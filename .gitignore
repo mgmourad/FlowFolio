@@ -1,0 +1,44 @@
+# --- OS / editors ---
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+.vscode/
+.idea/
+*.iml
+
+# --- Secrets (see .env.example files) ---
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+local.properties
+
+# --- Android / Gradle ---
+android/**/.gradle/
+android/**/build/
+android/**/.kotlin/
+android/captures/
+android/app/release/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+dist/
+*.egg-info/
+
+# --- Converter runtime data ---
+converter/data/
+
+# --- Corpus: PDFs are never committed; only manifest, hashes, baselines ---
+samples/corpus/**/*.pdf
+samples/corpus/**/*.epub
+samples/corpus/cache/
+samples/golden/**/output/
