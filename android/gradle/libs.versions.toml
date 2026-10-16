@@ -18,6 +18,11 @@ spotless = "8.10.4"
 ktlint = "1.8.0"
 detekt = "1.23.8"
 
+# Spike-only (android/spikes, never shipped)
+spikePagecurl = "1.5.1"
+spikeAndroidxPdf = "1.0.0-beta01"
+spikeOnnxRuntime = "1.31.0"
+
 # SDK levels (ADR-0006)
 minSdk = "29"
 compileSdk = "37"
@@ -46,6 +51,10 @@ androidx-test-ext-junit = { module = "androidx.test.ext:junit", version.ref = "a
 androidx-test-runner = { module = "androidx.test:runner", version.ref = "androidxTestRunner" }
 androidx-test-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "espresso" }
 robolectric = { module = "org.robolectric:robolectric", version.ref = "robolectric" }
+
+spike-pagecurl = { module = "io.github.oleksandrbalan:pagecurl", version.ref = "spikePagecurl" }
+spike-androidx-pdf-document-service = { module = "androidx.pdf:pdf-document-service", version.ref = "spikeAndroidxPdf" }
+spike-onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "spikeOnnxRuntime" }
 
 # Gradle plugins as libraries, for build-logic convention plugins
 android-gradlePlugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
