@@ -1,0 +1,21 @@
+# Golden corpus manifest. PDFs are NEVER committed (see .gitignore).
+# Openly licensed entries are downloaded by scripts/fetch_corpus.py (Phase 3) and verified by sha256.
+# Private/copyrighted entries are listed with `source: local` and stay on the developer's machine.
+#
+# Fields:
+#   id          stable slug used in metric baselines
+#   title       human-readable title
+#   source      url | local
+#   url         download URL (source: url only)
+#   license     SPDX id; verify on the publisher's page before adding
+#   sha256      hash of the exact file; filled when first downloaded
+#   pages       page count
+#   features    which hard cases it exercises: two-column, math, tables-wide, tables-multipage,
+#               vector-figures, sidebars, footnotes, margin-notes, index, glossary, scanned
+schema_version: 1
+books: []
+# Candidates to verify and add in Phase 3 (OpenStax, CC BY 4.0 per title page; confirm each):
+#   - University Physics Volume 1 (math, vector-figures, sidebars, index; ~1,000 pages, doubles as the 900+ page perf test)
+#   - Calculus Volume 1 (math-heavy)
+#   - Principles of Economics (charts, tables, glossary)
+#   - Biology 2e (figures with captions, sidebars, glossary)
