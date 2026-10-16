@@ -65,7 +65,7 @@ jobs:
         run: |
           range="$HEAD_SHA"; [ -n "$BASE" ] && range="$BASE..$HEAD_SHA"
           pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: .+'
-          bad=$(git log --no-merges --format='%h %s' "$range" | grep -Ev "^[0-9a-f]+ $pattern" || true)
+          bad=$(git log --no-merges --format='%s' "$range" | grep -Ev "$pattern" || true)
           if [ -n "$bad" ]; then
             echo "::error::Commits not following Conventional Commits:"; echo "$bad"; exit 1
           fi
