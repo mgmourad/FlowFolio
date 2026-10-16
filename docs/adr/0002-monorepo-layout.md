@@ -1,6 +1,6 @@
 # ADR-0002: Monorepo with strict app/converter boundary
 
-- **Status:** Accepted
+- **Status:** Superseded in part by ADR-0009 (2026-10-16)
 - **Date:** 2026-10-16
 - **Phase:** 0
 
