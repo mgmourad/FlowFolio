@@ -19,6 +19,7 @@ local.properties
 android/**/.gradle/
 android/**/build/
 android/**/.kotlin/
+android/**/.cxx/
 android/captures/
 android/app/release/
 
@@ -42,3 +43,7 @@ samples/corpus/**/*.pdf
 samples/corpus/**/*.epub
 samples/corpus/cache/
 samples/golden/**/output/
+
+# Spike raw output (book renders are not ours to commit; summaries go to docs/spikes/)
+android/spikes/*/results/
+samples/models/

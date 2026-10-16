@@ -24,3 +24,8 @@ dependencyResolutionManagement {
 rootProject.name = "FlowFolio"
 
 include(":app")
+
+// Throwaway spikes: built only with -Pspikes, never in CI or the shipped app.
+if (providers.gradleProperty("spikes").isPresent) {
+    include(":spikes:pdf-renderer")
+}
