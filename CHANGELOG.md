@@ -16,3 +16,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - CI: path-aware GitHub Actions workflow (Android, converter, Docker smoke test, Conventional
   Commits check, `ci-gate`), Dependabot, pre-commit hooks.
 - Golden corpus manifest schema (no books yet).
+
+### Fixed
+- `gradlew` committed without the executable bit, breaking the Linux CI build.
+- CI commit-subject check rejected every commit (anchored regex used mid-pattern).
+
+### Changed
+- Dependabot no longer proposes Python minor/major bumps for the converter image (pinned by ADR-0004).

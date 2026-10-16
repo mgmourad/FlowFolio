@@ -5,6 +5,7 @@ Read this first. Keep it current: update at the end of every phase.
 ## Current phase
 
 **Phase 0: Foundation. Complete pending product-owner approval** (2026-10-16).
+Exit criteria met: first green CI run on `main` (run 38979039796, all jobs), both projects run locally.
 Next: Phase 1 (PDF reader with page curl), which starts with a plan and a PDF-rendering spike.
 
 ## Working agreement (summary)
