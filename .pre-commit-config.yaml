@@ -1,0 +1,59 @@
+# Install once:  uv tool install pre-commit && pre-commit install --hook-type pre-commit --hook-type commit-msg
+# Run on all files:  pre-commit run --all-files
+# detekt and Android Lint are too slow for a commit hook; they run in CI (ADR-0008).
+default_install_hook_types: [pre-commit, commit-msg]
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: \.md$
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: detect-private-key
+      - id: mixed-line-ending
+        args: [--fix=no]
+        exclude: \.(bat|cmd|ps1)$
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check (converter)
+        entry: uv run --project converter ruff check --fix
+        language: system
+        types: [python]
+        files: ^converter/
+      - id: ruff-format
+        name: ruff format (converter)
+        entry: uv run --project converter ruff format
+        language: system
+        types: [python]
+        files: ^converter/
+      - id: mypy
+        name: mypy (converter)
+        entry: uv run --project converter mypy --config-file converter/pyproject.toml converter/src converter/tests
+        language: system
+        types: [python]
+        files: ^converter/
+        pass_filenames: false
+      - id: ktlint
+        name: ktlint via spotless (android)
+        entry: python infra/ci/gradle.py spotlessCheck --quiet
+        language: system
+        files: ^android/.*\.kts?$
+        pass_filenames: false
