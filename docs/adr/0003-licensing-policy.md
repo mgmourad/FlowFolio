@@ -1,6 +1,6 @@
 # ADR-0003: Licensing policy for FlowFolio and its dependencies
 
-- **Status:** Accepted
+- **Status:** Accepted, amended by ADR-0009 (2026-10-16): no copyleft anywhere, including the converter
 - **Date:** 2026-10-16
 - **Phase:** 0
 

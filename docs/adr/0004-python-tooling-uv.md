@@ -1,6 +1,6 @@
 # ADR-0004: uv for converter project and dependency management
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0009 (2026-10-16)
 - **Date:** 2026-10-16
 - **Phase:** 0
 

@@ -4,9 +4,19 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 0: Foundation. Complete pending product-owner approval** (2026-10-16).
-Exit criteria met: first green CI run on `main` (run 38979039796, all jobs), both projects run locally.
-Next: Phase 1 (PDF reader with page curl), which starts with a plan and a PDF-rendering spike.
+**Phase 1: PDF reader with page curl. In progress: renderer + page-curl spike** (started 2026-10-16).
+Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
+Spike stop point: report + ADR-0010 (renderer) / page-curl ADR go to the product owner before building.
+
+## Product direction (owner decisions, 2026-10-16)
+
+- **Foldables first** (reference device: Galaxy Z Fold 8 Ultra): single page on the cover screen,
+  two-page spread when unfolded; slab phones and tablets must still work well.
+- **Conversion runs on the device, inside the app** (ADR-0009). No server converter in the product.
+- **FlowFolio (reflow) mode is the default.** Pinch changes font size; tapping an image opens a zoomable viewer.
+- **Original mode** is a full PDF reader (pinch-zoom page, links, TOC, go to page).
+- **Import storage** is a user setting: copy into the app (default) or read in place, each with a disclaimer.
+- Any PDF/EPUB must work well; textbooks are the hardest case, not the only one.
 
 ## Working agreement (summary)
 
@@ -17,15 +27,18 @@ Conventional Commits; keep `CHANGELOG.md`; no secrets in the repo; propose a spi
 
 ## Architecture summary
 
-- Monorepo (ADR-0002): `android/` app, `converter/` Python service. The only shared artifact is
-  the output contract `docs/conversion-spec.md` (sidecar JSON Schema from Phase 3).
+- Monorepo: `android/` app (including, from Phase 3, the on-device conversion engine). The Python
+  `converter/` is no longer the product path (ADR-0009); its fate is decided in the Phase 3 plan.
+  Output contract: `docs/conversion-spec.md`.
+- Conversion engine (ADR-0009, planned): Kotlin Multiplatform `:core:conversion` (Android + JVM),
+  PDFium via our own JNI bridge, ONNX Runtime for models, WorkManager foreground job; corpus quality
+  gate runs on the JVM target in CI.
 - Android: Kotlin 2.4, AGP 9 (built-in Kotlin), Compose + Material 3, single activity, MVVM +
   unidirectional data flow, Hilt (ADR-0007), minSdk 29 / target 37 (ADR-0006). Build config lives
   in `android/build-logic` convention plugins; versions only in `android/gradle/libs.versions.toml` (ADR-0005).
-- Converter: Python 3.13, uv (ADR-0004), FastAPI, Pydantic v2, Typer CLI, Docker (non-root).
-  Planned stage pipeline A–I over a typed `Document` IR: see `docs/architecture.md`.
-- Licensing (ADR-0003): MIT project. No GPL/LGPL/AGPL in the app. Copyleft in the converter only
-  via a dedicated ADR, optional and swappable. Model weights checked separately. Matrix: `docs/licenses.md`.
+- Python converter skeleton (Phase 0, legacy): Python 3.13, uv, FastAPI, Docker.
+- Licensing (ADR-0003 as amended by ADR-0009): MIT project. No GPL/LGPL/AGPL code or model weights
+  anywhere, since everything ships in the app. Matrix: `docs/licenses.md`.
 
 ## Conventions
 
@@ -90,5 +103,5 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 
 ## Decision log
 
-ADRs 0001–0008 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
-structure, minSdk 29, Hilt, CI design.
+ADRs 0001–0009 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004).
