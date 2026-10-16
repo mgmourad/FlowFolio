@@ -1,0 +1,26 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    commit-message: { prefix: "ci" }
+    groups:
+      actions: { patterns: ["*"] }
+
+  - package-ecosystem: gradle
+    directory: /android
+    schedule: { interval: weekly }
+    commit-message: { prefix: "build(android)" }
+    groups:
+      androidx: { patterns: ["androidx.*"] }
+      kotlin: { patterns: ["org.jetbrains.kotlin*", "com.google.devtools.ksp*"] }
+
+  - package-ecosystem: uv
+    directory: /converter
+    schedule: { interval: weekly }
+    commit-message: { prefix: "build(converter)" }
+
+  - package-ecosystem: docker
+    directory: /converter
+    schedule: { interval: weekly }
+    commit-message: { prefix: "build(converter)" }
