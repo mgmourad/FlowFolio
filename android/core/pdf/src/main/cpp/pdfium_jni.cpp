@@ -39,6 +39,9 @@ struct NativeDoc {
     FPDF_DOCUMENT doc = nullptr;
     int fd = -1;
     FPDF_FILEACCESS access{};
+    // Kept only so the document can be reloaded to drop PDFium's caches (nativeReload); never logged or persisted.
+    std::string password;
+    bool hasPassword = false;
 };
 
 int readBlock(void* param, unsigned long position, unsigned char* buf, unsigned long size) {
@@ -105,6 +108,10 @@ JNIEXPORT jlong JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_nativeOp
         nd->access.m_GetBlock = readBlock;
         nd->access.m_Param = &nd->fd;
         const char* password = jpassword != nullptr ? env->GetStringUTFChars(jpassword, nullptr) : nullptr;
+        if (password != nullptr) {
+            nd->password = password;
+            nd->hasPassword = true;
+        }
         {
             std::lock_guard<std::mutex> guard(g_lock);
             nd->doc = FPDF_LoadCustomDocument(&nd->access, password);
@@ -118,6 +125,19 @@ JNIEXPORT jlong JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_nativeOp
     delete nd;
     env->SetIntArrayRegion(errOut, 0, 1, &err);
     return 0;
+}
+
+// PDFium keeps per-document caches (fonts, glyphs, parsed resources) that grow with every page loaded and are only
+// released when the document closes: measured +12 MB per 100 textbook pages. Reloading swaps in a fresh document over
+// the same file descriptor; the new one is opened before the old one is closed, so a failure leaves the old intact.
+JNIEXPORT jboolean JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_nativeReload(JNIEnv*, jobject, jlong handle) {
+    NativeDoc* nd = asDoc(handle);
+    std::lock_guard<std::mutex> guard(g_lock);
+    FPDF_DOCUMENT fresh = FPDF_LoadCustomDocument(&nd->access, nd->hasPassword ? nd->password.c_str() : nullptr);
+    if (fresh == nullptr) return JNI_FALSE;
+    FPDF_CloseDocument(nd->doc);
+    nd->doc = fresh;
+    return JNI_TRUE;
 }
 
 JNIEXPORT void JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_nativeClose(JNIEnv*, jobject, jlong handle) {

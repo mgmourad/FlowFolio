@@ -152,6 +152,28 @@ class TextbookOnDeviceTest {
         assertTrue(result.has("A_argb") && result.has("B_hardware_plus_one_scratch"))
     }
 
+    /** Isolates PDFium's own memory growth: one reused bitmap, 600 pages, native heap sampled every 100. */
+    @Test
+    fun nativeHeapGrowthOverManyPages() = runBlocking {
+        assumeTrue("textbook not on device", book.canRead())
+        val samples = ArrayList<String>()
+        open(book).use { doc ->
+            val target = Bitmap.createBitmap(1128, 1459, Bitmap.Config.ARGB_8888)
+            for (p in 0 until 600) {
+                doc.render(p % doc.pageCount, target)
+                if (p % 100 == 0 || p == 599) {
+                    settle()
+                    samples += "p$p=${Debug.getNativeHeapAllocatedSize() / (1024 * 1024)}MB"
+                }
+            }
+            target.recycle()
+        }
+        settle()
+        samples += "closed=${Debug.getNativeHeapAllocatedSize() / (1024 * 1024)}MB"
+        Log.i(TAG, "FF_NATIVE ${samples.joinToString(" ")}")
+        assertTrue(samples.isNotEmpty())
+    }
+
     private fun settle() {
         repeat(3) {
             Runtime.getRuntime().gc()

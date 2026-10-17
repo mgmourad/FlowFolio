@@ -13,6 +13,8 @@ internal object PdfiumNative {
 
     external fun nativeClose(handle: Long)
 
+    external fun nativeReload(handle: Long): Boolean
+
     external fun nativePageCount(handle: Long): Int
 
     external fun nativePageSize(handle: Long, index: Int): FloatArray?
