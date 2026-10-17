@@ -23,8 +23,8 @@ internal object PageFrames {
 
             ReaderLayout.SPREAD -> {
                 // Left page hugs the spine from the left, right page from the right (see SpreadReader).
-                val left = Spreads.leftOf(state.unit, state.pageCount)
-                val right = Spreads.rightOf(state.unit, state.pageCount)
+                val left = Spreads.leftOf(state.unit, state.pageCount, state.coverAlone)
+                val right = Spreads.rightOf(state.unit, state.pageCount, state.coverAlone)
                 if (left >= 0) place(left) { half - it.width }
                 if (right >= 0) place(right) { half }
             }

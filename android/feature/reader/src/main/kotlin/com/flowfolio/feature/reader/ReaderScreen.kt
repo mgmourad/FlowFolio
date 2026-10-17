@@ -134,7 +134,11 @@ internal fun SpreadReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap
                     )
                 }
         ) {
-            PagePane(images[Spreads.leftOf(state.unit, state.pageCount)], Alignment.CenterEnd, Spine.RIGHT)
+            PagePane(
+                images[Spreads.leftOf(state.unit, state.pageCount, state.coverAlone)],
+                Alignment.CenterEnd,
+                Spine.RIGHT
+            )
         }
         Box(Modifier.weight(1f).fillMaxHeight()) {
             PageCurl(
@@ -143,9 +147,15 @@ internal fun SpreadReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap
                 gradientShadow = true,
                 config = swipeAnywhereConfig(rightPageOfSpread = true),
                 modifier = Modifier.fillMaxSize(),
-                backPage = { unit -> latestImages[Spreads.leftOf(unit + 1, state.pageCount)] }
+                backPage = { unit ->
+                    latestImages[Spreads.leftOf(unit + 1, state.pageCount, state.coverAlone)]
+                }
             ) { unit ->
-                PagePane(images[Spreads.rightOf(unit, state.pageCount)], Alignment.CenterStart, Spine.LEFT)
+                PagePane(
+                    images[Spreads.rightOf(unit, state.pageCount, state.coverAlone)],
+                    Alignment.CenterStart,
+                    Spine.LEFT
+                )
             }
         }
     }

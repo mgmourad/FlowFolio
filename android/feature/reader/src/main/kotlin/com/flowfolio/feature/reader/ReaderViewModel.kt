@@ -7,7 +7,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.OpenedBook
 import com.flowfolio.core.data.ReaderRepository
+import com.flowfolio.core.data.SettingsRepository
 import com.flowfolio.core.model.PixelSize
+import com.flowfolio.core.model.UserSettings
 import com.flowfolio.core.pdf.PdfException
 import com.flowfolio.core.pdf.PdfLink
 import com.flowfolio.feature.reader.cache.PageCache
@@ -46,7 +48,9 @@ sealed interface ReaderState {
         /** Page in single layout, spread unit in spread layout. */
         val unit: Int,
         val unitCount: Int,
-        val anchorPage: Int
+        val anchorPage: Int,
+        /** Spread pairing (reader setting): the cover alone, or pages paired from the first. */
+        val coverAlone: Boolean = true
     ) : ReaderState
 }
 
@@ -56,6 +60,7 @@ data class Viewport(val widthPx: Int, val heightPx: Int, val widthDp: Float, val
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     private val repository: ReaderRepository,
+    settingsRepository: SettingsRepository,
     private val saved: SavedStateHandle
 ) : ViewModel() {
     private val bookId: String = checkNotNull(saved[ARG_BOOK_ID]) { "reader needs a bookId" }
@@ -103,8 +108,18 @@ class ReaderViewModel @Inject constructor(
             saved[KEY_ANCHOR] = value
         }
 
+    /** Reader settings (spreads on/off, pairing); a change re-lays the book out at the same page. */
+    private var settings = UserSettings()
+
     init {
         open(password = null)
+        viewModelScope.launch {
+            settingsRepository.settings.collect {
+                settings = it
+                publishReady()
+                replan()
+            }
+        }
     }
 
     fun submitPassword(password: String) = open(password)
@@ -180,14 +195,10 @@ class ReaderViewModel @Inject constructor(
         anchorPage = when (ready.layout) {
             ReaderLayout.SINGLE -> unit
 
-            ReaderLayout.SPREAD -> if (Spreads.pagesOf(
-                    unit,
-                    pageCount
-                ).contains(anchorPage)
-            ) {
+            ReaderLayout.SPREAD -> if (Spreads.pagesOf(unit, pageCount, ready.coverAlone).contains(anchorPage)) {
                 anchorPage
             } else {
-                Spreads.anchorOf(unit, pageCount)
+                Spreads.anchorOf(unit, pageCount, ready.coverAlone)
             }
         }
         publishReady(unit)
@@ -214,22 +225,28 @@ class ReaderViewModel @Inject constructor(
         cache?.trimToVisible(wanted, keep = if (ready.layout == ReaderLayout.SPREAD) 2 else 1)
     }
 
-    private fun layoutFor(v: Viewport?): ReaderLayout =
-        forcedLayout ?: v?.let { chooseLayout(it.widthDp, it.heightDp) } ?: ReaderLayout.SINGLE
+    private fun layoutFor(v: Viewport?): ReaderLayout = when {
+        forcedLayout != null -> forcedLayout
+        !settings.readerSpreads || v == null -> ReaderLayout.SINGLE
+        else -> chooseLayout(v.widthDp, v.heightDp)
+    }
 
     private fun publishReady(unitOverride: Int? = null) {
         val book = opened ?: return
         val pageCount = book.document.pageCount
         val layout = layoutFor(viewport)
-        val unit = unitOverride ?: if (layout == ReaderLayout.SPREAD) Spreads.unitOf(anchorPage) else anchorPage
+        val coverAlone = settings.spreadCoverAlone
+        val spread = layout == ReaderLayout.SPREAD
+        val unit = unitOverride ?: if (spread) Spreads.unitOf(anchorPage, coverAlone) else anchorPage
         _state.update {
             ReaderState.Ready(
                 title = book.book.title,
                 pageCount = pageCount,
                 layout = layout,
                 unit = unit,
-                unitCount = if (layout == ReaderLayout.SPREAD) Spreads.unitCount(pageCount) else pageCount,
-                anchorPage = anchorPage
+                unitCount = if (spread) Spreads.unitCount(pageCount, coverAlone) else pageCount,
+                anchorPage = anchorPage,
+                coverAlone = coverAlone
             )
         }
     }
@@ -248,7 +265,9 @@ class ReaderViewModel @Inject constructor(
             // (Dropping the extra one saved no measurable memory on the Fold, ADR-0013.)
             val order = listOf(ready.unit, ready.unit + 1, ready.unit - 1, ready.unit + 2)
             val units = order.filter { it in 0 until ready.unitCount }
-            val pages = units.flatMap { u -> if (spread) Spreads.pagesOf(u, ready.pageCount) else listOf(u) }
+            val pages = units.flatMap { u ->
+                if (spread) Spreads.pagesOf(u, ready.pageCount, ready.coverAlone) else listOf(u)
+            }
             val keys = pages.mapNotNull { page ->
                 val size = sizes.getOrPut(page) {
                     try {

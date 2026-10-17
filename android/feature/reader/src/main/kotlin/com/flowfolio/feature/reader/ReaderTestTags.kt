@@ -11,4 +11,8 @@ object ReaderTestTags {
     const val GO_TO_FIELD = "reader_go_to_field"
     const val SCRUBBER = "reader_scrubber"
     const val ZOOM = "reader_zoom"
+    const val SETTINGS = "reader_settings"
+    const val SETTINGS_SHEET = "reader_settings_sheet"
+    const val SETTING_SPREADS = "reader_setting_spreads"
+    const val SETTING_COVER = "reader_setting_cover"
 }

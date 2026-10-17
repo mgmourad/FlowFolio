@@ -10,6 +10,12 @@
     <string name="reader_password_open">Open</string>
     <string name="reader_cancel">Cancel</string>
     <string name="reader_link_title">Open this link?</string>
+    <string name="reader_settings_button">Aa</string>
+    <string name="reader_settings">Reading settings</string>
+    <string name="reader_settings_spreads">Two pages side by side</string>
+    <string name="reader_settings_spreads_detail">On wide screens, like the unfolded Fold. Turn off for one larger page.</string>
+    <string name="reader_settings_cover">Cover on its own</string>
+    <string name="reader_settings_cover_detail">Pair pages like a printed book. Turn off if facing pages look mismatched.</string>
     <string name="reader_link_open">Open</string>
     <string name="reader_contents">Contents</string>
     <string name="reader_contents_empty">This book has no table of contents.</string>

@@ -81,7 +81,7 @@ internal fun BoxScope.ReadyReader(
             overlay.shownAt = null
         }
     }
-    LaunchedEffect(s.unit, s.layout) { overlay.zoom = null } // a jump or fold/unfold leaves zoom
+    LaunchedEffect(s.unit, s.layout, s.coverAlone) { overlay.zoom = null } // a jump or fold/unfold leaves zoom
     val jump = { page: Int ->
         viewModel.goToPage(page)
         overlay.closeAll()
@@ -101,7 +101,7 @@ internal fun BoxScope.ReadyReader(
     }
     Box(Modifier.fillMaxSize().interceptTaps(onTap).pinchGestures(overlay::pinch, overlay::endPinch)) {
         // Recreate the curl state when the layout flips (fold/unfold); the ViewModel keeps the position.
-        key(s.layout) {
+        key(s.layout, s.coverAlone) {
             when (s.layout) {
                 ReaderLayout.SINGLE -> SinglePageReader(s, images, viewModel::onUnitShown)
                 ReaderLayout.SPREAD -> SpreadReader(s, images, viewModel::onUnitShown)
@@ -135,6 +135,7 @@ private fun BoxScope.Chrome(
             onBack = onBack,
             onContents = { overlay.panel = Panel.CONTENTS },
             onGoTo = { overlay.panel = Panel.GO_TO },
+            onSettings = { overlay.panel = Panel.SETTINGS },
             onScrub = jump,
             onInteract = overlay::touch
         )
@@ -152,7 +153,7 @@ private fun BoxScope.EdgeGuards() {
 }
 
 /** What is open on top of the reader. */
-private enum class Panel { NONE, CONTENTS, GO_TO }
+private enum class Panel { NONE, CONTENTS, GO_TO, SETTINGS }
 
 @Composable
 private fun Panels(
@@ -166,5 +167,6 @@ private fun Panels(
         Panel.NONE -> Unit
         Panel.CONTENTS -> ContentsSheet(navigation.outline, navigation.labels, s.anchorPage, jump, onDismiss)
         Panel.GO_TO -> GoToPageDialog(navigation.labels, s.pageCount, jump, onDismiss)
+        Panel.SETTINGS -> ReaderSettingsSheet(onDismiss)
     }
 }
