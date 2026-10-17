@@ -10,4 +10,5 @@ object ReaderTestTags {
     const val GO_TO = "reader_go_to"
     const val GO_TO_FIELD = "reader_go_to_field"
     const val SCRUBBER = "reader_scrubber"
+    const val ZOOM = "reader_zoom"
 }

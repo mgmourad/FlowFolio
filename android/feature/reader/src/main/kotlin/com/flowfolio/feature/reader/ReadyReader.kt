@@ -34,6 +34,20 @@ private class Overlay {
     var panel by mutableStateOf(Panel.NONE)
     var webLink by mutableStateOf<String?>(null)
 
+    /** Non-null while zoomed in; page turns and the chrome are paused meanwhile. */
+    var zoom by mutableStateOf<ZoomState?>(null)
+
+    /** A pinch on the book: zooming in starts zoom mode, zooming out at 1x does nothing. */
+    fun pinch(centroid: Offset, pan: Offset, factor: Float, size: IntSize) {
+        val current = zoom ?: if (factor > 1f) ZoomState().also { zoom = it } else return
+        current.transform(centroid, pan, factor, size)
+    }
+
+    /** Fingers lifted: back at 1x means leaving zoom. */
+    fun endPinch() {
+        if (zoom?.isAtRest == true) zoom = null
+    }
+
     fun toggle() {
         shownAt = if (shownAt == null) System.nanoTime() else null
     }
@@ -58,6 +72,7 @@ internal fun BoxScope.ReadyReader(
     onBack: () -> Unit
 ) {
     val links by viewModel.links.collectAsStateWithLifecycle()
+    val tiles by viewModel.tiles.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
     val overlay = remember { Overlay() }
     LaunchedEffect(overlay.shownAt, overlay.panel) {
@@ -66,13 +81,16 @@ internal fun BoxScope.ReadyReader(
             overlay.shownAt = null
         }
     }
+    LaunchedEffect(s.unit, s.layout) { overlay.zoom = null } // a jump or fold/unfold leaves zoom
     val jump = { page: Int ->
         viewModel.goToPage(page)
         overlay.closeAll()
     }
+    val framesFor = { size: IntSize ->
+        PageFrames.of(s, size) { page -> images[page]?.let { IntSize(it.width, it.height) } }
+    }
     val onTap = { tap: Offset, size: IntSize ->
-        val frames = PageFrames.of(s, size) { page -> images[page]?.let { IntSize(it.width, it.height) } }
-        val target = PageFrames.route(tap, size, frames, links)
+        val target = PageFrames.route(tap, size, framesFor(size), links)
         when (target) {
             is PageFrames.TapTarget.Jump -> jump(target.page)
             is PageFrames.TapTarget.Web -> overlay.webLink = target.uri
@@ -81,7 +99,7 @@ internal fun BoxScope.ReadyReader(
         }
         target != PageFrames.TapTarget.Page
     }
-    Box(Modifier.fillMaxSize().interceptTaps(onTap)) {
+    Box(Modifier.fillMaxSize().interceptTaps(onTap).pinchGestures(overlay::pinch, overlay::endPinch)) {
         // Recreate the curl state when the layout flips (fold/unfold); the ViewModel keeps the position.
         key(s.layout) {
             when (s.layout) {
@@ -90,6 +108,25 @@ internal fun BoxScope.ReadyReader(
             }
         }
     }
+    overlay.zoom?.let { ZoomView(it, framesFor, images, tiles, viewModel::showTiles, onExit = { overlay.zoom = null }) }
+    if (overlay.zoom == null) {
+        Chrome(s, navigation, overlay, onBack, jump)
+    }
+    Panels(overlay.panel, s, navigation, jump, onDismiss = { overlay.panel = Panel.NONE })
+    overlay.webLink?.let { uri ->
+        WebLinkDialog(uri, onOpen = { runCatching { uriHandler.openUri(uri) } }, onDismiss = { overlay.webLink = null })
+    }
+    EdgeGuards()
+}
+
+@Composable
+private fun BoxScope.Chrome(
+    s: ReaderState.Ready,
+    navigation: BookNavigation,
+    overlay: Overlay,
+    onBack: () -> Unit,
+    jump: (Int) -> Unit
+) {
     ReaderChrome(
         s,
         navigation,
@@ -102,11 +139,6 @@ internal fun BoxScope.ReadyReader(
             onInteract = overlay::touch
         )
     )
-    Panels(overlay.panel, s, navigation, jump, onDismiss = { overlay.panel = Panel.NONE })
-    overlay.webLink?.let { uri ->
-        WebLinkDialog(uri, onOpen = { runCatching { uriHandler.openUri(uri) } }, onDismiss = { overlay.webLink = null })
-    }
-    EdgeGuards()
 }
 
 /**

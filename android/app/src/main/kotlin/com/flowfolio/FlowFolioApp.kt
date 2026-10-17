@@ -14,6 +14,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -39,7 +41,12 @@ private object Routes {
 fun FlowFolioApp(appViewModel: AppViewModel) {
     val nav = rememberNavController()
     LaunchedEffect(nav) { appViewModel.directOpens.collect { (id, layout) -> nav.navigate(Routes.reader(id, layout)) } }
-    NavHost(navController = nav, startDestination = Routes.LIBRARY) {
+    // Exposes Compose test tags as resource ids so UiAutomator (on-device gesture tests, benchmarks) can find them.
+    NavHost(
+        navController = nav,
+        startDestination = Routes.LIBRARY,
+        modifier = Modifier.semantics { testTagsAsResourceId = true }
+    ) {
         composable(Routes.LIBRARY) {
             val library: LibraryViewModel = hiltViewModel()
             LaunchedEffect(library) { appViewModel.sharedFiles.collect(library::onFileShared) }
