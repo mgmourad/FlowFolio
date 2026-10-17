@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_title">Library</string>
+    <string name="library_empty">Your library is empty.\nTap Import to add a PDF.</string>
+    <string name="action_import">Import</string>
+    <string name="action_sort">Sort</string>
+    <string name="action_settings">Settings</string>
+    <string name="action_back">Back</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_copy_instead">Copy instead</string>
+    <string name="action_locate">Locate file</string>
+    <string name="sort_recent">Recently opened</string>
+    <string name="sort_title">Title</string>
+    <string name="importing">Importing…</string>
+    <string name="badge_missing">File missing</string>
+    <string name="badge_locked">Password</string>
+
+    <!-- Storage choice: wording approved by the product owner (Phase 1 plan). -->
+    <string name="storage_title">Where should FlowFolio keep your books?</string>
+    <string name="storage_title_each">Import this book</string>
+    <string name="storage_copy">Keep a copy in FlowFolio</string>
+    <string name="storage_copy_disclaimer">FlowFolio stores its own copy of this book. It keeps working offline and even if the original is moved or deleted. Removing the book from FlowFolio deletes the copy.</string>
+    <string name="storage_copy_disclaimer_sized">FlowFolio stores its own copy of this book (%1$s). It keeps working offline and even if the original is moved or deleted. Removing the book from FlowFolio deletes the copy.</string>
+    <string name="storage_link">Read from its current location</string>
+    <string name="storage_link_disclaimer">FlowFolio reads the file where it is and doesn\'t use extra space. If the file is moved, renamed or deleted, or the app or cloud service holding it removes access, the book won\'t open until you locate it again. Files stored in the cloud may need an internet connection.</string>
+    <string name="storage_change_later">You can change this any time in Settings.</string>
+    <string name="storage_shared_note">Books shared from other apps are always copied, because Android doesn\'t let FlowFolio keep access to them.</string>
+
+    <string name="link_not_possible_title">Can\'t read this file in place</string>
+    <string name="link_not_possible_body">The app holding this file doesn\'t let FlowFolio keep access to it. You can keep a copy in FlowFolio instead.</string>
+
+    <string name="delete_title">Remove “%1$s”?</string>
+    <string name="delete_body_copy">FlowFolio\'s copy of this book will be deleted. Your original file is not affected.</string>
+    <string name="delete_body_link">The book will be removed from your library. The file itself stays where it is.</string>
+
+    <string name="msg_imported">Added “%1$s”</string>
+    <string name="msg_duplicate">“%1$s” is already in your library</string>
+    <string name="msg_not_a_pdf">That file isn\'t a PDF FlowFolio can open</string>
+    <string name="msg_unreadable">That file couldn\'t be read</string>
+    <string name="msg_no_space">Not enough storage to copy this book (needs %1$s)</string>
+    <string name="msg_relinked">Book found again</string>
+    <string name="msg_relink_different">That\'s a different file. Choose the same book you imported.</string>
+    <string name="msg_relink_failed">That file couldn\'t be used</string>
+    <string name="msg_deleted">Removed “%1$s”</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_import_section">When importing books</string>
+    <string name="settings_ask_each">Ask every time</string>
+    <string name="settings_theme_section">App theme</string>
+    <string name="theme_system">Follow system</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+</resources>
