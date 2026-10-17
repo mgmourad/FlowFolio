@@ -11,3 +11,5 @@ Changes by The FlowFolio Authors (ADR-0011):
   instead of a tinted mirror of the front.
 - The deprecated PageCurl(state, modifier, content) overload was removed.
 - Optional gradient fold shading (gradientShadow) instead of the blurred shadow layer, to save GPU memory.
+- Releasing a drag finishes the turn at the pace of a full animated turn (scaled to the distance left) instead of
+  the default spring.

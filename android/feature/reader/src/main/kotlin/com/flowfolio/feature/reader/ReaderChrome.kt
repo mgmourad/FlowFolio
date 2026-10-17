@@ -247,10 +247,12 @@ internal fun Modifier.interceptTaps(onTap: (Offset, IntSize) -> Boolean): Modifi
     }
 }
 
-/** The middle [CENTRE_ZONE] of the width and height: a tap there shows or hides the controls. */
-internal fun isCentre(tap: Offset, size: IntSize): Boolean =
-    abs(tap.x - size.width / 2f) < size.width * CENTRE_ZONE / 2 &&
-        abs(tap.y - size.height / 2f) < size.height * CENTRE_ZONE / 2
+/**
+ * Touch zones (owner, 2026-10-17): the outer 30% on each side turns pages (tap: left back, right forward; swipes
+ * either way), the middle [CENTRE_ZONE] of the width, full height, is for taps that show or hide the controls.
+ * Swipes that start in the middle still turn pages.
+ */
+internal fun isCentre(tap: Offset, size: IntSize): Boolean = abs(tap.x - size.width / 2f) < size.width * CENTRE_ZONE / 2
 
 private val PRINT_GREY = Color(0xFF8E8E93)
 
@@ -262,7 +264,7 @@ private val PrintStyle = TextStyle(
 )
 
 internal const val CONTROLS_VISIBLE_MS = 10_000L
-private const val CENTRE_ZONE = 0.3f
+private const val CENTRE_ZONE = 0.4f
 private const val TRACK_ALPHA = 0.3f
 private const val SCRIM_ALPHA = 0.94f
 private const val SCRIM_SOLID = 0.6f // the part of each fade that stays solid behind the controls
