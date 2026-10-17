@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">FlowFolio</string>
-    <string name="library_title">Library</string>
-    <string name="library_empty">Your library is empty. Importing books arrives in Phase 1.</string>
+    <string name="reader_placeholder">The reader arrives in the next milestone.</string>
+    <string name="back">Back</string>
 </resources>
