@@ -8,8 +8,8 @@ Read this first. Keep it current: update at the end of every phase.
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
 Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
 Build plan approved 2026-10-16: 5 milestones; check in with the product owner at milestone 3 with memory numbers.
-Memory design: render at displayed size, scratch bitmap -> HARDWARE copies (measured: +84 MB vs +127 MB for 6
-inner-screen pages), one byte budget, zoom tiles. Exit target: total PSS <= 250 MB on the Fold in every scenario.
+Memory design: render at displayed size, 16-bit HARDWARE page images, one byte budget, prompt release of evicted pages,
+PDFium reloaded every 100 renders, gradient curl shading. Target (ADR-0013): reader <= floor + 110 MB, growth <= 10%.
 
 ## Product direction (owner decisions, 2026-10-16)
 
@@ -117,14 +117,14 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 11. DataStore unit tests write once per store: DataStore's atomic rename fails on Windows when the file exists.
 12. Linked ("read in place") books only work for files picked with the system picker; shared files are always copied.
 13. Settings screen lives in `:feature:library` for now; split into `:feature:settings` when it grows (reader settings).
-14. Reader memory on the Fold (300 turns): folded 232 MB (passes), unfolded spread 331 MB and single 391 MB (target
-    250 MB not met; app floor with no book is 181 MB on the inner screen, mostly display buffers). Decision pending.
+14. Reader memory target (ADR-0013): at most 110 MB over the app's floor on the same screen and fold state, and at most
+    10% growth from turn 50 to the last turn, on retained memory. Unfolded (300 turns): single +101 MB, spread +78 MB.
 15. Measuring on the Fold: logical display 0 is always the active panel; the phone must stay unlocked during runs
     (`tools/measure-reader.ps1` aborts if the lock screen shows). Debug-only intent extras `importPath`,
     `openBookId`, `layout` drive the app from adb.
 
 ## Decision log
 
-ADRs 0001–0011 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0013 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
-PDFium via own JNI bridge, vendored pagecurl.
+PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget.
