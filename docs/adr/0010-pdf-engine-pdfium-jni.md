@@ -1,6 +1,6 @@
 # ADR-0010: PDFium through our own JNI bridge for rendering and extraction
 
-- **Status:** Proposed (awaiting product-owner approval)
+- **Status:** Accepted (product owner, 2026-10-16)
 - **Date:** 2026-10-16
 - **Phase:** 1
 - **Evidence:** `docs/spikes/2026-10-pdf-renderer.md`
