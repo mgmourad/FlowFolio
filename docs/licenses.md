@@ -54,6 +54,16 @@ Release dates were checked on Maven Central, Google Maven, PyPI, or GitHub Relea
 | conventional-pre-commit | v4.4.0 | MIT | build | commit-msg hook |
 | GitHub Actions (checkout, setup-java, upload-artifact, gradle/actions, setup-uv, docker/*) | pinned by SHA in `ci.yml` | MIT / Apache-2.0 | build | |
 
+## Spike only (`android/spikes/`, never shipped)
+
+| Dependency | Version | Released | License | Notes |
+|---|---|---|---|---|
+| pdfium-binaries (PDFium) | chromium/8100 | 2026-10-12 | MIT (scripts); PDFium BSD-3/Apache-2.0; bundled FreeType (FTL), libjpeg-turbo, OpenJPEG, lcms, zlib, ICU, HarfBuzz (permissive) | Proposed for the app in ADR-0010; SHA-256 pinned |
+| androidx.pdf:pdf-document-service | 1.0.0-beta01 | 2026-08-26 | Apache-2.0 | Compared and rejected |
+| io.github.oleksandrbalan:pagecurl | 1.5.1 | 2024-02-09 | Apache-2.0 | Proposed to vendor in ADR-0011 |
+| com.microsoft.onnxruntime:onnxruntime-android | 1.31.0 | 2026-10-09 | MIT | 32.6 MB per ABI; feasibility probe |
+| all-MiniLM-L6-v2 (ONNX model weights) | HF main | n/a | Apache-2.0 | Local only (`samples/models/`, gitignored) |
+
 ## Under evaluation (not added)
 
 | Candidate | License | Notes |
