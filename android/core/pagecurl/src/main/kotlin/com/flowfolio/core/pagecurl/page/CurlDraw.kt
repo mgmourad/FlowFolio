@@ -14,6 +14,7 @@ import androidx.compose.ui.draw.DrawResult
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.toRect
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
@@ -38,6 +39,7 @@ internal fun Modifier.drawCurl(
     posA: Offset,
     posB: Offset,
     backPage: ImageBitmap? = null,
+    gradientShadow: Boolean = false,
 ): Modifier = drawWithCache {
     // Fast-check if curl is in left most position (gesture is fully completed)
     // In such case do not bother and draw nothing
@@ -75,11 +77,13 @@ internal fun Modifier.drawCurl(
     // That is the easy part, prepare a lambda to draw the content clipped by the curl line
     val drawClippedContent = prepareClippedContent(topCurlOffset, bottomCurlOffset)
     // That is the tricky part, prepare a lambda to draw the back-page with the shadow
-    val drawCurl = prepareCurl(config, topCurlOffset, bottomCurlOffset, backPage)
+    val drawCurl = prepareCurl(config, topCurlOffset, bottomCurlOffset, backPage, blurShadow = !gradientShadow)
+    val drawFoldShading = if (gradientShadow) prepareFoldShading(config, topCurlOffset, bottomCurlOffset) else null
 
     onDrawWithContent {
         drawClippedContent()
         drawCurl()
+        drawFoldShading?.invoke(this)
     }
 }
 
@@ -121,6 +125,7 @@ private fun CacheDrawScope.prepareCurl(
     topCurlOffset: Offset,
     bottomCurlOffset: Offset,
     backPage: ImageBitmap?,
+    blurShadow: Boolean,
 ): ContentDrawScope.() -> Unit {
     // Build a quadrilateral of the part of the page which should be mirrored as the back-page
     // In all cases polygon should have 4 points, even when back-page is only a small "corner" (with 3 points) due to
@@ -164,7 +169,7 @@ private fun CacheDrawScope.prepareCurl(
     val angle = Math.PI.toFloat() - atan2(lineVector.y, lineVector.x) * 2
 
     // Prepare a lambda to draw the shadow of the back-page
-    val drawShadow = prepareShadow(config, polygon, angle)
+    val drawShadow = if (blurShadow) prepareShadow(config, polygon, angle) else ({ })
 
     return result@{
         withTransform({
@@ -199,6 +204,52 @@ private fun CacheDrawScope.prepareCurl(
         }
     }
 }
+
+/**
+ * FlowFolio: cheap shading along the fold instead of the blurred shadow layer. The blur renders through an offscreen
+ * GPU layer; on the reference Fold turning the shadow off saved 36-40 MB of graphics memory. Two linear gradients
+ * approximate the look: a shadow cast onto the revealed page next to the fold, and shading on the folded sheet.
+ */
+private fun CacheDrawScope.prepareFoldShading(
+    config: PageCurlConfig,
+    top: Offset,
+    bottom: Offset,
+): ContentDrawScope.() -> Unit {
+    val direction = top - bottom
+    val length = direction.getDistance()
+    if (length == 0f || config.shadowAlpha == 0f) return { }
+    // Unit normal to the fold, pointing towards the revealed page (the side the sheet lifted from).
+    var normal = Offset(-direction.y / length, direction.x / length)
+    if (normal.x < 0f) normal = -normal
+    val castWidth = config.shadowRadius.toPx() * CAST_WIDTH_FACTOR
+    val curveWidth = config.shadowRadius.toPx() * CURVE_WIDTH_FACTOR
+    val middle = (top + bottom) / 2f
+    val color = config.shadowColor
+    val alpha = (config.shadowAlpha * CAST_ALPHA_FACTOR).coerceAtMost(MAX_ALPHA)
+
+    val cast = band(top, bottom, normal * castWidth)
+    val castBrush = Brush.linearGradient(listOf(color.copy(alpha = alpha), color.copy(alpha = 0f)), middle, middle + normal * castWidth)
+    val curve = band(top, bottom, -normal * curveWidth)
+    val curveBrush = Brush.linearGradient(listOf(color.copy(alpha = alpha * CURVE_ALPHA_FACTOR), color.copy(alpha = 0f)), middle, middle - normal * curveWidth)
+    return {
+        drawPath(cast, castBrush)
+        drawPath(curve, curveBrush)
+    }
+}
+
+private fun band(top: Offset, bottom: Offset, extent: Offset): Path = Path().apply {
+    moveTo(top.x, top.y)
+    lineTo(bottom.x, bottom.y)
+    lineTo(bottom.x + extent.x, bottom.y + extent.y)
+    lineTo(top.x + extent.x, top.y + extent.y)
+    close()
+}
+
+private const val CAST_WIDTH_FACTOR = 2.5f
+private const val CURVE_WIDTH_FACTOR = 1.2f
+private const val CAST_ALPHA_FACTOR = 1.75f
+private const val CURVE_ALPHA_FACTOR = 0.5f
+private const val MAX_ALPHA = 0.5f
 
 private fun CacheDrawScope.prepareShadow(
     config: PageCurlConfig,

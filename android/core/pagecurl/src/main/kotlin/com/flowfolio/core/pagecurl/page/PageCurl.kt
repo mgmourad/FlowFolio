@@ -29,6 +29,7 @@ import com.flowfolio.core.pagecurl.config.rememberPageCurlConfig
  * @param config The configuration for PageCurl.
  * @param backPage Optional image for the back of page n's sheet (book spreads: the next spread's left page). When
  * null, the back is a tinted mirror of the front, as upstream.
+ * @param gradientShadow FlowFolio: draw cheap gradient shading along the fold instead of the blurred shadow layer.
  * @param content The content lambda to provide the page composable. Receives the page number.
  */
 @Composable
@@ -38,6 +39,7 @@ public fun PageCurl(
     state: PageCurlState = rememberPageCurlState(),
     config: PageCurlConfig = rememberPageCurlConfig(),
     backPage: ((Int) -> ImageBitmap?)? = null,
+    gradientShadow: Boolean = false,
     content: @Composable (Int) -> Unit
 ) {
     val scope = rememberCoroutineScope()
@@ -92,14 +94,14 @@ public fun PageCurl(
 
                 if (updatedCurrent < state.max) {
                     val forward = internalState.forward.value
-                    Box(Modifier.drawCurl(updatedConfig, forward.top, forward.bottom, backPage?.invoke(updatedCurrent))) {
+                    Box(Modifier.drawCurl(updatedConfig, forward.top, forward.bottom, backPage?.invoke(updatedCurrent), gradientShadow)) {
                         content(updatedCurrent)
                     }
                 }
 
                 if (updatedCurrent > 0) {
                     val backward = internalState.backward.value
-                    Box(Modifier.drawCurl(updatedConfig, backward.top, backward.bottom, backPage?.invoke(updatedCurrent - 1))) {
+                    Box(Modifier.drawCurl(updatedConfig, backward.top, backward.bottom, backPage?.invoke(updatedCurrent - 1), gradientShadow)) {
                         content(updatedCurrent - 1)
                     }
                 }
