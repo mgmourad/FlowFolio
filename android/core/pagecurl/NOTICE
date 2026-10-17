@@ -1,0 +1,12 @@
+FlowFolio :core:pagecurl
+
+This module contains code from pagecurl 1.5.1 by Oleksandr Balan
+https://github.com/oleksandrbalan/pagecurl
+Licensed under the Apache License, Version 2.0 (see LICENSE in this directory).
+
+Changes by The FlowFolio Authors (ADR-0011):
+- Package renamed from eu.wewox.pagecurl to com.flowfolio.core.pagecurl.
+- The experimental opt-in annotation was removed (FlowFolio owns this code).
+- Book-spread support: the back of a turning sheet can show a separate image (the next spread's left page)
+  instead of a tinted mirror of the front.
+- The deprecated PageCurl(state, modifier, content) overload was removed.
