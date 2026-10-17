@@ -14,6 +14,8 @@ Release dates were checked on Maven Central, Google Maven, PyPI, or GitHub Relea
 | Gradle (wrapper) | 9.8.1 | 2026-10-07 | Apache-2.0 | build | Distribution SHA-256 pinned in wrapper properties |
 | KSP | 2.3.12 | 2026-09-09 | Apache-2.0 | build | |
 | Hilt / Dagger | 2.60.1 | 2026-07-06 | Apache-2.0 | app | |
+| kotlinx-coroutines (core, android, test) | 1.11.0 | 2026-05-08 | Apache-2.0 | app/test | |
+| **PDFium** via pdfium-binaries | chromium/8100 | 2026-10-12 | PDFium BSD-3/Apache-2.0; build scripts MIT; bundled FreeType (FTL), libjpeg-turbo (IJG/BSD), OpenJPEG (BSD-2), lcms (MIT), zlib, ICU (Unicode), HarfBuzz (MIT), abseil (Apache-2.0) | app | `:core:pdf` (ADR-0010). Downloaded at build time, SHA-256 pinned per ABI. License texts ship as assets under `third_party_licenses/pdfium/`; an in-app licenses screen is required before release. 6.3 MB (arm64), 4.3 MB (armv7), 6.8 MB (x86_64) |
 | Compose BOM (ui, material3, tooling) | 2026.09.00 | 2026-09-09 | Apache-2.0 | app | |
 | androidx.activity:activity-compose | 1.13.0 | 2026-03-11 | Apache-2.0 | app | |
 | androidx.lifecycle (runtime/viewmodel-compose) | 2.11.0 | 2026-06-17 | Apache-2.0 | app | |
@@ -54,13 +56,12 @@ Release dates were checked on Maven Central, Google Maven, PyPI, or GitHub Relea
 | conventional-pre-commit | v4.4.0 | MIT | build | commit-msg hook |
 | GitHub Actions (checkout, setup-java, upload-artifact, gradle/actions, setup-uv, docker/*) | pinned by SHA in `ci.yml` | MIT / Apache-2.0 | build | |
 
-## Spike only (`android/spikes/`, never shipped)
+## Evaluated in the Phase 1 spike (removed with the spike module)
 
 | Dependency | Version | Released | License | Notes |
 |---|---|---|---|---|
-| pdfium-binaries (PDFium) | chromium/8100 | 2026-10-12 | MIT (scripts); PDFium BSD-3/Apache-2.0; bundled FreeType (FTL), libjpeg-turbo, OpenJPEG, lcms, zlib, ICU, HarfBuzz (permissive) | Proposed for the app in ADR-0010; SHA-256 pinned |
 | androidx.pdf:pdf-document-service | 1.0.0-beta01 | 2026-08-26 | Apache-2.0 | Compared and rejected |
-| io.github.oleksandrbalan:pagecurl | 1.5.1 | 2024-02-09 | Apache-2.0 | Proposed to vendor in ADR-0011 |
+| io.github.oleksandrbalan:pagecurl | 1.5.1 | 2024-02-09 | Apache-2.0 | To be vendored into `:core:pagecurl` (ADR-0011, milestone 3) |
 | com.microsoft.onnxruntime:onnxruntime-android | 1.31.0 | 2026-10-09 | MIT | 32.6 MB per ABI; feasibility probe |
 | all-MiniLM-L6-v2 (ONNX model weights) | HF main | n/a | Apache-2.0 | Local only (`samples/models/`, gitignored) |
 
