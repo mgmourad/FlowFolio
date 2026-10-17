@@ -18,6 +18,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   and back-page gutter on the turning sheet. Gradients only, so no offscreen layers (ADR-0013).
 - Direction-based page turns on either page (iOS Books): swipe left = forward, swipe right = back, even short swipes;
   tap the right page of a spread to go forward, the left page to go back.
+- Reader chrome styled like print: the page number has no background (grey type, soft shadow) at the bottom left of
+  the left page (bottom centre on a single page); a tap in the centre of the screen shows the book title (top right
+  of the right page, top centre on a single page) and Back for 10 seconds.
 
 ### Fixed
 - Taps on the page curl stopped turning pages after the first turn (the curl state was recreated on every turn).
