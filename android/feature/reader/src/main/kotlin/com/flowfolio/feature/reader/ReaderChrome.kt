@@ -3,6 +3,7 @@ package com.flowfolio.feature.reader
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -29,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -62,21 +65,13 @@ internal fun BoxScope.ReaderChrome(
 ) {
     val spread = state.layout == ReaderLayout.SPREAD
     val shown = if (spread) {
-        Spreads.pagesOf(state.unit, state.pageCount).joinToString("–") { (it + 1).toString() }
+        Spreads.pagesOf(state.unit, state.pageCount, state.coverAlone).joinToString("–") { (it + 1).toString() }
     } else {
         (state.unit + 1).toString()
     }
-    Text(
-        stringResource(R.string.reader_page_of, shown, state.pageCount),
-        style = PrintStyle,
-        modifier = Modifier
-            .align(if (spread) Alignment.BottomStart else Alignment.BottomCenter)
-            .navigationBarsPadding()
-            .padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN)
-            .testTag(ReaderTestTags.INDICATOR)
-    )
     AnimatedVisibility(controlsVisible, Modifier.matchParentSize(), enter = fadeIn(), exit = fadeOut()) {
         Box(Modifier.fillMaxSize()) {
+            Fades()
             TopControls(state.title, spread, actions)
             Scrubber(
                 state,
@@ -90,6 +85,52 @@ internal fun BoxScope.ReaderChrome(
             )
         }
     }
+    // Drawn last so the controls' fade never veils it.
+    Text(
+        stringResource(R.string.reader_page_of, shown, state.pageCount),
+        style = PrintStyle,
+        modifier = Modifier
+            .align(if (spread) Alignment.BottomStart else Alignment.BottomCenter)
+            .navigationBarsPadding()
+            .padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN)
+            .testTag(ReaderTestTags.INDICATOR)
+    )
+}
+
+/**
+ * A soft paper-coloured fade behind the controls keeps them legible over a full-width page (single page on the
+ * unfolded screen) while still reading as part of the page rather than a toolbar.
+ */
+@Composable
+private fun BoxScope.Fades() {
+    Box(
+        Modifier
+            .align(Alignment.TopCenter)
+            .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    0f to PAPER.copy(alpha = SCRIM_ALPHA),
+                    SCRIM_SOLID to PAPER.copy(alpha = SCRIM_ALPHA),
+                    1f to Color.Transparent
+                )
+            )
+            .statusBarsPadding()
+            .height(TOP_SCRIM)
+    )
+    Box(
+        Modifier
+            .align(Alignment.BottomCenter)
+            .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    0f to Color.Transparent,
+                    1f - SCRIM_SOLID to PAPER.copy(alpha = SCRIM_ALPHA),
+                    1f to PAPER.copy(alpha = SCRIM_ALPHA)
+                )
+            )
+            .navigationBarsPadding()
+            .height(BOTTOM_SCRIM)
+    )
 }
 
 @Composable
@@ -107,6 +148,7 @@ private fun BoxScope.TopControls(title: String, spread: Boolean, actions: Chrome
     val buttons = @Composable {
         PrintButton(stringResource(R.string.reader_contents), actions.onContents, ReaderTestTags.CONTENTS)
         PrintButton(stringResource(R.string.reader_go_to), actions.onGoTo, ReaderTestTags.GO_TO)
+        PrintButton(stringResource(R.string.reader_settings_button), actions.onSettings, ReaderTestTags.SETTINGS)
     }
     if (spread) {
         Row(Modifier.align(Alignment.TopStart).statusBarsPadding().padding(top = 4.dp)) {
@@ -222,6 +264,10 @@ private val PrintStyle = TextStyle(
 internal const val CONTROLS_VISIBLE_MS = 10_000L
 private const val CENTRE_ZONE = 0.3f
 private const val TRACK_ALPHA = 0.3f
+private const val SCRIM_ALPHA = 0.94f
+private const val SCRIM_SOLID = 0.6f // the part of each fade that stays solid behind the controls
+private val TOP_SCRIM = 120.dp
+private val BOTTOM_SCRIM = 190.dp
 private const val SPREAD_SCRUBBER_WIDTH = 0.5f
 private const val SINGLE_SCRUBBER_WIDTH = 0.8f
 private val PAGE_MARGIN = 32.dp

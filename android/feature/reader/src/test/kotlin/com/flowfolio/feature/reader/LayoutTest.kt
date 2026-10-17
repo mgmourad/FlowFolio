@@ -54,5 +54,21 @@ class LayoutTest {
     @Test
     fun `empty documents have no units`() {
         assertEquals(0, Spreads.unitCount(0))
+        assertEquals(0, Spreads.unitCount(0, coverAlone = false))
+    }
+
+    @Test
+    fun `without a lone cover pages pair from the first`() {
+        assertEquals(480, Spreads.unitCount(959, coverAlone = false))
+        assertEquals(listOf(0, 1), Spreads.pagesOf(0, 959, coverAlone = false))
+        assertEquals(listOf(958), Spreads.pagesOf(479, 959, coverAlone = false))
+        assertEquals(5, Spreads.unitCount(10, coverAlone = false))
+        assertEquals(listOf(8, 9), Spreads.pagesOf(4, 10, coverAlone = false))
+        for (count in listOf(1, 2, 3, 10, 959)) {
+            for (page in 0 until count) {
+                val unit = Spreads.unitOf(page, coverAlone = false)
+                assertEquals("page $page of $count", true, page in Spreads.pagesOf(unit, count, coverAlone = false))
+            }
+        }
     }
 }

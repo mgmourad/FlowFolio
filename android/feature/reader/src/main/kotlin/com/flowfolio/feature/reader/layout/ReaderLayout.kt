@@ -21,23 +21,28 @@ private const val MIN_SPREAD_WIDTH_DP = 600f
 private const val MIN_SPREAD_ASPECT = 0.8f
 
 /**
- * Print-style spread pairing: the cover (page 0) stands alone on the right, then 1-2, 3-4, ... Unit n shows pages
- * 2n-1 (left) and 2n (right). A page index of -1 means an empty half.
+ * Spread pairing. With [coverAlone] (print style, the default) the cover (page 0) stands alone on the right, then
+ * 1-2, 3-4, ... Without it pages pair from the start: 0-1, 2-3, ... (some PDFs are laid out that way). A unit is one
+ * spread; a page index of -1 means an empty half. Owner setting since milestone 4.
  */
 object Spreads {
-    fun unitCount(pageCount: Int): Int = if (pageCount <= 0) 0 else pageCount / 2 + 1
+    private fun shift(coverAlone: Boolean) = if (coverAlone) 1 else 0
 
-    fun unitOf(page: Int): Int = (page + 1) / 2
+    fun unitCount(pageCount: Int, coverAlone: Boolean = true): Int =
+        if (pageCount <= 0) 0 else (pageCount - 1 + shift(coverAlone)) / 2 + 1
 
-    fun leftOf(unit: Int, pageCount: Int): Int = (2 * unit - 1).takeIf { unit > 0 && it < pageCount } ?: -1
+    fun unitOf(page: Int, coverAlone: Boolean = true): Int = (page + shift(coverAlone)) / 2
 
-    fun rightOf(unit: Int, pageCount: Int): Int = (2 * unit).takeIf { it < pageCount } ?: -1
+    fun leftOf(unit: Int, pageCount: Int, coverAlone: Boolean = true): Int =
+        (2 * unit - shift(coverAlone)).takeIf { it in 0 until pageCount } ?: -1
 
-    fun pagesOf(unit: Int, pageCount: Int): List<Int> {
-        val pages = listOf(leftOf(unit, pageCount), rightOf(unit, pageCount))
-        return pages.filter { it >= 0 }
-    }
+    fun rightOf(unit: Int, pageCount: Int, coverAlone: Boolean = true): Int =
+        (2 * unit - shift(coverAlone) + 1).takeIf { it in 0 until pageCount } ?: -1
+
+    fun pagesOf(unit: Int, pageCount: Int, coverAlone: Boolean = true): List<Int> =
+        listOf(leftOf(unit, pageCount, coverAlone), rightOf(unit, pageCount, coverAlone)).filter { it >= 0 }
 
     /** The page that represents a unit when switching back to single-page layout: its first visible page. */
-    fun anchorOf(unit: Int, pageCount: Int): Int = pagesOf(unit, pageCount).firstOrNull() ?: 0
+    fun anchorOf(unit: Int, pageCount: Int, coverAlone: Boolean = true): Int =
+        pagesOf(unit, pageCount, coverAlone).firstOrNull() ?: 0
 }

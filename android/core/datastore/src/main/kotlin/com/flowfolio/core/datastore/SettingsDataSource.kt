@@ -32,7 +32,9 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             askStorageEachImport = p[ASK_EACH_IMPORT] ?: defaults.askStorageEachImport,
             theme = p[THEME].toEnum(defaults.theme),
             storageNoticeSeen = p[NOTICE_SEEN] ?: defaults.storageNoticeSeen,
-            librarySort = p[SORT].toEnum(defaults.librarySort)
+            librarySort = p[SORT].toEnum(defaults.librarySort),
+            readerSpreads = p[READER_SPREADS] ?: defaults.readerSpreads,
+            spreadCoverAlone = p[COVER_ALONE] ?: defaults.spreadCoverAlone
         )
     }
 
@@ -56,6 +58,14 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         store.edit { it[SORT] = sort.name }
     }
 
+    suspend fun setReaderSpreads(on: Boolean) {
+        store.edit { it[READER_SPREADS] = on }
+    }
+
+    suspend fun setSpreadCoverAlone(on: Boolean) {
+        store.edit { it[COVER_ALONE] = on }
+    }
+
     private inline fun <reified T : Enum<T>> String?.toEnum(default: T): T =
         this?.let { name -> enumValues<T>().firstOrNull { it.name == name } } ?: default
 
@@ -65,6 +75,8 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val THEME = stringPreferencesKey("theme")
         val NOTICE_SEEN = booleanPreferencesKey("storage_notice_seen")
         val SORT = stringPreferencesKey("library_sort")
+        val READER_SPREADS = booleanPreferencesKey("reader_spreads")
+        val COVER_ALONE = booleanPreferencesKey("spread_cover_alone")
     }
 }
 

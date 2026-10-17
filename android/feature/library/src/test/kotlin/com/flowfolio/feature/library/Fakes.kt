@@ -80,4 +80,8 @@ class FakeSettings(initial: UserSettings = UserSettings()) : SettingsRepository 
     override suspend fun setStorageNoticeSeen() = state.update { it.copy(storageNoticeSeen = true) }
 
     override suspend fun setLibrarySort(sort: LibrarySort) = state.update { it.copy(librarySort = sort) }
+
+    override suspend fun setReaderSpreads(on: Boolean) = state.update { it.copy(readerSpreads = on) }
+
+    override suspend fun setSpreadCoverAlone(on: Boolean) = state.update { it.copy(spreadCoverAlone = on) }
 }

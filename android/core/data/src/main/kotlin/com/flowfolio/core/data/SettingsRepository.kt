@@ -20,6 +20,10 @@ interface SettingsRepository {
     suspend fun setStorageNoticeSeen()
 
     suspend fun setLibrarySort(sort: LibrarySort)
+
+    suspend fun setReaderSpreads(on: Boolean)
+
+    suspend fun setSpreadCoverAlone(on: Boolean)
 }
 
 class DefaultSettingsRepository @Inject constructor(private val source: SettingsDataSource) : SettingsRepository {
@@ -43,5 +47,13 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setLibrarySort(sort: LibrarySort) {
         source.setLibrarySort(sort)
+    }
+
+    override suspend fun setReaderSpreads(on: Boolean) {
+        source.setReaderSpreads(on)
+    }
+
+    override suspend fun setSpreadCoverAlone(on: Boolean) {
+        source.setSpreadCoverAlone(on)
     }
 }

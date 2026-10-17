@@ -44,5 +44,9 @@ data class UserSettings(
     val askStorageEachImport: Boolean = false,
     val theme: ThemePreference = ThemePreference.SYSTEM,
     val storageNoticeSeen: Boolean = false,
-    val librarySort: LibrarySort = LibrarySort.RECENT
+    val librarySort: LibrarySort = LibrarySort.RECENT,
+    /** Two pages side by side on wide windows (the unfolded Fold); off means always one page. */
+    val readerSpreads: Boolean = true,
+    /** In a spread, show the cover on its own (print style) rather than pairing from the first page. */
+    val spreadCoverAlone: Boolean = true
 )
