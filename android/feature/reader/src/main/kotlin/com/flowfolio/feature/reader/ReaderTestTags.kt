@@ -4,4 +4,5 @@ package com.flowfolio.feature.reader
 object ReaderTestTags {
     const val PAGE = "reader_page"
     const val INDICATOR = "reader_indicator"
+    const val TITLE = "reader_title"
 }
