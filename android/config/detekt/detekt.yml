@@ -7,6 +7,9 @@ naming:
     constantPattern: '[A-Z][A-Za-z0-9_]*'
 
 complexity:
+  TooManyFunctions:
+    # ViewModels and repositories expose one function per user action or operation; 11 is too tight for that.
+    thresholdInClasses: 16
   LongParameterList:
     # Composables commonly take many optional parameters.
     ignoreAnnotated: ['Composable']
