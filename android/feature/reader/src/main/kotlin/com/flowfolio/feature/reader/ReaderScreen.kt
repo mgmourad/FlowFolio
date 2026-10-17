@@ -104,6 +104,7 @@ private fun SinglePageReader(state: ReaderState.Ready, images: Map<Int, ImageBit
     PageCurl(
         count = state.unitCount,
         state = curl,
+        gradientShadow = true,
         modifier = Modifier.fillMaxSize().testTag(ReaderTestTags.PAGE)
     ) { page ->
         PagePane(images[page], Alignment.Center)
@@ -142,6 +143,7 @@ private fun SpreadReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap>
             PageCurl(
                 count = state.unitCount,
                 state = curl,
+                gradientShadow = true,
                 modifier = Modifier.fillMaxSize(),
                 backPage = { unit -> latestImages[Spreads.leftOf(unit + 1, state.pageCount)] }
             ) { unit ->

@@ -183,10 +183,10 @@ class ReaderViewModel @Inject constructor(
         planJob = viewModelScope.launch {
             val spread = ready.layout == ReaderLayout.SPREAD
             val paneWidth = if (spread) v.widthPx / 2 else v.widthPx
-            val units = listOf(ready.unit, ready.unit + 1, ready.unit - 1, ready.unit + 2).filter {
-                it in
-                    0 until ready.unitCount
-            }
+            // Visible unit, the one a forward turn reveals, the one a backward turn reveals, then one more ahead.
+            // (Dropping the extra one saved no measurable memory on the Fold, ADR-0013.)
+            val order = listOf(ready.unit, ready.unit + 1, ready.unit - 1, ready.unit + 2)
+            val units = order.filter { it in 0 until ready.unitCount }
             val pages = units.flatMap { u -> if (spread) Spreads.pagesOf(u, ready.pageCount) else listOf(u) }
             val keys = pages.mapNotNull { page ->
                 val size = sizes.getOrPut(page) {
