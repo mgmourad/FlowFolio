@@ -220,4 +220,21 @@ JNIEXPORT jstring JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_native
     return utf16(env, buf, bytes);
 }
 
+// Document information entry such as "Title" or "Author"; null when absent or empty.
+JNIEXPORT jstring JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_nativeMetaText(JNIEnv* env, jobject, jlong handle, jstring jtag) {
+    const char* tag = env->GetStringUTFChars(jtag, nullptr);
+    std::vector<unsigned short> buf;
+    unsigned long bytes = 0;
+    {
+        std::lock_guard<std::mutex> guard(g_lock);
+        unsigned long n = FPDF_GetMetaText(asDoc(handle)->doc, tag, nullptr, 0);
+        if (n > 2) {
+            buf.resize(n / 2 + 1);
+            bytes = FPDF_GetMetaText(asDoc(handle)->doc, tag, buf.data(), n);
+        }
+    }
+    env->ReleaseStringUTFChars(jtag, tag);
+    return bytes > 2 ? utf16(env, buf, bytes) : nullptr;
+}
+
 }  // extern "C"

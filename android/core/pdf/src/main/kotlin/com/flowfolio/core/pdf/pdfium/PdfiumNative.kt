@@ -31,4 +31,6 @@ internal object PdfiumNative {
     external fun nativeOutline(handle: Long): Array<String>
 
     external fun nativePageLabel(handle: Long, index: Int): String?
+
+    external fun nativeMetaText(handle: Long, tag: String): String?
 }

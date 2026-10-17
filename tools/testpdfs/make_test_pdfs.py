@@ -66,7 +66,7 @@ class Pdf:
         self.streams[num] = (extra, data)
 
     def build(self, root: int = 1, security: Rc4R2 | None = None, file_id: bytes | None = None,
-              break_xref: bool = False) -> bytes:
+              break_xref: bool = False, info: int | None = None) -> bytes:
         out = bytearray(b"%PDF-1.7\n%\xe2\xe3\xcf\xd3\n")
         offsets: dict[int, int] = {}
         nums = sorted(set(self.objects) | set(self.streams))
@@ -92,6 +92,8 @@ class Pdf:
                 offset += 7  # every entry points into the middle of the previous object
             out += (f"{offset:010d} 00000 n \n" if offset is not None else "0000000000 65535 f \n").encode()
         trailer = f"/Size {size} /Root {root} 0 R"
+        if info:
+            trailer += f" /Info {info} 0 R"
         if file_id:
             trailer += f" /ID [<{file_id.hex()}> <{file_id.hex()}>]"
         if security:
@@ -133,7 +135,8 @@ def generate(out_dir: Path) -> dict[str, int]:
     pdf.obj(4, "<< /Type /Outlines /First 5 0 R /Last 6 0 R /Count 2 >>")
     pdf.obj(5, "<< /Title (Front matter) /Parent 4 0 R /Next 6 0 R /Dest [10 0 R /Fit] >>")
     pdf.obj(6, "<< /Title (Chapter 1) /Parent 4 0 R /Prev 5 0 R /Dest [14 0 R /Fit] >>")
-    files["labels-outline.pdf"] = pdf.build()
+    pdf.obj(7, "<< /Title (FlowFolio Test Book) /Author (The FlowFolio Authors) >>")
+    files["labels-outline.pdf"] = pdf.build(info=7)
 
     files["rotated.pdf"] = document([("R0", letter, 0), ("R90", letter, 90), ("R180", letter, 180),
                                      ("R270", letter, 270)]).build()

@@ -40,6 +40,9 @@ interface PdfDocument : Closeable {
     /** The printed page label (e.g. "xiv", "214"), or null when the PDF defines none for this page. */
     suspend fun pageLabel(index: Int): String?
 
+    /** The document's Title metadata, trimmed; null when absent or blank. */
+    suspend fun title(): String?
+
     /** Closes the document. Further calls throw [PdfException.Closed]. Safe to call more than once. */
     override fun close()
 }

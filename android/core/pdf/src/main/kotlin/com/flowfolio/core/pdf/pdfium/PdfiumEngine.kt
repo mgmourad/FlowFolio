@@ -56,6 +56,10 @@ internal class PdfiumDocument(private val handle: Long, override val pageCount: 
         PdfiumNative.nativePageLabel(handle, index)
     }
 
+    override suspend fun title(): String? = call {
+        PdfiumNative.nativeMetaText(handle, "Title")?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
     override fun close() {
         if (!closed.compareAndSet(false, true)) return
         // Must run on the PDFium thread; close() may be called from anywhere, including that thread.
