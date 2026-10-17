@@ -61,7 +61,10 @@ foreach ($e in $Engines) { Run-Bench $e }
 Adb pull "$remote/results/." $out | Out-Null
 
 if ($Curl) {
-    $size = (Adb shell wm size) -replace '.*: ', '' | Select-Object -Last 1
+    # `wm size` reports the inner screen even when folded; the cover screen is logical display 0.
+    $sizeArgs = if ($startState -eq "CLOSED") { @("-d", "0") } else { @() }
+    $size = (Adb shell wm size @sizeArgs) -replace '.*: ', '' | Select-Object -Last 1
+    Write-Host "Swipe area: $size"
     $w, $h = $size.Trim().Split('x') | ForEach-Object { [int]$_ }
     foreach ($eng in "pdfium", "framework") {
         $spreadFlag = if ($Spread) { "true" } else { "false" }
