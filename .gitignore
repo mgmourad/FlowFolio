@@ -45,3 +45,6 @@ samples/corpus/cache/
 samples/golden/**/output/
 
 samples/models/
+
+# Local measurement output (contains renders/timings from local test books)
+android/tools/results/
