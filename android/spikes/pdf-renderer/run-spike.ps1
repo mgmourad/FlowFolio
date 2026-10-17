@@ -5,7 +5,8 @@ param(
     [switch]$SkipBuild,
     [switch]$Curl,
     [switch]$Spread,
-    [string[]]$Engines = @("pdfium", "framework", "androidx", "quality", "onnx")
+    [string[]]$Engines = @("pdfium", "framework", "androidx", "quality", "onnx"),
+    [string]$Label = "run"
 )
 $ErrorActionPreference = "Stop"
 $adb = Join-Path $env:ANDROID_HOME "platform-tools\adb.exe"
@@ -16,7 +17,7 @@ $pkg = "com.flowfolio.spike.pdf"
 $root = Resolve-Path (Join-Path $PSScriptRoot "..\..\..")
 $book = Join-Path $root "samples\corpus\cache\university-physics-volume-1.pdf"
 $model = (Adb shell getprop ro.product.model).Trim() -replace '[^A-Za-z0-9_-]', '_'
-$out = Join-Path $PSScriptRoot "results\$model"
+$out = Join-Path $PSScriptRoot "results\$model-$Label"
 New-Item -ItemType Directory -Force $out | Out-Null
 
 if (-not $SkipBuild) {
@@ -34,8 +35,18 @@ Adb push $book "$remote/books/university-physics-volume-1.pdf" | Out-Null
 $models = Join-Path $root "samples\models\all-MiniLM-L6-v2"
 Get-ChildItem $models -Filter *.onnx | ForEach-Object { Adb push $_.FullName "$remote/models/$($_.Name)" | Out-Null }
 
+function Fold-State { ((Adb shell dumpsys device_state | Select-String "mCommittedState" | Select-Object -First 1) -replace ".*name='([A-Z_]+)'.*", '$1').Trim() }
+$startState = Fold-State
+Write-Host "Fold state: $startState"
+function Assert-Fold {
+    $now = Fold-State
+    if ($now -ne $startState) { throw "Fold state changed from $startState to $now; results would be mixed. Re-run." }
+}
+
 function Run-Bench([string]$engine) {
+    Assert-Fold
     Write-Host "== $engine"
+    Adb shell input keyevent KEYCODE_WAKEUP
     Adb shell am force-stop $pkg
     Adb logcat -c
     Adb shell am start -W -n "$pkg/.BenchActivity" --es engine $engine | Out-Null
@@ -56,6 +67,7 @@ if ($Curl) {
         $spreadFlag = if ($Spread) { "true" } else { "false" }
         $tag = "curl-$eng" + $(if ($Spread) { "-spread" } else { "" })
         Write-Host "== $tag"
+        Adb shell input keyevent KEYCODE_WAKEUP
         Adb shell am force-stop $pkg
         Adb shell am start -W -n "$pkg/.CurlActivity" --es engine $eng --ez spread $spreadFlag --ei start 100 | Out-Null
         Start-Sleep 4
@@ -65,6 +77,7 @@ if ($Curl) {
             Adb shell input swipe ([int]($w * 0.92)) ([int]($h * 0.5)) ([int]($w * 0.08)) ([int]($h * 0.55)) 350
             Start-Sleep -Milliseconds 250
         }
+        Assert-Fold
         Adb shell dumpsys gfxinfo $pkg | Set-Content (Join-Path $out "$tag-gfxinfo.txt")
         Adb shell dumpsys meminfo $pkg | Set-Content (Join-Path $out "$tag-meminfo.txt")
     }
