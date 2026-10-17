@@ -37,6 +37,9 @@ abstract class DataBindings {
     abstract fun settings(impl: DefaultSettingsRepository): SettingsRepository
 
     @Binds
+    abstract fun reader(impl: DefaultReaderRepository): ReaderRepository
+
+    @Binds
     abstract fun documents(impl: AndroidDocumentSource): DocumentSource
 
     @Binds
