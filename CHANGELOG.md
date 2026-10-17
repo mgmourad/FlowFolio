@@ -12,6 +12,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   images, password prompt, edge-gesture guard, `tools/measure-reader.ps1` (frames + memory on device).
 
 ### Fixed
+- Reader memory budget (ADR-0013): 16-bit GPU-backed page images and gradient fold shading instead of the blurred
+  curl shadow; `tools/measure-reader.ps1` now measures the app floor, samples retained memory and reports PASS/FAIL.
 - Reader memory leaks found on the reference Fold: evicted GPU-backed pages are now recycled promptly, and PDFium's
   per-document caches are bounded by reloading the document every 100 renders (+12 MB/100 pages before).
 - Phase 1 milestone 2: library and import. Modules `:core:database` (Room), `:core:datastore` (settings),
