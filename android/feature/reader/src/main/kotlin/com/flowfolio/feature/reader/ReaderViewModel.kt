@@ -72,6 +72,7 @@ class ReaderViewModel @Inject constructor(
     private var viewport: Viewport? = null
     private var wanted: List<PageKey> = emptyList()
     private var planJob: Job? = null
+    private var progressJob: Job? = null
 
     /** Page index -> image at the current layout's size, for pages that are ready. */
     val pageImages: StateFlow<Map<Int, ImageBitmap>> = combine(cacheImages, currentSizes) { images, current ->
@@ -111,7 +112,10 @@ class ReaderViewModel @Inject constructor(
             cache = PageCache(pageSource, viewModelScope, budgetBytes = 0, onEvicted = ::releaseLater).also { c ->
                 viewModelScope.launch { c.images.collect { cacheImages.value = it } }
             }
-            anchorPage = anchorPage.coerceIn(0, (book.document.pageCount - 1).coerceAtLeast(0))
+            // A recreated reader (rotation, process death) keeps its own position; a fresh open resumes where the
+            // book was left (milestone 4).
+            val start = if (saved.contains(KEY_ANCHOR)) anchorPage else book.book.lastPage ?: 0
+            anchorPage = start.coerceIn(0, (book.document.pageCount - 1).coerceAtLeast(0))
             publishReady()
             replan()
         }
@@ -145,6 +149,14 @@ class ReaderViewModel @Inject constructor(
         }
         publishReady(unit)
         replan()
+        saveProgress()
+    }
+
+    private fun saveProgress() {
+        val page = anchorPage
+        // One small UPDATE per turn; conflated so a fast run of turns writes only the latest page.
+        progressJob?.cancel()
+        progressJob = viewModelScope.launch { repository.saveProgress(bookId, page) }
     }
 
     /** Android asked apps to free memory: keep only what is on screen. */

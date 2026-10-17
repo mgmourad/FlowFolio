@@ -189,5 +189,6 @@ internal fun BookEntity.toBook() = Book(
     addedAtMillis = addedAt,
     lastOpenedAtMillis = lastOpenedAt,
     coverPath = coverPath,
-    passwordProtected = passwordProtected
+    passwordProtected = passwordProtected,
+    lastPage = lastPage
 )
