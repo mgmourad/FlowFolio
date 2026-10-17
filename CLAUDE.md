@@ -4,7 +4,7 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 1: PDF reader with page curl. Build in progress: milestones 1-2 done, milestone 3 next** (started 2026-10-16).
+**Phase 1: PDF reader with page curl. Build in progress: milestones 1-2 done, milestone 3 at its memory check-in** (started 2026-10-16).
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
 Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
 Build plan approved 2026-10-16: 5 milestones; check in with the product owner at milestone 3 with memory numbers.
@@ -31,7 +31,8 @@ Conventional Commits; keep `CHANGELOG.md`; no secrets in the repo; propose a spi
 ## Architecture summary
 
 - Android modules (ADR-0012): `:app`, `:core:model` (JVM), `:core:pdf` (PDFium JNI, NDK), `:core:database` (Room),
-  `:core:datastore`, `:core:data` (repositories, import), `:core:designsystem`, `:feature:library` (library + settings).
+  `:core:datastore`, `:core:data` (repositories, import, reader access), `:core:designsystem`, `:core:pagecurl`
+  (vendored), `:feature:library` (library + settings), `:feature:reader` (curl, spreads, page cache).
 - Monorepo: `android/` app (including, from Phase 3, the on-device conversion engine). The Python
   `converter/` is no longer the product path (ADR-0009); its fate is decided in the Phase 3 plan.
   Output contract: `docs/conversion-spec.md`.
@@ -116,6 +117,11 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 11. DataStore unit tests write once per store: DataStore's atomic rename fails on Windows when the file exists.
 12. Linked ("read in place") books only work for files picked with the system picker; shared files are always copied.
 13. Settings screen lives in `:feature:library` for now; split into `:feature:settings` when it grows (reader settings).
+14. Reader memory on the Fold (300 turns): folded 232 MB (passes), unfolded spread 331 MB and single 391 MB (target
+    250 MB not met; app floor with no book is 181 MB on the inner screen, mostly display buffers). Decision pending.
+15. Measuring on the Fold: logical display 0 is always the active panel; the phone must stay unlocked during runs
+    (`tools/measure-reader.ps1` aborts if the lock screen shows). Debug-only intent extras `importPath`,
+    `openBookId`, `layout` drive the app from adb.
 
 ## Decision log
 

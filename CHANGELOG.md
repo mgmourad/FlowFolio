@@ -6,6 +6,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- Phase 1 milestone 3 (reader, in progress): `:core:pagecurl` (vendored pagecurl with book-spread back pages),
+  `:feature:reader` with page curl in single-page and two-page spread layouts (cover alone, print pairing),
+  layout chosen from the window (fold/unfold/rotation keep the position), byte-budgeted page cache of GPU-backed
+  images, password prompt, edge-gesture guard, `tools/measure-reader.ps1` (frames + memory on device).
+
+### Fixed
+- Reader memory leaks found on the reference Fold: evicted GPU-backed pages are now recycled promptly, and PDFium's
+  per-document caches are bounded by reloading the document every 100 renders (+12 MB/100 pages before).
 - Phase 1 milestone 2: library and import. Modules `:core:database` (Room), `:core:datastore` (settings),
   `:core:data` (repositories), `:core:designsystem`, `:feature:library`. Import from the file picker and
   "Open with"/share; storage setting with the approved disclaimers (copy by default, or read in place); SHA-256 book
