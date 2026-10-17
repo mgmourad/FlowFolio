@@ -28,6 +28,18 @@ gradlePlugin {
             id = "flowfolio.android.compose"
             implementationClass = "AndroidComposeConventionPlugin"
         }
+        register("androidLibrary") {
+            id = "flowfolio.android.library"
+            implementationClass = "AndroidLibraryConventionPlugin"
+        }
+        register("jvmLibrary") {
+            id = "flowfolio.jvm.library"
+            implementationClass = "JvmLibraryConventionPlugin"
+        }
+        register("pdfium") {
+            id = "flowfolio.pdfium"
+            implementationClass = "PdfiumConventionPlugin"
+        }
         register("hilt") {
             id = "flowfolio.hilt"
             implementationClass = "HiltConventionPlugin"
