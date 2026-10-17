@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -23,6 +22,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioAlertDialog
+import com.flowfolio.core.designsystem.flowFolioRadioColors
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.StorageMode
 
@@ -40,7 +42,7 @@ internal fun LibraryDialogs(dialog: LibraryDialog?, viewModel: LibraryViewModel)
             onDismiss = viewModel::dismissDialog
         )
 
-        is LibraryDialog.LinkNotPossible -> AlertDialog(
+        is LibraryDialog.LinkNotPossible -> FlowFolioAlertDialog(
             onDismissRequest = viewModel::dismissDialog,
             title = { Text(stringResource(R.string.link_not_possible_title)) },
             text = { Text(stringResource(R.string.link_not_possible_body)) },
@@ -48,7 +50,7 @@ internal fun LibraryDialogs(dialog: LibraryDialog?, viewModel: LibraryViewModel)
             dismissButton = { DialogButton(R.string.action_cancel, viewModel::dismissDialog) }
         )
 
-        is LibraryDialog.ConfirmDelete -> AlertDialog(
+        is LibraryDialog.ConfirmDelete -> FlowFolioAlertDialog(
             onDismissRequest = viewModel::dismissDialog,
             title = { Text(stringResource(R.string.delete_title, dialog.book.title)) },
             text = {
@@ -79,7 +81,7 @@ fun StorageChoiceDialog(
     onDismiss: () -> Unit
 ) {
     var choice by rememberSaveable { mutableStateOf(initial) }
-    AlertDialog(
+    FlowFolioAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
@@ -88,7 +90,7 @@ fun StorageChoiceDialog(
                 if (showChangeLater) {
                     Text(
                         stringResource(R.string.storage_change_later),
-                        style = MaterialTheme.typography.bodySmall,
+                        style = MaterialTheme.typography.bodySmall.merge(FlowFolio.hint),
                         modifier = Modifier.padding(top = 12.dp)
                     )
                 }
@@ -121,7 +123,7 @@ fun StorageOptions(selected: StorageMode, onChoose: (StorageMode) -> Unit, sizeB
         )
         Text(
             stringResource(R.string.storage_shared_note),
-            style = MaterialTheme.typography.bodySmall,
+            style = MaterialTheme.typography.bodySmall.merge(FlowFolio.subItem),
             modifier = Modifier.padding(top = 8.dp)
         )
     }
@@ -133,10 +135,10 @@ private fun StorageOption(selected: Boolean, label: String, disclaimer: String, 
         Modifier.selectable(selected = selected, role = Role.RadioButton, onClick = onClick).padding(vertical = 6.dp),
         verticalAlignment = Alignment.Top
     ) {
-        RadioButton(selected = selected, onClick = null)
+        RadioButton(selected = selected, onClick = null, colors = flowFolioRadioColors())
         Column(Modifier.padding(start = 8.dp)) {
-            Text(label, style = MaterialTheme.typography.titleSmall)
-            Text(disclaimer, style = MaterialTheme.typography.bodySmall)
+            Text(label, style = MaterialTheme.typography.titleSmall.merge(FlowFolio.item))
+            Text(disclaimer, style = MaterialTheme.typography.bodySmall.merge(FlowFolio.hint))
         }
     }
 }

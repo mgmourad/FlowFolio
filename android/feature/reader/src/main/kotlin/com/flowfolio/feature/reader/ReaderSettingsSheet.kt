@@ -8,7 +8,6 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -21,6 +20,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioToggle
 
 /** Reader settings ("Aa"): two pages side by side on wide screens, and how a spread pairs its pages. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -30,11 +31,12 @@ internal fun ReaderSettingsSheet(onDismiss: () -> Unit, viewModel: ReaderSetting
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = FlowFolio.palette.background,
         modifier = Modifier.testTag(ReaderTestTags.SETTINGS_SHEET)
     ) {
         Text(
             stringResource(R.string.reader_settings),
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleLarge.merge(FlowFolio.title),
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
         )
         SettingRow(
@@ -75,13 +77,9 @@ private fun SettingRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f).padding(end = 16.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                detail,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Text(title, style = MaterialTheme.typography.bodyLarge.merge(FlowFolio.item))
+            Text(detail, style = MaterialTheme.typography.bodyMedium.merge(FlowFolio.hint))
         }
-        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
+        FlowFolioToggle(checked = checked, onCheckedChange = null, enabled = enabled)
     }
 }

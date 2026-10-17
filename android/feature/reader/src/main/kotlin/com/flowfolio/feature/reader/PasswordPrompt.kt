@@ -1,7 +1,6 @@
 package com.flowfolio.feature.reader
 
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -13,12 +12,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import com.flowfolio.core.designsystem.FlowFolioAlertDialog
 
 /** Asks for a PDF's password. The password is passed to PDFium only; it is never stored. */
 @Composable
 internal fun PasswordPrompt(wrongPassword: Boolean, onSubmit: (String) -> Unit, onCancel: () -> Unit) {
     var password by rememberSaveable { mutableStateOf("") }
-    AlertDialog(
+    FlowFolioAlertDialog(
         onDismissRequest = onCancel,
         title = { Text(stringResource(R.string.reader_password_title)) },
         text = {

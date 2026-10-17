@@ -9,13 +9,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -28,6 +28,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioGlyph
+import com.flowfolio.core.designsystem.FlowFolioToggle
+import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.flowFolioRadioColors
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
@@ -56,8 +61,13 @@ fun SettingsContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.settings_title)) },
-                navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.action_back)) } }
+                title = { Text(stringResource(R.string.settings_title), style = FlowFolio.title) },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        FlowFolioGlyph(Glyph.Back, contentDescription = stringResource(R.string.action_back))
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = FlowFolio.palette.background)
             )
         }
     ) { padding ->
@@ -66,17 +76,17 @@ fun SettingsContent(
         ) {
             Text(
                 stringResource(R.string.settings_import_section),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.merge(FlowFolio.title),
                 modifier = Modifier.padding(vertical = 8.dp)
             )
             StorageOptions(settings.storageMode, onStorageMode)
             Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.settings_ask_each), modifier = Modifier.weight(1f))
-                Switch(checked = settings.askStorageEachImport, onCheckedChange = onAskEachImport)
+                Text(stringResource(R.string.settings_ask_each), style = FlowFolio.item, modifier = Modifier.weight(1f))
+                FlowFolioToggle(checked = settings.askStorageEachImport, onCheckedChange = onAskEachImport)
             }
             Text(
                 stringResource(R.string.settings_theme_section),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.merge(FlowFolio.title),
                 modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
             )
             listOf(
@@ -90,8 +100,8 @@ fun SettingsContent(
                     }.padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    RadioButton(selected = settings.theme == theme, onClick = null)
-                    Text(stringResource(label), modifier = Modifier.padding(start = 8.dp))
+                    RadioButton(selected = settings.theme == theme, onClick = null, colors = flowFolioRadioColors())
+                    Text(stringResource(label), style = FlowFolio.item, modifier = Modifier.padding(start = 8.dp))
                 }
             }
         }
