@@ -26,6 +26,9 @@ class PdfiumEngine : PdfEngine {
 internal class PdfiumDocument(private val handle: Long, override val pageCount: Int) : PdfDocument {
     private val closed = AtomicBoolean(false)
 
+    /** Renders since the last reload; only touched on the PDFium thread. */
+    private var rendersSinceReload = 0
+
     override suspend fun pageSize(index: Int): PageSize = call {
         checkIndex(index)
         val size = PdfiumNative.nativePageSize(handle, index) ?: throw PdfException.PageError(index)
@@ -38,11 +41,16 @@ internal class PdfiumDocument(private val handle: Long, override val pageCount: 
         }
         call {
             checkIndex(index)
-            if (!with(region) {
-                    PdfiumNative.nativeRender(handle, index, target, pageWidthPx, pageHeightPx, offsetX, offsetY)
-                }
+            val ok = with(region) {
+                PdfiumNative.nativeRender(handle, index, target, pageWidthPx, pageHeightPx, offsetX, offsetY)
+            }
+            if (!ok) throw PdfException.PageError(index)
+            // Bound PDFium's per-document caches (+12 MB per 100 pages otherwise; see nativeReload). If a reload
+            // fails, keep going on the current document and try again later.
+            if (++rendersSinceReload >= RELOAD_EVERY_RENDERS &&
+                PdfiumNative.nativeReload(handle)
             ) {
-                throw PdfException.PageError(index)
+                rendersSinceReload = 0
             }
         }
     }
@@ -77,5 +85,9 @@ internal class PdfiumDocument(private val handle: Long, override val pageCount: 
     private suspend fun <T> call(block: () -> T): T = withContext(PdfiumThread.dispatcher) {
         if (closed.get()) throw PdfException.Closed()
         block()
+    }
+
+    private companion object {
+        const val RELOAD_EVERY_RENDERS = 100
     }
 }

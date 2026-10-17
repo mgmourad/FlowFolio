@@ -163,6 +163,17 @@ class PdfiumEngineTest {
     }
 
     @Test
+    fun documentStaysUsableAcrossCacheReloadsIncludingEncrypted() = runBlocking {
+        // 250 renders cross the 100-render reload threshold twice; the reload must reuse the password.
+        open("encrypted-rc4.pdf", "flowfolio").use { doc ->
+            val bmp = Bitmap.createBitmap(612, 792, Bitmap.Config.ARGB_8888)
+            repeat(250) { doc.render(it % 2, bmp) }
+            assertTrue("still drawing decrypted content after reloads", bmp.isDark(96, 744))
+            assertEquals(2, doc.pageCount)
+        }
+    }
+
+    @Test
     fun brokenCrossReferenceTableIsRepaired() = runBlocking {
         open("broken-xref.pdf").use { doc ->
             assertEquals(1, doc.pageCount)
