@@ -28,11 +28,13 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
@@ -43,6 +45,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.pagecurl.config.PageCurlConfig
+import com.flowfolio.core.pagecurl.config.rememberPageCurlConfig
 import com.flowfolio.core.pagecurl.page.PageCurl
 import com.flowfolio.core.pagecurl.page.PageCurlState
 import com.flowfolio.core.pagecurl.page.rememberPageCurlState
@@ -99,26 +103,29 @@ fun ReaderScreen(onBack: () -> Unit, viewModel: ReaderViewModel = hiltViewModel(
 
 @Composable
 private fun SinglePageReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap>, onUnitShown: (Int) -> Unit) {
-    val curl = rememberPageCurlState(initialCurrent = state.unit)
+    val curl = rememberReaderCurlState(state.unit)
     ReportUnit(curl, onUnitShown)
     PageCurl(
         count = state.unitCount,
         state = curl,
         gradientShadow = true,
+        config = swipeAnywhereConfig(),
         modifier = Modifier.fillMaxSize().testTag(ReaderTestTags.PAGE)
     ) { page ->
-        PagePane(images[page], Alignment.Center)
+        // Single page: bound on the left like a book, with a lighter gutter than an open spread.
+        PagePane(images[page], Alignment.Center, Spine.LEFT, SINGLE_PAGE_GUTTER_STRENGTH)
     }
 }
 
 /**
  * Book spread: the left page is static, the right half is the curl. Each curl "page" is a spread; the back of the
- * turning sheet shows the next spread's left page (vendored pagecurl change, ADR-0011). Turning back starts on the
- * left page (tap or drag right).
+ * turning sheet shows the next spread's left page (vendored pagecurl change, ADR-0011). Swipes work on either page:
+ * on the right page the sheet follows the finger; on the left page a swipe right turns back and a swipe left turns
+ * forward (animated), and a tap on the left page turns back.
  */
 @Composable
 private fun SpreadReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap>, onUnitShown: (Int) -> Unit) {
-    val curl = rememberPageCurlState(initialCurrent = state.unit)
+    val curl = rememberReaderCurlState(state.unit)
     val scope = rememberCoroutineScope()
     val latestImages by rememberUpdatedState(images)
     ReportUnit(curl, onUnitShown)
@@ -133,24 +140,58 @@ private fun SpreadReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap>
                     detectHorizontalDragGestures(
                         onDragStart = { dragged = 0f },
                         onHorizontalDrag = { _, delta -> dragged += delta },
-                        onDragEnd = { if (dragged > BACK_DRAG_PX) scope.launch { curl.prev() } }
+                        // iOS Books behaviour: direction decides, even a short swipe. Right = back, left = forward.
+                        onDragEnd = {
+                            when {
+                                dragged > SWIPE_THRESHOLD_PX -> scope.launch { curl.prev() }
+                                dragged < -SWIPE_THRESHOLD_PX -> scope.launch { curl.next() }
+                            }
+                        }
                     )
                 }
         ) {
-            PagePane(images[Spreads.leftOf(state.unit, state.pageCount)], Alignment.CenterEnd)
+            PagePane(images[Spreads.leftOf(state.unit, state.pageCount)], Alignment.CenterEnd, Spine.RIGHT)
         }
         Box(Modifier.weight(1f).fillMaxHeight()) {
             PageCurl(
                 count = state.unitCount,
                 state = curl,
                 gradientShadow = true,
+                config = swipeAnywhereConfig(rightPageOfSpread = true),
                 modifier = Modifier.fillMaxSize(),
                 backPage = { unit -> latestImages[Spreads.leftOf(unit + 1, state.pageCount)] }
             ) { unit ->
-                PagePane(images[Spreads.rightOf(unit, state.pageCount)], Alignment.CenterStart)
+                PagePane(images[Spreads.rightOf(unit, state.pageCount)], Alignment.CenterStart, Spine.LEFT)
             }
         }
     }
+}
+
+/**
+ * Swipe anywhere on the page (iOS Books): dragging left turns forward, dragging right turns back, the page follows the
+ * finger, and releasing even slightly past the start completes the turn. A single page taps back on its left half and
+ * forward on its right half; the right page of a spread taps forward anywhere (its left page taps back).
+ */
+@Composable
+private fun swipeAnywhereConfig(rightPageOfSpread: Boolean = false) = rememberPageCurlConfig(
+    dragInteraction = PageCurlConfig.GestureDragInteraction(),
+    tapBackwardEnabled = !rightPageOfSpread,
+    tapInteraction = if (rightPageOfSpread) {
+        PageCurlConfig.TargetTapInteraction(forward = PageCurlConfig.TargetTapInteraction.Config(Rect(0f, 0f, 1f, 1f)))
+    } else {
+        PageCurlConfig.TargetTapInteraction()
+    }
+)
+
+/**
+ * The curl state for this layout, created once from the unit the reader opened at. pagecurl keys its state on
+ * initialCurrent, so passing the live unit would replace the state on every turn and strand its tap handler on a
+ * stale copy (taps after the first stopped turning). The layout key above recreates it on fold/unfold.
+ */
+@Composable
+private fun rememberReaderCurlState(unit: Int): PageCurlState {
+    val openedAt = remember { unit }
+    return rememberPageCurlState(initialCurrent = openedAt)
 }
 
 @Composable
@@ -161,8 +202,8 @@ private fun ReportUnit(curl: PageCurlState, onUnitShown: (Int) -> Unit) {
 
 /** One page image at its exact rendered size (no scaling), on paper. Missing images show blank paper. */
 @Composable
-private fun PagePane(image: ImageBitmap?, alignment: Alignment) {
-    Box(Modifier.fillMaxSize().background(PAPER), contentAlignment = alignment) {
+private fun PagePane(image: ImageBitmap?, alignment: Alignment, spine: Spine, shadingStrength: Float = 1f) {
+    Box(Modifier.fillMaxSize().background(PAPER).pageShading(spine, shadingStrength), contentAlignment = alignment) {
         if (image != null) Image(image, contentDescription = null, contentScale = ContentScale.None)
     }
 }
@@ -229,6 +270,7 @@ private fun TrimMemoryEffect(onTrim: () -> Unit) {
 
 private val PAPER = Color.White
 private const val INDICATOR_ALPHA = 0.85f
-private const val BACK_DRAG_PX = 48f
+private const val SWIPE_THRESHOLD_PX = 24f
+private const val SINGLE_PAGE_GUTTER_STRENGTH = 0.6f
 private val EDGE_GUARD_WIDTH = 32.dp
 private val EDGE_GUARD_HEIGHT = 200.dp

@@ -15,6 +15,7 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.toRect
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Paint
 import androidx.compose.ui.graphics.Path
@@ -193,6 +194,17 @@ private fun CacheDrawScope.prepareCurl(
                             backPage,
                             topLeft = Offset(size.width - backPage.width, (size.height - backPage.height) / 2f),
                         )
+                        // The left page's own gutter shadow at its binding edge, so nothing pops in when it lands.
+                        val gutter = size.width * BACK_GUTTER_FRACTION
+                        drawRect(
+                            Brush.horizontalGradient(
+                                colorStops = *softStops(config.shadowColor, BACK_GUTTER_ALPHA),
+                                startX = size.width,
+                                endX = size.width - gutter,
+                            ),
+                            topLeft = Offset(size.width - gutter, 0f),
+                            size = androidx.compose.ui.geometry.Size(gutter, size.height),
+                        )
                     }
                 } else {
                     this@result.drawContent()
@@ -227,15 +239,33 @@ private fun CacheDrawScope.prepareFoldShading(
     val color = config.shadowColor
     val alpha = (config.shadowAlpha * CAST_ALPHA_FACTOR).coerceAtMost(MAX_ALPHA)
 
+    // Shadow the lifted sheet casts on the page beneath: dispersed, soft falloff away from the fold.
     val cast = band(top, bottom, normal * castWidth)
-    val castBrush = Brush.linearGradient(listOf(color.copy(alpha = alpha), color.copy(alpha = 0f)), middle, middle + normal * castWidth)
+    val castBrush = Brush.linearGradient(*softStops(color, alpha), start = middle, end = middle + normal * castWidth)
+    // The folded sheet as a curved surface: darker right at the fold, then a soft highlight where it faces the light.
     val curve = band(top, bottom, -normal * curveWidth)
-    val curveBrush = Brush.linearGradient(listOf(color.copy(alpha = alpha * CURVE_ALPHA_FACTOR), color.copy(alpha = 0f)), middle, middle - normal * curveWidth)
+    val curveBrush = Brush.linearGradient(
+        colorStops = *arrayOf(
+            0f to color.copy(alpha = alpha * CURVE_ALPHA_FACTOR),
+            0.35f to color.copy(alpha = alpha * CURVE_ALPHA_FACTOR * 0.35f),
+            0.6f to Color.White.copy(alpha = HIGHLIGHT_ALPHA),
+            1f to Color.White.copy(alpha = 0f),
+        ),
+        start = middle,
+        end = middle - normal * curveWidth,
+    )
     return {
         drawPath(cast, castBrush)
         drawPath(curve, curveBrush)
     }
 }
+
+/** Colour stops approximating a Gaussian falloff (reads like a soft blur, without an offscreen blur layer). */
+private fun softStops(color: Color, alpha: Float): Array<Pair<Float, Color>> =
+    Array(SOFT_STOPS) { i ->
+        val t = i / (SOFT_STOPS - 1f)
+        t to color.copy(alpha = alpha * kotlin.math.exp(-SOFT_FALLOFF * t * t) * (1f - t))
+    }
 
 private fun band(top: Offset, bottom: Offset, extent: Offset): Path = Path().apply {
     moveTo(top.x, top.y)
@@ -245,11 +275,16 @@ private fun band(top: Offset, bottom: Offset, extent: Offset): Path = Path().app
     close()
 }
 
-private const val CAST_WIDTH_FACTOR = 2.5f
-private const val CURVE_WIDTH_FACTOR = 1.2f
-private const val CAST_ALPHA_FACTOR = 1.75f
-private const val CURVE_ALPHA_FACTOR = 0.5f
-private const val MAX_ALPHA = 0.5f
+private const val CAST_WIDTH_FACTOR = 3.5f
+private const val CURVE_WIDTH_FACTOR = 2.2f
+private const val CAST_ALPHA_FACTOR = 2.0f
+private const val CURVE_ALPHA_FACTOR = 0.6f
+private const val MAX_ALPHA = 0.55f
+private const val HIGHLIGHT_ALPHA = 0.12f
+private const val SOFT_STOPS = 8
+private const val SOFT_FALLOFF = 4.5f
+private const val BACK_GUTTER_FRACTION = 0.085f
+private const val BACK_GUTTER_ALPHA = 0.30f
 
 private fun CacheDrawScope.prepareShadow(
     config: PageCurlConfig,

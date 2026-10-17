@@ -11,7 +11,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   layout chosen from the window (fold/unfold/rotation keep the position), byte-budgeted page cache of GPU-backed
   images, password prompt, edge-gesture guard, `tools/measure-reader.ps1` (frames + memory on device).
 
+- Launcher icon from the owner's artwork (adaptive icon: gradient background plus the artwork, built by
+  `tools/icon/make_launcher_icons.ps1`; `tools/icon/preview_launcher_icon.ps1` previews it under launcher masks).
+- Skeuomorphic page shading (iOS Books style): a soft gutter shadow and crease at the binding with a faint highlight
+  where the paper bulges, outer-edge shading lit from the upper left, in spreads and single pages; softer cast shadow
+  and back-page gutter on the turning sheet. Gradients only, so no offscreen layers (ADR-0013).
+- Direction-based page turns on either page (iOS Books): swipe left = forward, swipe right = back, even short swipes;
+  tap the right page of a spread to go forward, the left page to go back.
+
 ### Fixed
+- Taps on the page curl stopped turning pages after the first turn (the curl state was recreated on every turn).
 - Reader memory budget (ADR-0013): 16-bit GPU-backed page images and gradient fold shading instead of the blurred
   curl shadow; `tools/measure-reader.ps1` now measures the app floor, samples retained memory and reports PASS/FAIL.
 - Reader memory leaks found on the reference Fold: evicted GPU-backed pages are now recycled promptly, and PDFium's

@@ -9,7 +9,7 @@ Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
 Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
 Build plan approved 2026-10-16: 5 milestones; check in with the product owner at milestone 3 with memory numbers.
 Memory design: render at displayed size, 16-bit HARDWARE page images, one byte budget, prompt release of evicted pages,
-PDFium reloaded every 100 renders, gradient curl shading. Target (ADR-0013): reader <= floor + 110 MB, growth <= 10%.
+PDFium reloaded every 100 renders, gradient curl shading, gradient-only page shading (`PageShading.kt`); create the curl state once per layout (pagecurl keys it on initialCurrent). Target (ADR-0013): reader <= floor + 110 MB, growth <= 10%.
 
 ## Product direction (owner decisions, 2026-10-16)
 
@@ -118,7 +118,7 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 12. Linked ("read in place") books only work for files picked with the system picker; shared files are always copied.
 13. Settings screen lives in `:feature:library` for now; split into `:feature:settings` when it grows (reader settings).
 14. Reader memory target (ADR-0013): at most 110 MB over the app's floor on the same screen and fold state, and at most
-    10% growth from turn 50 to the last turn, on retained memory. Unfolded (300 turns): single +101 MB, spread +78 MB.
+    10% growth from turn 50 to the last turn, on retained memory. Unfolded (300 turns, with page shading, 2026-10-17): single +104.5 MB, spread +83.9 MB.
 15. Measuring on the Fold: logical display 0 is always the active panel; the phone must stay unlocked during runs
     (`tools/measure-reader.ps1` aborts if the lock screen shows). Debug-only intent extras `importPath`,
     `openBookId`, `layout` drive the app from adb.
