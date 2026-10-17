@@ -16,6 +16,7 @@ import dagger.hilt.android.AndroidEntryPoint
 private const val EXTRA_OPEN_BOOK = "openBookId"
 private const val EXTRA_LAYOUT = "layout"
 private const val EXTRA_IMPORT_PATH = "importPath"
+private const val EXTRA_GC_NOW = "gcNow"
 
 /** The app's only Activity. Screens are Compose destinations (see [FlowFolioApp]). */
 @AndroidEntryPoint
@@ -49,9 +50,19 @@ class MainActivity : ComponentActivity() {
         val debuggable = applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
         val bookId = intent.getStringExtra(EXTRA_OPEN_BOOK)
         if (debuggable && bookId != null) appViewModel.onDirectOpen(bookId, intent.getStringExtra(EXTRA_LAYOUT))
+        // Debug builds: `--ez gcNow true` collects garbage so tools/measure-reader.ps1 samples retained memory only.
+        if (debuggable && intent.getBooleanExtra(EXTRA_GC_NOW, false)) collectGarbageForMeasurement()
         // Debug builds: `--es importPath /data/local/tmp/...` imports a test book as a copy (measurement scripts).
         intent.getStringExtra(EXTRA_IMPORT_PATH)?.takeIf {
             debuggable
         }?.let { appViewModel.onSharedFile(Uri.fromFile(java.io.File(it)).toString()) }
+    }
+
+    /** Debug builds only: lets the memory script sample retained memory (ADR-0013). Never called in release use. */
+    @Suppress("ExplicitGarbageCollectionCall")
+    private fun collectGarbageForMeasurement() {
+        Runtime.getRuntime().gc()
+        Runtime.getRuntime().runFinalization()
+        Runtime.getRuntime().gc()
     }
 }

@@ -9,8 +9,9 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * Renders into one reusable CPU bitmap, then keeps only a GPU-backed (HARDWARE) copy: measured on the reference Fold,
- * six inner-screen pages cost +84 MB this way versus +127 MB as plain bitmaps, before any GPU upload (milestone 1).
+ * Renders into one reusable CPU bitmap, then keeps only a 16-bit GPU-backed (HARDWARE) copy. Measured on the reference
+ * Fold: HARDWARE copies cost +84 MB vs +127 MB as plain bitmaps for six inner-screen pages (milestone 1), and 16-bit
+ * pages cut the reader's total by a further 37-70 MB (ADR-0013).
  */
 class PdfPageSource(private val document: PdfDocument) : PageSource {
     private val lock = Mutex()
@@ -24,7 +25,12 @@ class PdfPageSource(private val document: PdfDocument) : PageSource {
         } catch (_: PdfException) {
             return@withLock null // damaged page: the reader shows a blank page instead of crashing
         }
-        (bitmap.copy(Bitmap.Config.HARDWARE, false) ?: bitmap.copy(Bitmap.Config.ARGB_8888, false))?.asImageBitmap()
+        // 16-bit pages (ADR-0013): half the memory; text and line art are visually identical to 32-bit.
+        val source = bitmap.copy(Bitmap.Config.RGB_565, false) ?: bitmap
+        val image =
+            source.copy(Bitmap.Config.HARDWARE, false) ?: source.copy(source.config ?: Bitmap.Config.ARGB_8888, false)
+        if (source !== bitmap) source.recycle()
+        image?.asImageBitmap()
     }
 
     /** Releases the scratch bitmap; the document is owned and closed by the caller. */
