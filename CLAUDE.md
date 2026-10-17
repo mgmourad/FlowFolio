@@ -4,9 +4,10 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 1: PDF reader with page curl. In progress: renderer + page-curl spike** (started 2026-10-16).
+**Phase 1: PDF reader with page curl. Spike complete; build plan pending approval** (started 2026-10-16).
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
-Spike stop point: report + ADR-0010 (renderer) / page-curl ADR go to the product owner before building.
+Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
+Next: Phase 1 build plan awaiting approval. Main risk: memory budget (spike used 415-951 MB vs 250 MB target).
 
 ## Product direction (owner decisions, 2026-10-16)
 
@@ -103,5 +104,6 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 
 ## Decision log
 
-ADRs 0001–0009 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
-structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004).
+ADRs 0001–0011 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
+PDFium via own JNI bridge, vendored pagecurl.
