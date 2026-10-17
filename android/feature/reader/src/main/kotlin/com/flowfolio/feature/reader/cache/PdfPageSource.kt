@@ -5,23 +5,36 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfException
+import com.flowfolio.core.pdf.RenderRegion
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
  * Renders into one reusable CPU bitmap, then keeps only a 16-bit GPU-backed (HARDWARE) copy. Measured on the reference
  * Fold: HARDWARE copies cost +84 MB vs +127 MB as plain bitmaps for six inner-screen pages (milestone 1), and 16-bit
- * pages cut the reader's total by a further 37-70 MB (ADR-0013).
+ * pages cut the reader's total by a further 37-70 MB (ADR-0013). Zoom tiles go through the same path.
  */
-class PdfPageSource(private val document: PdfDocument) : PageSource {
+class PdfPageSource(private val document: PdfDocument) :
+    PageSource,
+    TileSource {
     private val lock = Mutex()
     private var scratch: Bitmap? = null
 
-    override suspend fun render(key: PageKey): ImageBitmap? = lock.withLock {
-        val (w, h) = key.size
+    override suspend fun render(key: PageKey): ImageBitmap? =
+        renderRegion(key.page, key.size.width, key.size.height, RenderRegion.fullPage(key.size.width, key.size.height))
+
+    override suspend fun render(key: TileKey): ImageBitmap? = renderRegion(
+        key.page,
+        key.widthPx,
+        key.heightPx,
+        RenderRegion(key.pageWidthPx, key.pageHeightPx, key.tx * TileKey.TILE_PX, key.ty * TileKey.TILE_PX)
+    )
+
+    private suspend fun renderRegion(page: Int, w: Int, h: Int, region: RenderRegion): ImageBitmap? = lock.withLock {
+        if (w <= 0 || h <= 0) return@withLock null
         val bitmap = scratchFor(w, h)
         try {
-            document.render(key.page, bitmap)
+            document.render(page, bitmap, region)
         } catch (_: PdfException) {
             return@withLock null // damaged page: the reader shows a blank page instead of crashing
         }

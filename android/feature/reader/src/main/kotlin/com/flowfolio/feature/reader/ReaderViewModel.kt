@@ -13,6 +13,8 @@ import com.flowfolio.core.pdf.PdfLink
 import com.flowfolio.feature.reader.cache.PageCache
 import com.flowfolio.feature.reader.cache.PageKey
 import com.flowfolio.feature.reader.cache.PdfPageSource
+import com.flowfolio.feature.reader.cache.TileCache
+import com.flowfolio.feature.reader.cache.TileKey
 import com.flowfolio.feature.reader.layout.ReaderLayout
 import com.flowfolio.feature.reader.layout.Spreads
 import com.flowfolio.feature.reader.layout.chooseLayout
@@ -77,6 +79,11 @@ class ReaderViewModel @Inject constructor(
     private var opened: OpenedBook? = null
     private var source: PdfPageSource? = null
     private var cache: PageCache? = null
+    private var tileCache: TileCache? = null
+    private val _tiles = MutableStateFlow<Map<TileKey, ImageBitmap>>(emptyMap())
+
+    /** Zoom tiles that are ready (empty unless the reader is zoomed in). */
+    val tiles: StateFlow<Map<TileKey, ImageBitmap>> = _tiles.asStateFlow()
     private val sizes = HashMap<Int, com.flowfolio.core.model.PageSize>()
     private val currentSizes = MutableStateFlow<Map<Int, PixelSize>>(emptyMap())
     private val cacheImages = MutableStateFlow<Map<PageKey, ImageBitmap>>(emptyMap())
@@ -122,6 +129,9 @@ class ReaderViewModel @Inject constructor(
             source = pageSource
             cache = PageCache(pageSource, viewModelScope, budgetBytes = 0, onEvicted = ::releaseLater).also { c ->
                 viewModelScope.launch { c.images.collect { cacheImages.value = it } }
+            }
+            tileCache = TileCache(pageSource, viewModelScope, MAX_TILES, onEvicted = ::releaseLater).also { c ->
+                viewModelScope.launch { c.tiles.collect { _tiles.value = it } }
             }
             // A recreated reader (rotation, process death) keeps its own position; a fresh open resumes where the
             // book was left (milestone 4).
@@ -192,8 +202,14 @@ class ReaderViewModel @Inject constructor(
         progressJob = viewModelScope.launch { repository.saveProgress(bookId, page) }
     }
 
+    /** The zoomed view settled: render these tiles, most important first. Empty when leaving zoom (frees them all). */
+    fun showTiles(keys: List<TileKey>) {
+        if (keys.isEmpty()) tileCache?.clear() else tileCache?.request(keys)
+    }
+
     /** Android asked apps to free memory: keep only what is on screen. */
     fun onTrimMemory() {
+        tileCache?.clear()
         val ready = _state.value as? ReaderState.Ready ?: return
         cache?.trimToVisible(wanted, keep = if (ready.layout == ReaderLayout.SPREAD) 2 else 1)
     }
@@ -273,6 +289,7 @@ class ReaderViewModel @Inject constructor(
 
     override fun onCleared() {
         cache?.clear()
+        tileCache?.clear()
         source?.release()
         opened?.document?.close()
     }
@@ -284,6 +301,9 @@ class ReaderViewModel @Inject constructor(
 
         /** Long enough for any frame that still referenced an evicted page to finish. */
         private const val RELEASE_DELAY_MS = 1_000L
+
+        /** Zoom tiles held at once: 40 x 512 x 512 x 2 bytes = 20 MB, enough to cover the inner screen ~1.5 times. */
+        private const val MAX_TILES = 40
 
         /** Hard cap for page images; the wish list (4 units) normally needs far less. */
         private const val MAX_CACHE_BYTES = 96L * 1024 * 1024

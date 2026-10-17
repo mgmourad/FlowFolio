@@ -234,7 +234,7 @@ private fun TrimMemoryEffect(onTrim: () -> Unit) {
     }
 }
 
-private val PAPER = Color.White
+internal val PAPER = Color.White
 private const val SWIPE_THRESHOLD_PX = 24f
 private const val SINGLE_PAGE_GUTTER_STRENGTH = 0.6f
 internal val EDGE_GUARD_WIDTH = 32.dp
