@@ -48,6 +48,18 @@ class PageFramesTest {
     }
 
     @Test
+    fun theMiddleFortyPercentIsForTapsTheSidesTurnPages() {
+        val size = IntSize(1000, 2000)
+        assertTrue(isCentre(Offset(301f, 10f), size)) // full height, not just the middle
+        assertTrue(isCentre(Offset(699f, 1990f), size))
+        assertFalse(isCentre(Offset(299f, 1000f), size))
+        assertFalse(isCentre(Offset(701f, 1000f), size))
+        val noLinks = emptyMap<Int, List<PdfLink>>()
+        assertEquals(PageFrames.TapTarget.Centre, PageFrames.route(Offset(500f, 100f), size, emptyList(), noLinks))
+        assertEquals(PageFrames.TapTarget.Page, PageFrames.route(Offset(100f, 1000f), size, emptyList(), noLinks))
+    }
+
+    @Test
     fun onlyWebAndMailLinksAreOpenable() {
         assertTrue(PageFrames.isOpenable("https://openstax.org"))
         assertTrue(PageFrames.isOpenable("MAILTO:a@b.c"))

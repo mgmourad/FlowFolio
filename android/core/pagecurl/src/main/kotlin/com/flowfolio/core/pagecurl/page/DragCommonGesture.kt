@@ -1,7 +1,7 @@
 /*
  * Vendored from oleksandrbalan/pagecurl 1.5.1 (https://github.com/oleksandrbalan/pagecurl), by Oleksandr Balan.
  * Licensed under the Apache License, Version 2.0 (see core/pagecurl/LICENSE). Modified by The FlowFolio Authors
- * (ADR-0011): package renamed, experimental opt-in removed, book-spread back pages added. See core/pagecurl/NOTICE.
+ * (ADR-0011): package renamed, experimental opt-in removed, book-spread back pages added, release animation paced like\n * a full turn. See core/pagecurl/NOTICE.
  */
 @file:Suppress("MatchingDeclarationName")
 
@@ -9,8 +9,10 @@ package com.flowfolio.core.pagecurl.page
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector4D
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.calculateTargetValue
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.splineBasedDecay
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -69,17 +71,26 @@ internal suspend fun PointerInputScope.detectCurlGestures(
                     )
                 }
 
+                // FlowFolio: finish at the pace of a full programmatic turn (DefaultNext/Prev: the page width in
+                // 450 ms), scaled to the distance left, instead of a default spring that felt rushed (owner,
+                // 2026-10-17). A short flick therefore turns at the same speed as a tap or a left-page swipe.
+                val widthPx = size.width.toFloat().coerceAtLeast(1f)
+                fun settle(target: Edge) = tween<Edge>(
+                    durationMillis = (TURN_MS * kotlin.math.abs(edge.value.centerX - target.centerX) / widthPx)
+                        .toInt().coerceIn(MIN_SETTLE_MS, TURN_MS),
+                    easing = LinearOutSlowInEasing
+                )
                 scope.launch {
                     if (complete && isDragSucceed(startOffset, flingEndOffset)) {
                         try {
-                            edge.animateTo(end)
+                            edge.animateTo(end, settle(end))
                         } finally {
                             onChange()
                             edge.snapTo(start)
                         }
                     } else {
                         try {
-                            edge.animateTo(start)
+                            edge.animateTo(start, settle(start))
                         } finally {
                             edge.snapTo(start)
                         }
@@ -103,6 +114,10 @@ internal suspend fun PointerInputScope.detectCurlGestures(
         }
     )
 }
+
+/** A full turn's duration, matching DefaultNext/DefaultPrev in PageCurlState. */
+private const val TURN_MS = 450
+private const val MIN_SETTLE_MS = 180
 
 internal suspend fun PointerInputScope.detectCustomDragGestures(
     onDragStart: (Offset, Offset) -> Boolean,
