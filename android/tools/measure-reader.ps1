@@ -1,4 +1,6 @@
-# Phase 1 milestone 3 measurement: frame timing and memory while turning pages in the reader.
+# Phase 1 reader measurement: frame timing and memory while turning pages, judged against ADR-0013:
+# the reader may add at most 110 MB over the app's own floor (library screen, same screen and fold state), and total
+# memory may grow at most 10% between turn 50 and the last turn.
 # Usage (from android/):  .\tools\measure-reader.ps1 -Serial <adb serial> -Layout spread|single [-Turns 300] [-Label name]
 # Needs the debug app installed with the test textbook imported (see CLAUDE.md). Results: tools/results/<label>/.
 param(
@@ -6,7 +8,9 @@ param(
     [ValidateSet("single", "spread")][string]$Layout = "single",
     [int]$Turns = 300,
     [string]$Label = "",
-    [string]$BookId = "93652b69c43197d10dc83438b813b5f7515e61e7ea4336da8636ff902cb4aba8"
+    [string]$BookId = "93652b69c43197d10dc83438b813b5f7515e61e7ea4336da8636ff902cb4aba8",
+    [double]$MaxOverheadMB = 110,
+    [double]$MaxGrowthPct = 10
 )
 $ErrorActionPreference = "Stop"
 $adb = Join-Path $env:ANDROID_HOME "platform-tools\adb.exe"
@@ -29,6 +33,9 @@ $w = [int]$Matches[1]; $h = [int]$Matches[2]
 Write-Host "Fold=$fold display=$displayId ${w}x$h layout=$Layout turns=$Turns"
 
 function Memory([string]$tag) {
+    # Retained memory: ask the (debug) app to collect garbage first, so uncollected garbage does not read as growth.
+    Adb shell am start -n "$pkg/com.flowfolio.MainActivity" --ez gcNow true | Out-Null
+    Start-Sleep 2
     $mem = Adb shell dumpsys meminfo $pkg
     $mem | Set-Content (Join-Path $out "meminfo-$tag.txt")
     $total = ($mem | Select-String "TOTAL PSS:\s+(\d+)").Matches[0].Groups[1].Value
@@ -42,6 +49,12 @@ Start-Sleep 1
 if ((Adb shell dumpsys window | Select-String "isKeyguardShowing=true")) {
     throw "The phone is locked. Unlock it (and keep it unlocked) before measuring; results would be empty."
 }
+# 1. The app's floor: the library screen on this same screen and fold state.
+Adb shell am force-stop $pkg
+Adb shell am start -W -n "$pkg/com.flowfolio.MainActivity" | Out-Null
+Start-Sleep 5
+$floor = Memory "floor"
+# 2. The reader.
 Adb shell am force-stop $pkg
 Adb shell am start -W -n "$pkg/com.flowfolio.MainActivity" --es openBookId $BookId --es layout $Layout | Out-Null
 Start-Sleep 4
@@ -53,7 +66,7 @@ $samples = @()
 for ($i = 1; $i -le $Turns; $i++) {
     Adb shell input swipe $x1 $y1 $x2 $y2 300
     Start-Sleep -Milliseconds 250
-    if ($i -eq 50) { $samples += Memory "turn50" }
+    if ($i -eq 50 -and $Turns -gt 50) { $samples += Memory "turn50" }
 }
 $samples += Memory "turn$Turns"
 if ((Adb shell dumpsys window | Select-String "isKeyguardShowing=true")) {
@@ -62,8 +75,14 @@ if ((Adb shell dumpsys window | Select-String "isKeyguardShowing=true")) {
 $gfx = Adb shell dumpsys gfxinfo $pkg
 $gfx | Set-Content (Join-Path $out "gfxinfo.txt")
 $pick = { param($p) ($gfx | Select-String $p | Select-Object -First 1).ToString().Trim() }
+$last = $samples | Select-Object -Last 1
+$first = $samples | Select-Object -First 1
+$overhead = [math]::Round($last.totalPssMB - $floor.totalPssMB, 1)
+$growth = [math]::Round(($last.totalPssMB - $first.totalPssMB) / $first.totalPssMB * 100, 1)
+$verdict = if ($overhead -le $MaxOverheadMB -and $growth -le $MaxGrowthPct) { "PASS" } else { "FAIL" }
 $summary = [pscustomobject]@{
     label = $Label; fold = $fold; window = "${w}x$h"; layout = $Layout; turns = $Turns
+    floorMB = $floor.totalPssMB; overheadMB = $overhead; growthPct = $growth; verdict = $verdict
     frames = & $pick "Total frames rendered"; janky = & $pick "Janky frames:"; p50 = & $pick "^50th percentile"
     p95 = & $pick "^95th percentile"; p99 = & $pick "^99th percentile"
     memory = $samples
