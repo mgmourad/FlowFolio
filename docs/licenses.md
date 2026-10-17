@@ -15,6 +15,11 @@ Release dates were checked on Maven Central, Google Maven, PyPI, or GitHub Relea
 | KSP | 2.3.12 | 2026-09-09 | Apache-2.0 | build | |
 | Hilt / Dagger | 2.60.1 | 2026-07-06 | Apache-2.0 | app | |
 | kotlinx-coroutines (core, android, test) | 1.11.0 | 2026-05-08 | Apache-2.0 | app/test | |
+| Room (runtime, ktx, compiler, Gradle plugin) | 2.8.5 | 2026-09-09 | Apache-2.0 | app/build | Schema exported to `core/database/schemas/` |
+| DataStore Preferences | 1.2.1 | 2026-03-11 | Apache-2.0 | app | |
+| Navigation Compose | 2.10.2 | 2026-09-23 | Apache-2.0 | app | String routes (type-safe routes would need kotlinx-serialization, not approved) |
+| androidx.hilt:hilt-navigation-compose | 1.4.0 | 2026-07-01 | Apache-2.0 | app | Brings hilt-lifecycle-viewmodel-compose 1.4.0 transitively |
+| Turbine | 1.2.1 | 2025-06-11 | Apache-2.0 | test | |
 | **PDFium** via pdfium-binaries | chromium/8100 | 2026-10-12 | PDFium BSD-3/Apache-2.0; build scripts MIT; bundled FreeType (FTL), libjpeg-turbo (IJG/BSD), OpenJPEG (BSD-2), lcms (MIT), zlib, ICU (Unicode), HarfBuzz (MIT), abseil (Apache-2.0) | app | `:core:pdf` (ADR-0010). Downloaded at build time, SHA-256 pinned per ABI. License texts ship as assets under `third_party_licenses/pdfium/`; an in-app licenses screen is required before release. 6.3 MB (arm64), 4.3 MB (armv7), 6.8 MB (x86_64) |
 | Compose BOM (ui, material3, tooling) | 2026.09.00 | 2026-09-09 | Apache-2.0 | app | |
 | androidx.activity:activity-compose | 1.13.0 | 2026-03-11 | Apache-2.0 | app | |
