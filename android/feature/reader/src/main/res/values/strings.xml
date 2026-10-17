@@ -9,6 +9,8 @@
     <string name="reader_password_wrong">That password didn\'t work. Try again.</string>
     <string name="reader_password_open">Open</string>
     <string name="reader_cancel">Cancel</string>
+    <string name="reader_link_title">Open this link?</string>
+    <string name="reader_link_open">Open</string>
     <string name="reader_contents">Contents</string>
     <string name="reader_contents_empty">This book has no table of contents.</string>
     <string name="reader_go_to">Go to page</string>

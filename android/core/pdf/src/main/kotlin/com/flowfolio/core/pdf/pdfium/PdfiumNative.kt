@@ -35,4 +35,6 @@ internal object PdfiumNative {
     external fun nativePageLabel(handle: Long, index: Int): String?
 
     external fun nativeMetaText(handle: Long, tag: String): String?
+
+    external fun nativeLinks(handle: Long, index: Int): Array<String>
 }
