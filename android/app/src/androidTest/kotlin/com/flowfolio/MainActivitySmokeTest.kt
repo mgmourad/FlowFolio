@@ -4,7 +4,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import com.flowfolio.ui.library.LibraryTestTags
+import com.flowfolio.feature.library.LibraryTestTags
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -16,7 +16,7 @@ class MainActivitySmokeTest {
     val compose = createAndroidComposeRule<MainActivity>()
 
     @Test
-    fun appLaunches_andShowsLibrary() {
-        compose.onNodeWithTag(LibraryTestTags.EMPTY).assertIsDisplayed()
+    fun appLaunches_andShowsLibraryWithImport() {
+        compose.onNodeWithTag(LibraryTestTags.IMPORT).assertIsDisplayed()
     }
 }
