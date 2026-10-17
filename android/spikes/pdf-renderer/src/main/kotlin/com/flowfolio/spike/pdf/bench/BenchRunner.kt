@@ -102,7 +102,7 @@ class BenchRunner(private val context: Context, private val log: (String) -> Uni
                 }
             )
             val labels = JSONObject()
-            for (p in listOf(0, 1, 10, 20, 30, 100, 500).filter { it < doc.pageCount }) {
+            for (p in listOf(0, 1, 2, 3, 4, 10, 20, 30, 100, 500).filter { it < doc.pageCount }) {
                 labels.put(
                     "p${p + 1}",
                     doc.pageLabel(p) ?: JSONObject.NULL
