@@ -21,6 +21,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - Reader chrome styled like print: the page number has no background (grey type, soft shadow) at the bottom left of
   the left page (bottom centre on a single page); a tap in the centre of the screen shows the book title (top right
   of the right page, top centre on a single page) and Back for 10 seconds.
+- Phase 1 milestone 4 (reader navigation): reading position saved in Room (schema v2, `books.last_page`) and resumed
+  on open; Contents (outline, opens on the current chapter), Go to page (printed labels first, then 1..N) and a page
+  scrubber in the centre-tap controls; PDF links (internal jumps; web links confirmed, http/https/mailto only);
+  pinch-zoom up to 6x with 512 px 16-bit tiles rendered after the view settles (at most 40 tiles, freed on exit);
+  Reading settings ("Aa"): two pages side by side on/off and cover-alone pairing on/off.
+- `ReaderZoomOnDeviceTest` (UiAutomator 2.4.0) for pinch gestures on a device; Compose test tags are exposed as
+  resource ids.
 
 ### Fixed
 - Taps on the page curl stopped turning pages after the first turn (the curl state was recreated on every turn).

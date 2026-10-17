@@ -4,7 +4,7 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 1: PDF reader with page curl. Build in progress: milestones 1-2 done, milestone 3 at its memory check-in** (started 2026-10-16).
+**Phase 1: PDF reader with page curl. Build in progress: milestones 1-3 done, milestone 4 built and awaiting the owner's review** (started 2026-10-16).
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
 Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
 Build plan approved 2026-10-16: 5 milestones; check in with the product owner at milestone 3 with memory numbers.
@@ -116,13 +116,23 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 10. OpenStax *University Physics* is CC BY-NC-SA: local testing only; prefer CC BY titles for anything committed.
 11. DataStore unit tests write once per store: DataStore's atomic rename fails on Windows when the file exists.
 12. Linked ("read in place") books only work for files picked with the system picker; shared files are always copied.
-13. Settings screen lives in `:feature:library` for now; split into `:feature:settings` when it grows (reader settings).
+13. Settings screen lives in `:feature:library` for now; reader settings live in the reader's "Aa" sheet
+    (`ReaderSettingsSheet`). Split into `:feature:settings` when it grows.
 14. Reader memory target (ADR-0013): at most 110 MB over the app's floor on the same screen and fold state, and at most
-    10% growth from turn 50 to the last turn, on retained memory. Unfolded (300 turns, with page shading, 2026-10-17): single +104.5 MB, spread +83.9 MB.
+    10% growth from turn 50 to the last turn, on retained memory. Unfolded (300 turns, milestone 4 build, 2026-10-17): single +107.3 MB (little headroom left), spread +73.5 MB;
+    zoomed in (tiles shown) the app read 242 MB vs 214 MB unzoomed.
 15. Measuring on the Fold: logical display 0 is always the active panel; the phone must stay unlocked during runs
     (`tools/measure-reader.ps1` aborts if the lock screen shows). Debug-only intent extras `importPath`,
     `openBookId`, `layout` drive the app from adb.
 
+16. Zoom is entered by pinching only. A double tap does not enter zoom because single taps turn pages instantly, and
+    waiting to tell a single tap from a double tap would delay every turn. Inside zoom, a double tap leaves it.
+17. Two-finger gestures can't be sent with `adb input`: use `ReaderZoomOnDeviceTest` (UiAutomator). Install the app
+    and test APKs with `adb install -r -t` and run `adb shell am instrument -w -e class ...`, rather than
+    `connectedDebugAndroidTest`, which uninstalls the app and its imported library afterwards.
+18. Bottom sheets and dialogs are separate windows, so their test tags are not exported as resource ids; find their
+    contents by text in UiAutomator.
+19. The OpenStax test PDF has no page labels, so "Go to page" by printed number falls back to the position in the file.
 ## Decision log
 
 ADRs 0001–0013 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
