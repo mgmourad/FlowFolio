@@ -1,0 +1,78 @@
+package com.flowfolio.core.datastore
+
+import android.content.Context
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStoreFile
+import com.flowfolio.core.model.LibrarySort
+import com.flowfolio.core.model.StorageMode
+import com.flowfolio.core.model.ThemePreference
+import com.flowfolio.core.model.UserSettings
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+
+/** User settings persisted with DataStore. Unknown stored values fall back to defaults instead of crashing. */
+@Singleton
+class SettingsDataSource @Inject constructor(private val store: DataStore<Preferences>) {
+    val settings: Flow<UserSettings> = store.data.map { p ->
+        val defaults = UserSettings()
+        UserSettings(
+            storageMode = p[STORAGE_MODE].toEnum(defaults.storageMode),
+            askStorageEachImport = p[ASK_EACH_IMPORT] ?: defaults.askStorageEachImport,
+            theme = p[THEME].toEnum(defaults.theme),
+            storageNoticeSeen = p[NOTICE_SEEN] ?: defaults.storageNoticeSeen,
+            librarySort = p[SORT].toEnum(defaults.librarySort)
+        )
+    }
+
+    suspend fun setStorageMode(mode: StorageMode) {
+        store.edit { it[STORAGE_MODE] = mode.name }
+    }
+
+    suspend fun setAskStorageEachImport(ask: Boolean) {
+        store.edit { it[ASK_EACH_IMPORT] = ask }
+    }
+
+    suspend fun setTheme(theme: ThemePreference) {
+        store.edit { it[THEME] = theme.name }
+    }
+
+    suspend fun setStorageNoticeSeen() {
+        store.edit { it[NOTICE_SEEN] = true }
+    }
+
+    suspend fun setLibrarySort(sort: LibrarySort) {
+        store.edit { it[SORT] = sort.name }
+    }
+
+    private inline fun <reified T : Enum<T>> String?.toEnum(default: T): T =
+        this?.let { name -> enumValues<T>().firstOrNull { it.name == name } } ?: default
+
+    private companion object {
+        val STORAGE_MODE = stringPreferencesKey("storage_mode")
+        val ASK_EACH_IMPORT = booleanPreferencesKey("ask_storage_each_import")
+        val THEME = stringPreferencesKey("theme")
+        val NOTICE_SEEN = booleanPreferencesKey("storage_notice_seen")
+        val SORT = stringPreferencesKey("library_sort")
+    }
+}
+
+@Module
+@InstallIn(SingletonComponent::class)
+object DataStoreModule {
+    @Provides
+    @Singleton
+    fun preferences(@ApplicationContext context: Context): DataStore<Preferences> =
+        PreferenceDataStoreFactory.create { context.preferencesDataStoreFile("settings") }
+}
