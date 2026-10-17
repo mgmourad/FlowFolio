@@ -26,4 +26,13 @@ class AppViewModel @Inject constructor(settings: SettingsRepository) : ViewModel
     fun onSharedFile(uri: String) {
         shared.trySend(uri)
     }
+
+    private val directOpen = Channel<Pair<String, String?>>(Channel.BUFFERED)
+
+    /** Debug builds only: open a book straight from an adb intent (measurement scripts). */
+    val directOpens: Flow<Pair<String, String?>> = directOpen.receiveAsFlow()
+
+    fun onDirectOpen(bookId: String, layout: String?) {
+        directOpen.trySend(bookId to layout)
+    }
 }

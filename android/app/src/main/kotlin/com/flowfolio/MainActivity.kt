@@ -13,6 +13,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.FlowFolioTheme
 import dagger.hilt.android.AndroidEntryPoint
 
+private const val EXTRA_OPEN_BOOK = "openBookId"
+private const val EXTRA_LAYOUT = "layout"
+private const val EXTRA_IMPORT_PATH = "importPath"
+
 /** The app's only Activity. Screens are Compose destinations (see [FlowFolioApp]). */
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -41,5 +45,13 @@ class MainActivity : ComponentActivity() {
             else -> null
         }
         uri?.let { appViewModel.onSharedFile(it.toString()) }
+        // Debug builds: `am start ... --es openBookId <sha256> [--es layout single|spread]` (measurement scripts).
+        val debuggable = applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
+        val bookId = intent.getStringExtra(EXTRA_OPEN_BOOK)
+        if (debuggable && bookId != null) appViewModel.onDirectOpen(bookId, intent.getStringExtra(EXTRA_LAYOUT))
+        // Debug builds: `--es importPath /data/local/tmp/...` imports a test book as a copy (measurement scripts).
+        intent.getStringExtra(EXTRA_IMPORT_PATH)?.takeIf {
+            debuggable
+        }?.let { appViewModel.onSharedFile(Uri.fromFile(java.io.File(it)).toString()) }
     }
 }

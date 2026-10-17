@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">FlowFolio</string>
-    <string name="reader_placeholder">The reader arrives in the next milestone.</string>
-    <string name="back">Back</string>
 </resources>

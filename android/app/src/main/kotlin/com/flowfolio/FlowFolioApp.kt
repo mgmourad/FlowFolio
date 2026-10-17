@@ -25,18 +25,20 @@ import androidx.navigation.navArgument
 import com.flowfolio.feature.library.LibraryScreen
 import com.flowfolio.feature.library.LibraryViewModel
 import com.flowfolio.feature.library.SettingsScreen
+import com.flowfolio.feature.reader.ReaderScreen
 
 private object Routes {
     const val LIBRARY = "library"
     const val SETTINGS = "settings"
-    const val READER = "reader/{bookId}"
+    const val READER = "reader/{bookId}?layout={layout}"
 
-    fun reader(bookId: String) = "reader/$bookId"
+    fun reader(bookId: String, layout: String? = null) = "reader/$bookId" + (layout?.let { "?layout=$it" } ?: "")
 }
 
 @Composable
 fun FlowFolioApp(appViewModel: AppViewModel) {
     val nav = rememberNavController()
+    LaunchedEffect(nav) { appViewModel.directOpens.collect { (id, layout) -> nav.navigate(Routes.reader(id, layout)) } }
     NavHost(navController = nav, startDestination = Routes.LIBRARY) {
         composable(Routes.LIBRARY) {
             val library: LibraryViewModel = hiltViewModel()
@@ -48,26 +50,18 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
             )
         }
         composable(Routes.SETTINGS) { SettingsScreen(onBack = { nav.popBackStack() }) }
-        composable(Routes.READER, arguments = listOf(navArgument("bookId") { type = NavType.StringType })) {
-            ReaderPlaceholder(onBack = { nav.popBackStack() })
-        }
-    }
-}
-
-/** STUB until Phase 1 milestone 3 delivers the reader. */
-@Composable
-private fun ReaderPlaceholder(onBack: () -> Unit) {
-    Scaffold { padding ->
-        Box(Modifier.fillMaxSize().padding(padding).padding(24.dp), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    stringResource(R.string.reader_placeholder),
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.testTag("reader_placeholder")
-                )
-                TextButton(onClick = onBack) { Text(stringResource(R.string.back)) }
-            }
+        composable(
+            Routes.READER,
+            arguments = listOf(
+                navArgument("bookId") { type = NavType.StringType },
+                navArgument("layout") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) {
+            ReaderScreen(onBack = { nav.popBackStack() })
         }
     }
 }
