@@ -43,8 +43,26 @@ interface PdfDocument : Closeable {
     /** The document's Title metadata, trimmed; null when absent or blank. */
     suspend fun title(): String?
 
+    /** Links on page [index] (internal jumps and web links); empty when there are none or the page is unreadable. */
+    suspend fun links(index: Int): List<PdfLink>
+
     /** Closes the document. Further calls throw [PdfException.Closed]. Safe to call more than once. */
     override fun close()
+}
+
+/**
+ * A link on a page. The box is a fraction (0..1) of the page as displayed, top-left origin. Exactly one of
+ * [targetPage] (0-based, inside this document) or [uri] (as written in the PDF, not validated) is set.
+ */
+data class PdfLink(
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float,
+    val targetPage: Int?,
+    val uri: String?
+) {
+    fun contains(x: Float, y: Float): Boolean = x in left..right && y in top..bottom
 }
 
 /**

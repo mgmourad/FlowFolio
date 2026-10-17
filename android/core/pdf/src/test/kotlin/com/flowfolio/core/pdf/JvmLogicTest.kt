@@ -1,6 +1,7 @@
 package com.flowfolio.core.pdf
 
 import com.flowfolio.core.model.OutlineEntry
+import com.flowfolio.core.pdf.pdfium.LinkCodec
 import com.flowfolio.core.pdf.pdfium.OutlineCodec
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -23,6 +24,27 @@ class JvmLogicTest {
     @Test
     fun `malformed outline lines are skipped, not fatal`() {
         assertEquals(listOf(OutlineEntry(0, 1, "ok")), OutlineCodec.decode(arrayOf("garbage", "x|1|t", "0|1|ok")))
+    }
+
+    @Test
+    fun `link lines decode into internal and web links, bad ones are skipped`() {
+        val decoded = LinkCodec.decode(
+            arrayOf(
+                "0.100000|0.200000|0.300000|0.250000|41|",
+                "0.5|0.5|0.9|0.6|-1|https://openstax.org/l/21scaleuniv",
+                "0.1|0.1|0.2|0.2|-1|",
+                "nonsense",
+                "0.1|x|0.2|0.2|3|"
+            )
+        )
+        assertEquals(
+            listOf(
+                PdfLink(0.1f, 0.2f, 0.3f, 0.25f, targetPage = 41, uri = null),
+                PdfLink(0.5f, 0.5f, 0.9f, 0.6f, targetPage = null, uri = "https://openstax.org/l/21scaleuniv")
+            ),
+            decoded
+        )
+        assertTrue(decoded[0].contains(0.2f, 0.22f))
     }
 
     @Test

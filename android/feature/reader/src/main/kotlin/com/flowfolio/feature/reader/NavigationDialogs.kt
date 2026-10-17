@@ -155,3 +155,20 @@ internal fun GoToPageDialog(labels: List<String?>, pageCount: Int, onGo: (Int) -
 private val INDENT = 20.dp
 private const val MAX_INDENT_LEVELS = 4
 private const val CONTEXT_ROWS = 3
+
+/** PDFs can carry any address, so web links are confirmed before leaving the book. */
+@Composable
+internal fun WebLinkDialog(uri: String, onOpen: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.reader_link_title)) },
+        text = { Text(uri) },
+        confirmButton = {
+            TextButton(onClick = {
+                onDismiss()
+                onOpen() // a missing browser just means nothing opens
+            }) { Text(stringResource(R.string.reader_link_open)) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.reader_cancel)) } }
+    )
+}

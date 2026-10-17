@@ -7,6 +7,7 @@ import com.flowfolio.core.model.PageSize
 import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfEngine
 import com.flowfolio.core.pdf.PdfException
+import com.flowfolio.core.pdf.PdfLink
 import com.flowfolio.core.pdf.RenderRegion
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlinx.coroutines.runBlocking
@@ -66,6 +67,11 @@ internal class PdfiumDocument(private val handle: Long, override val pageCount: 
 
     override suspend fun title(): String? = call {
         PdfiumNative.nativeMetaText(handle, "Title")?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
+    override suspend fun links(index: Int): List<PdfLink> = call {
+        checkIndex(index)
+        LinkCodec.decode(PdfiumNative.nativeLinks(handle, index))
     }
 
     override fun close() {

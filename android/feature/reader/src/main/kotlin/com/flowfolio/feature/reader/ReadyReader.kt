@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -15,11 +16,39 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.unit.IntSize
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.feature.reader.layout.ReaderLayout
 import kotlinx.coroutines.delay
 
-/** The open book: page turns, the centre-tap controls and the panels they open. */
+/**
+ * What floats over the book. A centre tap shows the controls for a while (each use of them restarts the clock);
+ * another centre tap hides them sooner. They stay up while the contents list or Go to page is open.
+ */
+@Stable
+private class Overlay {
+    var shownAt by mutableStateOf<Long?>(null)
+    var panel by mutableStateOf(Panel.NONE)
+    var webLink by mutableStateOf<String?>(null)
+
+    fun toggle() {
+        shownAt = if (shownAt == null) System.nanoTime() else null
+    }
+
+    fun touch() {
+        shownAt = System.nanoTime()
+    }
+
+    fun closeAll() {
+        panel = Panel.NONE
+        shownAt = null
+    }
+}
+
+/** The open book: page turns, link and centre taps, the controls and the panels they open. */
 @Composable
 internal fun BoxScope.ReadyReader(
     s: ReaderState.Ready,
@@ -28,26 +57,31 @@ internal fun BoxScope.ReadyReader(
     viewModel: ReaderViewModel,
     onBack: () -> Unit
 ) {
-    // A centre tap shows the controls for a while (each use of them restarts the clock); another centre
-    // tap hides them sooner. They stay up while the contents list or Go to page is open.
-    var controlsShownAt by remember { mutableStateOf<Long?>(null) }
-    var panel by remember { mutableStateOf(Panel.NONE) }
-    LaunchedEffect(controlsShownAt, panel) {
-        if (controlsShownAt != null && panel == Panel.NONE) {
+    val links by viewModel.links.collectAsStateWithLifecycle()
+    val uriHandler = LocalUriHandler.current
+    val overlay = remember { Overlay() }
+    LaunchedEffect(overlay.shownAt, overlay.panel) {
+        if (overlay.shownAt != null && overlay.panel == Panel.NONE) {
             delay(CONTROLS_VISIBLE_MS)
-            controlsShownAt = null
+            overlay.shownAt = null
         }
     }
     val jump = { page: Int ->
         viewModel.goToPage(page)
-        panel = Panel.NONE
-        controlsShownAt = null
+        overlay.closeAll()
     }
-    Box(
-        Modifier.fillMaxSize().centreTap {
-            controlsShownAt = if (controlsShownAt == null) System.nanoTime() else null
+    val onTap = { tap: Offset, size: IntSize ->
+        val frames = PageFrames.of(s, size) { page -> images[page]?.let { IntSize(it.width, it.height) } }
+        val target = PageFrames.route(tap, size, frames, links)
+        when (target) {
+            is PageFrames.TapTarget.Jump -> jump(target.page)
+            is PageFrames.TapTarget.Web -> overlay.webLink = target.uri
+            PageFrames.TapTarget.Centre -> overlay.toggle()
+            PageFrames.TapTarget.Page -> Unit
         }
-    ) {
+        target != PageFrames.TapTarget.Page
+    }
+    Box(Modifier.fillMaxSize().interceptTaps(onTap)) {
         // Recreate the curl state when the layout flips (fold/unfold); the ViewModel keeps the position.
         key(s.layout) {
             when (s.layout) {
@@ -59,16 +93,19 @@ internal fun BoxScope.ReadyReader(
     ReaderChrome(
         s,
         navigation,
-        controlsVisible = controlsShownAt != null,
+        controlsVisible = overlay.shownAt != null,
         actions = ChromeActions(
             onBack = onBack,
-            onContents = { panel = Panel.CONTENTS },
-            onGoTo = { panel = Panel.GO_TO },
+            onContents = { overlay.panel = Panel.CONTENTS },
+            onGoTo = { overlay.panel = Panel.GO_TO },
             onScrub = jump,
-            onInteract = { controlsShownAt = System.nanoTime() }
+            onInteract = overlay::touch
         )
     )
-    Panels(panel, s, navigation, jump, onDismiss = { panel = Panel.NONE })
+    Panels(overlay.panel, s, navigation, jump, onDismiss = { overlay.panel = Panel.NONE })
+    overlay.webLink?.let { uri ->
+        WebLinkDialog(uri, onOpen = { runCatching { uriHandler.openUri(uri) } }, onDismiss = { overlay.webLink = null })
+    }
     EdgeGuards()
 }
 

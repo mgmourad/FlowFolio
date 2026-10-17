@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -238,6 +239,64 @@ JNIEXPORT jstring JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_native
         bytes = FPDF_GetPageLabel(asDoc(handle)->doc, index, buf.data(), n);
     }
     return utf16(env, buf, bytes);
+}
+
+// Links on a page as "left|top|right|bottom|pageIndex|uri" strings (parsed by LinkCodec). The rectangle is a fraction
+// (0..1) of the page as displayed, top-left origin, after the page's own rotation; pageIndex is -1 for web links and
+// uri is empty for internal ones. Links with neither a destination nor a URI are skipped.
+JNIEXPORT jobjectArray JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_nativeLinks(JNIEnv* env, jobject, jlong handle, jint index) {
+    constexpr int kScale = 1000000;  // device space used to normalise coordinates
+    constexpr int kMaxLinks = 2000;  // malformed files can carry absurd numbers of annotations
+    std::vector<std::string> lines;
+    {
+        std::lock_guard<std::mutex> guard(g_lock);
+        FPDF_DOCUMENT doc = asDoc(handle)->doc;
+        FPDF_PAGE page = FPDF_LoadPage(doc, index);
+        if (page != nullptr) {
+            int pos = 0;
+            FPDF_LINK link = nullptr;
+            while (static_cast<int>(lines.size()) < kMaxLinks && FPDFLink_Enumerate(page, &pos, &link)) {
+                FS_RECTF r{};
+                if (!FPDFLink_GetAnnotRect(link, &r)) continue;
+                int target = -1;
+                std::string uri;
+                FPDF_DEST dest = FPDFLink_GetDest(doc, link);
+                FPDF_ACTION action = FPDFLink_GetAction(link);
+                if (dest == nullptr && action != nullptr && FPDFAction_GetType(action) == PDFACTION_GOTO) {
+                    dest = FPDFAction_GetDest(doc, action);
+                }
+                if (dest != nullptr) {
+                    target = FPDFDest_GetDestPageIndex(doc, dest);
+                } else if (action != nullptr && FPDFAction_GetType(action) == PDFACTION_URI) {
+                    unsigned long n = FPDFAction_GetURIPath(doc, action, nullptr, 0);
+                    if (n > 1 && n < 8192) {
+                        std::vector<char> buf(n);
+                        FPDFAction_GetURIPath(doc, action, buf.data(), n);
+                        for (unsigned long i = 0; i + 1 < n; i++) {
+                            unsigned char ch = static_cast<unsigned char>(buf[i]);
+                            uri.push_back(ch >= 0x20 && ch < 0x7F && ch != '|' ? static_cast<char>(ch) : '_');
+                        }
+                    }
+                }
+                if (target < 0 && uri.empty()) continue;
+                int x1, y1, x2, y2;
+                FPDF_PageToDevice(page, 0, 0, kScale, kScale, 0, r.left, r.top, &x1, &y1);
+                FPDF_PageToDevice(page, 0, 0, kScale, kScale, 0, r.right, r.bottom, &x2, &y2);
+                auto frac = [](int v) { return std::to_string(static_cast<double>(v) / kScale); };
+                lines.push_back(frac(std::min(x1, x2)) + "|" + frac(std::min(y1, y2)) + "|" + frac(std::max(x1, x2)) + "|" +
+                                frac(std::max(y1, y2)) + "|" + std::to_string(target) + "|" + uri);
+            }
+            FPDF_ClosePage(page);
+        }
+    }
+    jclass stringClass = env->FindClass("java/lang/String");
+    jobjectArray result = env->NewObjectArray(static_cast<jsize>(lines.size()), stringClass, nullptr);
+    for (size_t i = 0; i < lines.size(); i++) {
+        jstring s = env->NewStringUTF(lines[i].c_str());  // printable ASCII only, so valid modified UTF-8
+        env->SetObjectArrayElement(result, static_cast<jsize>(i), s);
+        env->DeleteLocalRef(s);
+    }
+    return result;
 }
 
 // Document information entry such as "Title" or "Author"; null when absent or empty.

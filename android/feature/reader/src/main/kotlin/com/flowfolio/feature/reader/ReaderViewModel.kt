@@ -9,6 +9,7 @@ import com.flowfolio.core.data.OpenedBook
 import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.model.PixelSize
 import com.flowfolio.core.pdf.PdfException
+import com.flowfolio.core.pdf.PdfLink
 import com.flowfolio.feature.reader.cache.PageCache
 import com.flowfolio.feature.reader.cache.PageKey
 import com.flowfolio.feature.reader.cache.PdfPageSource
@@ -67,6 +68,11 @@ class ReaderViewModel @Inject constructor(
 
     /** Outline and printed page labels, loaded in the background after the book opens. */
     val navigation: StateFlow<BookNavigation> = _navigation.asStateFlow()
+
+    private val _links = MutableStateFlow<Map<Int, List<PdfLink>>>(emptyMap())
+
+    /** Links of the pages read so far (and the ones about to be shown), by page. */
+    val links: StateFlow<Map<Int, List<PdfLink>>> = _links.asStateFlow()
 
     private var opened: OpenedBook? = null
     private var source: PdfPageSource? = null
@@ -240,6 +246,16 @@ class ReaderViewModel @Inject constructor(
             wanted = keys
             currentSizes.value = keys.associate { it.page to it.size }
             cache?.request(keys, newBudgetBytes = minOf(keys.sumOf { it.size.argbBytes }, MAX_CACHE_BYTES))
+            loadLinks(book, pages)
+        }
+    }
+
+    /** Links are small; once read for a page they are kept for the session. */
+    private suspend fun loadLinks(book: OpenedBook, pages: List<Int>) {
+        for (page in pages) {
+            if (page in _links.value) continue
+            val found = runCatching { book.document.links(page) }.getOrDefault(emptyList())
+            _links.update { it + (page to found) }
         }
     }
 

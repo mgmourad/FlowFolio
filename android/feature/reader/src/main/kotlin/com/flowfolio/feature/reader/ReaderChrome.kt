@@ -23,9 +23,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
@@ -37,6 +39,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.flowfolio.feature.reader.layout.ReaderLayout
@@ -178,30 +181,34 @@ private fun Scrubber(state: ReaderState.Ready, navigation: BookNavigation, actio
 }
 
 /**
- * Calls [onTap] for a tap in the centre of the screen (the middle [CENTRE_ZONE] of the width and height) and keeps that
- * tap from turning a page: the release is consumed in the initial pass, before the page handlers see it. Drags that
- * start in the centre still turn pages.
+ * Offers each tap (a press released without moving, before long-press time) to [onTap] with its position and the
+ * area's size. When [onTap] returns true the release is consumed in the initial pass, before the page handlers see it,
+ * so the tap does not also turn a page. Drags are never intercepted.
  */
-internal fun Modifier.centreTap(onTap: () -> Unit): Modifier = pointerInput(Unit) {
-    awaitEachGesture {
-        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-        val inCentre = abs(down.position.x - size.width / 2f) < size.width * CENTRE_ZONE / 2 &&
-            abs(down.position.y - size.height / 2f) < size.height * CENTRE_ZONE / 2
-        if (!inCentre) return@awaitEachGesture
-        var tracking = true
-        while (tracking) {
-            val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id }
-            val moved = change == null || (change.position - down.position).getDistance() > viewConfiguration.touchSlop
-            if (!moved && !change.pressed &&
-                change.uptimeMillis - down.uptimeMillis < viewConfiguration.longPressTimeoutMillis
-            ) {
-                change.consume()
-                onTap()
+internal fun Modifier.interceptTaps(onTap: (Offset, IntSize) -> Boolean): Modifier = composed {
+    val handler by rememberUpdatedState(onTap)
+    pointerInput(Unit) {
+        awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+            var tracking = true
+            while (tracking) {
+                val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id }
+                val moved =
+                    change == null || (change.position - down.position).getDistance() > viewConfiguration.touchSlop
+                val released = !moved && !change.pressed
+                val quick =
+                    change != null && change.uptimeMillis - down.uptimeMillis < viewConfiguration.longPressTimeoutMillis
+                if (released && quick && handler(change.position, size)) change.consume()
+                tracking = !moved && change.pressed
             }
-            tracking = !moved && change.pressed
         }
     }
 }
+
+/** The middle [CENTRE_ZONE] of the width and height: a tap there shows or hides the controls. */
+internal fun isCentre(tap: Offset, size: IntSize): Boolean =
+    abs(tap.x - size.width / 2f) < size.width * CENTRE_ZONE / 2 &&
+        abs(tap.y - size.height / 2f) < size.height * CENTRE_ZONE / 2
 
 private val PRINT_GREY = Color(0xFF8E8E93)
 
