@@ -44,6 +44,4 @@ samples/corpus/**/*.epub
 samples/corpus/cache/
 samples/golden/**/output/
 
-# Spike raw output (book renders are not ours to commit; summaries go to docs/spikes/)
-android/spikes/*/results/
 samples/models/

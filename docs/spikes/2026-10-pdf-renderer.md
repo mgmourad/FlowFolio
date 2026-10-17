@@ -2,7 +2,8 @@
 
 - **Date:** 2026-10-16
 - **Phase:** 1 (stop point before building)
-- **Code:** `android/spikes/pdf-renderer/` (built only with `-Pspikes`; deleted after the ADRs are accepted)
+- **Code:** was `android/spikes/pdf-renderer/` (commits 23aad39..f685cbb); removed in Phase 1 milestone 1 after porting the
+  PDFium bridge to `:core:pdf`. Recover with `git show 23aad39 -- android/spikes`.
 - **Reference device:** Samsung SM-F976U (reports itself as the product owner's Galaxy Z Fold), Android 17 / API 37,
   Snapdragon SM8850, ~11 GB RAM. Cover screen 1080×2520; inner screen 2256×2504, up to 120 Hz.
 - **Test book:** OpenStax *University Physics Vol. 1*, 959 pages, 81.5 MB (CC BY-NC-SA 4.0; local only, not committed),
