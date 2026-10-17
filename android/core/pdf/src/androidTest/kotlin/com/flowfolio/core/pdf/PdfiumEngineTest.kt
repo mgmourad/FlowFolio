@@ -60,6 +60,7 @@ class PdfiumEngineTest {
             assertEquals(5, doc.pageCount)
             assertEquals(listOf("i", "ii", "1", "2", "3"), (0 until 5).map { doc.pageLabel(it) })
             assertEquals(listOf(OutlineEntry(0, 0, "Front matter"), OutlineEntry(0, 2, "Chapter 1")), doc.outline())
+            assertEquals("FlowFolio Test Book", doc.title())
         }
     }
 
@@ -68,6 +69,7 @@ class PdfiumEngineTest {
         open("rotated.pdf").use { doc ->
             assertNull(doc.pageLabel(0))
             assertEquals(emptyList<OutlineEntry>(), doc.outline())
+            assertNull(doc.title())
         }
     }
 
