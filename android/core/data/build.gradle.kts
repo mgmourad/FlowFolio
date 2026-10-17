@@ -16,7 +16,7 @@ dependencies {
     api(projects.core.model)
     implementation(projects.core.database)
     implementation(projects.core.datastore)
-    implementation(projects.core.pdf)
+    api(projects.core.pdf)
     implementation(libs.kotlinx.coroutines.android)
 
     testImplementation(libs.junit4)
