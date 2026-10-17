@@ -4,10 +4,12 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 1: PDF reader with page curl. Spike complete; build plan pending approval** (started 2026-10-16).
+**Phase 1: PDF reader with page curl. Build in progress: milestone 1 done, milestone 2 next** (started 2026-10-16).
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
 Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
-Next: Phase 1 build plan awaiting approval. Main risk: memory budget (spike used 415-951 MB vs 250 MB target).
+Build plan approved 2026-10-16: 5 milestones; check in with the product owner at milestone 3 with memory numbers.
+Memory design: render at displayed size, scratch bitmap -> HARDWARE copies (measured: +84 MB vs +127 MB for 6
+inner-screen pages), one byte budget, zoom tiles. Exit target: total PSS <= 250 MB on the Fold in every scenario.
 
 ## Product direction (owner decisions, 2026-10-16)
 
@@ -28,6 +30,7 @@ Conventional Commits; keep `CHANGELOG.md`; no secrets in the repo; propose a spi
 
 ## Architecture summary
 
+- Android modules (ADR-0012): `:app`, `:core:model` (JVM), `:core:pdf` (PDFium JNI, NDK); more per milestone.
 - Monorepo: `android/` app (including, from Phase 3, the on-device conversion engine). The Python
   `converter/` is no longer the product path (ADR-0009); its fate is decided in the Phase 3 plan.
   Output contract: `docs/conversion-spec.md`.
@@ -66,6 +69,10 @@ uv tool install pre-commit; pre-commit install          # hooks: pre-commit + co
 .\gradlew.bat testDebugUnitTest                          # JVM unit + Robolectric Compose tests
 .\gradlew.bat spotlessCheck detekt lintDebug             # static checks (spotlessApply to fix format)
 .\gradlew.bat connectedDebugAndroidTest                  # instrumented tests; needs emulator/device
+# Textbook-based device tests skip unless the book is on the device:
+#   adb push samples\corpus\cache\university-physics-volume-1.pdf /data/local/tmp/flowfolio/
+# Regenerate the robustness PDFs (stdlib only):
+#   python -I tools/testpdfs/make_test_pdfs.py android/core/pdf/src/androidTest/assets/pdfs
 & "$env:ANDROID_HOME\emulator\emulator.exe" -avd flowfolio_api37   # start the local emulator
 
 # Converter (from converter/)
@@ -100,7 +107,11 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
    decide in Phase 3.
 5. Gradle prints "deprecated features ... incompatible with Gradle 10", coming from plugins. Track it.
 6. Branch protection needs a paid plan while the repo is private; `ci-gate` is advisory until then.
-7. Local git identity is the machine's global config; confirm the author name/email you want on commits.
+7. Local git identity is the machine's global config (owner chose to keep it).
+8. PDFium license texts ship as assets but there is no in-app licenses screen yet (needed before release).
+9. Reference Fold: `wm size` reports the inner screen even when folded (use `wm size -d 0`); folders created by adb
+   under `Android/data/<pkg>` are invisible to the app; restart adb if the device shows `unauthorized`.
+10. OpenStax *University Physics* is CC BY-NC-SA: local testing only; prefer CC BY titles for anything committed.
 
 ## Decision log
 
