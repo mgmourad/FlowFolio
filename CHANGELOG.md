@@ -6,6 +6,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 ## [Unreleased]
 
 ### Added
+- Phase 1 milestone 2: library and import. Modules `:core:database` (Room), `:core:datastore` (settings),
+  `:core:data` (repositories), `:core:designsystem`, `:feature:library`. Import from the file picker and
+  "Open with"/share; storage setting with the approved disclaimers (copy by default, or read in place); SHA-256 book
+  ids, duplicate detection, metadata titles, JPEG covers, missing-file detection and "Locate file", delete, sort,
+  settings screen (storage, ask every time, theme). The reader screen is a stub until milestone 3.
 - Phase 1 milestone 1: `:core:model` (page sizing, outline) and `:core:pdf` with our PDFium JNI bridge (ADR-0010):
   file-descriptor loading for app and Storage Access Framework files, typed errors, password support, tile rendering,
   outline and page labels, armeabi-v7a/arm64-v8a/x86_64.

@@ -4,7 +4,7 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 1: PDF reader with page curl. Build in progress: milestone 1 done, milestone 2 next** (started 2026-10-16).
+**Phase 1: PDF reader with page curl. Build in progress: milestones 1-2 done, milestone 3 next** (started 2026-10-16).
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
 Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
 Build plan approved 2026-10-16: 5 milestones; check in with the product owner at milestone 3 with memory numbers.
@@ -30,7 +30,8 @@ Conventional Commits; keep `CHANGELOG.md`; no secrets in the repo; propose a spi
 
 ## Architecture summary
 
-- Android modules (ADR-0012): `:app`, `:core:model` (JVM), `:core:pdf` (PDFium JNI, NDK); more per milestone.
+- Android modules (ADR-0012): `:app`, `:core:model` (JVM), `:core:pdf` (PDFium JNI, NDK), `:core:database` (Room),
+  `:core:datastore`, `:core:data` (repositories, import), `:core:designsystem`, `:feature:library` (library + settings).
 - Monorepo: `android/` app (including, from Phase 3, the on-device conversion engine). The Python
   `converter/` is no longer the product path (ADR-0009); its fate is decided in the Phase 3 plan.
   Output contract: `docs/conversion-spec.md`.
@@ -112,6 +113,9 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 9. Reference Fold: `wm size` reports the inner screen even when folded (use `wm size -d 0`); folders created by adb
    under `Android/data/<pkg>` are invisible to the app; restart adb if the device shows `unauthorized`.
 10. OpenStax *University Physics* is CC BY-NC-SA: local testing only; prefer CC BY titles for anything committed.
+11. DataStore unit tests write once per store: DataStore's atomic rename fails on Windows when the file exists.
+12. Linked ("read in place") books only work for files picked with the system picker; shared files are always copied.
+13. Settings screen lives in `:feature:library` for now; split into `:feature:settings` when it grows (reader settings).
 
 ## Decision log
 
