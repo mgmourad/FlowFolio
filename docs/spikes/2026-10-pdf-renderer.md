@@ -78,12 +78,18 @@ Display ran at 120 Hz (~117 frames/s observed), so the per-frame budget is 8.3 m
 | Inner | single page | Framework | 3,513 | 2.16% | 9 / 13 / 22 ms |
 | Inner | two-page spread | PDFium | 3,505 | **1.83%** | 8 / 13 / 16 ms |
 | Inner | two-page spread | Framework | 3,513 | 1.62% | 9 / 12 / 18 ms |
-| Cover | single page | — | *pending: phone must be folded for this run* | | |
+| Cover | single page | PDFium | 3,409 | **1.53%** | 7 / 11 / 16 ms |
+| Cover | single page | Framework | 3,406 | 1.50% | 7 / 11 / 13 ms |
+
+Turning was verified on the cover run: after 50 swipes from physical page 101 the screen showed physical page 151
+(printed "139"). A first folded attempt was discarded because the phone was unfolded mid-run; the run script now
+aborts when the fold state changes.
 
 "Frame time" in gfxinfo spans input to display and overlaps across frames, so it exceeds 8.3 ms while frames
 still arrive on time; **missed deadline** is the meaningful number: ~98% of frames on time at 120 Hz.
 
-**Memory during curl was far too high:** total PSS 597–727 MB single page, 697–951 MB spread
+**Memory during curl was far too high:** total PSS 415–436 MB on the cover screen, 597–727 MB single page on the
+inner screen, 697–951 MB spread
 (native heap 181–432 MB, graphics/GPU textures ~370–390 MB), against a 250 MB target. Causes in the spike code:
 the 128 MB cache budget does not cover bitmaps still referenced by Compose, every bitmap is also uploaded as a
 GPU texture, and nothing is pooled or recycled.
@@ -93,7 +99,7 @@ GPU texture, and nothing is pooled or recycled.
 1. **Renderer: PDFium through our own JNI bridge (ADR-0010, proposed).** Same image quality, the best tail latency,
    and the only option with outline, page labels, and the glyph/font/path data the on-device converter needs. One engine
    for reading and converting means the two can never disagree about a page.
-2. **Page curl: pagecurl is fast enough on the Fold at 120 Hz (ADR-0011, proposed),** for single page and spread.
+2. **Page curl: pagecurl is fast enough on the Fold at 120 Hz on both screens (ADR-0011, proposed),** for single page and spread.
    A real book spread (only the right-hand page turns, revealing the next spread) needs changes to the library, so we
    **vendor it** into `:core:pagecurl` with attribution and own it.
 3. **Memory is the main Phase 1 engineering risk,** not speed. The reader needs a strict budget covering bitmaps
@@ -116,6 +122,6 @@ GPU texture, and nothing is pooled or recycled.
   and run *conversion* in an isolated process. Rendering stays in-process for latency.
 
 ## Not yet measured
-- Folded (cover screen) curl run.
+
 - Malformed/encrypted/rotated PDFs (robustness set), non-textbook PDFs: Phase 1 build adds a robustness test set.
 - Fold/unfold continuity and the memory-disciplined cache: Phase 1 build exit criteria.
