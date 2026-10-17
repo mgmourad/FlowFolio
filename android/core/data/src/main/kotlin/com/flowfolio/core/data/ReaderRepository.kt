@@ -22,6 +22,9 @@ interface ReaderRepository {
      * @throws PdfException for damaged files; [FileNotFoundException] when the book or its file is gone.
      */
     suspend fun open(bookId: String, password: String? = null): OpenedBook
+
+    /** Remembers [page] (0-based) as where the reader left off in [bookId]. */
+    suspend fun saveProgress(bookId: String, page: Int)
 }
 
 class OpenedBook(val book: Book, val document: PdfDocument)
@@ -46,4 +49,6 @@ class DefaultReaderRepository @Inject constructor(
         val document = fd.use { engine.open(it, password) } // the engine keeps its own duplicate of the descriptor
         return OpenedBook(book, document)
     }
+
+    override suspend fun saveProgress(bookId: String, page: Int) = withContext(io) { dao.updateLastPage(bookId, page) }
 }

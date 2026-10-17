@@ -10,7 +10,9 @@ data class Book(
     val addedAtMillis: Long,
     val lastOpenedAtMillis: Long?,
     val coverPath: String?,
-    val passwordProtected: Boolean
+    val passwordProtected: Boolean,
+    /** Where the reader left off (0-based page), or null if the book has not been read yet. */
+    val lastPage: Int? = null
 )
 
 /** Where the book's bytes live (ADR-0012 import storage setting). */

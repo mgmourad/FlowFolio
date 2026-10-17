@@ -61,6 +61,14 @@ class BookDaoTest {
         assertNull(dao.get("x"))
     }
 
+    @Test
+    fun lastPageStartsEmptyAndIsSaved() = runTest {
+        dao.insert(book("p", "P", added = 1))
+        assertNull(dao.get("p")?.lastPage)
+        dao.updateLastPage("p", 41)
+        assertEquals(41, dao.get("p")?.lastPage)
+    }
+
     @Test(expected = android.database.sqlite.SQLiteConstraintException::class)
     fun duplicateIdIsRejected() = runTest {
         dao.insert(book("dup", "One", added = 1))
