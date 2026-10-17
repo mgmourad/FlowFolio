@@ -63,6 +63,11 @@ class ReaderViewModel @Inject constructor(
     private val _state = MutableStateFlow<ReaderState>(ReaderState.Loading)
     val state: StateFlow<ReaderState> = _state.asStateFlow()
 
+    private val _navigation = MutableStateFlow(BookNavigation())
+
+    /** Outline and printed page labels, loaded in the background after the book opens. */
+    val navigation: StateFlow<BookNavigation> = _navigation.asStateFlow()
+
     private var opened: OpenedBook? = null
     private var source: PdfPageSource? = null
     private var cache: PageCache? = null
@@ -118,7 +123,29 @@ class ReaderViewModel @Inject constructor(
             anchorPage = start.coerceIn(0, (book.document.pageCount - 1).coerceAtLeast(0))
             publishReady()
             replan()
+            loadNavigation(book)
         }
+    }
+
+    /** Outline first (the contents list), then labels; both go through the PDFium thread between page renders. */
+    private fun loadNavigation(book: OpenedBook) {
+        viewModelScope.launch {
+            val outline = runCatching { book.document.outline() }.getOrDefault(emptyList())
+            _navigation.value = BookNavigation(outline = outline)
+            val labels = (0 until book.document.pageCount).map { page ->
+                runCatching { book.document.pageLabel(page) }.getOrNull()
+            }
+            _navigation.value = BookNavigation(outline, labels)
+        }
+    }
+
+    /** Jumps to [page] (contents, Go to page, scrubber). The curl follows the published unit. */
+    fun goToPage(page: Int) {
+        val ready = _state.value as? ReaderState.Ready ?: return
+        anchorPage = page.coerceIn(0, (ready.pageCount - 1).coerceAtLeast(0))
+        publishReady()
+        replan()
+        saveProgress()
     }
 
     /** The reader's root layout reports the window size whenever it changes (fold, unfold, rotation, resize). */

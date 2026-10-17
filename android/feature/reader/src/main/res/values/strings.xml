@@ -8,4 +8,14 @@
     <string name="reader_password_label">Password</string>
     <string name="reader_password_wrong">That password didn\'t work. Try again.</string>
     <string name="reader_password_open">Open</string>
+    <string name="reader_cancel">Cancel</string>
+    <string name="reader_contents">Contents</string>
+    <string name="reader_contents_empty">This book has no table of contents.</string>
+    <string name="reader_go_to">Go to page</string>
+    <string name="reader_go_to_title">Go to page</string>
+    <string name="reader_go_to_label">Page</string>
+    <string name="reader_go_to_hint">As printed (214, xiv) or 1–%1$d</string>
+    <string name="reader_go_to_not_found">No such page. Try a printed page number or 1–%1$d.</string>
+    <string name="reader_go_to_confirm">Go</string>
+    <string name="reader_scrub_preview">Page %1$s · %2$d of %3$d</string>
 </resources>

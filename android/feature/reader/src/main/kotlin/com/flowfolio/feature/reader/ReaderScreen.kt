@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -60,6 +61,7 @@ import kotlinx.coroutines.launch
 fun ReaderScreen(onBack: () -> Unit, viewModel: ReaderViewModel = hiltViewModel()) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val images by viewModel.pageImages.collectAsStateWithLifecycle()
+    val navigation by viewModel.navigation.collectAsStateWithLifecycle()
     TrimMemoryEffect(viewModel::onTrimMemory)
 
     BoxWithConstraints(Modifier.fillMaxSize().background(PAPER)) {
@@ -76,50 +78,16 @@ fun ReaderScreen(onBack: () -> Unit, viewModel: ReaderViewModel = hiltViewModel(
                 onBack
             )
 
-            is ReaderState.Ready -> {
-                // A centre tap shows the title for a while; another centre tap hides it sooner.
-                var titleShownAt by remember { mutableStateOf<Long?>(null) }
-                LaunchedEffect(titleShownAt) {
-                    if (titleShownAt != null) {
-                        delay(TITLE_VISIBLE_MS)
-                        titleShownAt = null
-                    }
-                }
-                Box(
-                    Modifier.fillMaxSize().centreTap {
-                        titleShownAt = if (titleShownAt == null) System.nanoTime() else null
-                    }
-                ) {
-                    // Recreate the curl state when the layout flips (fold/unfold); the ViewModel keeps the position.
-                    key(s.layout) {
-                        when (s.layout) {
-                            ReaderLayout.SINGLE -> SinglePageReader(s, images, viewModel::onUnitShown)
-                            ReaderLayout.SPREAD -> SpreadReader(s, images, viewModel::onUnitShown)
-                        }
-                    }
-                }
-                ReaderChrome(s, titleVisible = titleShownAt != null, onBack = onBack)
-                // Android's back gesture owns the screen edges. Reserve the middle of each side for page turns
-                // (200 dp is the system maximum per edge); back still works above and below.
-                Spacer(
-                    Modifier.align(
-                        Alignment.CenterStart
-                    ).width(EDGE_GUARD_WIDTH).height(EDGE_GUARD_HEIGHT).systemGestureExclusion()
-                )
-                Spacer(
-                    Modifier.align(
-                        Alignment.CenterEnd
-                    ).width(EDGE_GUARD_WIDTH).height(EDGE_GUARD_HEIGHT).systemGestureExclusion()
-                )
-            }
+            is ReaderState.Ready -> ReadyReader(s, images, navigation, viewModel, onBack)
         }
     }
 }
 
 @Composable
-private fun SinglePageReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap>, onUnitShown: (Int) -> Unit) {
+internal fun SinglePageReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap>, onUnitShown: (Int) -> Unit) {
     val curl = rememberReaderCurlState(state.unit)
     ReportUnit(curl, onUnitShown)
+    FollowJumps(curl, state.unit)
     PageCurl(
         count = state.unitCount,
         state = curl,
@@ -139,11 +107,12 @@ private fun SinglePageReader(state: ReaderState.Ready, images: Map<Int, ImageBit
  * forward (animated), and a tap on the left page turns back.
  */
 @Composable
-private fun SpreadReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap>, onUnitShown: (Int) -> Unit) {
+internal fun SpreadReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap>, onUnitShown: (Int) -> Unit) {
     val curl = rememberReaderCurlState(state.unit)
     val scope = rememberCoroutineScope()
     val latestImages by rememberUpdatedState(images)
     ReportUnit(curl, onUnitShown)
+    FollowJumps(curl, state.unit)
     Row(Modifier.fillMaxSize().testTag(ReaderTestTags.PAGE)) {
         Box(
             Modifier
@@ -209,6 +178,12 @@ private fun rememberReaderCurlState(unit: Int): PageCurlState {
     return rememberPageCurlState(initialCurrent = openedAt)
 }
 
+/** Contents, Go to page and the scrubber move the ViewModel's unit; the curl snaps to it without animating. */
+@Composable
+private fun FollowJumps(curl: PageCurlState, unit: Int) {
+    LaunchedEffect(unit) { if (curl.current != unit) curl.snapTo(unit) }
+}
+
 @Composable
 private fun ReportUnit(curl: PageCurlState, onUnitShown: (Int) -> Unit) {
     val callback by rememberUpdatedState(onUnitShown)
@@ -262,5 +237,5 @@ private fun TrimMemoryEffect(onTrim: () -> Unit) {
 private val PAPER = Color.White
 private const val SWIPE_THRESHOLD_PX = 24f
 private const val SINGLE_PAGE_GUTTER_STRENGTH = 0.6f
-private val EDGE_GUARD_WIDTH = 32.dp
-private val EDGE_GUARD_HEIGHT = 200.dp
+internal val EDGE_GUARD_WIDTH = 32.dp
+internal val EDGE_GUARD_HEIGHT = 200.dp
