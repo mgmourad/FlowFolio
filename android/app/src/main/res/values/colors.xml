@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launch window background: the design language's light background (ADR-0014). -->
+    <color name="window_background">#FFFFEBC4</color>
+</resources>

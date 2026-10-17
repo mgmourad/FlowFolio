@@ -10,7 +10,6 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -34,6 +33,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioAlertDialog
 import com.flowfolio.core.model.OutlineEntry
 
 /** The book's table of contents; the current chapter is highlighted and scrolled into view. */
@@ -48,17 +49,18 @@ internal fun ContentsSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = FlowFolio.palette.background
     ) {
         Text(
             stringResource(R.string.reader_contents),
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.titleLarge.merge(FlowFolio.title),
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
         )
         if (outline.isEmpty()) {
             Text(
                 stringResource(R.string.reader_contents_empty),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyMedium.merge(FlowFolio.hint),
                 modifier = Modifier.padding(24.dp)
             )
             return@ModalBottomSheet
@@ -87,11 +89,16 @@ private fun ContentsRow(entry: OutlineEntry, labels: List<String?>, current: Boo
                 bottom = 12.dp
             )
     ) {
+        // Chapters are items, nested sections sub-items; the chapter you are in is lit in the title colour.
+        val role = when {
+            current -> FlowFolio.title
+            entry.depth == 0 -> FlowFolio.item
+            else -> FlowFolio.subItem
+        }
         Text(
             entry.title,
-            style = MaterialTheme.typography.bodyLarge,
+            style = MaterialTheme.typography.bodyLarge.merge(role),
             fontWeight = if (current || entry.depth == 0) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (current) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
@@ -99,8 +106,7 @@ private fun ContentsRow(entry: OutlineEntry, labels: List<String?>, current: Boo
         if (target >= 0) {
             Text(
                 PageLookup.labelOf(target, labels),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodyMedium.merge(FlowFolio.hint),
                 modifier = Modifier.padding(start = 16.dp)
             )
         }
@@ -118,7 +124,7 @@ internal fun GoToPageDialog(labels: List<String?>, pageCount: Int, onGo: (Int) -
         val page = PageLookup.resolve(text, labels, pageCount)
         if (page != null) onGo(page) else notFound = true
     }
-    AlertDialog(
+    FlowFolioAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.reader_go_to_title)) },
         text = {
@@ -159,7 +165,7 @@ private const val CONTEXT_ROWS = 3
 /** PDFs can carry any address, so web links are confirmed before leaving the book. */
 @Composable
 internal fun WebLinkDialog(uri: String, onOpen: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
+    FlowFolioAlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.reader_link_title)) },
         text = { Text(uri) },

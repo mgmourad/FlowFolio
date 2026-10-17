@@ -7,6 +7,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,14 +23,15 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -51,6 +53,10 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.designsystem.EDGE_WIDTH
+import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioGlyph
+import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
@@ -124,17 +130,27 @@ fun LibraryContent(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.library_title)) },
+                title = { Text(stringResource(R.string.library_title), style = FlowFolio.title) },
                 actions = {
                     SortMenu(state.sort, onSort)
-                    TextButton(onClick = onSettings) { Text(stringResource(R.string.action_settings)) }
-                }
+                    IconButton(onClick = onSettings) {
+                        FlowFolioGlyph(Glyph.Settings, contentDescription = stringResource(R.string.action_settings))
+                    }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = FlowFolio.palette.background)
             )
         },
         floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = onImport, modifier = Modifier.testTag(LibraryTestTags.IMPORT)) {
-                Text(stringResource(R.string.action_import))
-            }
+            ExtendedFloatingActionButton(
+                onClick = onImport,
+                icon = { FlowFolioGlyph(Glyph.Add, contentDescription = null, color = FlowFolio.palette.title) },
+                text = { Text(stringResource(R.string.action_import), style = FlowFolio.title) },
+                containerColor = FlowFolio.palette.background,
+                shape = MaterialTheme.shapes.large,
+                modifier = Modifier
+                    .border(EDGE_WIDTH, FlowFolio.palette.edge, MaterialTheme.shapes.large)
+                    .testTag(LibraryTestTags.IMPORT)
+            )
         },
         snackbarHost = { SnackbarHost(snackbar) }
     ) { padding ->
@@ -149,7 +165,7 @@ fun LibraryContent(
                 ) {
                     Text(
                         stringResource(R.string.library_empty),
-                        style = MaterialTheme.typography.bodyLarge,
+                        style = MaterialTheme.typography.bodyLarge.merge(FlowFolio.hint),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.testTag(LibraryTestTags.EMPTY)
                     )
@@ -170,14 +186,21 @@ fun LibraryContent(
 private fun SortMenu(current: LibrarySort, onSort: (LibrarySort) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        TextButton(onClick = { open = true }) { Text(stringResource(R.string.action_sort)) }
+        IconButton(onClick = { open = true }) {
+            FlowFolioGlyph(Glyph.Sort, contentDescription = stringResource(R.string.action_sort))
+        }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             listOf(
                 LibrarySort.RECENT to R.string.sort_recent,
                 LibrarySort.TITLE to R.string.sort_title
             ).forEach { (sort, label) ->
                 DropdownMenuItem(
-                    text = { Text((if (sort == current) "✓ " else "") + stringResource(label)) },
+                    text = {
+                        Text(
+                            stringResource(label),
+                            style = if (sort == current) FlowFolio.title else FlowFolio.item
+                        )
+                    },
                     onClick = {
                         open = false
                         onSort(sort)
@@ -205,30 +228,41 @@ private fun BookTile(
         Box(Modifier.fillMaxWidth().aspectRatio(COVER_ASPECT)) {
             Cover(item.book)
             if (item.availability == Availability.MISSING) {
-                Badge(Modifier.align(Alignment.TopEnd).padding(4.dp)) { Text(stringResource(R.string.badge_missing)) }
+                Badge(Modifier.align(Alignment.TopEnd).padding(4.dp), containerColor = FlowFolio.palette.subItem) {
+                    Text(stringResource(R.string.badge_missing))
+                }
             } else if (item.book.passwordProtected) {
-                Badge(Modifier.align(Alignment.TopEnd).padding(4.dp)) { Text(stringResource(R.string.badge_locked)) }
+                Badge(Modifier.align(Alignment.TopEnd).padding(4.dp), containerColor = FlowFolio.palette.subItem) {
+                    Text(stringResource(R.string.badge_locked))
+                }
             }
         }
         Text(
             item.book.title,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium
+            style = MaterialTheme.typography.bodyMedium.merge(FlowFolio.item),
+            modifier = Modifier.padding(top = 6.dp)
         )
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             if (item.book.storage is BookStorage.Linked) {
-                DropdownMenuItem(text = { Text(stringResource(R.string.action_locate)) }, onClick = {
+                DropdownMenuItem(text = { MenuText(R.string.action_locate) }, onClick = {
                     menu = false
                     onLocate(item.book)
                 })
             }
-            DropdownMenuItem(text = { Text(stringResource(R.string.action_delete)) }, onClick = {
+            DropdownMenuItem(text = { MenuText(R.string.action_delete, warn = true) }, onClick = {
                 menu = false
                 onDelete(item.book)
             })
         }
     }
+}
+
+/** A menu entry: the title colour, or the sub-item colour for destructive entries. */
+@Composable
+private fun MenuText(label: Int, warn: Boolean = false) {
+    Text(stringResource(label), style = if (warn) FlowFolio.subItem else FlowFolio.title)
 }
 
 @Composable
@@ -252,7 +286,7 @@ private fun Cover(book: Book) {
             Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
             contentAlignment = Alignment.Center
         ) {
-            Text(book.title.take(1).uppercase(), style = MaterialTheme.typography.headlineMedium)
+            FlowFolioGlyph(Glyph.Book, contentDescription = null, size = 48.dp)
         }
     }
 }
