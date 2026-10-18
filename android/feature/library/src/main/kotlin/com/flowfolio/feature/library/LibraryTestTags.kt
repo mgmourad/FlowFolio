@@ -28,6 +28,7 @@ object LibraryTestTags {
     const val EDIT_MENU = "details_edit"
     const val EDIT_DETAILS = "edit_details"
     const val SAVE_DETAILS = "edit_details_save"
+    const val LOOKUP = "edit_details_lookup"
 
     fun book(id: String) = "book_$id"
 

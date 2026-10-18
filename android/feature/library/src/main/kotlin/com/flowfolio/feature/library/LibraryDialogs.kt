@@ -42,6 +42,16 @@ internal fun LibraryDialogs(dialog: LibraryDialog?, viewModel: LibraryViewModel)
             onDismiss = viewModel::dismissDialog
         )
 
+        is LibraryDialog.AskLookup -> FlowFolioAlertDialog(
+            onDismissRequest = { viewModel.onLookupAnswer(dialog, allow = false) },
+            title = { Text(stringResource(R.string.lookup_ask_title)) },
+            text = { Text(stringResource(R.string.lookup_ask_body)) },
+            confirmButton = {
+                DialogButton(R.string.lookup_ask_yes) { viewModel.onLookupAnswer(dialog, allow = true) }
+            },
+            dismissButton = { DialogButton(R.string.lookup_ask_no) { viewModel.onLookupAnswer(dialog, allow = false) } }
+        )
+
         is LibraryDialog.LinkNotPossible -> FlowFolioAlertDialog(
             onDismissRequest = viewModel::dismissDialog,
             title = { Text(stringResource(R.string.link_not_possible_title)) },

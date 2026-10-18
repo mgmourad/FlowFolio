@@ -4,7 +4,7 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 1: PDF reader with page curl. Build in progress: milestones 1-4 done, milestone 5 (design) in progress: slices 1-6 done** (started 2026-10-16).
+**Phase 1: PDF reader with page curl. Build in progress: milestones 1-4 done, milestone 5 (design) in progress: slices 1-7 done** (started 2026-10-16).
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
 Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
 Build plan approved 2026-10-16: 5 milestones; check in with the product owner at milestone 3 with memory numbers.
@@ -173,6 +173,9 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     or the home screen. Delete pulled dumps after parsing.
 23. The reader bars hide 10 seconds after the last interaction; a UI dump taken later will not find them.
 24. Bookmarks are stored per page (one ribbon per page; adding again recolours it). The Bookmarks tab is slice 5.
+28. Network (ADR-0017): INTERNET is used only by Translate (Google Translate in a WebView limited to *.google.com) and
+    the Open Library lookup (`BookLookup`, off until the reader agrees). Page numbers: `PageLabels` runs in
+    `books.page_labels` (Room v7), from PDF labels or `FolioScanner` (margin folios).
 27. Annotations (ADR-0016): page text from `nativePageText`; selection logic in `TextSelection`, gestures and drawing
     in `ReaderSelection` / `ReaderAnnotating`. Selection is off in Scroll and while zoomed. Room is at schema v6
     (`annotations`, `books.right_to_left`). Right to left mirrors the book layer and each page (`LocalMirroredPages`).
@@ -184,7 +187,7 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
 ## Decision log
 
-ADRs 0001–0016 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0017 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014, proposed).

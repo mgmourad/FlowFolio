@@ -2,6 +2,8 @@ package com.flowfolio.feature.library
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flowfolio.core.data.BookEnricher
+import com.flowfolio.core.data.BookLookup
 import com.flowfolio.core.data.ImportResult
 import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.data.RelinkResult
@@ -113,6 +115,9 @@ sealed interface LibraryDialog {
     data class LinkNotPossible(val uri: String) : LibraryDialog
 
     data class ConfirmDelete(val book: Book) : LibraryDialog
+
+    /** After the first import: may FlowFolio look book details up online (ADR-0017)? */
+    data class AskLookup(val book: Book) : LibraryDialog
 }
 
 sealed interface LibraryMessage {
@@ -136,11 +141,13 @@ sealed interface LibraryMessage {
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@Suppress("TooManyFunctions") // one handler per library action
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val library: LibraryRepository,
     private val settingsRepo: SettingsRepository,
-    shelfRepo: ShelfRepository
+    shelfRepo: ShelfRepository,
+    private val lookup: BookLookup
 ) : ViewModel() {
     private val view = MutableStateFlow(View())
     private val transient = MutableStateFlow(Transient())
@@ -251,17 +258,37 @@ class LibraryViewModel @Inject constructor(
 
     fun dismissDialog() = transient.update { it.copy(dialog = null) }
 
+    /** The answer to [LibraryDialog.AskLookup]: remembered, and on yes the new book is looked up straight away. */
+    fun onLookupAnswer(dialog: LibraryDialog.AskLookup, allow: Boolean) = viewModelScope.launch {
+        dismissDialog()
+        settingsRepo.setOnlineLookup(allow)
+        if (allow) BookEnricher(lookup, library).enrich(dialog.book)
+    }
+
     private fun showDialog(dialog: LibraryDialog) = transient.update { it.copy(dialog = dialog) }
 
     private suspend fun import(uri: String, mode: StorageMode, fromShare: Boolean = false) {
         transient.update { it.copy(importing = true) }
         try {
             when (val r = library.import(uri, mode, fromShare)) {
-                is ImportResult.Imported -> messageChannel.send(LibraryMessage.Imported(r.book.title))
+                is ImportResult.Imported -> {
+                    messageChannel.send(LibraryMessage.Imported(r.book.title))
+                    // The online lookup: runs when allowed, or asks the first time (off until agreed).
+                    viewModelScope.launch {
+                        if (BookEnricher(lookup, library).afterImport(r.book, settingsRepo)) {
+                            showDialog(LibraryDialog.AskLookup(r.book))
+                        }
+                    }
+                }
+
                 is ImportResult.Duplicate -> messageChannel.send(LibraryMessage.Duplicate(r.existing.title))
+
                 ImportResult.NotAPdf -> messageChannel.send(LibraryMessage.NotAPdf)
+
                 ImportResult.Unreadable -> messageChannel.send(LibraryMessage.Unreadable)
+
                 is ImportResult.NotEnoughSpace -> messageChannel.send(LibraryMessage.NotEnoughSpace(r.neededBytes))
+
                 ImportResult.LinkNotPossible -> showDialog(LibraryDialog.LinkNotPossible(uri))
             }
         } finally {

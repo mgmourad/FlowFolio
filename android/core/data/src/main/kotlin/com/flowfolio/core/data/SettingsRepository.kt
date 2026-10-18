@@ -10,6 +10,7 @@ import com.flowfolio.core.model.UserSettings
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 
+@Suppress("TooManyFunctions") // one setter per setting
 interface SettingsRepository {
     val settings: Flow<UserSettings>
 
@@ -32,6 +33,8 @@ interface SettingsRepository {
     suspend fun setPageTurn(turn: PageTurn)
 
     suspend fun setNeonGlow(on: Boolean)
+
+    suspend fun setOnlineLookup(on: Boolean)
 }
 
 class DefaultSettingsRepository @Inject constructor(private val source: SettingsDataSource) : SettingsRepository {
@@ -75,5 +78,9 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setNeonGlow(on: Boolean) {
         source.setNeonGlow(on)
+    }
+
+    override suspend fun setOnlineLookup(on: Boolean) {
+        source.setOnlineLookup(on)
     }
 }

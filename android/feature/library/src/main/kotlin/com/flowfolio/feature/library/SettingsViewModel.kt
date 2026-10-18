@@ -22,7 +22,8 @@ data class SettingsActions(
     val onSpreads: (Boolean) -> Unit = {},
     val onCoverAlone: (Boolean) -> Unit = {},
     val onStorageMode: (StorageMode) -> Unit = {},
-    val onAskEachImport: (Boolean) -> Unit = {}
+    val onAskEachImport: (Boolean) -> Unit = {},
+    val onLookup: (Boolean) -> Unit = {}
 )
 
 @HiltViewModel
@@ -43,6 +44,8 @@ class SettingsViewModel @Inject constructor(private val repo: SettingsRepository
     fun setTheme(theme: ThemePreference) = viewModelScope.launch { repo.setTheme(theme) }
 
     fun setGlow(on: Boolean) = viewModelScope.launch { repo.setNeonGlow(on) }
+
+    fun setLookup(on: Boolean) = viewModelScope.launch { repo.setOnlineLookup(on) }
 
     fun setPageTurn(turn: PageTurn) = viewModelScope.launch { repo.setPageTurn(turn) }
 

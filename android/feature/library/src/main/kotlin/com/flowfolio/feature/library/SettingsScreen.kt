@@ -55,7 +55,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             onSpreads = viewModel::setSpreads,
             onCoverAlone = viewModel::setCoverAlone,
             onStorageMode = viewModel::setStorageMode,
-            onAskEachImport = viewModel::setAskEachImport
+            onAskEachImport = viewModel::setAskEachImport,
+            onLookup = viewModel::setLookup
         )
     )
 }
@@ -165,6 +166,8 @@ private fun LibraryGroup(settings: UserSettings, actions: SettingsActions) {
         }
         Divider()
         SwitchRow(R.string.settings_ask_each, null, settings.askStorageEachImport, actions.onAskEachImport)
+        Divider()
+        SwitchRow(R.string.settings_lookup, R.string.settings_lookup_detail, settings.onlineLookup, actions.onLookup)
     }
 }
 

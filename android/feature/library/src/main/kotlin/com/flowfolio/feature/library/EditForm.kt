@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.setValue
+import com.flowfolio.core.data.Found
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookDetails
 import com.flowfolio.core.model.BookType
@@ -42,6 +43,22 @@ class EditForm(values: List<String>) {
         authorBio = authorBio,
         type = type
     )
+
+    /** Puts what Open Library found into the fields that are still empty; true when any field changed. */
+    fun fillEmpty(found: Found): Boolean {
+        val f = found.details
+        val before = values()
+        if (author.isBlank()) author = found.author.orEmpty()
+        if (subtitle.isBlank()) subtitle = f.subtitle.orEmpty()
+        if (edition.isBlank()) edition = f.edition.orEmpty()
+        if (released.isBlank()) released = f.released.orEmpty()
+        if (publisher.isBlank()) publisher = f.publisher.orEmpty()
+        if (isbn.isBlank()) isbn = f.isbn.orEmpty()
+        if (language.isBlank()) language = f.language.orEmpty()
+        if (description.isBlank()) description = f.description.orEmpty()
+        if (authorBio.isBlank()) authorBio = f.authorBio.orEmpty()
+        return values() != before
+    }
 
     companion object {
         fun of(book: Book): EditForm {

@@ -69,7 +69,11 @@ data class UserSettings(
     /** How pages turn in the reader. */
     val pageTurn: PageTurn = PageTurn.CURL,
     /** The mock's "Neon glow": the soft light on text and icons in dark mode (and soft shadows in light mode). */
-    val neonGlow: Boolean = true
+    val neonGlow: Boolean = true,
+    /** Look book details up online (Open Library, ADR-0017). Off until the reader agrees. */
+    val onlineLookup: Boolean = false,
+    /** Whether the first import has asked about the online lookup yet. */
+    val onlineLookupAsked: Boolean = false
 )
 
 /**

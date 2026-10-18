@@ -58,6 +58,23 @@ class ReaderZoomOnDeviceTest {
         assertTrue("pinching back to 1x should leave zoom", device.wait(Until.gone(By.res(ZOOM)), TIMEOUT_MS))
     }
 
+    @Test
+    fun pressAndHoldSelectsTextWhileZoomedIn() {
+        device.findObject(By.res(PAGE)).pinchOpen(PINCH_PERCENT, PINCH_SPEED)
+        val zoom = device.wait(Until.findObject(By.res(ZOOM)), TIMEOUT_MS)
+        assertNotNull(zoom)
+        Thread.sleep(SETTLE_MS)
+        val area = zoom.visibleBounds
+        // Some points of a page are blank or a figure; one of these lands on text.
+        val points = (1..4).flatMap { row -> (1..3).map { col -> col * area.width() / 4 to row * area.height() / 5 } }
+        val found = points.any { (x, y) ->
+            device.swipe(area.left + x, area.top + y, area.left + x, area.top + y, HOLD_STEPS) // press and hold
+            device.wait(Until.hasObject(By.res(HIGHLIGHT_BAR)), BAR_WAIT_MS)
+        }
+        assertTrue("pressing and holding on text while zoomed in should offer the highlight bar", found)
+        device.pressBack() // leave the selection and the zoom without highlighting anything
+    }
+
     /** Two quick taps injected directly; separate UiAutomator clicks are too far apart to count as a double tap. */
     private fun doubleTap(x: Float, y: Float) {
         val automation = instrumentation.uiAutomation
@@ -80,6 +97,11 @@ class ReaderZoomOnDeviceTest {
         const val BOOK_ID = "93652b69c43197d10dc83438b813b5f7515e61e7ea4336da8636ff902cb4aba8"
         const val PAGE = "reader_page"
         const val ZOOM = "reader_zoom"
+        const val HIGHLIGHT_BAR = "reader_highlight_bar"
+
+        /** UiAutomator swipe steps are about 5 ms each: a one-second hold. */
+        const val HOLD_STEPS = 200
+        const val BAR_WAIT_MS = 1_500L
         const val TIMEOUT_MS = 10_000L
         const val SETTLE_MS = 1_500L
         const val PINCH_PERCENT = 0.6f

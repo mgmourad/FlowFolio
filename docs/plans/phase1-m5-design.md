@@ -57,7 +57,7 @@ Each slice is verified on the Fold with screenshots.
    as Room v3, and ribbons into slice 4 as v4. This slice is v5: editable details, book type and reading sessions.
    - Ribbons, book type, reading sessions.
    - Editable metadata: subtitle, edition, publisher, ISBN, description, language, release date, author bio.
-7. **Online lookup** (own ADR).
+7. **Online lookup** (ADR-0017, done 2026-10-18).
    - Open Library, by ISBN, or by title and author.
    - Android's built-in HTTP and JSON; the INTERNET permission.
    - Off by default.
