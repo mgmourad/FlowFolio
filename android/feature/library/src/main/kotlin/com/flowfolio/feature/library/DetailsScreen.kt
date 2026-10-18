@@ -77,13 +77,16 @@ import kotlinx.coroutines.launch
 
 /**
  * A book's details page (the mock's `#s-details`). [origin] is the library row the book was opened from, so its cover
- * flies in from there. [onRead] opens the reader; it runs after the book-opening hinge.
+ * flies in from there. [onRead] opens the reader; it runs after the book-opening hinge. [onEdit] opens Edit details;
+ * [onOpenBook] another book's details (the Author tab's other books).
  */
 @Composable
 fun DetailsScreen(
     origin: String,
     onBack: () -> Unit,
     onRead: (Book) -> Unit,
+    onEdit: (Book) -> Unit = {},
+    onOpenBook: (Book) -> Unit = {},
     viewModel: DetailsViewModel = hiltViewModel(),
     shelvesVm: ShelvesViewModel = hiltViewModel(),
     libraryVm: LibraryViewModel = hiltViewModel()
@@ -112,7 +115,9 @@ fun DetailsScreen(
         onLocate = locate,
         onDelete = {
             libraryVm.onRequestDelete(book)
-        }
+        },
+        onEdit = { onEdit(book) },
+        onBook = onOpenBook
     )
     DetailsContent(state, book, origin, hero, actions)
     LibraryDialogs(libraryVm.uiState.collectAsStateWithLifecycle().value.dialog, libraryVm)
@@ -125,7 +130,9 @@ internal data class DetailsActions(
     val onChapter: (Int) -> Unit = {},
     val onShelves: () -> Unit = {},
     val onLocate: () -> Unit = {},
-    val onDelete: () -> Unit = {}
+    val onDelete: () -> Unit = {},
+    val onEdit: () -> Unit = {},
+    val onBook: (Book) -> Unit = {}
 )
 
 /** Folded: hero, then title, actions and tabs under it. Unfolded (600 dp and wider): cover pane and tabs pane. */
@@ -251,6 +258,14 @@ private fun Backdrop(backdrop: androidx.compose.ui.graphics.ImageBitmap?, modifi
 private fun DetailsHeading(state: DetailsUiState, book: Book, actions: DetailsActions, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth().padding(horizontal = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(book.title, style = FlowFolioType.bookTitle.merge(FlowFolio.title), textAlign = TextAlign.Center)
+        book.details.subtitle?.let {
+            Text(
+                it,
+                style = FlowFolioType.sub.merge(FlowFolio.hint),
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 4.dp)
+            )
+        }
         book.author?.let {
             Text(
                 it,
@@ -326,6 +341,12 @@ private fun TopButtons(state: DetailsUiState, actions: DetailsActions) {
                     })
                 }
                 DropdownMenuItem(text = {
+                    Text(stringResource(R.string.action_edit_details), style = FlowFolio.item)
+                }, onClick = {
+                    menu = false
+                    actions.onEdit()
+                }, modifier = Modifier.testTag(LibraryTestTags.EDIT_MENU))
+                DropdownMenuItem(text = {
                     Text(stringResource(R.string.action_delete), style = FlowFolio.subItem)
                 }, onClick = {
                     menu = false
@@ -341,6 +362,7 @@ private fun DetailsTabs(state: DetailsUiState, book: Book, tab: Int, onTab: (Int
     val tabs = listOf(
         stringResource(R.string.tab_overview),
         stringResource(R.string.tab_details),
+        stringResource(R.string.tab_author),
         stringResource(R.string.tab_contents)
     )
     FlowFolioTabs(tabs, tab, onTab, Modifier.padding(top = 22.dp))
@@ -348,6 +370,7 @@ private fun DetailsTabs(state: DetailsUiState, book: Book, tab: Int, onTab: (Int
         when (tab) {
             0 -> OverviewPanel(state, book)
             1 -> InfoPanel(state, book)
+            2 -> AuthorPanel(state, book, actions.onBook)
             else -> ContentsPanel(state.contents, book, actions.onChapter)
         }
     }

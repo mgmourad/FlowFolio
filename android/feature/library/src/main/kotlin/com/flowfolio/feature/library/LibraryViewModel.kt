@@ -10,6 +10,7 @@ import com.flowfolio.core.data.ShelfRepository
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
+import com.flowfolio.core.model.BookType
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.Shelf
 import com.flowfolio.core.model.StorageMode
@@ -35,8 +36,8 @@ import kotlinx.coroutines.launch
 
 data class LibraryItem(val book: Book, val availability: Availability = Availability.AVAILABLE)
 
-/** The chips under the library header. Type chips (Textbooks, Novels) come with book types in a later slice. */
-enum class LibraryFilter { ALL, IN_PROGRESS, NOT_STARTED, RECENT }
+/** The library chips. [TEXTBOOKS] and [NOVELS] (the mock's chips) appear once a book has that type. */
+enum class LibraryFilter { ALL, IN_PROGRESS, NOT_STARTED, TEXTBOOKS, NOVELS, RECENT }
 
 data class LibraryUiState(
     /** The books that pass [filter] and [query], in the chosen sort order. */
@@ -52,7 +53,9 @@ data class LibraryUiState(
     val totalCount: Int = 0,
     val inProgressCount: Int = 0,
     /** The most recently opened book with a saved position, for the "Continue reading" card. */
-    val continueReading: LibraryItem? = null
+    val continueReading: LibraryItem? = null,
+    /** The chips to show: the type chips only when some book has that type. */
+    val filters: List<LibraryFilter> = LibraryFilter.entries.filter { it.type == null }
 ) {
     /** Whether the library itself is empty (as opposed to nothing matching the chips or search). */
     val libraryEmpty: Boolean get() = totalCount == 0
@@ -82,7 +85,16 @@ internal fun LibraryFilter.accepts(book: Book, now: Long): Boolean = when (this)
     LibraryFilter.IN_PROGRESS -> book.started() && book.progress < 1f
     LibraryFilter.NOT_STARTED -> !book.started()
     LibraryFilter.RECENT -> now - book.addedAtMillis <= RECENT_WINDOW_MS
+    LibraryFilter.TEXTBOOKS, LibraryFilter.NOVELS -> book.details.type == type
 }
+
+/** The book type a chip stands for, or null for the reading-state chips. */
+internal val LibraryFilter.type: BookType?
+    get() = when (this) {
+        LibraryFilter.TEXTBOOKS -> BookType.TEXTBOOK
+        LibraryFilter.NOVELS -> BookType.NOVEL
+        else -> null
+    }
 
 internal fun Book.matches(query: String): Boolean =
     query.isBlank() || title.contains(query.trim(), ignoreCase = true) || author?.contains(query.trim(), true) == true
@@ -171,7 +183,8 @@ class LibraryViewModel @Inject constructor(
             totalCount = all.size,
             inProgressCount = all.count { it.book.started() },
             continueReading = all.filter { it.book.started() && it.book.lastOpenedAtMillis != null }
-                .maxByOrNull { it.book.lastOpenedAtMillis ?: 0L }
+                .maxByOrNull { it.book.lastOpenedAtMillis ?: 0L },
+            filters = LibraryFilter.entries.filter { f -> f.type == null || all.any { it.book.details.type == f.type } }
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), LibraryUiState())
 

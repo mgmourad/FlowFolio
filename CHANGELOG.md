@@ -84,6 +84,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     pages).
   - Edge bounce: turning past the first or last page nudges the page and springs it back.
   - Reader memory on the unfolded Fold, spread, Night paper, 300 turns: 263 MB, growth 2.3%, 2.25% janky frames.
+- Phase 1 milestone 5, data slice (Room schema v5):
+  - Editable book details: subtitle, edition, publisher, ISBN, description, language, release date, the author's role
+    and bio, and the book's type (Textbook, Novel, Non-fiction, Other). Edit details is in the details page's menu;
+    blank fields read as "Not known yet".
+  - Details page as in the mock: subtitle and edition under the title, a description on Overview, the full Details
+    grid, and an Author tab (initials, role, bio, the author's other books in the library).
+  - Time read: the reader records reading sessions (`reading_sessions`) while it is in front and in use; five minutes
+    without a page turn ends a session, and glances under ten seconds are not kept. Overview shows time read and
+    ribbons.
+  - Library chips Textbooks and Novels appear once a book has that type.
 - Owner tweaks after the Bookmarks and Settings slice:
   - On Night and Black pages the Contents, Go to page and "Aa" panels use a nearly opaque glass, so their text stays
     readable over bright photos on the page.

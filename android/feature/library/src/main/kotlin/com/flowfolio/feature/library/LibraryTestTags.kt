@@ -23,6 +23,9 @@ object LibraryTestTags {
     const val SHELF_VIEW = "shelf_page_view"
     const val BOOKMARKS = "bookmarks"
     const val SETTINGS = "settings"
+    const val EDIT_MENU = "details_edit"
+    const val EDIT_DETAILS = "edit_details"
+    const val SAVE_DETAILS = "edit_details_save"
 
     fun book(id: String) = "book_$id"
 

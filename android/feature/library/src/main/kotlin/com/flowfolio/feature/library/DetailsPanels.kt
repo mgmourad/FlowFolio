@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioPill
@@ -44,6 +45,7 @@ import kotlin.math.roundToInt
 internal fun DetailsPills(state: DetailsUiState, book: Book, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+        book.details.edition?.let { FlowFolioPill(it, FlowFolio.subItem) }
         FlowFolioPill(pluralStringResource(R.plurals.page_count, book.pageCount, book.pageCount), FlowFolio.hint)
         FlowFolioPill(stringResource(R.string.format_pdf), FlowFolio.item)
         FlowFolioPill(Formatter.formatShortFileSize(context, book.sizeBytes), FlowFolio.subItem)
@@ -53,18 +55,25 @@ internal fun DetailsPills(state: DetailsUiState, book: Book, modifier: Modifier 
     }
 }
 
-/** Overview: how far along, and three stats (`.stats`). */
+/** Overview: what the book is about, how far along, and three stats (`.stats`): time read, ribbons, shelves. */
 @Composable
 internal fun OverviewPanel(state: DetailsUiState, book: Book) {
     Column(Modifier.fillMaxWidth()) {
+        book.details.description?.let {
+            Text(
+                it,
+                style = FlowFolioType.sub.copy(fontSize = 15.sp, lineHeight = 23.sp).merge(FlowFolio.hint),
+                modifier = Modifier.padding(bottom = 18.dp)
+            )
+        }
         FlowFolioProgressBar(book.progress, Modifier.padding(bottom = 6.dp))
         Text(
             stringResource(R.string.percent_complete, (book.progress * PERCENT).roundToInt()),
             style = FlowFolioType.rowDetail.merge(FlowFolio.hint)
         )
         Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Stat((book.lastPage?.plus(1) ?: 0).toString(), R.string.stat_page, FlowFolio.item, Modifier.weight(1f))
-            Stat(book.pageCount.toString(), R.string.stat_pages, FlowFolio.title, Modifier.weight(1f))
+            Stat(readTime(state.readMillis), R.string.stat_read, FlowFolio.item, Modifier.weight(1f))
+            Stat(state.ribbons.toString(), R.string.stat_ribbons, FlowFolio.title, Modifier.weight(1f))
             Stat(state.bookShelves.size.toString(), R.string.stat_shelves, FlowFolio.subItem, Modifier.weight(1f))
         }
         if (state.bookShelves.isNotEmpty()) {
@@ -74,6 +83,20 @@ internal fun OverviewPanel(state: DetailsUiState, book: Book) {
                 modifier = Modifier.padding(top = 14.dp)
             )
         }
+    }
+}
+
+/** Time read as the mock shows it: "14h", "2h 05m", "35m", or "<1m" for a glance. */
+@Composable
+internal fun readTime(millis: Long): String {
+    val minutes = millis / MS_PER_MINUTE
+    val hours = minutes / MINUTES_PER_HOUR
+    val rest = minutes % MINUTES_PER_HOUR
+    return when {
+        minutes < 1 -> stringResource(R.string.read_under_minute)
+        hours == 0L -> stringResource(R.string.read_minutes, minutes)
+        rest == 0L || hours >= WHOLE_HOURS_FROM -> stringResource(R.string.read_hours, hours)
+        else -> stringResource(R.string.read_hours_minutes, hours, rest.toInt())
     }
 }
 
@@ -87,16 +110,27 @@ private fun Stat(value: String, label: Int, role: TextStyle, modifier: Modifier)
     }
 }
 
-/** Details (`.info-grid`): what is known about the file. More fields come with editable metadata. */
+/** Details (`.info-grid`): what is known about the book and its file. Unknown fields say so. */
 @Composable
 internal fun InfoPanel(state: DetailsUiState, book: Book) {
     val context = LocalContext.current
     val dateFormat = DateFormat.getMediumDateFormat(context)
     val unknown = stringResource(R.string.info_unknown)
+    val d = book.details
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Info(R.string.info_author, book.author ?: unknown, Modifier.weight(1f))
             Info(R.string.info_pages, book.pageCount.toString(), Modifier.weight(1f))
+        }
+        Info(R.string.info_isbn, d.isbn ?: unknown)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Info(R.string.info_released, d.released ?: unknown, Modifier.weight(1f))
+            Info(R.string.info_edition, d.edition ?: unknown, Modifier.weight(1f))
+        }
+        Info(R.string.info_publisher, d.publisher ?: unknown)
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Info(R.string.info_language, d.language ?: unknown, Modifier.weight(1f))
+            Info(R.string.info_type, d.type?.let { stringResource(it.label) } ?: unknown, Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Info(R.string.info_added, dateFormat.format(book.addedAtMillis), Modifier.weight(1f))
@@ -193,4 +227,9 @@ internal fun currentChapter(entries: List<OutlineEntry>, lastPage: Int?): Int {
 }
 
 private const val PERCENT = 100
+private const val MS_PER_MINUTE = 60_000L
+private const val MINUTES_PER_HOUR = 60L
+
+/** From ten hours on, minutes are noise. */
+private const val WHOLE_HOURS_FROM = 10L
 private const val DOT_IDLE_ALPHA = 0.4f

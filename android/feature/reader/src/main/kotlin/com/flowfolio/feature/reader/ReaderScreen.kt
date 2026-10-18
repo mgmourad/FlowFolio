@@ -52,6 +52,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.color
@@ -70,7 +71,8 @@ import kotlinx.coroutines.launch
 fun ReaderScreen(
     onBack: () -> Unit,
     viewModel: ReaderViewModel = hiltViewModel(),
-    bookmarks: ReaderBookmarksViewModel = hiltViewModel()
+    bookmarks: ReaderBookmarksViewModel = hiltViewModel(),
+    readingTime: ReadingTimeViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val images by viewModel.pageImages.collectAsStateWithLifecycle()
@@ -78,6 +80,13 @@ fun ReaderScreen(
     TrimMemoryEffect(viewModel::onTrimMemory)
     // System Back closes the book the same way as the Back button (open panels catch it first).
     BackHandler(onBack = onBack)
+    // Time read (slice 6): a session runs while the reader is in front, and page turns keep it going.
+    LifecycleResumeEffect(readingTime) {
+        readingTime.onResume()
+        onPauseOrDispose { readingTime.onPause() }
+    }
+    val unit = (state as? ReaderState.Ready)?.unit
+    LaunchedEffect(unit) { if (unit != null) readingTime.onActivity() }
 
     val tone = (state as? ReaderState.Ready)?.tone ?: PageTone.PRINTED
     val marks by bookmarks.bookmarks.collectAsStateWithLifecycle()

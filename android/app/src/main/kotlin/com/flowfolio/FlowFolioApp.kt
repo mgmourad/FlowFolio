@@ -44,6 +44,7 @@ import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.feature.library.BookmarksScreen
 import com.flowfolio.feature.library.DetailsScreen
 import com.flowfolio.feature.library.DetailsViewModel
+import com.flowfolio.feature.library.EditDetailsScreen
 import com.flowfolio.feature.library.LibraryScreen
 import com.flowfolio.feature.library.LibraryViewModel
 import com.flowfolio.feature.library.SettingsScreen
@@ -55,10 +56,13 @@ import com.flowfolio.feature.reader.ReaderScreen
 private object Routes {
     const val READER = "reader/{bookId}?layout={layout}"
     const val DETAILS = "book/{${DetailsViewModel.ARG_BOOK_ID}}?from={from}"
+    const val EDIT = "book/{${DetailsViewModel.ARG_BOOK_ID}}/edit"
 
     fun reader(bookId: String, layout: String? = null) = "reader/$bookId" + (layout?.let { "?layout=$it" } ?: "")
 
     fun details(bookId: String, origin: String) = "book/$bookId?from=$origin"
+
+    fun edit(bookId: String) = "book/$bookId/edit"
 
     const val SHELF = "shelf/{${ShelfPageViewModel.ARG_SHELF_ID}}"
 
@@ -109,6 +113,7 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                     }
                     destination(TopLevel.Settings.route) { ScreenEntrance { SettingsScreen() } }
                     detailsDestination(nav)
+                    editDestination(nav)
                     shelfDestination(nav)
                     readerDestination(nav)
                 }
@@ -138,9 +143,19 @@ private fun NavGraphBuilder.detailsDestination(nav: NavHostController) = composa
         DetailsScreen(
             origin = backStack.arguments?.getString("from").orEmpty(),
             onBack = { nav.popBackStack() },
-            onRead = { book -> nav.navigate(Routes.reader(book.id)) }
+            onRead = { book -> nav.navigate(Routes.reader(book.id)) },
+            onEdit = { book -> nav.navigate(Routes.edit(book.id)) },
+            onOpenBook = { book -> nav.navigate(Routes.details(book.id, "")) }
         )
     }
+}
+
+/** Edit details for a book (from the details page's menu). */
+private fun NavGraphBuilder.editDestination(nav: NavHostController) = composable(
+    Routes.EDIT,
+    arguments = listOf(navArgument(DetailsViewModel.ARG_BOOK_ID) { type = NavType.StringType })
+) {
+    EditDetailsScreen(onDone = { nav.popBackStack() })
 }
 
 /** A whole shelf, as tiles or a list (opened from a shelf's book count in the library). */

@@ -5,7 +5,9 @@ import com.flowfolio.core.database.BookDao
 import com.flowfolio.core.database.BookEntity
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
+import com.flowfolio.core.model.BookDetails
 import com.flowfolio.core.model.BookStorage
+import com.flowfolio.core.model.BookType
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.StorageMode
 import java.io.File
@@ -157,32 +159,36 @@ class DefaultLibraryRepository @Inject constructor(
 
     override suspend fun rename(bookId: String, title: String) = withContext(io) {
         require(title.isNotBlank()) { "title is blank" }
-        dao.updateTitle(bookId, title.trim())
+        val book = dao.get(bookId)?.toBook() ?: return@withContext
+        updateDetails(bookId, title, book.author, book.details)
     }
+
+    override suspend fun updateDetails(bookId: String, title: String, author: String?, details: BookDetails) =
+        withContext(io) {
+            require(title.isNotBlank()) { "title is blank" }
+            dao.updateDetails(
+                id = bookId,
+                title = title.trim(),
+                author = author.clean(),
+                subtitle = details.subtitle.clean(),
+                edition = details.edition.clean(),
+                publisher = details.publisher.clean(),
+                isbn = details.isbn.clean(),
+                description = details.description.clean(),
+                language = details.language.clean(),
+                released = details.released.clean(),
+                authorRole = details.authorRole.clean(),
+                authorBio = details.authorBio.clean(),
+                bookType = details.type?.name
+            )
+        }
 
     override fun observeBook(bookId: String): Flow<Book?> = dao.observe(bookId).map { it?.toBook() }
 
     override suspend fun markOpened(bookId: String) = withContext(io) { dao.markOpened(bookId, clock.now()) }
 
-    /** Streams the file once: SHA-256 for the book id, optionally copying to [sink]. Closes [fd]. */
-    private fun hash(fd: ParcelFileDescriptor, sink: OutputStream?): Pair<String, Long> {
-        val digest = MessageDigest.getInstance("SHA-256")
-        var total = 0L
-        DigestInputStream(ParcelFileDescriptor.AutoCloseInputStream(fd), digest).use { input ->
-            val buf = ByteArray(BUFFER_BYTES)
-            while (true) {
-                val n = input.read(buf)
-                if (n < 0) break
-                sink?.write(buf, 0, n)
-                total += n
-            }
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) } to total
-    }
-
     private companion object {
         const val COVER_WIDTH_PX = 360
-        const val BUFFER_BYTES = 1 shl 16
         const val SPACE_RESERVE_BYTES = 50L * 1024 * 1024
         const val DEFAULT_TITLE = "Untitled"
     }
@@ -199,5 +205,38 @@ internal fun BookEntity.toBook() = Book(
     coverPath = coverPath,
     passwordProtected = passwordProtected,
     lastPage = lastPage,
-    author = author
+    author = author,
+    details = BookDetails(
+        subtitle = subtitle,
+        edition = edition,
+        publisher = publisher,
+        isbn = isbn,
+        description = description,
+        language = language,
+        released = released,
+        authorRole = authorRole,
+        authorBio = authorBio,
+        type = BookType.entries.firstOrNull { it.name == bookType }
+    )
 )
+
+/** Trimmed, and null when blank, so an emptied field reads as unknown. */
+private fun String?.clean(): String? = this?.trim()?.takeIf { it.isNotEmpty() }
+
+/** Streams the file once: SHA-256 for the book id, optionally copying to [sink]. Closes [fd]. */
+private fun hash(fd: ParcelFileDescriptor, sink: OutputStream?): Pair<String, Long> {
+    val digest = MessageDigest.getInstance("SHA-256")
+    var total = 0L
+    DigestInputStream(ParcelFileDescriptor.AutoCloseInputStream(fd), digest).use { input ->
+        val buf = ByteArray(HASH_BUFFER_BYTES)
+        while (true) {
+            val n = input.read(buf)
+            if (n < 0) break
+            sink?.write(buf, 0, n)
+            total += n
+        }
+    }
+    return digest.digest().joinToString("") { "%02x".format(it) } to total
+}
+
+private const val HASH_BUFFER_BYTES = 1 shl 16

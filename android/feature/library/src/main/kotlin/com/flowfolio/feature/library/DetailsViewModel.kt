@@ -3,12 +3,16 @@ package com.flowfolio.feature.library
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flowfolio.core.data.BookmarkRepository
 import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.data.ReaderRepository
+import com.flowfolio.core.data.ReadingRepository
 import com.flowfolio.core.data.RelinkResult
 import com.flowfolio.core.data.ShelfRepository
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
+import com.flowfolio.core.model.BookDetails
+import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.OutlineEntry
 import com.flowfolio.core.model.Shelf
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -37,7 +41,11 @@ data class DetailsUiState(
     val book: Book? = null,
     val availability: Availability = Availability.AVAILABLE,
     val shelves: List<Shelf> = emptyList(),
-    val contents: DetailsContents = DetailsContents.Loading
+    val contents: DetailsContents = DetailsContents.Loading,
+    /** Time spent reading this book (milliseconds), its ribbons, and the other books by the same author. */
+    val readMillis: Long = 0,
+    val ribbons: Int = 0,
+    val sameAuthor: List<Book> = emptyList()
 ) {
     val bookShelves: List<Shelf> get() = book?.let { b -> shelves.filter { b.id in it.bookIds } }.orEmpty()
 }
@@ -48,7 +56,9 @@ class DetailsViewModel @Inject constructor(
     saved: SavedStateHandle,
     private val library: LibraryRepository,
     private val reader: ReaderRepository,
-    shelves: ShelfRepository
+    shelves: ShelfRepository,
+    reading: ReadingRepository,
+    bookmarks: BookmarkRepository
 ) : ViewModel() {
     val bookId: String = checkNotNull(saved[ARG_BOOK_ID]) { "details needs a book id" }
 
@@ -56,8 +66,24 @@ class DetailsViewModel @Inject constructor(
     private val availability = MutableStateFlow(Availability.AVAILABLE)
 
     val uiState: StateFlow<DetailsUiState> =
-        combine(library.observeBook(bookId), shelves.observeShelves(), contents, availability) { book, s, c, a ->
-            DetailsUiState(loading = false, book = book, availability = a, shelves = s, contents = c)
+        combine(
+            library.observeBook(bookId),
+            shelves.observeShelves(),
+            contents,
+            availability,
+            extras(reading, bookmarks)
+        ) { book, s, c, a, x ->
+            DetailsUiState(
+                loading = false,
+                book = book,
+                availability = a,
+                shelves = s,
+                contents = c,
+                readMillis = x.readMillis,
+                ribbons = x.ribbons,
+                sameAuthor = book?.author?.let { author -> x.books.filter { it.id != bookId && it.author == author } }
+                    .orEmpty()
+            )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), DetailsUiState())
 
     init {
@@ -75,6 +101,20 @@ class DetailsViewModel @Inject constructor(
     /** Points the book at a file the reader located again, then re-reads its availability and contents. */
     fun relink(uri: String) = viewModelScope.launch {
         if (library.relink(bookId, uri) == RelinkResult.Relinked) load()
+    }
+
+    private class Extras(val readMillis: Long, val ribbons: Int, val books: List<Book>)
+
+    private fun extras(reading: ReadingRepository, bookmarks: BookmarkRepository) = combine(
+        reading.observeReadMillis(bookId),
+        bookmarks.observe(bookId),
+        library.observeBooks(LibrarySort.RECENT)
+    ) { ms, marks, books -> Extras(ms, marks.size, books) }
+
+    /** Saves Edit details. */
+    fun saveDetails(title: String, author: String?, details: BookDetails, then: () -> Unit) = viewModelScope.launch {
+        if (title.isNotBlank()) library.updateDetails(bookId, title, author, details)
+        then()
     }
 
     private suspend fun load() {

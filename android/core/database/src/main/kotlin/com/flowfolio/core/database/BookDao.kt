@@ -30,8 +30,28 @@ interface BookDao {
     @Query("UPDATE books SET last_opened_at = :at WHERE id = :id")
     suspend fun markOpened(id: String, at: Long)
 
-    @Query("UPDATE books SET title = :title WHERE id = :id")
-    suspend fun updateTitle(id: String, title: String)
+    /** Everything the reader can edit about a book (Edit details). */
+    @Query(
+        """UPDATE books SET title = :title, author = :author, subtitle = :subtitle, edition = :edition,
+        publisher = :publisher, isbn = :isbn, description = :description, language = :language, released = :released,
+        author_role = :authorRole, author_bio = :authorBio, book_type = :bookType WHERE id = :id"""
+    )
+    @Suppress("LongParameterList") // one column each, as the query reads
+    suspend fun updateDetails(
+        id: String,
+        title: String,
+        author: String?,
+        subtitle: String?,
+        edition: String?,
+        publisher: String?,
+        isbn: String?,
+        description: String?,
+        language: String?,
+        released: String?,
+        authorRole: String?,
+        authorBio: String?,
+        bookType: String?
+    )
 
     @Query("UPDATE books SET last_page = :page WHERE id = :id")
     suspend fun updateLastPage(id: String, page: Int)

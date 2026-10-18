@@ -133,13 +133,18 @@ internal fun SearchField(query: String, onQuery: (String) -> Unit) {
 
 /** `.chips`. */
 @Composable
-internal fun FilterChips(selected: LibraryFilter, onFilter: (LibraryFilter) -> Unit, modifier: Modifier = Modifier) {
+internal fun FilterChips(
+    filters: List<LibraryFilter>,
+    selected: LibraryFilter,
+    onFilter: (LibraryFilter) -> Unit,
+    modifier: Modifier = Modifier
+) {
     LazyRow(
         modifier.fillMaxWidth(),
         contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 14.dp, bottom = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(LibraryFilter.entries) { f ->
+        items(filters) { f ->
             FlowFolioChip(stringResource(f.label), selected = f == selected, onClick = { onFilter(f) })
         }
     }
@@ -151,6 +156,8 @@ private val LibraryFilter.label: Int
         LibraryFilter.IN_PROGRESS -> R.string.filter_in_progress
         LibraryFilter.NOT_STARTED -> R.string.filter_not_started
         LibraryFilter.RECENT -> R.string.filter_recent
+        LibraryFilter.TEXTBOOKS -> R.string.filter_textbooks
+        LibraryFilter.NOVELS -> R.string.filter_novels
     }
 
 /** `.hero-card`: the book in progress, how far along, and Resume. */

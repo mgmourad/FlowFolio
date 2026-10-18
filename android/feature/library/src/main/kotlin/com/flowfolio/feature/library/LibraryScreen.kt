@@ -215,7 +215,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.libraryBody(state: Li
         state.libraryEmpty -> item(key = "empty") { EmptyLibrary(actions.onImport) }
 
         else -> {
-            item(key = "chips") { FilterChips(state.filter, actions.onFilter, Modifier.reveal(1)) }
+            item(key = "chips") { FilterChips(state.filters, state.filter, actions.onFilter, Modifier.reveal(1)) }
             val hero = state.continueReading
             if (hero != null && state.filter == LibraryFilter.ALL && state.query.isBlank()) {
                 item(key = "hero") { ContinueReadingCard(hero, actions, Modifier.reveal(2)) }

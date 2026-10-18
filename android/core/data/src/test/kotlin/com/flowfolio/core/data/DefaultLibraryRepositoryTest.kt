@@ -176,7 +176,7 @@ class DefaultLibraryRepositoryTest {
 }
 
 /** Maps content URIs to temp files; tracks persisted grants. */
-private class FakeDocumentSource : DocumentSource {
+internal class FakeDocumentSource : DocumentSource {
     private val docs = mutableMapOf<String, File>()
     val persisted = mutableSetOf<String>()
     val refusePersist = mutableSetOf<String>()
@@ -202,7 +202,7 @@ private class FakeDocumentSource : DocumentSource {
 }
 
 /** Accepts files starting with "%PDF"; title comes from the file's name on disk; writes a stub cover. */
-private class FakeInspector : PdfInspector {
+internal class FakeInspector : PdfInspector {
     override suspend fun inspect(fd: ParcelFileDescriptor, coverOut: File, coverWidthPx: Int): PdfInfo {
         val text = FileInputStream(fd.fileDescriptor).bufferedReader().readText()
         if (!text.startsWith("%PDF")) throw NotAPdfException()
