@@ -180,42 +180,7 @@ private fun DetailsHero(book: Book, origin: String, hinge: Float, fadeRight: Boo
         label = "swayT"
     )
     Box(Modifier.fillMaxWidth().height(HERO_HEIGHT)) {
-        // `.det-bg` + `.det-fade`: the blurred cover, faded out toward the bottom with a mask (rather than painted
-        // over with a flat colour), so it melts into the gradient app background without a seam. A static layer.
-        Box(
-            Modifier
-                .fillMaxSize()
-                .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                .drawWithContent {
-                    drawContent()
-                    drawRect(
-                        Brush.verticalGradient(
-                            0f to Color.Black.copy(alpha = FADE_TOP),
-                            FADE_MID_STOP to Color.Black.copy(alpha = FADE_MID),
-                            FADE_END_STOP to Color.Transparent
-                        ),
-                        blendMode = BlendMode.DstIn
-                    )
-                    // Two panes: also fade out toward the tabs pane, so the backdrop has no straight edge there.
-                    if (fadeRight) {
-                        drawRect(
-                            Brush.horizontalGradient(FADE_SIDE_STOP to Color.Black, 1f to Color.Transparent),
-                            blendMode = BlendMode.DstIn
-                        )
-                    }
-                }
-        ) {
-            backdrop?.let {
-                Image(
-                    it,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    filterQuality = FilterQuality.Low,
-                    colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(BACKDROP_SATURATION) }),
-                    modifier = Modifier.fillMaxSize().graphicsLayer { alpha = BACKDROP_ALPHA }
-                )
-            }
-        }
+        Backdrop(backdrop, fadeRight)
         // `@keyframes sway`: rotateY 22 -> 8 degrees while rising 8 dp, 6 s each way. The book redraws its angle;
         // the rise is a layer move, so its blurred contact shadow is not re-rasterized every frame.
         Box(
@@ -241,6 +206,48 @@ private fun DetailsHero(book: Book, origin: String, hinge: Float, fadeRight: Boo
                 COVER_HEIGHT,
                 modifier = Modifier.sharedCover(coverKey(book.id, origin)),
                 restAngle = SWAY_FROM + (SWAY_TO - SWAY_FROM) * t
+            )
+        }
+    }
+}
+
+/**
+ * `.det-bg` + `.det-fade`: the blurred cover, faded out toward the bottom (and toward the tabs pane when [fadeRight])
+ * with a mask rather than a flat colour, so it melts into the gradient app background without a seam.
+ */
+@Composable
+private fun Backdrop(backdrop: androidx.compose.ui.graphics.ImageBitmap?, fadeRight: Boolean) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                drawRect(
+                    Brush.verticalGradient(
+                        0f to Color.Black.copy(alpha = FADE_TOP),
+                        FADE_MID_STOP to Color.Black.copy(alpha = FADE_MID),
+                        FADE_END_STOP to Color.Transparent
+                    ),
+                    blendMode = BlendMode.DstIn
+                )
+                // Two panes: also fade out toward the tabs pane, so the backdrop has no straight edge there.
+                if (fadeRight) {
+                    drawRect(
+                        Brush.horizontalGradient(FADE_SIDE_STOP to Color.Black, 1f to Color.Transparent),
+                        blendMode = BlendMode.DstIn
+                    )
+                }
+            }
+    ) {
+        backdrop?.let {
+            Image(
+                it,
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                filterQuality = FilterQuality.Low,
+                colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(BACKDROP_SATURATION) }),
+                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = BACKDROP_ALPHA }
             )
         }
     }
