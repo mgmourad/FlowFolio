@@ -227,16 +227,13 @@ private fun BookmarkRow(item: BookmarkItem, actions: BookmarkActions) {
                 actions.onRemove(item)
             }
         },
-        modifier = Modifier.clipSideways().testTag(LibraryTestTags.bookmark(item.bookmark.id))
+        // Unfolded, a sliding card stays inside its own column; its shadow can still fall above and below.
+        modifier = Modifier
+            .drawWithContent {
+                clipRect(0f, -size.height, size.width, size.height * 2) { this@drawWithContent.drawContent() }
+            }
+            .testTag(LibraryTestTags.bookmark(item.bookmark.id))
     ) { BookmarkCard(item) { spot -> actions.onOpen(item, spot) } }
-}
-
-/**
- * Keeps a sliding card inside its own column (unfolded, it would slide over the card beside it) while its shadow can
- * still fall above and below.
- */
-private fun Modifier.clipSideways(): Modifier = drawWithContent {
-    clipRect(0f, -size.height, size.width, size.height * 2) { this@drawWithContent.drawContent() }
 }
 
 @Composable
