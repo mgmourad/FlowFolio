@@ -124,10 +124,10 @@ class LibraryUiTest {
     @Test
     fun settingsShowStorageOptionsAndAskSwitch() {
         compose.setContent {
-            FlowFolioTheme { SettingsContent(UserSettings(), {}, {}, {}, {}) }
+            FlowFolioTheme { SettingsContent(UserSettings(), SettingsActions()) }
         }
-        compose.onNodeWithText(res.getString(R.string.storage_copy)).assertIsDisplayed()
-        compose.onNodeWithText(res.getString(R.string.settings_ask_each)).assertIsDisplayed()
+        compose.onNodeWithText(res.getString(R.string.storage_copy)).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText(res.getString(R.string.settings_ask_each)).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(res.getString(R.string.theme_dark)).performScrollTo().assertIsDisplayed()
     }
 }

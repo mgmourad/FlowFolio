@@ -30,6 +30,8 @@ interface SettingsRepository {
     suspend fun setPaperStyle(style: PaperStyle)
 
     suspend fun setPageTurn(turn: PageTurn)
+
+    suspend fun setNeonGlow(on: Boolean)
 }
 
 class DefaultSettingsRepository @Inject constructor(private val source: SettingsDataSource) : SettingsRepository {
@@ -69,5 +71,9 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setPageTurn(turn: PageTurn) {
         source.setPageTurn(turn)
+    }
+
+    override suspend fun setNeonGlow(on: Boolean) {
+        source.setNeonGlow(on)
     }
 }

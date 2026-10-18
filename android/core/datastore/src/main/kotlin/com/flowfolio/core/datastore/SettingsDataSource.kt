@@ -38,7 +38,8 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             readerSpreads = p[READER_SPREADS] ?: defaults.readerSpreads,
             spreadCoverAlone = p[COVER_ALONE] ?: defaults.spreadCoverAlone,
             paperStyle = p[PAPER_STYLE].toEnum(defaults.paperStyle),
-            pageTurn = p[PAGE_TURN].toEnum(defaults.pageTurn)
+            pageTurn = p[PAGE_TURN].toEnum(defaults.pageTurn),
+            neonGlow = p[NEON_GLOW] ?: defaults.neonGlow
         )
     }
 
@@ -78,6 +79,10 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         store.edit { it[PAGE_TURN] = turn.name }
     }
 
+    suspend fun setNeonGlow(on: Boolean) {
+        store.edit { it[NEON_GLOW] = on }
+    }
+
     private inline fun <reified T : Enum<T>> String?.toEnum(default: T): T =
         this?.let { name -> enumValues<T>().firstOrNull { it.name == name } } ?: default
 
@@ -91,6 +96,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val COVER_ALONE = booleanPreferencesKey("spread_cover_alone")
         val PAPER_STYLE = stringPreferencesKey("reader_paper")
         val PAGE_TURN = stringPreferencesKey("reader_page_turn")
+        val NEON_GLOW = booleanPreferencesKey("neon_glow")
     }
 }
 

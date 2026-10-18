@@ -4,7 +4,7 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 1: PDF reader with page curl. Build in progress: milestones 1-4 done, milestone 5 (design) in progress: slices 1-4 done** (started 2026-10-16).
+**Phase 1: PDF reader with page curl. Build in progress: milestones 1-4 done, milestone 5 (design) in progress: slices 1-5 done** (started 2026-10-16).
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
 Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
 Build plan approved 2026-10-16: 5 milestones; check in with the product owner at milestone 3 with memory numbers.
@@ -140,8 +140,8 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 10. OpenStax *University Physics* is CC BY-NC-SA: local testing only; prefer CC BY titles for anything committed.
 11. DataStore unit tests write once per store: DataStore's atomic rename fails on Windows when the file exists.
 12. Linked ("read in place") books only work for files picked with the system picker; shared files are always copied.
-13. Settings screen lives in `:feature:library` for now; reader settings live in the reader's "Aa" sheet
-    (`ReaderSettingsSheet`). Split into `:feature:settings` when it grows.
+13. Settings and the Bookmarks tab live in `:feature:library` for now; reader settings also live in the reader's "Aa"
+    panel (`ReaderSettingsContent`). Split into `:feature:settings` when it grows.
 14. Reader memory target (ADR-0013): at most 110 MB over the app's floor on the same screen and fold state, and at most
     10% growth from turn 50 to the last turn, on retained memory. Unfolded (300 turns, milestone 4 build, 2026-10-17): single +107.3 MB (little headroom left), spread +73.5 MB;
     zoomed in (tiles shown) the app read 242 MB vs 214 MB unzoomed.
@@ -167,7 +167,7 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     dump` fails on that screen. Tap by coordinates, or test it with Compose tests.
 21. GPU memory: never draw blurs with BlurMaskFilter on the GPU for anything repeated or animated; use `softShadow` /
     `blurredShape` (cached CPU bitmaps, `ShadowBitmaps`). Text and glyph glows are still GPU blurs (about 70-100 MB in
-    dark mode); the slice 5 "Neon glow" switch turns them off.
+    dark mode); Settings > Neon glow (`UserSettings.neonGlow`) turns them off.
 22. Before any adb input or UI dump on the owner's phone, check that FlowFolio is the resumed activity
     (`dumpsys activity activities | topResumedActivity`) and stop if it is not, so no tap or dump reaches another app
     or the home screen. Delete pulled dumps after parsing.

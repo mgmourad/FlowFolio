@@ -84,6 +84,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     pages).
   - Edge bounce: turning past the first or last page nudges the page and springs it back.
   - Reader memory on the unfolded Fold, spread, Night paper, 300 turns: 263 MB, growth 2.3%, 2.25% janky frames.
+- Phase 1 milestone 5, Bookmarks and Settings slice:
+  - Bookmarks tab: every ribbon in the library as a card with its colour tag, the book's cover, the printed page and
+    the chapter it is in (from the PDF's outline), newest first; colour filter chips; tap to open the book there with
+    the book opening; swipe right to recolour, left to remove. Two columns unfolded.
+  - Settings grouped as in the mock: Appearance (theme, Neon glow, page turn), Reading (two pages side by side, cover
+    on its own), Library (import storage, ask every time) and Conversion ("On this device"). Two columns unfolded.
+    The mock's reflow and reminder settings stay hidden until those features exist.
+  - Neon glow (setting `neon_glow`, on by default) turns the text and icon glows off.
 - Owner tweaks after the reader slice:
   - The reader's bars and panels take the light or dark palette of the page colour, so icons, the page number and
     the percentage read well on every paper; over dark papers the glass is a lighter frosted tint with a pale edge.

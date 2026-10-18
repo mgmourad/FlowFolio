@@ -383,7 +383,7 @@ private fun BookRowMenu(book: Book, open: Boolean, actions: BookRowActions, onCl
 
 /** One action uncovered by a swipe: a glyph over its label in [color]. */
 @Composable
-private fun SwipeAction(label: Int, glyph: Glyph, color: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+internal fun SwipeAction(label: Int, glyph: Glyph, color: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
     Column(
         Modifier.width(ACTION_WIDTH).fillMaxHeight().clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
