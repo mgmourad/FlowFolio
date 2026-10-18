@@ -117,7 +117,8 @@ class DefaultLibraryRepository @Inject constructor(
             addedAt = clock.now(),
             lastOpenedAt = null,
             coverPath = cover,
-            passwordProtected = info.passwordProtected
+            passwordProtected = info.passwordProtected,
+            author = info.author
         )
         dao.insert(entity)
         return ImportResult.Imported(entity.toBook())
@@ -153,6 +154,8 @@ class DefaultLibraryRepository @Inject constructor(
         files.cover(bookId).delete()
         Unit
     }
+
+    override fun observeBook(bookId: String): Flow<Book?> = dao.observe(bookId).map { it?.toBook() }
 
     override suspend fun markOpened(bookId: String) = withContext(io) { dao.markOpened(bookId, clock.now()) }
 
@@ -190,5 +193,6 @@ internal fun BookEntity.toBook() = Book(
     lastOpenedAtMillis = lastOpenedAt,
     coverPath = coverPath,
     passwordProtected = passwordProtected,
-    lastPage = lastPage
+    lastPage = lastPage,
+    author = author
 )

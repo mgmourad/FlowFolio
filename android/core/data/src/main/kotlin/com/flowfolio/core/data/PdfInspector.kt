@@ -7,14 +7,14 @@ import com.flowfolio.core.pdf.PdfException
 import java.io.File
 import javax.inject.Inject
 
-data class PdfInfo(val pageCount: Int, val title: String?, val passwordProtected: Boolean)
+data class PdfInfo(val pageCount: Int, val title: String?, val passwordProtected: Boolean, val author: String? = null)
 
 class NotAPdfException(cause: Throwable? = null) : Exception("not a readable PDF", cause)
 
 /** Reads what the library needs from a PDF at import time. Abstracted so import logic is testable on the JVM. */
 interface PdfInspector {
     /**
-     * Reads page count and title, and writes a cover thumbnail (page 1, [coverWidthPx] wide) to [coverOut] when
+     * Reads page count, title and author, and writes a cover thumbnail (page 1, [coverWidthPx] wide) to [coverOut] when
      * possible. JPEG, because lossy WebP encoding needs API 30 and minSdk is 29. Password-protected files are
      * accepted without a cover; the password is asked when opening.
      *
@@ -34,7 +34,7 @@ class PdfiumInspector @Inject constructor(private val engine: PdfEngine) : PdfIn
         }
         return doc.use {
             if (it.pageCount > 0) writeCover(it, coverOut, coverWidthPx)
-            PdfInfo(it.pageCount, it.title(), passwordProtected = false)
+            PdfInfo(it.pageCount, it.title(), passwordProtected = false, author = it.author())
         }
     }
 

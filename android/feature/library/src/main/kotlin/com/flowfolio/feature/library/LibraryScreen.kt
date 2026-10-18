@@ -1,86 +1,79 @@
 package com.flowfolio.feature.library
 
-import android.graphics.BitmapFactory
 import android.text.format.Formatter
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.material3.Badge
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.flowfolio.core.designsystem.EDGE_WIDTH
 import com.flowfolio.core.designsystem.FlowFolio
-import com.flowfolio.core.designsystem.FlowFolioGlyph
-import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
+import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.LocalChromePadding
 import com.flowfolio.core.designsystem.chromeStart
+import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
-import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.LibrarySort
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 private val PDF_TYPES = arrayOf("application/pdf")
 
-/** Library route: wires the ViewModel, file pickers and snackbar messages to [LibraryContent]. */
+/** What the library screen can ask for. [onOpen] gets the row the book was tapped in, for the cover flight. */
+data class LibraryActions(
+    val onImport: () -> Unit = {},
+    val onOpen: (LibraryItem, String) -> Unit = { _, _ -> },
+    val onResume: (LibraryItem) -> Unit = {},
+    val onDelete: (Book) -> Unit = {},
+    val onLocate: (Book) -> Unit = {},
+    val onAddToShelf: (Book) -> Unit = {},
+    val onSort: (LibrarySort) -> Unit = {},
+    val onFilter: (LibraryFilter) -> Unit = {},
+    val onQuery: (String) -> Unit = {}
+)
+
+/** Library route: wires the ViewModels, file pickers, snackbar messages and shelf dialogs to [LibraryContent]. */
 @Composable
 fun LibraryScreen(
-    onOpenBook: (Book) -> Unit,
-    onOpenSettings: (() -> Unit)? = null,
-    viewModel: LibraryViewModel = hiltViewModel()
+    onOpenDetails: (Book, String) -> Unit,
+    onRead: (Book) -> Unit,
+    scrollToShelf: Long? = null,
+    onScrolledToShelf: () -> Unit = {},
+    viewModel: LibraryViewModel = hiltViewModel(),
+    shelves: ShelvesViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     var relinkBookId by rememberSaveable { mutableStateOf<String?>(null) }
+    var shelving by remember { mutableStateOf<Book?>(null) }
 
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.onFilePicked(it.toString()) }
@@ -90,6 +83,10 @@ fun LibraryScreen(
         if (uri != null && id != null) viewModel.onRelinkPicked(id, uri.toString())
         relinkBookId = null
     }
+    val locate = { book: Book ->
+        relinkBookId = book.id
+        relinkPicker.launch(PDF_TYPES)
+    }
 
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { snackbar.showSnackbar(it.text(context)) }
@@ -98,215 +95,166 @@ fun LibraryScreen(
     LibraryContent(
         state = state,
         snackbar = snackbar,
-        onImport = { importPicker.launch(PDF_TYPES) },
-        onOpen = { item ->
-            if (item.availability == Availability.MISSING) {
-                relinkBookId = item.book.id
-                relinkPicker.launch(PDF_TYPES)
-            } else {
-                viewModel.onBookOpened(item.book.id)
-                onOpenBook(item.book)
-            }
-        },
-        onDelete = viewModel::onRequestDelete,
-        onLocate = { book ->
-            relinkBookId = book.id
-            relinkPicker.launch(PDF_TYPES)
-        },
-        onSort = viewModel::onSortChange,
-        onSettings = onOpenSettings
+        scrollToShelf = scrollToShelf,
+        onScrolledToShelf = onScrolledToShelf,
+        actions = LibraryActions(
+            onImport = { importPicker.launch(PDF_TYPES) },
+            onOpen = { item, origin ->
+                if (item.availability == Availability.MISSING) locate(item.book) else onOpenDetails(item.book, origin)
+            },
+            onResume = { item ->
+                if (item.availability == Availability.MISSING) {
+                    locate(item.book)
+                } else {
+                    viewModel.onBookOpened(item.book.id)
+                    onRead(item.book)
+                }
+            },
+            onDelete = viewModel::onRequestDelete,
+            onLocate = locate,
+            onAddToShelf = { shelving = it },
+            onSort = viewModel::onSortChange,
+            onFilter = viewModel::onFilter,
+            onQuery = viewModel::onQuery
+        )
     )
     LibraryDialogs(state.dialog, viewModel)
+    shelving?.let { ShelveBookFlow(it, state.shelves, shelves) { shelving = null } }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun LibraryTopBar(sort: LibrarySort, onSort: (LibrarySort) -> Unit, onSettings: (() -> Unit)?) {
-    TopAppBar(
-        title = { Text(stringResource(R.string.library_title), style = FlowFolio.title) },
-        actions = {
-            SortMenu(sort, onSort)
-            if (onSettings != null) {
-                IconButton(onClick = onSettings) {
-                    FlowFolioGlyph(Glyph.Settings, contentDescription = stringResource(R.string.action_settings))
-                }
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-    )
-}
-
+/** The library as in the mock: header, chips, "Continue reading" and a shelf row per shelf, on the app background. */
 @Composable
 fun LibraryContent(
     state: LibraryUiState,
     snackbar: SnackbarHostState,
-    onImport: () -> Unit,
-    onOpen: (LibraryItem) -> Unit,
-    onDelete: (Book) -> Unit,
-    onLocate: (Book) -> Unit,
-    onSort: (LibrarySort) -> Unit,
-    onSettings: (() -> Unit)?
+    actions: LibraryActions,
+    scrollToShelf: Long? = null,
+    onScrolledToShelf: () -> Unit = {}
 ) {
-    val bottom = LocalChromePadding.current.calculateBottomPadding()
-    Scaffold(
-        modifier = Modifier.chromeStart(),
-        containerColor = Color.Transparent,
-        topBar = { LibraryTopBar(state.sort, onSort, onSettings) },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick = onImport,
-                icon = { FlowFolioGlyph(Glyph.Add, contentDescription = null, color = FlowFolio.palette.title) },
-                text = { Text(stringResource(R.string.action_import), style = FlowFolio.title) },
-                containerColor = FlowFolio.palette.background,
-                shape = MaterialTheme.shapes.large,
-                modifier = Modifier
-                    .padding(bottom = bottom)
-                    .border(EDGE_WIDTH, FlowFolio.palette.edge, MaterialTheme.shapes.large)
-                    .testTag(LibraryTestTags.IMPORT)
+    val chrome = LocalChromePadding.current
+    val insets = WindowInsets.safeDrawing.asPaddingValues()
+    var searching by rememberSaveable { mutableStateOf(state.query.isNotEmpty()) }
+    val list = rememberLazyListState()
+    // Shelves screen -> "show this shelf": scroll its row into view once the rows are there.
+    LaunchedEffect(scrollToShelf, state.loading, state.shelves) {
+        val target = scrollToShelf ?: return@LaunchedEffect
+        if (state.loading) return@LaunchedEffect
+        val index = rowIndex(state, searching, target)
+        if (index != null) list.animateScrollToItem(index)
+        onScrolledToShelf()
+    }
+    Box(Modifier.fillMaxSize().chromeStart()) {
+        LazyColumn(
+            Modifier.fillMaxSize().testTag(LibraryTestTags.GRID),
+            state = list,
+            contentPadding = PaddingValues(
+                top = insets.calculateTopPadding(),
+                bottom = insets.calculateBottomPadding() + chrome.calculateBottomPadding() + LIST_END
             )
-        },
-        snackbarHost = { SnackbarHost(snackbar) }
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
-            if (state.importing) LinearProgressIndicator(Modifier.fillMaxWidth())
-            when {
-                state.loading -> Unit
-
-                state.items.isEmpty() -> Box(
-                    Modifier.fillMaxSize().padding(24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        stringResource(R.string.library_empty),
-                        style = MaterialTheme.typography.bodyLarge.merge(FlowFolio.hint),
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.testTag(LibraryTestTags.EMPTY)
+        ) {
+            item(key = "header") {
+                LibraryHeader(
+                    state = state,
+                    searching = searching,
+                    onSearch = {
+                        searching = !searching
+                        if (!searching) actions.onQuery("")
+                    },
+                    actions = actions,
+                    modifier = Modifier.reveal(0)
+                )
+            }
+            if (searching) item(key = "search") { SearchField(state.query, actions.onQuery) }
+            if (state.importing) {
+                item(key = "importing") {
+                    LinearProgressIndicator(
+                        Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 6.dp),
+                        color = FlowFolio.palette.title,
+                        trackColor = FlowFolio.palette.edge
                     )
                 }
-
-                else -> LazyVerticalGrid(
-                    columns = GridCells.Adaptive(minSize = 128.dp),
-                    contentPadding = PaddingValues(bottom = bottom + GRID_FAB_CLEARANCE),
-                    modifier = Modifier.fillMaxSize().testTag(LibraryTestTags.GRID)
-                ) {
-                    items(state.items, key = { it.book.id }) { item -> BookTile(item, onOpen, onDelete, onLocate) }
-                }
             }
+            libraryBody(state, actions)
         }
+        SnackbarHost(
+            snackbar,
+            Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = insets.calculateBottomPadding() + chrome.calculateBottomPadding())
+        )
     }
 }
 
-@Composable
-private fun SortMenu(current: LibrarySort, onSort: (LibrarySort) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { open = true }) {
-            FlowFolioGlyph(Glyph.Sort, contentDescription = stringResource(R.string.action_sort))
-        }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            listOf(
-                LibrarySort.RECENT to R.string.sort_recent,
-                LibrarySort.TITLE to R.string.sort_title
-            ).forEach { (sort, label) ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            stringResource(label),
-                            style = if (sort == current) FlowFolio.title else FlowFolio.item
-                        )
-                    },
-                    onClick = {
-                        open = false
-                        onSort(sort)
-                    }
+/** The list index of [shelfId]'s row, matching the items [LibraryContent] emits; null when it has no row. */
+private fun rowIndex(state: LibraryUiState, searching: Boolean, shelfId: Long): Int? {
+    val rows = shelfRows(state.items, state.shelves)
+    val row = rows.indexOfFirst { it.shelf?.id == shelfId }.takeIf { it >= 0 } ?: return null
+    val hero = state.continueReading != null && state.filter == LibraryFilter.ALL && state.query.isBlank()
+    // Header, search field, import progress, chips and the hero card come before the rows.
+    val before = listOf(true, searching, state.importing, true, hero).count { it }
+    return before + row
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.libraryBody(state: LibraryUiState, actions: LibraryActions) {
+    when {
+        state.loading -> Unit
+
+        state.libraryEmpty -> item(key = "empty") { EmptyLibrary(actions.onImport) }
+
+        else -> {
+            item(key = "chips") { FilterChips(state.filter, actions.onFilter, Modifier.reveal(1)) }
+            val hero = state.continueReading
+            if (hero != null && state.filter == LibraryFilter.ALL && state.query.isBlank()) {
+                item(key = "hero") { ContinueReadingCard(hero, actions, Modifier.reveal(2)) }
+            }
+            val rows = shelfRows(state.items, state.shelves)
+            if (rows.isEmpty()) item(key = "nomatch") { NoMatch() }
+            items(rows, key = { "row-" + (it.shelf?.id ?: "loose") }) { row ->
+                ShelfRowView(
+                    row,
+                    noShelves = state.shelves.isEmpty(),
+                    actions = actions,
+                    modifier = Modifier.reveal(ROWS_REVEAL_ORDER)
                 )
             }
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun BookTile(
-    item: LibraryItem,
-    onOpen: (LibraryItem) -> Unit,
-    onDelete: (Book) -> Unit,
-    onLocate: (Book) -> Unit
-) {
-    var menu by remember { mutableStateOf(false) }
-    Column(
-        Modifier
-            .padding(8.dp)
-            .combinedClickable(onClick = { onOpen(item) }, onLongClick = { menu = true })
+private fun EmptyLibrary(onImport: () -> Unit) {
+    androidx.compose.foundation.layout.Column(
+        Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 96.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(Modifier.fillMaxWidth().aspectRatio(COVER_ASPECT)) {
-            Cover(item.book)
-            if (item.availability == Availability.MISSING) {
-                Badge(Modifier.align(Alignment.TopEnd).padding(4.dp), containerColor = FlowFolio.palette.subItem) {
-                    Text(stringResource(R.string.badge_missing))
-                }
-            } else if (item.book.passwordProtected) {
-                Badge(Modifier.align(Alignment.TopEnd).padding(4.dp), containerColor = FlowFolio.palette.subItem) {
-                    Text(stringResource(R.string.badge_locked))
-                }
-            }
-        }
         Text(
-            item.book.title,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            style = MaterialTheme.typography.bodyMedium.merge(FlowFolio.item),
-            modifier = Modifier.padding(top = 6.dp)
+            stringResource(R.string.library_empty),
+            style = FlowFolioType.prose.merge(FlowFolio.hint),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.testTag(LibraryTestTags.EMPTY)
         )
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            if (item.book.storage is BookStorage.Linked) {
-                DropdownMenuItem(text = { MenuText(R.string.action_locate) }, onClick = {
-                    menu = false
-                    onLocate(item.book)
-                })
-            }
-            DropdownMenuItem(text = { MenuText(R.string.action_delete, warn = true) }, onClick = {
-                menu = false
-                onDelete(item.book)
-            })
-        }
+        FlowFolioPrimaryButton(
+            text = stringResource(R.string.action_import),
+            onClick = onImport,
+            modifier = Modifier.padding(top = 20.dp)
+        )
     }
-}
-
-/** A menu entry: the title colour, or the sub-item colour for destructive entries. */
-@Composable
-private fun MenuText(label: Int, warn: Boolean = false) {
-    Text(stringResource(label), style = if (warn) FlowFolio.subItem else FlowFolio.title)
 }
 
 @Composable
-private fun Cover(book: Book) {
-    val image by produceState<ImageBitmap?>(null, book.coverPath) {
-        value =
-            book.coverPath?.let { path ->
-                withContext(Dispatchers.IO) { BitmapFactory.decodeFile(path)?.asImageBitmap() }
-            }
-    }
-    val bitmap = image
-    if (bitmap != null) {
-        Image(
-            bitmap,
-            contentDescription = book.title,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize()
-        )
-    } else {
-        Box(
-            Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center
-        ) {
-            FlowFolioGlyph(Glyph.Book, contentDescription = null, size = 48.dp)
-        }
-    }
+private fun NoMatch() {
+    Text(
+        stringResource(R.string.library_no_match),
+        style = FlowFolioType.sub.merge(FlowFolio.hint),
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(32.dp)
+    )
 }
 
-private const val COVER_ASPECT = 0.72f
-private val GRID_FAB_CLEARANCE = 88.dp
+private val LIST_END = 24.dp
+
+/** Shelf rows reveal after the header, chips and hero card (orders 0 to 2). */
+private const val ROWS_REVEAL_ORDER = 3
 
 internal fun LibraryMessage.text(context: android.content.Context): String = when (this) {
     is LibraryMessage.Imported -> context.getString(R.string.msg_imported, title)

@@ -13,14 +13,17 @@ import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
 @Database(
-    entities = [BookEntity::class],
-    version = 2,
+    entities = [BookEntity::class, ShelfEntity::class, ShelfBookEntity::class],
+    version = 3,
     exportSchema = true,
     // v2: books.last_page (reading position, Phase 1 milestone 4).
-    autoMigrations = [AutoMigration(from = 1, to = 2)]
+    // v3: books.author, shelves and shelf_books (milestone 5, slice 3).
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)]
 )
 abstract class FlowFolioDatabase : RoomDatabase() {
     abstract fun bookDao(): BookDao
+
+    abstract fun shelfDao(): ShelfDao
 }
 
 @Module
@@ -33,4 +36,7 @@ object DatabaseModule {
 
     @Provides
     fun bookDao(db: FlowFolioDatabase): BookDao = db.bookDao()
+
+    @Provides
+    fun shelfDao(db: FlowFolioDatabase): ShelfDao = db.shelfDao()
 }

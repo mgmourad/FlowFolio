@@ -52,4 +52,69 @@
     <string name="theme_system">Follow system</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
+    <!-- Library (milestone 5, slice 3) -->
+    <plurals name="book_count">
+        <item quantity="one">%d book</item>
+        <item quantity="other">%d books</item>
+    </plurals>
+    <plurals name="page_count">
+        <item quantity="one">%d page</item>
+        <item quantity="other">%d pages</item>
+    </plurals>
+    <string name="library_sub">%1$s · %2$d in progress</string>
+    <string name="library_no_match">No books match.</string>
+    <string name="action_search">Search</string>
+    <string name="search_hint">Search titles and authors</string>
+    <string name="filter_all">All</string>
+    <string name="filter_in_progress">In progress</string>
+    <string name="filter_not_started">Not started</string>
+    <string name="filter_recent">Recently added</string>
+    <string name="continue_reading">Continue reading</string>
+    <string name="action_resume">Resume</string>
+    <string name="action_read">Read</string>
+    <string name="action_more">More</string>
+    <string name="action_done">Done</string>
+    <string name="action_save">Save</string>
+    <string name="action_rename">Rename</string>
+    <string name="action_remove">Remove</string>
+    <string name="action_add_to_shelf">Add to shelf</string>
+    <string name="page_of">p. %1$d of %2$d</string>
+    <string name="page_short">p. %1$d</string>
+
+    <!-- Shelves -->
+    <string name="shelves_title">Shelves</string>
+    <string name="shelves_sub">Collections you curate</string>
+    <string name="shelf_all_books">All books</string>
+    <string name="shelf_loose">Not on a shelf</string>
+    <string name="shelf_new">New shelf</string>
+    <string name="shelf_rename">Rename shelf</string>
+    <string name="shelf_name_hint">Shelf name</string>
+    <string name="shelf_picker_title">Shelves for “%1$s”</string>
+    <string name="shelf_picker_empty">No shelves yet. Make one below.</string>
+    <string name="shelf_delete_title">Remove the shelf “%1$s”?</string>
+    <string name="shelf_delete_body">The books on it stay in your library.</string>
+
+    <!-- Book details -->
+    <string name="format_pdf">PDF</string>
+    <string name="tab_overview">Overview</string>
+    <string name="tab_details">Details</string>
+    <string name="tab_contents">Contents</string>
+    <string name="percent_complete">%1$d%% complete</string>
+    <string name="stat_page">Page</string>
+    <string name="stat_pages">Pages</string>
+    <string name="stat_shelves">Shelves</string>
+    <string name="info_author">Author</string>
+    <string name="info_pages">Pages</string>
+    <string name="info_added">Added</string>
+    <string name="info_size">File size</string>
+    <string name="info_last_opened">Last opened</string>
+    <string name="info_never">Not yet</string>
+    <string name="info_unknown">Not in the file</string>
+    <string name="info_storage">Stored</string>
+    <string name="info_storage_copy">A copy in FlowFolio</string>
+    <string name="info_storage_link">Read from its own location</string>
+    <string name="info_storage_missing">File missing: locate it to read</string>
+    <string name="info_cover">Cover</string>
+    <string name="info_cover_page1">Rendered from page 1 of the file</string>
+    <string name="contents_none">This PDF has no table of contents.</string>
 </resources>

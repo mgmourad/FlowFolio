@@ -4,10 +4,12 @@ import com.flowfolio.core.data.ImportResult
 import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.data.RelinkResult
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.data.ShelfRepository
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.LibrarySort
+import com.flowfolio.core.model.Shelf
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
@@ -38,6 +40,8 @@ class FakeLibrary : LibraryRepository {
 
     override fun observeBooks(sort: LibrarySort): Flow<List<Book>> =
         books.map { list -> if (sort == LibrarySort.TITLE) list.sortedBy { it.title } else list }
+
+    override fun observeBook(bookId: String): Flow<Book?> = books.map { list -> list.firstOrNull { it.id == bookId } }
 
     override suspend fun import(uri: String, mode: StorageMode, fromShare: Boolean): ImportResult {
         imports += Triple(uri, mode, fromShare)
@@ -86,4 +90,30 @@ class FakeSettings(initial: UserSettings = UserSettings()) : SettingsRepository 
     override suspend fun setSpreadCoverAlone(on: Boolean) = state.update { it.copy(spreadCoverAlone = on) }
 
     override suspend fun setNightPages(on: Boolean) = state.update { it.copy(nightPages = on) }
+}
+
+class FakeShelves(initial: List<Shelf> = emptyList()) : ShelfRepository {
+    val shelves = MutableStateFlow(initial)
+    private var nextId = (initial.maxOfOrNull { it.id } ?: 0L) + 1
+
+    override fun observeShelves(): Flow<List<Shelf>> = shelves
+
+    override suspend fun create(name: String): Long =
+        nextId++.also { id -> shelves.update { it + Shelf(id, name.trim(), emptyList()) } }
+
+    override suspend fun rename(shelfId: Long, name: String) =
+        shelves.update { list -> list.map { if (it.id == shelfId) it.copy(name = name) else it } }
+
+    override suspend fun delete(shelfId: Long) = shelves.update { list -> list.filterNot { it.id == shelfId } }
+
+    override suspend fun setShelves(bookId: String, shelfIds: Set<Long>) = shelves.update { list ->
+        list.map { s ->
+            val on = bookId in s.bookIds
+            when {
+                s.id in shelfIds && !on -> s.copy(bookIds = listOf(bookId) + s.bookIds)
+                s.id !in shelfIds && on -> s.copy(bookIds = s.bookIds - bookId)
+                else -> s
+            }
+        }
+    }
 }

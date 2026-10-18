@@ -12,8 +12,14 @@ data class Book(
     val coverPath: String?,
     val passwordProtected: Boolean,
     /** Where the reader left off (0-based page), or null if the book has not been read yet. */
-    val lastPage: Int? = null
-)
+    val lastPage: Int? = null,
+    /** The PDF's Author metadata, or null when the file names none. */
+    val author: String? = null
+) {
+    /** How far through the book the reader is, 0..1 (0 when not started). */
+    val progress: Float
+        get() = lastPage?.let { if (pageCount > 1) it.toFloat() / (pageCount - 1) else 1f }?.coerceIn(0f, 1f) ?: 0f
+}
 
 /** Where the book's bytes live (ADR-0012 import storage setting). */
 sealed interface BookStorage {

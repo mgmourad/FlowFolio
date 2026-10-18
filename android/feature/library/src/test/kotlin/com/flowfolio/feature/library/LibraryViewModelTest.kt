@@ -34,7 +34,7 @@ class LibraryViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun vm(settings: FakeSettings) = LibraryViewModel(library, settings)
+    private fun vm(settings: FakeSettings) = LibraryViewModel(library, settings, FakeShelves())
 
     private fun seen(mode: StorageMode = StorageMode.COPY, ask: Boolean = false) =
         FakeSettings(UserSettings(storageMode = mode, askStorageEachImport = ask, storageNoticeSeen = true))

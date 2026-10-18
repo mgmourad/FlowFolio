@@ -20,5 +20,7 @@ data class BookEntity(
     @ColumnInfo(name = "cover_path") val coverPath: String?,
     @ColumnInfo(name = "password_protected") val passwordProtected: Boolean,
     /** The page the reader last showed (0-based); null until the book is first read. Added in schema v2. */
-    @ColumnInfo(name = "last_page") val lastPage: Int? = null
+    @ColumnInfo(name = "last_page") val lastPage: Int? = null,
+    /** The PDF's Author metadata. Added in schema v3; null for books imported before. */
+    val author: String? = null
 )
