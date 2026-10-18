@@ -6,7 +6,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -24,9 +28,14 @@ import kotlinx.coroutines.launch
  */
 @Composable
 fun ScreenEntrance(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
-    val alpha = remember { Animatable(0f) }
-    val rise = remember { Animatable(1f) }
+    // Only the first time: coming back to a screen (closing a book, Back from details) finds it where it was, so a
+    // cover flying home lands on a still shelf instead of one rising into place (owner, 2026-10-18).
+    var played by rememberSaveable { mutableStateOf(false) }
+    val alpha = remember { Animatable(if (played) 1f else 0f) }
+    val rise = remember { Animatable(if (played) 0f else 1f) }
     LaunchedEffect(Unit) {
+        if (played) return@LaunchedEffect
+        played = true
         launch { alpha.animateTo(1f, tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) }
         launch { rise.animateTo(0f, tween(Motion.SLOW_MS, easing = Motion.EaseOut)) }
     }
@@ -44,12 +53,16 @@ fun ScreenEntrance(modifier: Modifier = Modifier, content: @Composable BoxScope.
 
 /**
  * The mock's staggered reveal (`[data-r]`): the element fades in over 700 ms and rises 20 dp over 900 ms, starting
- * [order] x 70 ms after the screen appears, so a screen's sections arrive one after another.
+ * [order] x 70 ms after the screen appears, so a screen's sections arrive one after another. Like [ScreenEntrance],
+ * only the first time the screen appears.
  */
 fun Modifier.reveal(order: Int): Modifier = composed {
-    val alpha = remember { Animatable(0f) }
-    val rise = remember { Animatable(1f) }
+    var played by rememberSaveable { mutableStateOf(false) }
+    val alpha = remember { Animatable(if (played) 1f else 0f) }
+    val rise = remember { Animatable(if (played) 0f else 1f) }
     LaunchedEffect(Unit) {
+        if (played) return@LaunchedEffect
+        played = true
         delay(order.toLong() * STAGGER_MS)
         launch { alpha.animateTo(1f, tween(REVEAL_FADE_MS, easing = Motion.EaseOut)) }
         launch { rise.animateTo(0f, tween(REVEAL_RISE_MS, easing = Motion.EaseOut)) }

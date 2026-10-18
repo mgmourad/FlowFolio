@@ -84,6 +84,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     pages).
   - Edge bounce: turning past the first or last page nudges the page and springs it back.
   - Reader memory on the unfolded Fold, spread, Night paper, 300 turns: 263 MB, growth 2.3%, 2.25% janky frames.
+- Fixes after annotations (Room schema v7):
+  - Closing a book: screens no longer replay their entrance when you come back, so the cover lands on a still shelf.
+  - Selecting text works in every turn style (Curl, Slide, Scroll) and zoomed in: pages report where they are on
+    screen, and a press near the text finds the nearest word.
+  - Translate in the selection bar: Google Translate in a glass panel over the book (never leaves the app; ADR-0017).
+    Adds the INTERNET permission.
+  - Page numbers follow the book's own numbering: the PDF's page labels, or else the numbers printed in its margins
+    (found once and kept as `books.page_labels`), including roman front matter and prefixed appendices; books with no
+    numbering count from the cover as page 1. The library, details, bookmarks and the reader all use them.
 - Annotations and right-to-left books (ADR-0016, Room schema v6):
   - Highlights: press and hold a word, drag to select more, adjust with the handles, then pick one of five
     highlighter colours. Highlights are drawn on the page (multiplied into light paper, a soft wash on dark paper) and

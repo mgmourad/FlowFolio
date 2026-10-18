@@ -7,24 +7,40 @@ import kotlin.math.abs
 /** Selecting text on a page from its character boxes (PDFium's reading order); positions are page fractions. */
 internal object TextSelection {
     /**
-     * The character at ([x], [y]): one whose box contains the point, else the nearest on the line the point is on
-     * (within [reach] of the page's width), else none.
+     * The character at ([x], [y]): one whose box contains the point; else the nearest on the line the point is on
+     * (within [reach] of the page's width); else the nearest anywhere within [reach] (a press between lines or just
+     * beside the text still finds a word); else none.
      */
     fun charAt(text: PageText, x: Float, y: Float, reach: Float = LINE_REACH): Int? {
-        var best: Int? = null
-        var bestDistance = Float.MAX_VALUE
+        var onLine: Int? = null
+        var lineDistance = Float.MAX_VALUE
+        var near: Int? = null
+        var nearDistance = Float.MAX_VALUE
         for (i in 0 until text.length) {
-            val onLine = text.hasBox(i) && y in text.top(i)..text.bottom(i)
-            if (onLine) {
-                if (x in text.left(i)..text.right(i)) return i
-                val d = if (x < text.left(i)) text.left(i) - x else x - text.right(i)
-                if (d < bestDistance) {
-                    bestDistance = d
-                    best = i
-                }
+            if (!text.hasBox(i)) continue
+            val dx = gap(x, text.left(i), text.right(i))
+            val dy = gap(y, text.top(i), text.bottom(i))
+            if (dx == 0f && dy == 0f) return i
+            if (dy == 0f && dx < lineDistance) {
+                lineDistance = dx
+                onLine = i
+            }
+            val d = dx * dx + dy * dy
+            if (d < nearDistance) {
+                nearDistance = d
+                near = i
             }
         }
-        return best?.takeIf { bestDistance <= reach }
+        return onLine?.takeIf { lineDistance <= reach } ?: near?.takeIf { nearDistance <= reach * reach }
+    }
+
+    /** How far [v] lies outside [from]..[to] (0 inside). */
+    private fun gap(v: Float, from: Float, to: Float) = if (v < from) {
+        from - v
+    } else if (v > to) {
+        v - to
+    } else {
+        0f
     }
 
     /** The word around character [i]: letters, digits and apostrophes on either side. */

@@ -52,6 +52,8 @@ class FakeReader : ReaderRepository {
     override suspend fun saveProgress(bookId: String, page: Int) {
         saved += bookId to page
     }
+
+    override suspend fun savePageLabels(bookId: String, labels: String) = Unit
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)

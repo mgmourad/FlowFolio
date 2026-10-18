@@ -63,6 +63,8 @@ import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
+import com.flowfolio.core.model.pageLabel
+import com.flowfolio.core.model.printedPages
 
 /** What is being asked about a book on the shelf page. */
 private sealed interface BookPrompt {
@@ -346,7 +348,7 @@ private fun BookRowCard(item: LibraryItem, actions: BookRowActions) {
                 }
                 FlowFolioProgressBar(book.progress, Modifier.padding(top = 8.dp, bottom = 4.dp))
                 val where = if (book.lastPage != null) {
-                    stringResource(R.string.page_of, book.lastPage!! + 1, book.pageCount)
+                    stringResource(R.string.page_of, book.pageLabel(book.lastPage!!), book.printedPages())
                 } else {
                     pluralStringResource(R.plurals.page_count, book.pageCount, book.pageCount)
                 }

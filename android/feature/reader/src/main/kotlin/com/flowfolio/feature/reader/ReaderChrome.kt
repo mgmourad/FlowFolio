@@ -92,7 +92,7 @@ internal fun BoxScope.ReaderChrome(
         BottomBar(state, navigation, actions)
     }
     // In Scroll the number would float over the text; the bars show the page there.
-    if (!controlsVisible && state.turn != PageTurn.SCROLL) PageNumber(state)
+    if (!controlsVisible && state.turn != PageTurn.SCROLL) PageNumber(state, navigation.labels)
 }
 
 /** `.r-top`: Back, the title, and the reading tools, each on glass. */
@@ -202,15 +202,14 @@ private fun BottomBar(state: ReaderState.Ready, navigation: BookNavigation, acti
 
 /** The print-style page number at the foot of the page while the bars are hidden. */
 @Composable
-private fun BoxScope.PageNumber(state: ReaderState.Ready) {
+private fun BoxScope.PageNumber(state: ReaderState.Ready, labels: List<String?>) {
     val spread = state.layout == ReaderLayout.SPREAD
-    val shown = if (spread) {
-        Spreads.pagesOf(state.unit, state.pageCount, state.coverAlone).joinToString("–") { (it + 1).toString() }
-    } else {
-        (state.anchorPage + 1).toString()
-    }
+    val pages = if (spread) Spreads.pagesOf(state.unit, state.pageCount, state.coverAlone) else listOf(state.anchorPage)
+    val shown = pages.joinToString("–") { PageLookup.labelOf(it, labels) }
+    // The book's own numbers stand alone ("48–49"); counting from the cover, "62–63 of 959".
+    val printed = pages.any { labels.getOrNull(it) != null }
     Text(
-        stringResource(R.string.reader_page_of, shown, state.pageCount),
+        if (printed) shown else stringResource(R.string.reader_page_of, shown, state.pageCount),
         style = PrintStyle.copy(color = LocalTone.current.folioInk),
         modifier = Modifier
             .align(if (spread) Alignment.BottomStart else Alignment.BottomCenter)

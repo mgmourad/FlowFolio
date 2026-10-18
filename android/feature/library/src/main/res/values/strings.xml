@@ -76,8 +76,8 @@
     <string name="action_rename">Rename</string>
     <string name="action_remove">Remove</string>
     <string name="action_add_to_shelf">Add to shelf</string>
-    <string name="page_of">p. %1$d of %2$d</string>
-    <string name="page_short">p. %1$d</string>
+    <string name="page_of">p. %1$s of %2$s</string>
+    <string name="page_short">p. %1$s</string>
 
     <!-- Shelves -->
     <string name="shelves_title">Shelves</string>

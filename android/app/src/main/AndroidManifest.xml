@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Translate (Google Translate in the reader) and the optional online book lookup (ADR-0017). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".FlowFolioApplication"
         android:allowBackup="false"

@@ -18,7 +18,12 @@ data class Book(
     /** Subtitle, edition, publisher, description and the rest, as entered by the reader. */
     val details: BookDetails = BookDetails(),
     /** Pages run right to left (Arabic and other right-to-left books); set per book in the reader. */
-    val rightToLeft: Boolean = false
+    val rightToLeft: Boolean = false,
+    /**
+     * The book's printed page numbers ([PageLabels] runs): from the PDF, or read from its page margins. Null until the
+     * reader has looked; "" when the book prints none (pages count from the cover).
+     */
+    val pageLabels: String? = null
 ) {
     /** How far through the book the reader is, 0..1 (0 when not started). */
     val progress: Float

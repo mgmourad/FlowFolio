@@ -61,4 +61,7 @@
     <string name="highlight_blue">Blue</string>
     <string name="highlight_pink">Pink</string>
     <string name="highlight_purple">Purple</string>
+    <string name="reader_translate">Translate</string>
+    <string name="reader_translate_note">By Google Translate. The passage is sent to Google.</string>
+    <string name="reader_close">Close</string>
 </resources>

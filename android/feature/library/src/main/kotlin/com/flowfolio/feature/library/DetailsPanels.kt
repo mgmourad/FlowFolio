@@ -37,6 +37,7 @@ import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.OutlineEntry
+import com.flowfolio.core.model.pageLabel
 import kotlin.math.roundToInt
 
 /** `.meta-row`: page count, format and size, plus a warning when the file is missing. */
@@ -183,7 +184,7 @@ internal fun ContentsPanel(contents: DetailsContents, book: Book, onChapter: (In
         is DetailsContents.Ready -> Column(Modifier.testTag(LibraryTestTags.CONTENTS)) {
             val current = currentChapter(contents.entries, book.lastPage)
             contents.entries.forEachIndexed { i, entry ->
-                ChapterRow(entry, i, current, onChapter)
+                ChapterRow(entry, book.pageLabel(entry.pageIndex), i, current, onChapter)
                 HorizontalDivider(color = FlowFolio.palette.edge)
             }
         }
@@ -191,7 +192,7 @@ internal fun ContentsPanel(contents: DetailsContents, book: Book, onChapter: (In
 }
 
 @Composable
-private fun ChapterRow(entry: OutlineEntry, index: Int, current: Int, onChapter: (Int) -> Unit) {
+private fun ChapterRow(entry: OutlineEntry, label: String, index: Int, current: Int, onChapter: (Int) -> Unit) {
     val p = FlowFolio.palette
     val (dot, dotAlpha) = when {
         index < current -> p.item to 1f
@@ -214,7 +215,7 @@ private fun ChapterRow(entry: OutlineEntry, index: Int, current: Int, onChapter:
             modifier = Modifier.weight(1f).padding(start = 10.dp, end = 12.dp)
         )
         Text(
-            stringResource(R.string.page_short, entry.pageIndex + 1),
+            stringResource(R.string.page_short, label),
             style = FlowFolioType.sub.merge(FlowFolio.hint)
         )
     }

@@ -267,7 +267,7 @@ internal fun PagePane(
     val mirrored = LocalMirroredPages.current
     Box(modifier.background(PAPER).pageShading(spine, shadingStrength, isDarkPaper), contentAlignment = alignment) {
         if (image != null) {
-            Box(Modifier.graphicsLayer { scaleX = if (mirrored) -1f else 1f }) {
+            Box(Modifier.reportBounds(page).graphicsLayer { scaleX = if (mirrored) -1f else 1f }) {
                 val highlights = LocalHighlights.current[page].orEmpty()
                 val dark = isDarkPaper
                 Image(
