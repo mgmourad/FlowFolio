@@ -60,6 +60,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Books keep the PDF's Author metadata (schema v3 `books.author`; books imported earlier show none until the
     metadata slice).
   - The backdrop blur is computed once on the CPU from a 40 px copy of the cover, not as a live GPU blur.
+
+### Changed
+- Shadows (cards, chips, buttons, glass, book contact shadows, the plank glow) are rendered once on the CPU into small
+  alpha bitmaps and reused (`ShadowBitmaps`). As GPU blurs, each kept its own render target: the slice 3 library used
+  525 MB on the unfolded Fold; now about 365 MB. Reader, spread, 300 turns: 263 MB, growth 0.7%, 1.9% janky frames.
+- `tools/measure-reader.ps1` takes `-StartPage` (default 0) and sets the reading position before turning (debug-only
+  `startPage` extra), since the position now persists between runs.
 - FlowFolio design language (ADR-0014): the owner's dark and light palettes (pixel-exact), glow in dark mode and
   soft shadow in light mode, rounded surfaces, own toggle and outline glyphs, themed dialogs and sheets; library,
   settings and the reader's sheets use it.

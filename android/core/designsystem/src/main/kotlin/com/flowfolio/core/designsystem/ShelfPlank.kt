@@ -33,9 +33,13 @@ fun ShelfPlank(modifier: Modifier = Modifier) {
                 onDrawBehind {
                     if (p.dark && p.itemGlow.color.alpha > 0f) {
                         // `0 -2px 18px rgba(0,240,255,.55)`: the glow rising off the edge.
-                        blurred(p.item.copy(alpha = 0.55f), 18.dp.toPx()) {
-                            drawRect(0f, -edge, size.width, edge, it)
-                        }
+                        blurredShape(
+                            p.item.copy(alpha = 0.55f),
+                            18.dp.toPx(),
+                            BlurShape.Rect,
+                            Offset(0f, -edge),
+                            androidx.compose.ui.geometry.Size(size.width, 2 * edge)
+                        )
                     }
                     drawOutline(outline, face)
                     if (p.dark) {

@@ -145,9 +145,14 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 14. Reader memory target (ADR-0013): at most 110 MB over the app's floor on the same screen and fold state, and at most
     10% growth from turn 50 to the last turn, on retained memory. Unfolded (300 turns, milestone 4 build, 2026-10-17): single +107.3 MB (little headroom left), spread +73.5 MB;
     zoomed in (tiles shown) the app read 242 MB vs 214 MB unzoomed.
+    Since milestone 5 the library "floor" holds the design's GPU caches (glows, backdrop), 365-410 MB, so the script's
+    floor-relative verdict no longer means anything. Judge the reader by its absolute memory against the pre-M5 floor
+    (182 MB + 110 = 292 MB): slice 3 build, spread, 300 turns: 263 MB, growth 0.7%.
 15. Measuring on the Fold: logical display 0 is always the active panel; the phone must stay unlocked during runs
     (`tools/measure-reader.ps1` aborts if the lock screen shows). Debug-only intent extras `importPath`,
-    `openBookId`, `layout` drive the app from adb.
+    `openBookId`, `layout`, `startPage` (0-based; the script sets it, since the position persists) drive the app from
+    adb. The phone's "Stay awake" may read off; keep the screen on with a harmless `input keyevent 59` every few
+    seconds, or a run measures a backgrounded app. Put the owner's reading position back afterwards.
 
 16. Zoom is entered by pinching only. A double tap does not enter zoom because single taps turn pages instantly, and
     waiting to tell a single tap from a double tap would delay every turn. Inside zoom, a double tap leaves it.
@@ -157,6 +162,11 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 18. Bottom sheets and dialogs are separate windows, so their test tags are not exported as resource ids; find their
     contents by text in UiAutomator.
 19. The OpenStax test PDF has no page labels, so "Go to page" by printed number falls back to the position in the file.
+20. The details cover sways forever (as in the mock), so UiAutomator can never get an idle state there: `uiautomator
+    dump` fails on that screen. Tap by coordinates, or test it with Compose tests.
+21. GPU memory: never draw blurs with BlurMaskFilter on the GPU for anything repeated or animated; use `softShadow` /
+    `blurredShape` (cached CPU bitmaps, `ShadowBitmaps`). Text and glyph glows are still GPU blurs (about 70-100 MB in
+    dark mode); the slice 5 "Neon glow" switch turns them off.
 ## Decision log
 
 ADRs 0001–0014 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build

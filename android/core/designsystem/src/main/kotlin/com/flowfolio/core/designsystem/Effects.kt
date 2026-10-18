@@ -14,6 +14,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.ImageShader
 import androidx.compose.ui.graphics.Outline
@@ -36,12 +37,13 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import kotlin.math.cos
 import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.random.Random
 
 /*
  * The mock's surfaces, drawn by hand: CSS box-shadow (outer and inset), the 160-degree card gradient, the faint grain
- * and the radial page background. Blurs use BlurMaskFilter, so no offscreen layer and no minimum Android version.
+ * and the radial page background. Outer shadows are cached bitmaps (ShadowBitmaps); no minimum Android version.
  */
 
 /** CSS blur radius to a BlurMaskFilter radius (CSS blur = 2 sigma; BlurMaskFilter sigma ~= 0.57735 r + 0.5). */
@@ -63,20 +65,28 @@ private fun Density.outlinePath(
     return path
 }
 
-/** `box-shadow: 0 [offsetY] [blur] [spread] [color]` behind [shape]. */
+/**
+ * `box-shadow: 0 [offsetY] [blur] [spread] [color]` behind [shape]. The blurred shape comes from [ShadowBitmaps]
+ * (rendered once per shape and size, then drawn tinted), so shadows hold no GPU render targets.
+ */
 fun Modifier.softShadow(shape: Shape, color: Color, blur: Dp, offsetY: Dp = 0.dp, spread: Dp = 0.dp): Modifier =
-    drawBehind {
-        if (color.alpha == 0f) return@drawBehind
+    drawWithCache {
         val s = spread.toPx()
-        val grown = Size((size.width + 2 * s).coerceAtLeast(1f), (size.height + 2 * s).coerceAtLeast(1f))
-        val path = outlinePath(shape, grown, layoutDirection, Offset(-s, offsetY.toPx() - s))
-        drawIntoCanvas { canvas ->
-            val paint = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                this.color = color.toArgb()
-                maskFilter = BlurMaskFilter(cssBlurToRadius(blur.toPx()), BlurMaskFilter.Blur.NORMAL)
+        val w = (size.width + 2 * s).roundToInt().coerceAtLeast(1)
+        val h = (size.height + 2 * s).roundToInt().coerceAtLeast(1)
+        val grown = Size(w.toFloat(), h.toFloat())
+        val outline = shape.createOutline(grown, layoutDirection, this)
+        val key = ShadowBitmaps.Key(outline.shadowKey(), w, h, cssBlurToRadius(blur.toPx()))
+        val shadow = if (color.alpha == 0f) {
+            null
+        } else {
+            ShadowBitmaps.get(key) { paint ->
+                drawPath(outlinePath(shape, grown, layoutDirection).asAndroidPath(), paint)
             }
-            canvas.nativeCanvas.drawPath(path.asAndroidPath(), paint)
         }
+        val tint = ColorFilter.tint(color)
+        val topLeft = Offset(-s - (shadow?.margin ?: 0), offsetY.toPx() - s - (shadow?.margin ?: 0))
+        onDrawBehind { shadow?.let { drawImage(it.image, topLeft, colorFilter = tint) } }
     }
 
 /** `box-shadow: inset 0 [offsetY] [blur] [color]` inside [shape], drawn over the content. */
