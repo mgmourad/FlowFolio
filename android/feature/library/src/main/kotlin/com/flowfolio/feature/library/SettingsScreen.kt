@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -32,6 +33,8 @@ import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.chromeBottom
+import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.flowFolioRadioColors
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
@@ -44,7 +47,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(onBack: (() -> Unit)? = null, viewModel: SettingsViewModel = hiltViewModel()) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     SettingsContent(settings, onBack, viewModel::setStorageMode, viewModel::setAskEachImport, viewModel::setTheme)
 }
@@ -53,7 +56,7 @@ fun SettingsScreen(onBack: () -> Unit, viewModel: SettingsViewModel = hiltViewMo
 @Composable
 fun SettingsContent(
     settings: UserSettings,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onStorageMode: (StorageMode) -> Unit,
     onAskEachImport: (Boolean) -> Unit,
     onTheme: (ThemePreference) -> Unit
@@ -63,16 +66,25 @@ fun SettingsContent(
             TopAppBar(
                 title = { Text(stringResource(R.string.settings_title), style = FlowFolio.title) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        FlowFolioGlyph(Glyph.Back, contentDescription = stringResource(R.string.action_back))
+                    if (onBack != null) {
+                        IconButton(onClick = onBack) {
+                            FlowFolioGlyph(Glyph.Back, contentDescription = stringResource(R.string.action_back))
+                        }
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = FlowFolio.palette.background)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
-        }
+        },
+        modifier = Modifier.chromeStart(),
+        containerColor = Color.Transparent
     ) { padding ->
         Column(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp).verticalScroll(rememberScrollState())
+            Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp)
+                .verticalScroll(rememberScrollState())
+                .chromeBottom()
         ) {
             Text(
                 stringResource(R.string.settings_import_section),

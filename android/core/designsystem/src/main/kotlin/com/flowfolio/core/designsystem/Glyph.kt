@@ -61,10 +61,11 @@ fun FlowFolioGlyph(
     contentDescription: String?,
     modifier: Modifier = Modifier,
     color: Color = FlowFolio.palette.glyph,
-    size: Dp = 24.dp
+    size: Dp = 24.dp,
+    glow: Boolean = true
 ) {
     val p = FlowFolio.palette
-    val glow = p.glyphGlow
+    val effectGlow = if (glow) p.glyphGlow else Glow.None
     val path = remember(glyph) { PathParser().parsePathString(glyph.pathData).toPath() }
     val described = if (contentDescription != null) {
         Modifier.semantics { this.contentDescription = contentDescription }
@@ -77,17 +78,17 @@ fun FlowFolioGlyph(
             transform(android.graphics.Matrix().apply { setScale(unit, unit) })
         }
         val width = glyph.stroke * unit
-        if (glow.color.alpha > 0f) {
+        if (effectGlow.color.alpha > 0f) {
             // Dark: a glow in the glyph's own colour; light: the palette's soft shadow colour, dropped.
-            val effect = if (p.dark) color.copy(alpha = glow.color.alpha) else glow.color
-            blurred(effect, glow.blur.toPx() * 2f) { paint ->
+            val effect = if (p.dark) color.copy(alpha = effectGlow.color.alpha) else effectGlow.color
+            blurred(effect, effectGlow.blur.toPx() * 2f) { paint ->
                 paint.style =
                     if (glyph.filled) android.graphics.Paint.Style.FILL else android.graphics.Paint.Style.STROKE
                 paint.strokeWidth = width
                 paint.strokeCap = android.graphics.Paint.Cap.ROUND
                 paint.strokeJoin = android.graphics.Paint.Join.ROUND
                 save()
-                translate(0f, glow.offsetY.toPx())
+                translate(0f, effectGlow.offsetY.toPx())
                 drawPath(scaled, paint)
                 restore()
             }

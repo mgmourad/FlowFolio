@@ -11,6 +11,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -42,6 +43,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -57,6 +59,8 @@ import com.flowfolio.core.designsystem.EDGE_WIDTH
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.LocalChromePadding
+import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
@@ -70,7 +74,7 @@ private val PDF_TYPES = arrayOf("application/pdf")
 @Composable
 fun LibraryScreen(
     onOpenBook: (Book) -> Unit,
-    onOpenSettings: () -> Unit,
+    onOpenSettings: (() -> Unit)? = null,
     viewModel: LibraryViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -117,6 +121,22 @@ fun LibraryScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+private fun LibraryTopBar(sort: LibrarySort, onSort: (LibrarySort) -> Unit, onSettings: (() -> Unit)?) {
+    TopAppBar(
+        title = { Text(stringResource(R.string.library_title), style = FlowFolio.title) },
+        actions = {
+            SortMenu(sort, onSort)
+            if (onSettings != null) {
+                IconButton(onClick = onSettings) {
+                    FlowFolioGlyph(Glyph.Settings, contentDescription = stringResource(R.string.action_settings))
+                }
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+    )
+}
+
+@Composable
 fun LibraryContent(
     state: LibraryUiState,
     snackbar: SnackbarHostState,
@@ -125,21 +145,13 @@ fun LibraryContent(
     onDelete: (Book) -> Unit,
     onLocate: (Book) -> Unit,
     onSort: (LibrarySort) -> Unit,
-    onSettings: () -> Unit
+    onSettings: (() -> Unit)?
 ) {
+    val bottom = LocalChromePadding.current.calculateBottomPadding()
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.library_title), style = FlowFolio.title) },
-                actions = {
-                    SortMenu(state.sort, onSort)
-                    IconButton(onClick = onSettings) {
-                        FlowFolioGlyph(Glyph.Settings, contentDescription = stringResource(R.string.action_settings))
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = FlowFolio.palette.background)
-            )
-        },
+        modifier = Modifier.chromeStart(),
+        containerColor = Color.Transparent,
+        topBar = { LibraryTopBar(state.sort, onSort, onSettings) },
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = onImport,
@@ -148,6 +160,7 @@ fun LibraryContent(
                 containerColor = FlowFolio.palette.background,
                 shape = MaterialTheme.shapes.large,
                 modifier = Modifier
+                    .padding(bottom = bottom)
                     .border(EDGE_WIDTH, FlowFolio.palette.edge, MaterialTheme.shapes.large)
                     .testTag(LibraryTestTags.IMPORT)
             )
@@ -173,6 +186,7 @@ fun LibraryContent(
 
                 else -> LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 128.dp),
+                    contentPadding = PaddingValues(bottom = bottom + GRID_FAB_CLEARANCE),
                     modifier = Modifier.fillMaxSize().testTag(LibraryTestTags.GRID)
                 ) {
                     items(state.items, key = { it.book.id }) { item -> BookTile(item, onOpen, onDelete, onLocate) }
@@ -292,6 +306,7 @@ private fun Cover(book: Book) {
 }
 
 private const val COVER_ASPECT = 0.72f
+private val GRID_FAB_CLEARANCE = 88.dp
 
 internal fun LibraryMessage.text(context: android.content.Context): String = when (this) {
     is LibraryMessage.Imported -> context.getString(R.string.msg_imported, title)

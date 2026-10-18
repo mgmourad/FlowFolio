@@ -148,21 +148,6 @@ fun FlowFolioIconButton(
     )
 }
 
-/**
- * Translucent "glass" (`.glass`): the background colour at 45% with a hairline. The mock also blurs what is behind;
- * that needs a backdrop-blur library on Android and is left for the shell slice (owner to decide).
- */
-@Composable
-fun Modifier.glass(shape: androidx.compose.ui.graphics.Shape): Modifier {
-    val p = FlowFolio.palette
-    return softShadow(shape, Color.Black.copy(alpha = 0.35f), blur = 24.dp, offsetY = 10.dp, spread = (-10).dp)
-        .drawBehind {
-            val outline = shape.createOutline(size, layoutDirection, this)
-            drawOutline(outline, p.background.copy(alpha = GLASS_ALPHA))
-            drawOutline(outline, p.edge, style = Stroke(1.dp.toPx()))
-        }
-}
-
 /** The orange pill button (`.btn.primary`) with its own glow; [icon] sits before the label. */
 @Composable
 fun FlowFolioPrimaryButton(
@@ -224,4 +209,3 @@ fun FlowFolioRow(modifier: Modifier = Modifier, content: @Composable RowScope.()
 private const val PRESS_MS = 250
 private const val ICON_PRESSED = 0.9f
 private const val BUTTON_PRESSED = 0.94f
-private const val GLASS_ALPHA = 0.45f
