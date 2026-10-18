@@ -30,6 +30,9 @@ interface LibraryRepository {
     suspend fun delete(bookId: String)
 
     suspend fun markOpened(bookId: String)
+
+    /** Gives the book a new title in the library ([title] trimmed, not blank). The file is not changed. */
+    suspend fun rename(bookId: String, title: String)
 }
 
 sealed interface ImportResult {

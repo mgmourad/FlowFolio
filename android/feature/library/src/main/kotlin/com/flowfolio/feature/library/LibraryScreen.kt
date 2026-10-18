@@ -54,6 +54,9 @@ data class LibraryActions(
     val onDelete: (Book) -> Unit = {},
     val onLocate: (Book) -> Unit = {},
     val onAddToShelf: (Book) -> Unit = {},
+    val onRename: ((Book) -> Unit)? = null,
+    /** Opens a whole shelf ([ShelfPageViewModel.LOOSE] for the books on no shelf). */
+    val onOpenShelf: (Long) -> Unit = {},
     val onSort: (LibrarySort) -> Unit = {},
     val onFilter: (LibraryFilter) -> Unit = {},
     val onQuery: (String) -> Unit = {}
@@ -64,6 +67,7 @@ data class LibraryActions(
 fun LibraryScreen(
     onOpenDetails: (Book, String) -> Unit,
     onRead: (Book) -> Unit,
+    onOpenShelf: (Long) -> Unit = {},
     scrollToShelf: Long? = null,
     onScrolledToShelf: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
@@ -113,6 +117,7 @@ fun LibraryScreen(
             onDelete = viewModel::onRequestDelete,
             onLocate = locate,
             onAddToShelf = { shelving = it },
+            onOpenShelf = onOpenShelf,
             onSort = viewModel::onSortChange,
             onFilter = viewModel::onFilter,
             onQuery = viewModel::onQuery

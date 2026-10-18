@@ -229,16 +229,19 @@ private fun drawSpine(
     )
     canvas.save()
     canvas.concat(m)
-    val base = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = face.colors.end.toArgb() }
+    // A real cover's spine is printed in its dominant colour (coverColors); a drawn cover keeps the mock's darker end.
+    val spineColor = if (face.cover != null) face.colors.start else face.colors.end
+    val base = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = spineColor.toArgb() }
     canvas.drawRect(0f, 0f, p.d, p.h, base)
-    // `linear-gradient(90deg, rgba(0,0,0,.4), rgba(255,255,255,.1) 45%, rgba(0,0,0,.3))`.
+    // `linear-gradient(90deg, rgba(0,0,0,.4), rgba(255,255,255,.1) 45%, rgba(0,0,0,.3))`; lighter on a coloured
+    // spine so the colour still reads.
     val shade = Paint().apply {
         shader = LinearGradient(
             0f,
             0f,
             p.d,
             0f,
-            intArrayOf(0x66000000, 0x1AFFFFFF, 0x4D000000),
+            if (face.cover != null) SPINE_SHADE_ON_COLOUR else SPINE_SHADE,
             floatArrayOf(0f, 0.45f, 1f),
             Shader.TileMode.CLAMP
         )
@@ -314,3 +317,7 @@ private const val SPINE_TEXT_RATIO = 0.42f
 private const val MAX_SPINE_TEXT = 11f
 private const val COVER_TITLE_RATIO = 0.14f
 private const val COVER_MAX_LINES = 4
+
+/** The mock's spine shading, and a lighter version for spines painted in the cover's colour. */
+private val SPINE_SHADE = intArrayOf(0x66000000, 0x1AFFFFFF, 0x4D000000)
+private val SPINE_SHADE_ON_COLOUR = intArrayOf(0x40000000, 0x14FFFFFF, 0x30000000)

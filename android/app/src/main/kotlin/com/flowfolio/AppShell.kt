@@ -149,7 +149,8 @@ private fun Rail(selected: TopLevel, onSelect: (TopLevel) -> Unit) {
             .fillMaxHeight()
             .glass(RoundedCornerShape(BAR_RADIUS), tint = FlowFolio.palette.tabBar, blur = BAR_BLUR)
             .testTag(ShellTestTags.RAIL),
-        verticalArrangement = Arrangement.spacedBy(RAIL_GAP, Alignment.CenterVertically),
+        // The tabs share the rail's whole height, so it has no empty stretch at the top or bottom.
+        verticalArrangement = Arrangement.SpaceEvenly,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         TopLevel.entries.forEach { TabItem(it, it == selected, onSelect) }
@@ -216,7 +217,6 @@ private val BAR_BOTTOM = 20.dp
 private val BAR_BLUR = 22.dp
 private val CHROME_INSET = 14.dp
 private val RAIL_WIDTH = 84.dp
-private val RAIL_GAP = 22.dp
 private val TAB_WIDTH = 70.dp
 private val TAB_GAP = 4.dp
 private val TAB_GLYPH = 23.dp

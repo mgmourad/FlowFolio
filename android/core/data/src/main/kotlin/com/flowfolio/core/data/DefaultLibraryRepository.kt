@@ -155,6 +155,11 @@ class DefaultLibraryRepository @Inject constructor(
         Unit
     }
 
+    override suspend fun rename(bookId: String, title: String) = withContext(io) {
+        require(title.isNotBlank()) { "title is blank" }
+        dao.updateTitle(bookId, title.trim())
+    }
+
     override fun observeBook(bookId: String): Flow<Book?> = dao.observe(bookId).map { it?.toBook() }
 
     override suspend fun markOpened(bookId: String) = withContext(io) { dao.markOpened(bookId, clock.now()) }

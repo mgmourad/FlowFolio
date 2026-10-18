@@ -1,7 +1,10 @@
 package com.flowfolio.feature.library
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.snapping.SnapPosition
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
@@ -220,12 +224,21 @@ internal fun ShelfRowView(row: ShelfRow, noShelves: Boolean, actions: LibraryAct
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            // Tapping the count opens the whole shelf (tiles or a list).
             Text(
-                pluralStringResource(R.plurals.book_count, row.items.size, row.items.size),
-                style = FlowFolioType.sub.copy(fontSize = 13.sp).merge(FlowFolio.subItem)
+                pluralStringResource(R.plurals.book_count, row.items.size, row.items.size) + "  ›",
+                style = FlowFolioType.sub.copy(fontSize = 13.sp).merge(FlowFolio.subItem),
+                modifier = Modifier
+                    .clickable { actions.onOpenShelf(row.shelf?.id ?: ShelfPageViewModel.LOOSE) }
+                    .padding(start = 12.dp, top = 6.dp, bottom = 6.dp)
+                    .testTag(LibraryTestTags.shelfCount(row.shelf?.id ?: ShelfPageViewModel.LOOSE))
             )
         }
+        // `.shelf-row` with `scroll-snap-type: x mandatory`: swipe sideways through the shelf; it settles on a book.
+        val rowState = rememberLazyListState()
         LazyRow(
+            state = rowState,
+            flingBehavior = rememberSnapFlingBehavior(rowState, SnapPosition.Start),
             contentPadding = PaddingValues(start = 30.dp, end = 30.dp, top = 22.dp, bottom = 6.dp),
             horizontalArrangement = Arrangement.spacedBy(22.dp),
             verticalAlignment = Alignment.Bottom
@@ -298,6 +311,12 @@ private fun BookMenu(item: LibraryItem, open: Boolean, actions: LibraryActions, 
         MenuEntry(R.string.action_add_to_shelf) {
             onClose()
             actions.onAddToShelf(item.book)
+        }
+        actions.onRename?.let { rename ->
+            MenuEntry(R.string.action_rename) {
+                onClose()
+                rename(item.book)
+            }
         }
         if (item.book.storage is BookStorage.Linked) {
             MenuEntry(R.string.action_locate) {

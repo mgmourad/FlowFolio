@@ -7,21 +7,34 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import com.flowfolio.core.designsystem.BookColors
 import com.flowfolio.core.designsystem.BookFace
+import com.flowfolio.core.designsystem.coverColors
 import com.flowfolio.core.model.Book
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-/** The book's cover thumbnail (page 1, written at import), decoded off the main thread; null until ready or absent. */
+/** A decoded cover thumbnail and the colours taken from it (spine, ink). */
+internal class CoverArt(val image: ImageBitmap, val colors: BookColors)
+
+/** The book's cover thumbnail (page 1, written at import) and its colours, decoded off the main thread; null until
+ * ready or when there is none. */
 @Composable
-internal fun rememberCover(book: Book): State<ImageBitmap?> = produceState<ImageBitmap?>(null, book.coverPath) {
+internal fun rememberCover(book: Book): State<CoverArt?> = produceState<CoverArt?>(null, book.coverPath) {
     value = book.coverPath?.let { path ->
-        withContext(Dispatchers.IO) { BitmapFactory.decodeFile(path)?.asImageBitmap() }
+        withContext(Dispatchers.IO) {
+            BitmapFactory.decodeFile(path)?.let { CoverArt(it.asImageBitmap(), coverColors(it)) }
+        }
     }
 }
 
-/** What the 3D book shows for [book]: its rendered first page, or a drawn cover with its title. */
-internal fun Book.face(cover: ImageBitmap?) = BookFace(title = title, pageCount = pageCount, cover = cover)
+/** What the 3D book shows for [book]: its rendered first page with a spine in its colour, or a drawn cover. */
+internal fun Book.face(cover: CoverArt?) = BookFace(
+    title = title,
+    pageCount = pageCount,
+    cover = cover?.image,
+    colors = cover?.colors ?: BookColors.Default
+)
 
 /**
  * The mock's blurred backdrop (`.det-bg`, `blur(34px)`), made without a GPU blur: the cover is decoded tiny and box
