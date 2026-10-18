@@ -35,6 +35,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - The 3D book (true perspective, spine depth from the page count, lift on press), the shelf plank and the mock's
     icons.
   - A debug-only design catalog (`--ez catalog true`).
+- Phase 1 milestone 5, app shell slice:
+  - Library, Shelves, Bookmarks and Settings tabs in the mock's floating glass tab bar (folded), or a glass rail on
+    the left when the window is 600 dp or wider (unfolded). The chrome slides away in the reader.
+  - Real backdrop blur on the glass (Haze, Android 12+; tint only on older phones).
+  - Animated splash on cold start (the mock's icon, ribbon and page curl, wordmark and tagline; tap to skip).
+  - Screen entrance (fade and rise) and staggered reveal motion from the mock. The mock's focus blur and slight
+    scale on entrance are left out: each frame of a changing blur, or of glows at a changing scale, left a texture in
+    the GPU cache (+140 MB on the library screen before the fix). Animated shadows and glows now draw once into a
+    layer that is then transformed. The library screen costs 247 MB (193 MB before the shell).
+  - Theme changes are revealed in a circle growing from the touch (700 ms).
+  - Status and navigation bar icons follow the app's theme.
+  - Shelves and Bookmarks are placeholders until their slices.
 - FlowFolio design language (ADR-0014): the owner's dark and light palettes (pixel-exact), glow in dark mode and
   soft shadow in light mode, rounded surfaces, own toggle and outline glyphs, themed dialogs and sheets; library,
   settings and the reader's sheets use it.

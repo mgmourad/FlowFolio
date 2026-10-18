@@ -4,7 +4,7 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 1: PDF reader with page curl. Build in progress: milestones 1-3 done, milestone 4 built and awaiting the owner's review** (started 2026-10-16).
+**Phase 1: PDF reader with page curl. Build in progress: milestones 1-4 done, milestone 5 (design) in progress: slices 1-2 done** (started 2026-10-16).
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
 Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
 Build plan approved 2026-10-16: 5 milestones; check in with the product owner at milestone 3 with memory numbers.
@@ -61,6 +61,10 @@ on the unfolded Fold use a side rail and wider layouts. M5 plan: `docs/plans/pha
 Check components on a device with the debug catalog:
 `adb shell am start -n com.flowfolio.dev/com.flowfolio.MainActivity --ez catalog true [--es theme light]`.
 When testing on the owner's phone, read every setting before you touch it and restore it afterwards.
+
+App shell (`app/AppShell.kt`): top-level tabs in the glass tab bar (folded) or rail (>= 600 dp); screens keep clear
+of it with `Modifier.chromeStart()` / `chromeBottom()` (`LocalChromePadding`). Glass blurs what is marked
+`glassSource()` (`LocalGlassState`, Haze). The splash is skipped when debug extras drive the app from adb.
 
 ## Conventions
 
