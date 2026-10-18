@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.systemGestureExclusion
@@ -76,9 +77,11 @@ fun ReaderScreen(
 
     val tone = (state as? ReaderState.Ready)?.tone ?: PageTone.PRINTED
     val marks by bookmarks.bookmarks.collectAsStateWithLifecycle()
-    StatusBarForPaper(tone)
     CompositionLocalProvider(LocalTone provides tone, LocalRibbons provides marks.associate { it.page to it.color }) {
-        ReaderRoot(state, images, navigation, viewModel, bookmarks, onBack)
+        PaperRevealHost(FlowFolio.palette.dark, state, images) {
+            StatusBarForPaper(LocalPaperReveal.current?.fromTone ?: tone)
+            ReaderRoot(state, images, navigation, viewModel, bookmarks, onBack)
+        }
     }
 }
 
@@ -241,7 +244,12 @@ internal fun PagePane(
         if (image != null) {
             Box {
                 Image(image, contentDescription = null, contentScale = ContentScale.None)
-                ribbon?.let { Ribbon(it.color, Modifier.align(Alignment.TopEnd).padding(end = RIBBON_INSET)) }
+                ribbon?.let {
+                    Ribbon(
+                        it.color,
+                        Modifier.align(Alignment.TopEnd).offset(y = -RIBBON_RISE).padding(end = RIBBON_INSET)
+                    )
+                }
             }
         }
     }
@@ -260,6 +268,7 @@ private fun Message(text: String, onBack: () -> Unit) {
 
 internal const val SWIPE_THRESHOLD_PX = 24f
 private val RIBBON_INSET = 26.dp
+private val RIBBON_RISE = 6.dp
 private const val SINGLE_PAGE_GUTTER_STRENGTH = 0.6f
 internal val EDGE_GUARD_WIDTH = 32.dp
 internal val EDGE_GUARD_HEIGHT = 200.dp

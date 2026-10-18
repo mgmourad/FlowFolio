@@ -18,11 +18,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.designsystem.FlowFolioPalette
+import com.flowfolio.core.designsystem.GlassStyle
 import com.flowfolio.core.designsystem.LocalGlassState
+import com.flowfolio.core.designsystem.LocalGlassStyle
 import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.feature.reader.layout.ReaderLayout
@@ -61,6 +65,11 @@ private class Overlay {
 
     fun touch() {
         shownAt = System.nanoTime()
+    }
+
+    /** Opens [which], or closes it when it is already open (a second tap on its button). */
+    fun open(which: Panel) {
+        panel = if (panel == which) Panel.NONE else which
     }
 
     fun closeAll() {
@@ -127,15 +136,34 @@ internal fun BoxScope.ReadyReader(
     }
     overlay.zoom?.let { ZoomView(it, framesFor, images, tiles, viewModel::showTiles, onExit = { overlay.zoom = null }) }
     if (overlay.zoom == null) {
-        CompositionLocalProvider(LocalGlassState provides haze) {
-            Chrome(s, navigation, overlay, mark, onBack, jump)
-        }
+        CompositionLocalProvider(LocalGlassState provides haze) { Controls(s, navigation, overlay, mark, onBack, jump) }
     }
-    Panels(overlay.panel, s, navigation, jump, onDismiss = { overlay.panel = Panel.NONE })
     overlay.webLink?.let { uri ->
         WebLinkDialog(uri, onOpen = { runCatching { uriHandler.openUri(uri) } }, onDismiss = { overlay.webLink = null })
     }
     EdgeGuards()
+}
+
+/**
+ * The bars and their panels. They take the light or dark palette of the page colour, so they read well on it, and a
+ * glass that shows on it (owner, 2026-10-18).
+ */
+@Composable
+private fun BoxScope.Controls(
+    s: ReaderState.Ready,
+    navigation: BookNavigation,
+    overlay: Overlay,
+    mark: ChromeMark,
+    onBack: () -> Unit,
+    jump: (Int) -> Unit
+) {
+    FlowFolioPalette(dark = s.tone.dark) {
+        CompositionLocalProvider(LocalGlassStyle provides glassOver(s.tone)) {
+            PanelDismiss(overlay.panel) { overlay.panel = Panel.NONE }
+            Chrome(s, navigation, overlay, mark, onBack, jump)
+            ReaderPanels(overlay.panel, s, navigation, mark, jump, onDismiss = { overlay.panel = Panel.NONE })
+        }
+    }
 }
 
 @Composable
@@ -154,9 +182,7 @@ private fun BoxScope.Chrome(
         mark = mark,
         actions = ChromeActions(
             onBack = onBack,
-            onContents = { overlay.panel = Panel.CONTENTS },
-            onGoTo = { overlay.panel = Panel.GO_TO },
-            onSettings = { overlay.panel = Panel.SETTINGS },
+            onPanel = overlay::open,
             onScrub = jump,
             onInteract = overlay::touch
         )
@@ -194,21 +220,18 @@ private fun BoxScope.EdgeGuards() {
     Spacer(Modifier.align(Alignment.CenterEnd).size(EDGE_GUARD_WIDTH, EDGE_GUARD_HEIGHT).systemGestureExclusion())
 }
 
-/** What is open on top of the reader. */
-private enum class Panel { NONE, CONTENTS, GO_TO, SETTINGS }
-
-@Composable
-private fun Panels(
-    panel: Panel,
-    s: ReaderState.Ready,
-    navigation: BookNavigation,
-    jump: (Int) -> Unit,
-    onDismiss: () -> Unit
-) {
-    when (panel) {
-        Panel.NONE -> Unit
-        Panel.CONTENTS -> ContentsSheet(navigation.outline, navigation.labels, s.anchorPage, jump, onDismiss)
-        Panel.GO_TO -> GoToPageDialog(navigation.labels, s.pageCount, jump, onDismiss)
-        Panel.SETTINGS -> ReaderSettingsSheet(onDismiss)
-    }
+/**
+ * Glass over the page: on dark papers a light frosted tint and a pale edge, since the app's dark tint over a dark page
+ * reads as a hole rather than glass; on light papers the light palette's own glass.
+ */
+private fun glassOver(tone: PageTone): GlassStyle = if (tone.dark) {
+    GlassStyle(
+        Color.White.copy(alpha = DARK_PAPER_TINT),
+        Color.White.copy(alpha = DARK_PAPER_EDGE)
+    )
+} else {
+    GlassStyle()
 }
+
+private const val DARK_PAPER_TINT = 0.12f
+private const val DARK_PAPER_EDGE = 0.22f

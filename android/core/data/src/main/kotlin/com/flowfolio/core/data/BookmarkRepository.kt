@@ -47,7 +47,11 @@ class DefaultBookmarkRepository @Inject constructor(
         id = e.id,
         bookId = e.bookId,
         page = e.page,
-        color = BookmarkColor.entries.firstOrNull { it.name == e.color } ?: BookmarkColor.SUB_ITEM,
+        color = BookmarkColor.entries.firstOrNull { it.name == e.color.replace(OLD_GREY, BookmarkColor.GREEN.name) }
+            ?: BookmarkColor.SUB_ITEM,
         createdAtMillis = e.createdAt
     )
 }
+
+/** The grey choice of the first reader build, replaced by green (owner, 2026-10-18). */
+private const val OLD_GREY = "HINT"

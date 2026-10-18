@@ -13,10 +13,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -43,55 +40,51 @@ import com.flowfolio.core.model.PaperStyle
 
 /**
  * The mock's reading sheet ("Aa", `#sheet`): the page colour as swatches (Auto, Paper, Sepia, Night, Black; photos keep
- * their colours), how pages turn (Curl, Slide, Scroll), and the spread layout options.
+ * their colours), how pages turn (Curl, Slide, Scroll), and the spread layout options. Shown on glass by
+ * [ReaderPanels].
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ReaderSettingsSheet(onDismiss: () -> Unit, viewModel: ReaderSettingsViewModel = hiltViewModel()) {
+internal fun ReaderSettingsContent(viewModel: ReaderSettingsViewModel = hiltViewModel()) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = FlowFolio.palette.background,
-        modifier = Modifier.testTag(ReaderTestTags.SETTINGS_SHEET)
-    ) {
-        Column(Modifier.padding(horizontal = 24.dp).padding(bottom = 28.dp)) {
-            Heading(R.string.reader_paper)
-            PaperSwatches(settings.paperStyle, viewModel::setPaperStyle)
-            Text(
-                stringResource(R.string.reader_paper_note),
-                style = FlowFolioType.rowDetail.merge(FlowFolio.hint),
-                modifier = Modifier.padding(top = 10.dp)
-            )
-            Heading(R.string.reader_turn, Modifier.padding(top = 22.dp))
-            FlowFolioSegmented(
-                listOf(
-                    stringResource(R.string.reader_turn_curl),
-                    stringResource(R.string.reader_turn_slide),
-                    stringResource(R.string.reader_turn_scroll)
-                ),
-                PageTurn.entries.indexOf(settings.pageTurn),
-                { viewModel.setPageTurn(PageTurn.entries[it]) },
-                modifier = Modifier.testTag(ReaderTestTags.SETTING_TURN)
-            )
-            Heading(R.string.reader_layout, Modifier.padding(top = 22.dp))
-            SettingRow(
-                title = stringResource(R.string.reader_settings_spreads),
-                detail = stringResource(R.string.reader_settings_spreads_detail),
-                checked = settings.readerSpreads,
-                enabled = settings.pageTurn != PageTurn.SCROLL,
-                tag = ReaderTestTags.SETTING_SPREADS,
-                onChange = viewModel::setSpreads
-            )
-            SettingRow(
-                title = stringResource(R.string.reader_settings_cover),
-                detail = stringResource(R.string.reader_settings_cover_detail),
-                checked = settings.spreadCoverAlone,
-                enabled = settings.readerSpreads && settings.pageTurn != PageTurn.SCROLL,
-                tag = ReaderTestTags.SETTING_COVER,
-                onChange = viewModel::setCoverAlone
-            )
+    Column(Modifier.padding(horizontal = 8.dp).padding(bottom = 8.dp).testTag(ReaderTestTags.SETTINGS_SHEET)) {
+        Heading(R.string.reader_paper)
+        val reveal = LocalPaperReveal.current
+        PaperSwatches(settings.paperStyle) { style ->
+            if (reveal != null) reveal.change(style, viewModel::setPaperStyle) else viewModel.setPaperStyle(style)
         }
+        Text(
+            stringResource(R.string.reader_paper_note),
+            style = FlowFolioType.rowDetail.merge(FlowFolio.hint),
+            modifier = Modifier.padding(top = 10.dp)
+        )
+        Heading(R.string.reader_turn, Modifier.padding(top = 22.dp))
+        FlowFolioSegmented(
+            listOf(
+                stringResource(R.string.reader_turn_curl),
+                stringResource(R.string.reader_turn_slide),
+                stringResource(R.string.reader_turn_scroll)
+            ),
+            PageTurn.entries.indexOf(settings.pageTurn),
+            { viewModel.setPageTurn(PageTurn.entries[it]) },
+            modifier = Modifier.testTag(ReaderTestTags.SETTING_TURN)
+        )
+        Heading(R.string.reader_layout, Modifier.padding(top = 22.dp))
+        SettingRow(
+            title = stringResource(R.string.reader_settings_spreads),
+            detail = stringResource(R.string.reader_settings_spreads_detail),
+            checked = settings.readerSpreads,
+            enabled = settings.pageTurn != PageTurn.SCROLL,
+            tag = ReaderTestTags.SETTING_SPREADS,
+            onChange = viewModel::setSpreads
+        )
+        SettingRow(
+            title = stringResource(R.string.reader_settings_cover),
+            detail = stringResource(R.string.reader_settings_cover_detail),
+            checked = settings.spreadCoverAlone,
+            enabled = settings.readerSpreads && settings.pageTurn != PageTurn.SCROLL,
+            tag = ReaderTestTags.SETTING_COVER,
+            onChange = viewModel::setCoverAlone
+        )
     }
 }
 

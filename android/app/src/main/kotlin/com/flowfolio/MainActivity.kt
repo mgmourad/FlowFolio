@@ -17,11 +17,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.designsystem.BookOpeningHost
 import com.flowfolio.core.designsystem.DesignCatalog
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioSplash
 import com.flowfolio.core.designsystem.FlowFolioTheme
+import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.ThemePreference
+import com.flowfolio.core.model.UserSettings
+import com.flowfolio.feature.reader.layout.ReaderLayout
+import com.flowfolio.feature.reader.layout.chooseLayout
+import com.flowfolio.feature.reader.tone
 import dagger.hilt.android.AndroidEntryPoint
 
 private const val EXTRA_OPEN_BOOK = "openBookId"
@@ -58,7 +64,11 @@ class MainActivity : ComponentActivity() {
                 ThemeRevealHost(theme) { shown ->
                     FlowFolioTheme(shown) {
                         SystemBarsFollowTheme(FlowFolio.palette.dark)
-                        FlowFolioApp(appViewModel)
+                        val reading by appViewModel.readerSettings.collectAsStateWithLifecycle()
+                        BookOpeningHost(
+                            paper = reading.paperStyle.tone(FlowFolio.palette.dark).paper,
+                            spread = { w, h -> reading.opensAsSpread(w, h) }
+                        ) { FlowFolioApp(appViewModel) }
                         if (splash) FlowFolioSplash(stringResource(R.string.splash_tagline)) { splash = false }
                     }
                 }
@@ -119,3 +129,7 @@ class MainActivity : ComponentActivity() {
         Runtime.getRuntime().gc()
     }
 }
+
+/** Whether the reader will show two pages side by side in a window of [widthDp] x [heightDp] (its own rule). */
+private fun UserSettings.opensAsSpread(widthDp: Float, heightDp: Float): Boolean =
+    readerSpreads && pageTurn != PageTurn.SCROLL && chooseLayout(widthDp, heightDp) == ReaderLayout.SPREAD

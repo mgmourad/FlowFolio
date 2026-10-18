@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.Book3D
+import com.flowfolio.core.designsystem.CoverSpot
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
@@ -64,8 +65,10 @@ import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
 import com.flowfolio.core.designsystem.FlowFolioTabs
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.LocalBookOpener
 import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.coverKey
+import com.flowfolio.core.designsystem.coverSpot
 import com.flowfolio.core.designsystem.sharedCover
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
@@ -94,14 +97,12 @@ fun DetailsScreen(
     val locate = { relink.launch(arrayOf("application/pdf")) }
     LaunchedEffect(state.loading, book) { if (!state.loading && book == null) onBack() }
     if (book == null) return
-    val hinge = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
+    val hero = remember { CoverSpot().apply { angle = HERO_ANGLE } }
+    val opener = LocalBookOpener.current
     val open: (Int?) -> Unit = { page ->
-        scope.launch {
-            viewModel.markOpened()
-            hinge.animateTo(1f, tween(HINGE_MS, easing = Motion.EaseInOut))
-            if (page != null) viewModel.startAt(page) { onRead(book) } else onRead(book)
-        }
+        viewModel.markOpened()
+        val show: () -> Unit = { if (page != null) viewModel.startAt(page) { onRead(book) } else onRead(book) }
+        opener?.open(hero, show) ?: show()
     }
     val actions = DetailsActions(
         onBack = onBack,
@@ -113,7 +114,7 @@ fun DetailsScreen(
             libraryVm.onRequestDelete(book)
         }
     )
-    DetailsContent(state, book, origin, hinge.value, actions)
+    DetailsContent(state, book, origin, hero, actions)
     LibraryDialogs(libraryVm.uiState.collectAsStateWithLifecycle().value.dialog, libraryVm)
     if (picking) ShelveBookFlow(book, state.shelves, shelvesVm) { picking = false }
 }
@@ -129,14 +130,22 @@ internal data class DetailsActions(
 
 /** Folded: hero, then title, actions and tabs under it. Unfolded (600 dp and wider): cover pane and tabs pane. */
 @Composable
-internal fun DetailsContent(state: DetailsUiState, book: Book, origin: String, hinge: Float, actions: DetailsActions) {
-    val p = FlowFolio.palette
+internal fun DetailsContent(
+    state: DetailsUiState,
+    book: Book,
+    origin: String,
+    hero: CoverSpot,
+    actions: DetailsActions
+) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     BoxWithConstraints(Modifier.fillMaxSize().testTag(LibraryTestTags.DETAILS)) {
         if (maxWidth >= TWO_PANE_WIDTH) {
+            // Unfolded, the blurred cover spans the top half of the whole screen, as it does folded (owner).
+            val blurred by rememberBackdrop(book)
+            Backdrop(blurred, Modifier.fillMaxWidth().height(maxHeight * BACKDROP_SHARE))
             Row(Modifier.fillMaxSize()) {
                 Column(Modifier.weight(LEFT_PANE).verticalScroll(rememberScrollState())) {
-                    DetailsHero(book, origin, hinge, fadeRight = true)
+                    DetailsHero(book, origin, hero, backdrop = false)
                     DetailsHeading(state, book, actions, Modifier.offset(y = -HERO_OVERLAP))
                 }
                 Column(
@@ -151,7 +160,7 @@ internal fun DetailsContent(state: DetailsUiState, book: Book, origin: String, h
             }
         } else {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                DetailsHero(book, origin, hinge)
+                DetailsHero(book, origin, hero)
                 Column(Modifier.offset(y = -HERO_OVERLAP).padding(horizontal = 22.dp)) {
                     DetailsHeading(state, book, actions)
                     DetailsTabs(state, book, tab, { tab = it }, actions)
@@ -162,15 +171,16 @@ internal fun DetailsContent(state: DetailsUiState, book: Book, origin: String, h
             }
         }
         TopButtons(state, actions)
-        // The page colour rising over the screen as the cover swings open (the mock's book-opening hinge).
-        if (hinge > 0f) Box(Modifier.fillMaxSize().graphicsLayer { alpha = hinge }.background(p.paper))
     }
 }
 
-/** `.det-hero`: the cover blurred behind, fading into the background, and the 3D book swaying in front. */
+/**
+ * `.det-hero`: the cover blurred behind (unless the screen draws it itself, unfolded), fading into the background, and
+ * the 3D book swaying in front. [hero] records where the book is, for the book-opening animation.
+ */
 @Composable
-private fun DetailsHero(book: Book, origin: String, hinge: Float, fadeRight: Boolean = false) {
-    val backdrop by rememberBackdrop(book)
+private fun DetailsHero(book: Book, origin: String, hero: CoverSpot, backdrop: Boolean = true) {
+    val blurred by rememberBackdrop(book)
     val cover by rememberCover(book)
     val sway = rememberInfiniteTransition(label = "sway")
     val t by sway.animateFloat(
@@ -179,26 +189,17 @@ private fun DetailsHero(book: Book, origin: String, hinge: Float, fadeRight: Boo
         infiniteRepeatable(tween(SWAY_MS, easing = Motion.EaseInOut), RepeatMode.Reverse),
         label = "swayT"
     )
+    hero.face = book.face(cover)
     Box(Modifier.fillMaxWidth().height(HERO_HEIGHT)) {
-        Backdrop(backdrop, fadeRight)
+        if (backdrop) Backdrop(blurred)
         // `@keyframes sway`: rotateY 22 -> 8 degrees while rising 8 dp, 6 s each way. The book redraws its angle;
         // the rise is a layer move, so its blurred contact shadow is not re-rasterized every frame.
         Box(
             Modifier
                 .align(Alignment.TopCenter)
                 .padding(top = COVER_TOP)
-                .graphicsLayer {
-                    translationY = -SWAY_RISE.toPx() * t
-                    // The hinge: the cover swings open around its spine and grows toward the reader.
-                    if (hinge > 0f) {
-                        transformOrigin = TransformOrigin(0f, 0.5f)
-                        rotationY = -HINGE_ANGLE * hinge
-                        cameraDistance = HINGE_CAMERA * density
-                        scaleX = 1f + hinge * HINGE_GROW
-                        scaleY = 1f + hinge * HINGE_GROW
-                        compositingStrategy = CompositingStrategy.Offscreen
-                    }
-                }
+                .graphicsLayer { translationY = -SWAY_RISE.toPx() * t }
+                .coverSpot(hero)
         ) {
             Book3D(
                 book.face(cover),
@@ -212,14 +213,13 @@ private fun DetailsHero(book: Book, origin: String, hinge: Float, fadeRight: Boo
 }
 
 /**
- * `.det-bg` + `.det-fade`: the blurred cover, faded out toward the bottom (and toward the tabs pane when [fadeRight])
+ * `.det-bg` + `.det-fade`: the blurred cover, faded out toward the bottom
  * with a mask rather than a flat colour, so it melts into the gradient app background without a seam.
  */
 @Composable
-private fun Backdrop(backdrop: androidx.compose.ui.graphics.ImageBitmap?, fadeRight: Boolean) {
+private fun Backdrop(backdrop: androidx.compose.ui.graphics.ImageBitmap?, modifier: Modifier = Modifier.fillMaxSize()) {
     Box(
-        Modifier
-            .fillMaxSize()
+        modifier
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithContent {
                 drawContent()
@@ -231,13 +231,6 @@ private fun Backdrop(backdrop: androidx.compose.ui.graphics.ImageBitmap?, fadeRi
                     ),
                     blendMode = BlendMode.DstIn
                 )
-                // Two panes: also fade out toward the tabs pane, so the backdrop has no straight edge there.
-                if (fadeRight) {
-                    drawRect(
-                        Brush.horizontalGradient(FADE_SIDE_STOP to Color.Black, 1f to Color.Transparent),
-                        blendMode = BlendMode.DstIn
-                    )
-                }
             }
     ) {
         backdrop?.let {
@@ -377,9 +370,8 @@ private const val FADE_TOP = 0.9f
 private const val FADE_MID = 0.8f
 private const val FADE_MID_STOP = 0.45f
 private const val FADE_END_STOP = 0.96f
-private const val FADE_SIDE_STOP = 0.55f
+private const val BACKDROP_SHARE = 0.5f
 private val PANE_TOP = 72.dp
-private const val HINGE_MS = 520
-private const val HINGE_ANGLE = 110f
-private const val HINGE_CAMERA = 12f
-private const val HINGE_GROW = 0.6f
+
+/** The sway's middle angle: where the opening flight starts from. */
+private const val HERO_ANGLE = 15f
