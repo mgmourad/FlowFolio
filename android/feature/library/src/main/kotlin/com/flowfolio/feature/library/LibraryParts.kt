@@ -56,6 +56,7 @@ import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.ShelfPlank
 import com.flowfolio.core.designsystem.coverKey
+import com.flowfolio.core.designsystem.coverSpot
 import com.flowfolio.core.designsystem.sharedCover
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
@@ -180,7 +181,11 @@ internal fun ContinueReadingCard(item: LibraryItem, actions: LibraryActions, mod
             }
         )
         Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            ShelfBook(item, HERO_ORIGIN, actions, width = 104.dp, height = 152.dp)
+            val cover by rememberCover(book)
+            actions.heroSpot.face = book.face(cover)
+            Box(Modifier.coverSpot(actions.heroSpot)) {
+                ShelfBook(item, HERO_ORIGIN, actions, width = 104.dp, height = 152.dp)
+            }
             Column(Modifier.weight(1f)) {
                 Text(
                     stringResource(R.string.continue_reading).uppercase(),

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.data.SettingsRepository
 import com.flowfolio.core.model.ThemePreference
+import com.flowfolio.core.model.UserSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
@@ -22,6 +23,10 @@ class AppViewModel @Inject constructor(settings: SettingsRepository, private val
     ViewModel() {
     val theme: StateFlow<ThemePreference> =
         settings.settings.map { it.theme }.stateIn(viewModelScope, SharingStarted.Eagerly, ThemePreference.SYSTEM)
+
+    /** The reader's settings, so the book-opening animation opens onto the page the reader will show. */
+    val readerSettings: StateFlow<UserSettings> =
+        settings.settings.stateIn(viewModelScope, SharingStarted.Eagerly, UserSettings())
 
     private val shared = Channel<String>(Channel.BUFFERED)
     val sharedFiles: Flow<String> = shared.receiveAsFlow()

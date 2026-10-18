@@ -1,0 +1,163 @@
+package com.flowfolio.feature.reader
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.Motion
+import com.flowfolio.core.designsystem.glass
+
+/**
+ * Catches taps outside an open panel and closes it (and Back closes it), so a tap meant to dismiss never turns a
+ * page. Sits under the bars, so they stay usable.
+ */
+@Composable
+internal fun BoxScope.PanelDismiss(panel: Panel, onDismiss: () -> Unit) {
+    BackHandler(enabled = panel != Panel.NONE, onBack = onDismiss)
+    if (panel != Panel.NONE) {
+        Box(Modifier.matchParentSize().pointerInput(Unit) { detectTapGestures { onDismiss() } })
+    }
+}
+
+/**
+ * The reader's panels, on glass that blurs the page behind (they are drawn in the reader's own window: a sheet or a
+ * dialog is a separate window, which glass cannot see through). Contents, Go to page and the ribbon colours drop from
+ * under the top bar; the reading sheet ("Aa") rises from the bottom like the mock's `.sheet`.
+ */
+@Composable
+internal fun BoxScope.ReaderPanels(
+    panel: Panel,
+    s: ReaderState.Ready,
+    navigation: BookNavigation,
+    mark: ChromeMark,
+    jump: (Int) -> Unit,
+    onDismiss: () -> Unit
+) {
+    DropPanel(panel == Panel.CONTENTS, CONTENTS_WIDTH, fillDown = true) {
+        ContentsList(navigation.outline, navigation.labels, s.anchorPage, jump)
+    }
+    DropPanel(panel == Panel.GO_TO, GO_TO_WIDTH) {
+        GoToForm(navigation.labels, s.pageCount, jump, onDismiss)
+    }
+    DropPanel(panel == Panel.MARK, width = null) {
+        ColourStrip(mark) { chosen ->
+            if (chosen == null) mark.onUnmark() else mark.onMark(chosen)
+            onDismiss()
+        }
+    }
+    SheetPanel(panel == Panel.SETTINGS) { ReaderSettingsContent() }
+}
+
+/**
+ * A glass panel under the top bar, at the right (under the buttons that open it). [fillDown] stretches it to just above
+ * the bottom bar; [width] caps it on wide screens (null: as wide as its content).
+ */
+@Composable
+private fun BoxScope.DropPanel(
+    visible: Boolean,
+    width: Dp?,
+    fillDown: Boolean = false,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    AnimatedVisibility(
+        visible,
+        Modifier
+            .align(Alignment.TopEnd)
+            .statusBarsPadding()
+            .padding(start = PANEL_INSET, end = PANEL_INSET, top = TOP_BAR_CLEARANCE)
+            .then(if (fillDown) Modifier.navigationBarsPadding().padding(bottom = BOTTOM_BAR_CLEARANCE) else Modifier)
+            .imePadding(),
+        enter = fadeIn(tween(Motion.FAST_MS)) +
+            slideInVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { -it / DROP_FRACTION },
+        exit = fadeOut(tween(Motion.FAST_MS)) +
+            slideOutVertically(tween(Motion.FAST_MS, easing = Motion.EaseOut)) { -it / DROP_FRACTION }
+    ) {
+        val sized = if (width != null) Modifier.widthIn(max = width).fillMaxWidth() else Modifier
+        Column(
+            sized
+                .then(if (fillDown) Modifier.fillMaxHeight() else Modifier)
+                .glass(PanelShape)
+                .padding(vertical = 4.dp),
+            content = content
+        )
+    }
+}
+
+/** The mock's `.sheet`: glass rising from the bottom (600 ms, ease-out) with a grab handle. */
+@Composable
+private fun BoxScope.SheetPanel(visible: Boolean, content: @Composable ColumnScope.() -> Unit) {
+    AnimatedVisibility(
+        visible,
+        Modifier
+            .align(Alignment.BottomCenter)
+            .navigationBarsPadding()
+            .padding(start = SHEET_INSET, end = SHEET_INSET, bottom = SHEET_INSET),
+        enter = slideInVertically(tween(SHEET_MS, easing = Motion.EaseOut)) { it * 2 },
+        exit = slideOutVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { it * 2 }
+    ) {
+        Column(
+            Modifier
+                .widthIn(max = SHEET_WIDTH)
+                .fillMaxWidth()
+                .glass(RoundedCornerShape(28.dp))
+                .verticalScroll(rememberScrollState())
+                .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 18.dp)
+        ) {
+            // `.grab`
+            Box(
+                Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(bottom = 8.dp)
+                    .size(40.dp, 5.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(FlowFolio.palette.hint.copy(alpha = GRAB_ALPHA))
+            )
+            content()
+        }
+    }
+}
+
+private val PanelShape = RoundedCornerShape(26.dp)
+private val PANEL_INSET = 14.dp
+
+/** The top bar is 8 + 42 + 8 dp under the status bar; panels start just below it. */
+private val TOP_BAR_CLEARANCE = 64.dp
+
+/** The bottom bar is 56 dp tall, 26 dp above the navigation bar; the contents stop 10 dp above it. */
+private val BOTTOM_BAR_CLEARANCE = 92.dp
+private val CONTENTS_WIDTH = 520.dp
+private val GO_TO_WIDTH = 420.dp
+private val SHEET_WIDTH = 600.dp
+private val SHEET_INSET = 10.dp
+private const val SHEET_MS = 600
+private const val DROP_FRACTION = 8
+private const val GRAB_ALPHA = 0.4f

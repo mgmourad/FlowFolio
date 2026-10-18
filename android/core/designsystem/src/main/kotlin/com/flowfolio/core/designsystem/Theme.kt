@@ -45,6 +45,30 @@ fun FlowFolioTheme(
     }
 }
 
+/**
+ * The light or dark palette for a part of the screen whatever the app's theme (the reader's controls follow the page
+ * colour, so they stay readable on it). Keeps the app's glow setting.
+ */
+@Composable
+fun FlowFolioPalette(dark: Boolean, content: @Composable () -> Unit) {
+    val current = LocalPalette.current
+    if (current.dark == dark) {
+        content()
+        return
+    }
+    val base = if (dark) DarkPalette else LightPalette
+    val glowOff = current.titleGlow == Glow.None && current.itemGlow == Glow.None
+    val palette = if (glowOff) base.withoutGlow() else base
+    CompositionLocalProvider(LocalPalette provides palette) {
+        MaterialTheme(
+            colorScheme = palette.toColorScheme(),
+            typography = MaterialTheme.typography,
+            shapes = MaterialTheme.shapes,
+            content = content
+        )
+    }
+}
+
 /** Access to the design language from any composable. */
 object FlowFolio {
     val palette: Palette

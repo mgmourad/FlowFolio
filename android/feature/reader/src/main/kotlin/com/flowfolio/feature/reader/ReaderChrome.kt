@@ -120,15 +120,15 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions) {
             )
         }
         val contents = Modifier.testTag(ReaderTestTags.CONTENTS)
-        FlowFolioIconButton(onClick = actions.onContents, glass = true, modifier = contents) {
+        FlowFolioIconButton(onClick = { actions.onPanel(Panel.CONTENTS) }, glass = true, modifier = contents) {
             FlowFolioGlyph(Glyph.Contents, stringResource(R.string.reader_contents))
         }
         val goTo = Modifier.testTag(ReaderTestTags.GO_TO)
-        FlowFolioIconButton(onClick = actions.onGoTo, glass = true, modifier = goTo) {
+        FlowFolioIconButton(onClick = { actions.onPanel(Panel.GO_TO) }, glass = true, modifier = goTo) {
             FlowFolioGlyph(Glyph.GoTo, stringResource(R.string.reader_go_to))
         }
         val settings = Modifier.testTag(ReaderTestTags.SETTINGS)
-        FlowFolioIconButton(onClick = actions.onSettings, glass = true, modifier = settings) {
+        FlowFolioIconButton(onClick = { actions.onPanel(Panel.SETTINGS) }, glass = true, modifier = settings) {
             Text(
                 stringResource(R.string.reader_settings_button),
                 style = FlowFolioType.button.copy(fontSize = 16.sp, fontFamily = FlowFolioType.heroTitle.fontFamily)
@@ -197,7 +197,7 @@ private fun BoxScope.PageNumber(state: ReaderState.Ready) {
     }
     Text(
         stringResource(R.string.reader_page_of, shown, state.pageCount),
-        style = PrintStyle.copy(color = if (isDarkPaper) PRINT_GREY_ON_DARK else PRINT_GREY),
+        style = PrintStyle.copy(color = LocalTone.current.folioInk),
         modifier = Modifier
             .align(if (spread) Alignment.BottomStart else Alignment.BottomCenter)
             .navigationBarsPadding()
@@ -238,8 +238,11 @@ internal fun Modifier.interceptTaps(onTap: (Offset, IntSize) -> Boolean): Modifi
  */
 internal fun isCentre(tap: Offset, size: IntSize): Boolean = abs(tap.x - size.width / 2f) < size.width * CENTRE_ZONE / 2
 
-private val PRINT_GREY = Color(0xFF8E8E93)
-private val PRINT_GREY_ON_DARK = Color(0xFF9B9AA6)
+/** The page number in the page's own ink, softened like print, so it reads on every paper. */
+private val PageTone.folioInk: Color get() = (ink ?: PRINT_INK).copy(alpha = FOLIO_ALPHA)
+
+private val PRINT_INK = Color(0xFF3A3A3C)
+private const val FOLIO_ALPHA = 0.72f
 
 private val PrintStyle = TextStyle(
     fontSize = 13.sp,

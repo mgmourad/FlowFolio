@@ -1,6 +1,7 @@
 package com.flowfolio.core.designsystem
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,6 +25,15 @@ import dev.chrisbanes.haze.hazeSource
  */
 val LocalGlassState = staticCompositionLocalOf<HazeState?> { null }
 
+/**
+ * Overrides the glass look below it: [tint] over the blur and the [edge] hairline (null keeps the default). The reader
+ * uses a lighter, frosted tint over dark pages, where the default dark tint would read as a hole rather than glass.
+ */
+@Immutable
+data class GlassStyle(val tint: Color? = null, val edge: Color? = null)
+
+val LocalGlassStyle = staticCompositionLocalOf { GlassStyle() }
+
 /** Marks this content as what glass surfaces above it blur (the app's screens, the reader's pages). */
 @Composable
 fun Modifier.glassSource(): Modifier = LocalGlassState.current?.let { hazeSource(it) } ?: this
@@ -36,10 +46,11 @@ fun Modifier.glassSource(): Modifier = LocalGlassState.current?.let { hazeSource
 @Composable
 fun Modifier.glass(
     shape: Shape,
-    tint: Color = FlowFolio.palette.background.copy(alpha = GLASS_ALPHA),
+    tint: Color = LocalGlassStyle.current.tint ?: FlowFolio.palette.background.copy(alpha = GLASS_ALPHA),
     blur: Dp = 16.dp
 ): Modifier {
     val p = FlowFolio.palette
+    val edge = LocalGlassStyle.current.edge ?: p.edge
     val state = LocalGlassState.current
     val shadowed =
         softShadow(shape, Color.Black.copy(alpha = SHADOW_ALPHA), blur = 40.dp, offsetY = 20.dp, spread = (-14).dp)
@@ -62,7 +73,7 @@ fun Modifier.glass(
     }
     return blurred.drawWithContent {
         drawContent()
-        drawOutline(shape.createOutline(size, layoutDirection, this), p.edge, style = Stroke(1.dp.toPx()))
+        drawOutline(shape.createOutline(size, layoutDirection, this), edge, style = Stroke(1.dp.toPx()))
     }
 }
 

@@ -67,7 +67,9 @@ data class Palette(
     /** Pressed / sunken inner shadow colour (`--shadow-press`). */
     val pressShadow: Color,
     /** Top inner highlight on cards (`inset 0 1px 0`). */
-    val highlight: Color
+    val highlight: Color,
+    /** A green in the palette's own tone (bookmark colours; not in the mock's swatches). */
+    val green: Color
 ) {
     /** The mock's "Neon glow" switch off: no glows or text shadows. */
     fun withoutGlow(): Palette = copy(
@@ -116,7 +118,8 @@ val DarkPalette = Palette(
     selected = Color(0xFF311770),
     shadow = Color(0xB3000000),
     pressShadow = Color(0x73000000),
-    highlight = Color(0x0FFFFFFF)
+    highlight = Color(0x0FFFFFFF),
+    green = Color(0xFF39F28F)
 )
 
 val LightPalette = Palette(
@@ -156,7 +159,8 @@ val LightPalette = Palette(
     selected = Color(0xFFFFFAF0),
     shadow = Color(0x80784614),
     pressShadow = Color(0x4D784614),
-    highlight = Color(0xBFFFFFFF)
+    highlight = Color(0xBFFFFFFF),
+    green = Color(0xFF2C7A2E)
 )
 
 val LocalPalette = staticCompositionLocalOf { LightPalette }

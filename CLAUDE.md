@@ -173,6 +173,9 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     or the home screen. Delete pulled dumps after parsing.
 23. The reader bars hide 10 seconds after the last interaction; a UI dump taken later will not find them.
 24. Bookmarks are stored per page (one ribbon per page; adding again recolours it). The Bookmarks tab is slice 5.
+25. The reader's panels (Contents, Go to page, ribbon colours, "Aa") are drawn in the reader's window (`ReaderPanels`),
+    not as sheets or dialogs, so glass can blur the page; their tags are resource ids. The bars and panels use
+    `FlowFolioPalette(dark = tone.dark)`, not the app theme.
 ## Decision log
 
 ADRs 0001–0014 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build

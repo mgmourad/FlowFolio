@@ -34,9 +34,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.designsystem.CoverSpot
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
 import com.flowfolio.core.designsystem.FlowFolioType
+import com.flowfolio.core.designsystem.LocalBookOpener
 import com.flowfolio.core.designsystem.LocalChromePadding
 import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.reveal
@@ -59,7 +61,9 @@ data class LibraryActions(
     val onOpenShelf: (Long) -> Unit = {},
     val onSort: (LibrarySort) -> Unit = {},
     val onFilter: (LibraryFilter) -> Unit = {},
-    val onQuery: (String) -> Unit = {}
+    val onQuery: (String) -> Unit = {},
+    /** Where the "Continue reading" cover is, so Resume opens the book from it. */
+    val heroSpot: CoverSpot = CoverSpot()
 )
 
 /** Library route: wires the ViewModels, file pickers, snackbar messages and shelf dialogs to [LibraryContent]. */
@@ -96,6 +100,8 @@ fun LibraryScreen(
         viewModel.messages.collect { snackbar.showSnackbar(it.text(context)) }
     }
 
+    val opener = LocalBookOpener.current
+    val heroSpot = remember { CoverSpot() }
     LibraryContent(
         state = state,
         snackbar = snackbar,
@@ -111,7 +117,8 @@ fun LibraryScreen(
                     locate(item.book)
                 } else {
                     viewModel.onBookOpened(item.book.id)
-                    onRead(item.book)
+                    val open = { onRead(item.book) }
+                    opener?.open(heroSpot, open) ?: open()
                 }
             },
             onDelete = viewModel::onRequestDelete,
@@ -120,7 +127,8 @@ fun LibraryScreen(
             onOpenShelf = onOpenShelf,
             onSort = viewModel::onSortChange,
             onFilter = viewModel::onFilter,
-            onQuery = viewModel::onQuery
+            onQuery = viewModel::onQuery,
+            heroSpot = heroSpot
         )
     )
     LibraryDialogs(state.dialog, viewModel)

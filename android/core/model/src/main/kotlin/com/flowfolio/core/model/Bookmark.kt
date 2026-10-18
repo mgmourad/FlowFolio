@@ -11,7 +11,7 @@ data class Bookmark(
 
 /**
  * A bookmark's colour, as one of the app's colour roles rather than a fixed colour, so it follows dark and light mode:
- * sub-item (red, the mock's ribbon), title (orange / brown), item (cyan / teal), accent (magenta / indigo), hint
- * (grey).
+ * sub-item (red, the mock's ribbon), title (orange / brown), item (cyan / teal), accent (magenta / indigo), and a
+ * green in the same tone.
  */
-enum class BookmarkColor { SUB_ITEM, TITLE, ITEM, ACCENT, HINT }
+enum class BookmarkColor { SUB_ITEM, TITLE, ITEM, ACCENT, GREEN }

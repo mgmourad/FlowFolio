@@ -84,6 +84,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     pages).
   - Edge bounce: turning past the first or last page nudges the page and springs it back.
   - Reader memory on the unfolded Fold, spread, Night paper, 300 turns: 263 MB, growth 2.3%, 2.25% janky frames.
+- Owner tweaks after the reader slice:
+  - The reader's bars and panels take the light or dark palette of the page colour, so icons, the page number and
+    the percentage read well on every paper; over dark papers the glass is a lighter frosted tint with a pale edge.
+  - Contents, Go to page, the ribbon colours and the "Aa" sheet are glass panels drawn in the reader itself, so they
+    blur the page behind (sheets and dialogs are separate windows the glass cannot see through). Contents opens under
+    the top bar and stops above the bottom bar. Back or a tap outside closes them.
+  - Ribbon colours: green replaces grey (a stored grey ribbon reads as green). The ribbon is flat and solid like the
+    mock, drops in on a spring and pokes 6 dp above the page.
+  - Changing the page colour is revealed in a circle from the touch, like the theme switch; the circle starts once the
+    pages are drawn in the new colour.
+  - Slide turns pages like a stack: the top page lifts off to the left over the next one.
+  - Book opening (Read on the details page and Resume in the library): the cover flies to the page it opens on (the
+    right-hand page of a spread), the paper floods in, then the cover swings open on its spine and the page melts in.
+  - Unfolded, the details page's blurred cover spans the top half of the screen.
 
 ### Changed
 - Shadows (cards, chips, buttons, glass, book contact shadows, the plank glow) are rendered once on the CPU into small
