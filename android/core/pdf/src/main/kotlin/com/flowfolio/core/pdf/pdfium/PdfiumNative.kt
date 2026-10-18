@@ -27,7 +27,8 @@ internal object PdfiumNative {
         pageWidth: Int,
         pageHeight: Int,
         offsetX: Int,
-        offsetY: Int
+        offsetY: Int,
+        night: Boolean
     ): Boolean
 
     external fun nativeOutline(handle: Long): Array<String>

@@ -25,6 +25,10 @@ class ReaderSettingsViewModel @Inject constructor(private val repository: Settin
         viewModelScope.launch { repository.setSpreadCoverAlone(on) }
     }
 
+    fun setNightPages(on: Boolean) {
+        viewModelScope.launch { repository.setNightPages(on) }
+    }
+
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
     }

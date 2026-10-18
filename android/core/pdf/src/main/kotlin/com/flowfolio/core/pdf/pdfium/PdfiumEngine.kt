@@ -36,14 +36,14 @@ internal class PdfiumDocument(private val handle: Long, override val pageCount: 
         PageSize(size[0], size[1])
     }
 
-    override suspend fun render(index: Int, target: Bitmap, region: RenderRegion) {
+    override suspend fun render(index: Int, target: Bitmap, region: RenderRegion, night: Boolean) {
         require(target.config == Bitmap.Config.ARGB_8888 && target.isMutable && !target.isRecycled) {
             "target must be a mutable, live ARGB_8888 bitmap"
         }
         call {
             checkIndex(index)
             val ok = with(region) {
-                PdfiumNative.nativeRender(handle, index, target, pageWidthPx, pageHeightPx, offsetX, offsetY)
+                PdfiumNative.nativeRender(handle, index, target, pageWidthPx, pageHeightPx, offsetX, offsetY, night)
             }
             if (!ok) throw PdfException.PageError(index)
             // Bound PDFium's per-document caches (+12 MB per 100 pages otherwise; see nativeReload). If a reload

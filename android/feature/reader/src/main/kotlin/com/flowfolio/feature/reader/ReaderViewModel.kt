@@ -8,7 +8,6 @@ import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.OpenedBook
 import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.data.SettingsRepository
-import com.flowfolio.core.model.PixelSize
 import com.flowfolio.core.model.UserSettings
 import com.flowfolio.core.pdf.PdfException
 import com.flowfolio.core.pdf.PdfLink
@@ -50,12 +49,20 @@ sealed interface ReaderState {
         val unitCount: Int,
         val anchorPage: Int,
         /** Spread pairing (reader setting): the cover alone, or pages paired from the first. */
-        val coverAlone: Boolean = true
+        val coverAlone: Boolean = true,
+        /** Night pages are showing (the setting is on and the app is in dark mode). */
+        val night: Boolean = false
     ) : ReaderState
 }
 
-/** Window in pixels and dp, as measured by the reader's root layout. */
-data class Viewport(val widthPx: Int, val heightPx: Int, val widthDp: Float, val heightDp: Float)
+/** Window in pixels and dp, as measured by the reader's root layout, and whether the app is showing dark mode. */
+data class Viewport(
+    val widthPx: Int,
+    val heightPx: Int,
+    val widthDp: Float,
+    val heightDp: Float,
+    val dark: Boolean = false
+)
 
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
@@ -90,7 +97,7 @@ class ReaderViewModel @Inject constructor(
     /** Zoom tiles that are ready (empty unless the reader is zoomed in). */
     val tiles: StateFlow<Map<TileKey, ImageBitmap>> = _tiles.asStateFlow()
     private val sizes = HashMap<Int, com.flowfolio.core.model.PageSize>()
-    private val currentSizes = MutableStateFlow<Map<Int, PixelSize>>(emptyMap())
+    private val currentKeys = MutableStateFlow<Map<Int, PageKey>>(emptyMap())
     private val cacheImages = MutableStateFlow<Map<PageKey, ImageBitmap>>(emptyMap())
     private var viewport: Viewport? = null
     private var wanted: List<PageKey> = emptyList()
@@ -98,8 +105,8 @@ class ReaderViewModel @Inject constructor(
     private var progressJob: Job? = null
 
     /** Page index -> image at the current layout's size, for pages that are ready. */
-    val pageImages: StateFlow<Map<Int, ImageBitmap>> = combine(cacheImages, currentSizes) { images, current ->
-        current.mapNotNull { (page, size) -> images[PageKey(page, size)]?.let { page to it } }.toMap()
+    val pageImages: StateFlow<Map<Int, ImageBitmap>> = combine(cacheImages, currentKeys) { images, current ->
+        current.mapNotNull { (page, key) -> images[key]?.let { page to it } }.toMap()
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
     private var anchorPage: Int
@@ -215,7 +222,8 @@ class ReaderViewModel @Inject constructor(
 
     /** The zoomed view settled: render these tiles, most important first. Empty when leaving zoom (frees them all). */
     fun showTiles(keys: List<TileKey>) {
-        if (keys.isEmpty()) tileCache?.clear() else tileCache?.request(keys)
+        val night = (_state.value as? ReaderState.Ready)?.night == true
+        if (keys.isEmpty()) tileCache?.clear() else tileCache?.request(keys.map { it.copy(night = night) })
     }
 
     /** Android asked apps to free memory: keep only what is on screen. */
@@ -246,7 +254,8 @@ class ReaderViewModel @Inject constructor(
                 unit = unit,
                 unitCount = if (spread) Spreads.unitCount(pageCount, coverAlone) else pageCount,
                 anchorPage = anchorPage,
-                coverAlone = coverAlone
+                coverAlone = coverAlone,
+                night = settings.nightPages && viewport?.dark == true
             )
         }
     }
@@ -276,10 +285,10 @@ class ReaderViewModel @Inject constructor(
                         return@mapNotNull null
                     }
                 }
-                PageKey(page, size.fitInside(paneWidth, v.heightPx))
+                PageKey(page, size.fitInside(paneWidth, v.heightPx), ready.night)
             }
             wanted = keys
-            currentSizes.value = keys.associate { it.page to it.size }
+            currentKeys.value = keys.associateBy { it.page }
             cache?.request(keys, newBudgetBytes = minOf(keys.sumOf { it.size.argbBytes }, MAX_CACHE_BYTES))
             loadLinks(book, pages)
         }

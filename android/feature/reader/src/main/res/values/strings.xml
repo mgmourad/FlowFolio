@@ -15,6 +15,8 @@
     <string name="reader_settings_spreads">Two pages side by side</string>
     <string name="reader_settings_spreads_detail">On wide screens, like the unfolded Fold. Turn off for one larger page.</string>
     <string name="reader_settings_cover">Cover on its own</string>
+    <string name="reader_settings_night">Night pages</string>
+    <string name="reader_settings_night_detail">In dark mode, show pages as light text on dark. Photos keep their colours.</string>
     <string name="reader_settings_cover_detail">Pair pages like a printed book. Turn off if facing pages look mismatched.</string>
     <string name="reader_link_open">Open</string>
     <string name="reader_contents">Contents</string>

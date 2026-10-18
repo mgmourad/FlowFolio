@@ -9,8 +9,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/** One rendered page at one size. Sizes are part of the key, so a layout change never shows a mis-sized image. */
-data class PageKey(val page: Int, val size: PixelSize)
+/**
+ * One rendered page at one size, printed or night. Size and night are part of the key, so a layout or Night pages
+ * change never shows a stale image.
+ */
+data class PageKey(val page: Int, val size: PixelSize, val night: Boolean = false)
 
 /** Renders pages. The reader's implementation returns GPU-backed (HARDWARE) images to avoid a second CPU copy. */
 fun interface PageSource {

@@ -101,7 +101,7 @@ internal fun BoxScope.ReadyReader(
     }
     Box(Modifier.fillMaxSize().interceptTaps(onTap).pinchGestures(overlay::pinch, overlay::endPinch)) {
         // Recreate the curl state when the layout flips (fold/unfold); the ViewModel keeps the position.
-        key(s.layout, s.coverAlone) {
+        key(s.layout, s.coverAlone, s.night) {
             when (s.layout) {
                 ReaderLayout.SINGLE -> SinglePageReader(s, images, viewModel::onUnitShown)
                 ReaderLayout.SPREAD -> SpreadReader(s, images, viewModel::onUnitShown)

@@ -48,5 +48,7 @@ data class UserSettings(
     /** Two pages side by side on wide windows (the unfolded Fold); off means always one page. */
     val readerSpreads: Boolean = true,
     /** In a spread, show the cover on its own (print style) rather than pairing from the first page. */
-    val spreadCoverAlone: Boolean = true
+    val spreadCoverAlone: Boolean = true,
+    /** In dark mode, show pages light-on-dark (images keep their colours). Off: pages as printed. */
+    val nightPages: Boolean = false
 )

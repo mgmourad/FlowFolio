@@ -26,10 +26,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   scrubber in the centre-tap controls; PDF links (internal jumps; web links confirmed, http/https/mailto only);
   pinch-zoom up to 6x with 512 px 16-bit tiles rendered after the view settles (at most 40 tiles, freed on exit);
   Reading settings ("Aa"): two pages side by side on/off and cover-alone pairing on/off.
+- FlowFolio design language (ADR-0014): the owner's dark and light palettes (pixel-exact), glow in dark mode and
+  soft shadow in light mode, rounded surfaces, own toggle and outline glyphs, themed dialogs and sheets; library,
+  settings and the reader's sheets use it.
+- Night pages (reader setting, dark mode only): text and line art light on dark, images keep their printed colours.
+- Touch zones: outer 30% on each side turn pages (tap or swipe), the middle 40% is for taps (controls).
 - `ReaderZoomOnDeviceTest` (UiAutomator 2.4.0) for pinch gestures on a device; Compose test tags are exposed as
   resource ids.
 
 ### Fixed
+- Right-page turns finished on a fast default spring; they now finish at the pace of a full turn, like the left page.
 - Taps on the page curl stopped turning pages after the first turn (the curl state was recreated on every turn).
 - Reader memory budget (ADR-0013): 16-bit GPU-backed page images and gradient fold shading instead of the blurred
   curl shadow; `tools/measure-reader.ps1` now measures the app floor, samples retained memory and reports PASS/FAIL.

@@ -55,6 +55,14 @@ internal fun ReaderSettingsSheet(onDismiss: () -> Unit, viewModel: ReaderSetting
             tag = ReaderTestTags.SETTING_COVER,
             onChange = viewModel::setCoverAlone
         )
+        SettingRow(
+            title = stringResource(R.string.reader_settings_night),
+            detail = stringResource(R.string.reader_settings_night_detail),
+            checked = settings.nightPages,
+            enabled = true,
+            tag = ReaderTestTags.SETTING_NIGHT,
+            onChange = viewModel::setNightPages
+        )
         Text("", Modifier.padding(bottom = 24.dp))
     }
 }

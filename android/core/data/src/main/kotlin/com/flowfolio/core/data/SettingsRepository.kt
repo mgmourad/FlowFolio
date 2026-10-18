@@ -24,6 +24,8 @@ interface SettingsRepository {
     suspend fun setReaderSpreads(on: Boolean)
 
     suspend fun setSpreadCoverAlone(on: Boolean)
+
+    suspend fun setNightPages(on: Boolean)
 }
 
 class DefaultSettingsRepository @Inject constructor(private val source: SettingsDataSource) : SettingsRepository {
@@ -55,5 +57,9 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setSpreadCoverAlone(on: Boolean) {
         source.setSpreadCoverAlone(on)
+    }
+
+    override suspend fun setNightPages(on: Boolean) {
+        source.setNightPages(on)
     }
 }

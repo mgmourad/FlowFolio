@@ -23,8 +23,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +35,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
@@ -46,6 +49,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.pagecurl.config.PageCurlConfig
 import com.flowfolio.core.pagecurl.config.rememberPageCurlConfig
 import com.flowfolio.core.pagecurl.page.PageCurl
@@ -64,8 +68,23 @@ fun ReaderScreen(onBack: () -> Unit, viewModel: ReaderViewModel = hiltViewModel(
     val navigation by viewModel.navigation.collectAsStateWithLifecycle()
     TrimMemoryEffect(viewModel::onTrimMemory)
 
+    val night = (state as? ReaderState.Ready)?.night == true
+    CompositionLocalProvider(LocalPaper provides if (night) NIGHT_PAPER else Color.White) {
+        ReaderRoot(state, images, navigation, viewModel, onBack)
+    }
+}
+
+@Composable
+private fun ReaderRoot(
+    state: ReaderState,
+    images: Map<Int, ImageBitmap>,
+    navigation: BookNavigation,
+    viewModel: ReaderViewModel,
+    onBack: () -> Unit
+) {
+    val dark = FlowFolio.palette.dark
     BoxWithConstraints(Modifier.fillMaxSize().background(PAPER)) {
-        val viewport = Viewport(constraints.maxWidth, constraints.maxHeight, maxWidth.value, maxHeight.value)
+        val viewport = Viewport(constraints.maxWidth, constraints.maxHeight, maxWidth.value, maxHeight.value, dark)
         LaunchedEffect(viewport) { viewModel.onViewport(viewport) }
 
         when (val s = state) {
@@ -168,6 +187,7 @@ internal fun SpreadReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap
  */
 @Composable
 private fun swipeAnywhereConfig(rightPageOfSpread: Boolean = false) = rememberPageCurlConfig(
+    backPageColor = PAPER,
     dragInteraction = PageCurlConfig.GestureDragInteraction(),
     tapBackwardEnabled = !rightPageOfSpread,
     tapInteraction = if (rightPageOfSpread) {
@@ -203,7 +223,10 @@ private fun ReportUnit(curl: PageCurlState, onUnitShown: (Int) -> Unit) {
 /** One page image at its exact rendered size (no scaling), on paper. Missing images show blank paper. */
 @Composable
 private fun PagePane(image: ImageBitmap?, alignment: Alignment, spine: Spine, shadingStrength: Float = 1f) {
-    Box(Modifier.fillMaxSize().background(PAPER).pageShading(spine, shadingStrength), contentAlignment = alignment) {
+    Box(
+        Modifier.fillMaxSize().background(PAPER).pageShading(spine, shadingStrength, isNightPaper),
+        contentAlignment = alignment
+    ) {
         if (image != null) Image(image, contentDescription = null, contentScale = ContentScale.None)
     }
 }
@@ -219,32 +242,6 @@ private fun Message(text: String, onBack: () -> Unit) {
     }
 }
 
-@Composable
-private fun TrimMemoryEffect(onTrim: () -> Unit) {
-    val context = LocalContext.current
-    val latest by rememberUpdatedState(onTrim)
-    DisposableEffect(context) {
-        val callbacks = object : ComponentCallbacks2 {
-            override fun onTrimMemory(level: Int) {
-                // Only the levels that mean "the system is short on memory while we are visible".
-                if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW &&
-                    level < ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN
-                ) {
-                    latest()
-                }
-            }
-
-            override fun onConfigurationChanged(newConfig: Configuration) = Unit
-
-            @Deprecated("Deprecated in Java")
-            override fun onLowMemory() = latest()
-        }
-        context.registerComponentCallbacks(callbacks)
-        onDispose { context.unregisterComponentCallbacks(callbacks) }
-    }
-}
-
-internal val PAPER = Color.White
 private const val SWIPE_THRESHOLD_PX = 24f
 private const val SINGLE_PAGE_GUTTER_STRENGTH = 0.6f
 internal val EDGE_GUARD_WIDTH = 32.dp
