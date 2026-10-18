@@ -1,6 +1,7 @@
 package com.flowfolio.feature.reader.cache
 
 import androidx.compose.ui.graphics.ImageBitmap
+import com.flowfolio.feature.reader.PageTone
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +20,7 @@ data class TileKey(
     val pageHeightPx: Int,
     val tx: Int,
     val ty: Int,
-    val night: Boolean = false
+    val tone: PageTone = PageTone.PRINTED
 ) {
     val widthPx: Int get() = minOf(TILE_PX, pageWidthPx - tx * TILE_PX)
     val heightPx: Int get() = minOf(TILE_PX, pageHeightPx - ty * TILE_PX)

@@ -9,6 +9,8 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.flowfolio.core.model.LibrarySort
+import com.flowfolio.core.model.PageTurn
+import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
@@ -35,7 +37,8 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             librarySort = p[SORT].toEnum(defaults.librarySort),
             readerSpreads = p[READER_SPREADS] ?: defaults.readerSpreads,
             spreadCoverAlone = p[COVER_ALONE] ?: defaults.spreadCoverAlone,
-            nightPages = p[NIGHT_PAGES] ?: defaults.nightPages
+            paperStyle = p[PAPER_STYLE].toEnum(defaults.paperStyle),
+            pageTurn = p[PAGE_TURN].toEnum(defaults.pageTurn)
         )
     }
 
@@ -67,8 +70,12 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         store.edit { it[COVER_ALONE] = on }
     }
 
-    suspend fun setNightPages(on: Boolean) {
-        store.edit { it[NIGHT_PAGES] = on }
+    suspend fun setPaperStyle(style: PaperStyle) {
+        store.edit { it[PAPER_STYLE] = style.name }
+    }
+
+    suspend fun setPageTurn(turn: PageTurn) {
+        store.edit { it[PAGE_TURN] = turn.name }
     }
 
     private inline fun <reified T : Enum<T>> String?.toEnum(default: T): T =
@@ -82,7 +89,8 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val SORT = stringPreferencesKey("library_sort")
         val READER_SPREADS = booleanPreferencesKey("reader_spreads")
         val COVER_ALONE = booleanPreferencesKey("spread_cover_alone")
-        val NIGHT_PAGES = booleanPreferencesKey("night_pages")
+        val PAPER_STYLE = stringPreferencesKey("reader_paper")
+        val PAGE_TURN = stringPreferencesKey("reader_page_turn")
     }
 }
 

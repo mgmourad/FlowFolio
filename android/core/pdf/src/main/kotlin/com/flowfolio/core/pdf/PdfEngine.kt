@@ -26,14 +26,14 @@ interface PdfDocument : Closeable {
 
     /**
      * Renders page [index] into [target] as described by [region]. [target] must be a mutable ARGB_8888 bitmap;
-     * it is filled white before drawing. Defaults to the whole page scaled to the target's size. With [night], text
-     * and line art are shown light on dark (lightness inverted, hue kept) while images keep their printed colours.
+     * it is filled white before drawing. Defaults to the whole page scaled to the target's size. With [tint], text
+     * and line art are recoloured for the reader's paper (see [PageTint]) while images keep their printed colours.
      */
     suspend fun render(
         index: Int,
         target: Bitmap,
         region: RenderRegion = RenderRegion.fullPage(target.width, target.height),
-        night: Boolean = false
+        tint: PageTint? = null
     )
 
     /** The outline (bookmarks) in document order; empty when the PDF has none. */
@@ -54,6 +54,12 @@ interface PdfDocument : Closeable {
     /** Closes the document. Further calls throw [PdfException.Closed]. Safe to call more than once. */
     override fun close()
 }
+
+/**
+ * Recolours a rendered page's text and line art: white becomes [paper] and black [ink] (ARGB), with lightness
+ * inverted first when [invert] (dark papers). Images on the page keep their printed colours.
+ */
+data class PageTint(val paper: Int, val ink: Int, val invert: Boolean)
 
 /**
  * A link on a page. The box is a fraction (0..1) of the page as displayed, top-left origin. Exactly one of

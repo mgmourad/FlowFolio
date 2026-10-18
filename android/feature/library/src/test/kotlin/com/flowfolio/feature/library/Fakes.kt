@@ -9,6 +9,8 @@ import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.LibrarySort
+import com.flowfolio.core.model.PageTurn
+import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.Shelf
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
@@ -92,7 +94,9 @@ class FakeSettings(initial: UserSettings = UserSettings()) : SettingsRepository 
 
     override suspend fun setSpreadCoverAlone(on: Boolean) = state.update { it.copy(spreadCoverAlone = on) }
 
-    override suspend fun setNightPages(on: Boolean) = state.update { it.copy(nightPages = on) }
+    override suspend fun setPaperStyle(style: PaperStyle) = state.update { it.copy(paperStyle = style) }
+
+    override suspend fun setPageTurn(turn: PageTurn) = state.update { it.copy(pageTurn = turn) }
 }
 
 class FakeShelves(initial: List<Shelf> = emptyList()) : ShelfRepository {

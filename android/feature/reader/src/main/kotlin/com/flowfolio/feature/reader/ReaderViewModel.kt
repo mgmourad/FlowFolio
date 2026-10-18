@@ -8,6 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.OpenedBook
 import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.UserSettings
 import com.flowfolio.core.pdf.PdfException
 import com.flowfolio.core.pdf.PdfLink
@@ -50,8 +51,12 @@ sealed interface ReaderState {
         val anchorPage: Int,
         /** Spread pairing (reader setting): the cover alone, or pages paired from the first. */
         val coverAlone: Boolean = true,
-        /** Night pages are showing (the setting is on and the app is in dark mode). */
-        val night: Boolean = false
+        /** The paper the pages are shown on (the Aa sheet's swatch, Auto resolved for the app's theme). */
+        val tone: PageTone = PageTone.PRINTED,
+        /** How pages turn. */
+        val turn: PageTurn = PageTurn.CURL,
+        /** Width / height of the page in view, for sizing pages not rendered yet (Scroll). */
+        val pageAspect: Float = ReaderViewModel.LETTER_ASPECT
     ) : ReaderState
 }
 
@@ -222,8 +227,8 @@ class ReaderViewModel @Inject constructor(
 
     /** The zoomed view settled: render these tiles, most important first. Empty when leaving zoom (frees them all). */
     fun showTiles(keys: List<TileKey>) {
-        val night = (_state.value as? ReaderState.Ready)?.night == true
-        if (keys.isEmpty()) tileCache?.clear() else tileCache?.request(keys.map { it.copy(night = night) })
+        val tone = (_state.value as? ReaderState.Ready)?.tone ?: PageTone.PRINTED
+        if (keys.isEmpty()) tileCache?.clear() else tileCache?.request(keys.map { it.copy(tone = tone) })
     }
 
     /** Android asked apps to free memory: keep only what is on screen. */
@@ -235,7 +240,7 @@ class ReaderViewModel @Inject constructor(
 
     private fun layoutFor(v: Viewport?): ReaderLayout = when {
         forcedLayout != null -> forcedLayout
-        !settings.readerSpreads || v == null -> ReaderLayout.SINGLE
+        !settings.readerSpreads || v == null || settings.pageTurn == PageTurn.SCROLL -> ReaderLayout.SINGLE
         else -> chooseLayout(v.widthDp, v.heightDp)
     }
 
@@ -255,7 +260,9 @@ class ReaderViewModel @Inject constructor(
                 unitCount = if (spread) Spreads.unitCount(pageCount, coverAlone) else pageCount,
                 anchorPage = anchorPage,
                 coverAlone = coverAlone,
-                night = settings.nightPages && viewport?.dark == true
+                tone = settings.paperStyle.tone(appDark = viewport?.dark == true),
+                turn = settings.pageTurn,
+                pageAspect = sizes[anchorPage]?.let { it.widthPt / it.heightPt } ?: LETTER_ASPECT
             )
         }
     }
@@ -270,6 +277,8 @@ class ReaderViewModel @Inject constructor(
         planJob = viewModelScope.launch {
             val spread = ready.layout == ReaderLayout.SPREAD
             val paneWidth = if (spread) v.widthPx / 2 else v.widthPx
+            // Scroll shows pages at the full width, however tall that makes them; the other styles fit the screen.
+            val paneHeight = if (ready.turn == PageTurn.SCROLL) UNBOUNDED_HEIGHT else v.heightPx
             // Visible unit, the one a forward turn reveals, the one a backward turn reveals, then one more ahead.
             // (Dropping the extra one saved no measurable memory on the Fold, ADR-0013.)
             val order = listOf(ready.unit, ready.unit + 1, ready.unit - 1, ready.unit + 2)
@@ -285,7 +294,7 @@ class ReaderViewModel @Inject constructor(
                         return@mapNotNull null
                     }
                 }
-                PageKey(page, size.fitInside(paneWidth, v.heightPx), ready.night)
+                PageKey(page, size.fitInside(paneWidth, paneHeight), ready.tone)
             }
             wanted = keys
             currentKeys.value = keys.associateBy { it.page }
@@ -335,5 +344,10 @@ class ReaderViewModel @Inject constructor(
 
         /** Hard cap for page images; the wish list (4 units) normally needs far less. */
         private const val MAX_CACHE_BYTES = 96L * 1024 * 1024
+
+        /** US Letter, the most common textbook page, until the real page size is known. */
+        const val LETTER_ASPECT = 8.5f / 11f
+
+        private const val UNBOUNDED_HEIGHT = 1 shl 20
     }
 }

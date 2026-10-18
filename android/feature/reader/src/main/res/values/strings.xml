@@ -15,8 +15,6 @@
     <string name="reader_settings_spreads">Two pages side by side</string>
     <string name="reader_settings_spreads_detail">On wide screens, like the unfolded Fold. Turn off for one larger page.</string>
     <string name="reader_settings_cover">Cover on its own</string>
-    <string name="reader_settings_night">Night pages</string>
-    <string name="reader_settings_night_detail">In dark mode, show pages as light text on dark. Photos keep their colours.</string>
     <string name="reader_settings_cover_detail">Pair pages like a printed book. Turn off if facing pages look mismatched.</string>
     <string name="reader_link_open">Open</string>
     <string name="reader_contents">Contents</string>
@@ -28,4 +26,21 @@
     <string name="reader_go_to_not_found">No such page. Try a printed page number or 1–%1$d.</string>
     <string name="reader_go_to_confirm">Go</string>
     <string name="reader_scrub_preview">Page %1$s · %2$d of %3$d</string>
+    <string name="reader_page_short">p. %1$s</string>
+    <string name="reader_percent">%1$d%%</string>
+    <string name="reader_bookmark">Bookmark this page</string>
+    <string name="reader_bookmarked">Bookmarked: change or remove</string>
+    <string name="reader_bookmark_remove">Remove bookmark</string>
+    <string name="reader_paper">Page</string>
+    <string name="reader_paper_auto">Auto</string>
+    <string name="reader_paper_paper">Paper</string>
+    <string name="reader_paper_sepia">Sepia</string>
+    <string name="reader_paper_night">Night</string>
+    <string name="reader_paper_black">Black</string>
+    <string name="reader_paper_note">Photos always keep their printed colours.</string>
+    <string name="reader_turn">Page turn</string>
+    <string name="reader_turn_curl">Curl</string>
+    <string name="reader_turn_slide">Slide</string>
+    <string name="reader_turn_scroll">Scroll</string>
+    <string name="reader_layout">Layout</string>
 </resources>

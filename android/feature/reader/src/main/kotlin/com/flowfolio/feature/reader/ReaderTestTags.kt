@@ -15,5 +15,8 @@ object ReaderTestTags {
     const val SETTINGS_SHEET = "reader_settings_sheet"
     const val SETTING_SPREADS = "reader_setting_spreads"
     const val SETTING_COVER = "reader_setting_cover"
-    const val SETTING_NIGHT = "reader_setting_night"
+    const val SETTING_TURN = "reader_setting_turn"
+    const val PAPER_SWATCHES = "reader_paper_swatches"
+    const val BOOKMARK = "reader_bookmark"
+    const val BOOKMARK_COLOURS = "reader_bookmark_colours"
 }

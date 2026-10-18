@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.os.ParcelFileDescriptor
 import com.flowfolio.core.model.OutlineEntry
 import com.flowfolio.core.model.PageSize
+import com.flowfolio.core.pdf.PageTint
 import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfEngine
 import com.flowfolio.core.pdf.PdfException
@@ -36,14 +37,30 @@ internal class PdfiumDocument(private val handle: Long, override val pageCount: 
         PageSize(size[0], size[1])
     }
 
-    override suspend fun render(index: Int, target: Bitmap, region: RenderRegion, night: Boolean) {
+    override suspend fun render(index: Int, target: Bitmap, region: RenderRegion, tint: PageTint?) {
         require(target.config == Bitmap.Config.ARGB_8888 && target.isMutable && !target.isRecycled) {
             "target must be a mutable, live ARGB_8888 bitmap"
         }
         call {
             checkIndex(index)
             val ok = with(region) {
-                PdfiumNative.nativeRender(handle, index, target, pageWidthPx, pageHeightPx, offsetX, offsetY, night)
+                val mode = when {
+                    tint == null -> 0
+                    tint.invert -> 2
+                    else -> 1
+                }
+                PdfiumNative.nativeRender(
+                    handle,
+                    index,
+                    target,
+                    pageWidthPx,
+                    pageHeightPx,
+                    offsetX,
+                    offsetY,
+                    mode,
+                    tint?.paper ?: 0,
+                    tint?.ink ?: 0
+                )
             }
             if (!ok) throw PdfException.PageError(index)
             // Bound PDFium's per-document caches (+12 MB per 100 pages otherwise; see nativeReload). If a reload

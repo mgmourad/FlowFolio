@@ -2,6 +2,7 @@ package com.flowfolio.feature.reader.cache
 
 import androidx.compose.ui.graphics.ImageBitmap
 import com.flowfolio.core.model.PixelSize
+import com.flowfolio.feature.reader.PageTone
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,10 +11,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * One rendered page at one size, printed or night. Size and night are part of the key, so a layout or Night pages
+ * One rendered page at one size and paper tone. Size and tone are part of the key, so a layout or paper
  * change never shows a stale image.
  */
-data class PageKey(val page: Int, val size: PixelSize, val night: Boolean = false)
+data class PageKey(val page: Int, val size: PixelSize, val tone: PageTone = PageTone.PRINTED)
 
 /** Renders pages. The reader's implementation returns GPU-backed (HARDWARE) images to avoid a second CPU copy. */
 fun interface PageSource {

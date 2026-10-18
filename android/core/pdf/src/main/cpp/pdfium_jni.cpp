@@ -91,9 +91,9 @@ void walkOutline(FPDF_DOCUMENT doc, FPDF_BOOKMARK parent, int depth, std::vector
     }
 }
 
-// --- Night pages (reader option, ADR-0014) ----------------------------------------------------------------------
-// Text and line art get their lightness inverted with hue kept (a blue link stays blue), then are tinted toward the
-// app's dark palette; photos (image objects) are restored exactly as printed.
+// --- Paper styles (reader option: Paper, Sepia, Night, Black; ADR-0014) --------------------------------------------
+// Text and line art are mapped from white..black onto paper..ink; dark papers first invert lightness with hue kept
+// (a blue link stays blue). Photos (image objects) are restored exactly as printed.
 
 struct Rect {
     int x0, y0, x1, y1;
@@ -131,7 +131,8 @@ std::vector<Rect> imageRects(FPDF_PAGE page, int offsetX, int offsetY, int pageW
 }
 
 // Pixels are RGBA bytes (Android ARGB_8888 memory order).
-void nightPage(uint8_t* pixels, int w, int h, int stride, const std::vector<Rect>& keep) {
+void tintPage(uint8_t* pixels, int w, int h, int stride, const std::vector<Rect>& keep, bool invert, uint32_t paper,
+              uint32_t ink) {
     // Save the image areas, transform everything, then put the images back untouched.
     std::vector<std::vector<uint8_t>> saved;
     saved.reserve(keep.size());
@@ -142,18 +143,26 @@ void nightPage(uint8_t* pixels, int w, int h, int stride, const std::vector<Rect
         }
         saved.push_back(std::move(block));
     }
-    // Paper (#18084A: the app's dark background #1C0A4D moved to the nearest colour a 16-bit page can hold, so the
-    // page and the screen around it match exactly) to ink (#E9E4F5, a soft light lavender).
-    constexpr int kBg[3] = {0x18, 0x08, 0x4A};
-    constexpr int kFg[3] = {0xE9, 0xE4, 0xF5};
+    // Colours are ARGB ints from Kotlin. With invert, white maps to paper (a dark colour) and black to ink (light);
+    // without, white maps to paper and black to ink directly. Paper colours are chosen to be exact in a 16-bit page,
+    // so the page and the screen around it match.
+    const int bg[3] = {static_cast<int>((paper >> 16) & 0xFF), static_cast<int>((paper >> 8) & 0xFF),
+                       static_cast<int>(paper & 0xFF)};
+    const int fg[3] = {static_cast<int>((ink >> 16) & 0xFF), static_cast<int>((ink >> 8) & 0xFF),
+                       static_cast<int>(ink & 0xFF)};
     for (int y = 0; y < h; y++) {
         uint8_t* row = pixels + y * stride;
         for (int x = 0; x < w; x++) {
             uint8_t* px = row + x * 4;
             int r = px[0], g = px[1], b = px[2];
-            int shift = 255 - std::max(r, std::max(g, b)) - std::min(r, std::min(g, b));  // invert lightness, keep hue
-            int v[3] = {r + shift, g + shift, b + shift};
-            for (int c = 0; c < 3; c++) px[c] = static_cast<uint8_t>(kBg[c] + v[c] * (kFg[c] - kBg[c]) / 255);
+            if (invert) {
+                int shift = 255 - std::max(r, std::max(g, b)) - std::min(r, std::min(g, b));  // invert lightness
+                int v[3] = {r + shift, g + shift, b + shift};
+                for (int c = 0; c < 3; c++) px[c] = static_cast<uint8_t>(bg[c] + v[c] * (fg[c] - bg[c]) / 255);
+            } else {
+                int v[3] = {r, g, b};
+                for (int c = 0; c < 3; c++) px[c] = static_cast<uint8_t>(fg[c] + v[c] * (bg[c] - fg[c]) / 255);
+            }
         }
     }
     for (size_t i = 0; i < keep.size(); i++) {
@@ -249,7 +258,8 @@ JNIEXPORT jfloatArray JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_na
 // bitmap, so a full page uses offset 0 and a zoom tile uses the tile's position. The target is filled white first.
 JNIEXPORT jboolean JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_nativeRender(JNIEnv* env, jobject, jlong handle, jint index,
                                                                                           jobject bitmap, jint pageW, jint pageH,
-                                                                                          jint offsetX, jint offsetY, jboolean night) {
+                                                                                          jint offsetX, jint offsetY, jint mode,
+                                                                                          jint paper, jint ink) {
     AndroidBitmapInfo info;
     if (AndroidBitmap_getInfo(env, bitmap, &info) != ANDROID_BITMAP_RESULT_SUCCESS || info.format != ANDROID_BITMAP_FORMAT_RGBA_8888) {
         return JNI_FALSE;
@@ -269,9 +279,10 @@ JNIEXPORT jboolean JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_nativ
                 // highlights and notes stored in the PDF.
                 FPDF_RenderPageBitmap(target, page, -offsetX, -offsetY, pageW, pageH, 0, FPDF_ANNOT | FPDF_REVERSE_BYTE_ORDER);
                 FPDFBitmap_Destroy(target);
-                if (night) {
-                    nightPage(static_cast<uint8_t*>(pixels), w, h, static_cast<int>(info.stride),
-                              imageRects(page, offsetX, offsetY, pageW, pageH, w, h));
+                if (mode != 0) {
+                    tintPage(static_cast<uint8_t*>(pixels), w, h, static_cast<int>(info.stride),
+                             imageRects(page, offsetX, offsetY, pageW, pageH, w, h), mode == 2,
+                             static_cast<uint32_t>(paper), static_cast<uint32_t>(ink));
                 }
                 ok = true;
             }

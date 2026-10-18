@@ -16,7 +16,7 @@ import kotlin.math.exp
  * Everything is multi-stop linear gradients that follow a Gaussian falloff, so it reads like a soft blur without the
  * offscreen GPU layer a real blur needs (ADR-0013: the blurred curl shadow cost 36-40 MB).
  */
-fun Modifier.pageShading(spine: Spine, strength: Float = 1f, night: Boolean = false): Modifier = drawWithCache {
+fun Modifier.pageShading(spine: Spine, strength: Float = 1f, darkPaper: Boolean = false): Modifier = drawWithCache {
     val w = size.width
     val gutterWidth = w * GUTTER_FRACTION
     val creaseWidth = w * CREASE_FRACTION
@@ -27,11 +27,11 @@ fun Modifier.pageShading(spine: Spine, strength: Float = 1f, night: Boolean = fa
     // Light from the upper left: the right-hand outer edge sits in a little more shade.
     val outerAlpha = if (spine == Spine.LEFT) EDGE_ALPHA_RIGHT else EDGE_ALPHA_LEFT
 
-    // On night paper a white highlight reads as a light stripe, and the shadow needs more weight to show at all.
-    val gutterAlpha = if (night) NIGHT_GUTTER_ALPHA else GUTTER_ALPHA
+    // On dark paper a white highlight reads as a light stripe, and the shadow needs more weight to show at all.
+    val gutterAlpha = if (darkPaper) NIGHT_GUTTER_ALPHA else GUTTER_ALPHA
     val gutter = softBand(atSpine, toward, gutterWidth, gutterAlpha * strength, Color.Black)
     val crease = softBand(atSpine, toward, creaseWidth, CREASE_ALPHA * strength, Color.Black)
-    val bulgeAlpha = if (night) 0f else BULGE_ALPHA * strength
+    val bulgeAlpha = if (darkPaper) 0f else BULGE_ALPHA * strength
     val bulge = bumpBand(atSpine + toward * gutterWidth * BULGE_OFFSET, toward, gutterWidth, bulgeAlpha)
     val edge = softBand(outer, -toward, edgeWidth, outerAlpha * strength, Color.Black)
 

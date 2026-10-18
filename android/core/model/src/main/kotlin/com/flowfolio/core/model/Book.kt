@@ -55,6 +55,17 @@ data class UserSettings(
     val readerSpreads: Boolean = true,
     /** In a spread, show the cover on its own (print style) rather than pairing from the first page. */
     val spreadCoverAlone: Boolean = true,
-    /** In dark mode, show pages light-on-dark (images keep their colours). Off: pages as printed. */
-    val nightPages: Boolean = false
+    /** The page colour in the reader (the Aa sheet's swatches); images always keep their printed colours. */
+    val paperStyle: PaperStyle = PaperStyle.AUTO,
+    /** How pages turn in the reader. */
+    val pageTurn: PageTurn = PageTurn.CURL
 )
+
+/**
+ * The reader's paper (the mock's swatches). [AUTO] follows the app: pages as printed in light mode, Night in dark
+ * mode. The others tint text and line art; photos are never changed.
+ */
+enum class PaperStyle { AUTO, PAPER, SEPIA, NIGHT, BLACK }
+
+/** Page turns: the 3D curl (default), sliding sideways, or one continuous vertical scroll. */
+enum class PageTurn { CURL, SLIDE, SCROLL }
