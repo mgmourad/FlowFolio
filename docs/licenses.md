@@ -32,6 +32,8 @@ Release dates were checked on Maven Central, Google Maven, PyPI, or GitHub Relea
 | androidx.test:runner | 1.7.0 | 2025-07-30 | Apache-2.0 | test | |
 | androidx.test.espresso:espresso-core | 3.7.0 | 2025-07-30 | Apache-2.0 | test | Calls an API removed in API 37 under Robolectric |
 | androidx.test.uiautomator:uiautomator | 2.4.0 | 2026-07-01 | Apache-2.0 | test | Multi-finger gestures (pinch) in on-device tests; approved with the Phase 1 plan |
+| Fraunces (variable font) | google/fonts main, 2026-10-17 | 2018-2024 (Undercase Type) | SIL OFL 1.1 | app | Display font (ADR-0015). `core/designsystem/res/font`; licence text in `assets/third_party_licenses/fonts/`. 775 KB (roman + italic) |
+| Instrument Sans (variable font) | google/fonts main, 2026-10-17 | 2022-2024 (Instrument) | SIL OFL 1.1 | app | UI font (ADR-0015). Same locations. 396 KB (roman + italic) |
 | Spotless Gradle plugin | 8.10.4 | 2026-10-08 | Apache-2.0 | build | |
 | ktlint | 1.8.0 | 2025-11-14 | MIT | build | |
 | detekt | 1.23.8 | 2025-02-21 | Apache-2.0 | build | **Maintenance risk:** last 1.x release is 20 months old; 2.0 is still alpha. Works with Kotlin 2.4 today; re-evaluate when 2.0 is stable |
