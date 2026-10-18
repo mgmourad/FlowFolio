@@ -2,6 +2,8 @@ package com.flowfolio.core.data
 
 import com.flowfolio.core.datastore.SettingsDataSource
 import com.flowfolio.core.model.LibrarySort
+import com.flowfolio.core.model.PageTurn
+import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
@@ -25,7 +27,9 @@ interface SettingsRepository {
 
     suspend fun setSpreadCoverAlone(on: Boolean)
 
-    suspend fun setNightPages(on: Boolean)
+    suspend fun setPaperStyle(style: PaperStyle)
+
+    suspend fun setPageTurn(turn: PageTurn)
 }
 
 class DefaultSettingsRepository @Inject constructor(private val source: SettingsDataSource) : SettingsRepository {
@@ -59,7 +63,11 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
         source.setSpreadCoverAlone(on)
     }
 
-    override suspend fun setNightPages(on: Boolean) {
-        source.setNightPages(on)
+    override suspend fun setPaperStyle(style: PaperStyle) {
+        source.setPaperStyle(style)
+    }
+
+    override suspend fun setPageTurn(turn: PageTurn) {
+        source.setPageTurn(turn)
     }
 }

@@ -3,6 +3,7 @@ package com.flowfolio.feature.reader.cache
 import android.graphics.Bitmap
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import com.flowfolio.core.pdf.PageTint
 import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfException
 import com.flowfolio.core.pdf.RenderRegion
@@ -22,7 +23,7 @@ class PdfPageSource(private val document: PdfDocument) :
 
     override suspend fun render(key: PageKey): ImageBitmap? {
         val (w, h) = key.size
-        return renderRegion(key.page, w, h, RenderRegion.fullPage(w, h), key.night)
+        return renderRegion(key.page, w, h, RenderRegion.fullPage(w, h), key.tone.tint)
     }
 
     override suspend fun render(key: TileKey): ImageBitmap? = renderRegion(
@@ -30,17 +31,17 @@ class PdfPageSource(private val document: PdfDocument) :
         key.widthPx,
         key.heightPx,
         RenderRegion(key.pageWidthPx, key.pageHeightPx, key.tx * TileKey.TILE_PX, key.ty * TileKey.TILE_PX),
-        key.night
+        key.tone.tint
     )
 
-    private suspend fun renderRegion(page: Int, w: Int, h: Int, region: RenderRegion, night: Boolean): ImageBitmap? =
-        if (w <= 0 || h <= 0) null else lock.withLock { renderLocked(page, w, h, region, night) }
+    private suspend fun renderRegion(page: Int, w: Int, h: Int, region: RenderRegion, tint: PageTint?): ImageBitmap? =
+        if (w <= 0 || h <= 0) null else lock.withLock { renderLocked(page, w, h, region, tint) }
 
     @Suppress("LongParameterList") // one page render: what, how big, which part, which colours
-    private suspend fun renderLocked(page: Int, w: Int, h: Int, region: RenderRegion, night: Boolean): ImageBitmap? {
+    private suspend fun renderLocked(page: Int, w: Int, h: Int, region: RenderRegion, tint: PageTint?): ImageBitmap? {
         val bitmap = scratchFor(w, h)
         try {
-            document.render(page, bitmap, region, night)
+            document.render(page, bitmap, region, tint)
         } catch (_: PdfException) {
             return null // damaged page: the reader shows a blank page instead of crashing
         }

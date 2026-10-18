@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.systemGestureExclusion
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
@@ -21,7 +22,13 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.designsystem.LocalGlassState
+import com.flowfolio.core.model.Bookmark
+import com.flowfolio.core.model.PageTurn
 import com.flowfolio.feature.reader.layout.ReaderLayout
+import com.flowfolio.feature.reader.layout.Spreads
+import dev.chrisbanes.haze.hazeSource
+import dev.chrisbanes.haze.rememberHazeState
 import kotlinx.coroutines.delay
 
 /**
@@ -69,9 +76,14 @@ internal fun BoxScope.ReadyReader(
     images: Map<Int, ImageBitmap>,
     navigation: BookNavigation,
     viewModel: ReaderViewModel,
+    bookmarks: ReaderBookmarksViewModel,
     onBack: () -> Unit
 ) {
     val links by viewModel.links.collectAsStateWithLifecycle()
+    val marks by bookmarks.bookmarks.collectAsStateWithLifecycle()
+    val mark = chromeMark(s, marks, bookmarks)
+    val bounce = remember { EdgeBounce() }
+    val haze = rememberHazeState()
     val tiles by viewModel.tiles.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
     val overlay = remember { Overlay() }
@@ -99,18 +111,25 @@ internal fun BoxScope.ReadyReader(
         }
         target != PageFrames.TapTarget.Page
     }
-    Box(Modifier.fillMaxSize().interceptTaps(onTap).pinchGestures(overlay::pinch, overlay::endPinch)) {
-        // Recreate the curl state when the layout flips (fold/unfold); the ViewModel keeps the position.
-        key(s.layout, s.coverAlone, s.night) {
-            when (s.layout) {
-                ReaderLayout.SINGLE -> SinglePageReader(s, images, viewModel::onUnitShown)
-                ReaderLayout.SPREAD -> SpreadReader(s, images, viewModel::onUnitShown)
-            }
+    Box(
+        Modifier
+            .fillMaxSize()
+            .hazeSource(haze)
+            .interceptTaps(onTap)
+            .pinchGestures(overlay::pinch, overlay::endPinch)
+            .edgeBounce(bounce, atStart = s.unit <= 0, atEnd = s.unit >= s.unitCount - 1)
+    ) {
+        // Recreate the page state when the layout or turn style changes (fold/unfold, Aa); the ViewModel keeps the
+        // position.
+        key(s.layout, s.coverAlone, s.tone, s.turn) {
+            BookPages(s, images, s.pageAspect, viewModel::onUnitShown)
         }
     }
     overlay.zoom?.let { ZoomView(it, framesFor, images, tiles, viewModel::showTiles, onExit = { overlay.zoom = null }) }
     if (overlay.zoom == null) {
-        Chrome(s, navigation, overlay, onBack, jump)
+        CompositionLocalProvider(LocalGlassState provides haze) {
+            Chrome(s, navigation, overlay, mark, onBack, jump)
+        }
     }
     Panels(overlay.panel, s, navigation, jump, onDismiss = { overlay.panel = Panel.NONE })
     overlay.webLink?.let { uri ->
@@ -124,6 +143,7 @@ private fun BoxScope.Chrome(
     s: ReaderState.Ready,
     navigation: BookNavigation,
     overlay: Overlay,
+    mark: ChromeMark,
     onBack: () -> Unit,
     jump: (Int) -> Unit
 ) {
@@ -131,6 +151,7 @@ private fun BoxScope.Chrome(
         s,
         navigation,
         controlsVisible = overlay.shownAt != null,
+        mark = mark,
         actions = ChromeActions(
             onBack = onBack,
             onContents = { overlay.panel = Panel.CONTENTS },
@@ -139,6 +160,27 @@ private fun BoxScope.Chrome(
             onScrub = jump,
             onInteract = overlay::touch
         )
+    )
+}
+
+/** The pages in view: both pages of a spread (curl or slide), otherwise the page being read. */
+internal fun pagesInView(s: ReaderState.Ready): List<Int> =
+    if (s.layout == ReaderLayout.SPREAD && s.turn != PageTurn.SCROLL) {
+        Spreads.pagesOf(s.unit, s.pageCount, s.coverAlone).ifEmpty { listOf(s.anchorPage) }
+    } else {
+        listOf(s.anchorPage)
+    }
+
+/**
+ * The bookmark button's view of the pages in view: the ribbon on any of them, and marking puts a ribbon on the first
+ * (the left page of a spread); removing takes ribbons off all of them.
+ */
+private fun chromeMark(s: ReaderState.Ready, marks: List<Bookmark>, bookmarks: ReaderBookmarksViewModel): ChromeMark {
+    val inView = pagesInView(s)
+    return ChromeMark(
+        color = marks.firstOrNull { it.page in inView }?.color,
+        onMark = { bookmarks.mark(inView.first(), it) },
+        onUnmark = { inView.forEach(bookmarks::unmark) }
     )
 }
 

@@ -44,9 +44,11 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.FlowFolio
@@ -62,15 +64,21 @@ import kotlinx.coroutines.launch
 
 /** Original-mode PDF reader: page curl, single page or two-page spread (Phase 1, milestone 3). */
 @Composable
-fun ReaderScreen(onBack: () -> Unit, viewModel: ReaderViewModel = hiltViewModel()) {
+fun ReaderScreen(
+    onBack: () -> Unit,
+    viewModel: ReaderViewModel = hiltViewModel(),
+    bookmarks: ReaderBookmarksViewModel = hiltViewModel()
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val images by viewModel.pageImages.collectAsStateWithLifecycle()
     val navigation by viewModel.navigation.collectAsStateWithLifecycle()
     TrimMemoryEffect(viewModel::onTrimMemory)
 
-    val night = (state as? ReaderState.Ready)?.night == true
-    CompositionLocalProvider(LocalPaper provides if (night) NIGHT_PAPER else Color.White) {
-        ReaderRoot(state, images, navigation, viewModel, onBack)
+    val tone = (state as? ReaderState.Ready)?.tone ?: PageTone.PRINTED
+    val marks by bookmarks.bookmarks.collectAsStateWithLifecycle()
+    StatusBarForPaper(tone)
+    CompositionLocalProvider(LocalTone provides tone, LocalRibbons provides marks.associate { it.page to it.color }) {
+        ReaderRoot(state, images, navigation, viewModel, bookmarks, onBack)
     }
 }
 
@@ -80,6 +88,7 @@ private fun ReaderRoot(
     images: Map<Int, ImageBitmap>,
     navigation: BookNavigation,
     viewModel: ReaderViewModel,
+    bookmarks: ReaderBookmarksViewModel,
     onBack: () -> Unit
 ) {
     val dark = FlowFolio.palette.dark
@@ -97,7 +106,7 @@ private fun ReaderRoot(
                 onBack
             )
 
-            is ReaderState.Ready -> ReadyReader(s, images, navigation, viewModel, onBack)
+            is ReaderState.Ready -> ReadyReader(s, images, navigation, viewModel, bookmarks, onBack)
         }
     }
 }
@@ -115,7 +124,7 @@ internal fun SinglePageReader(state: ReaderState.Ready, images: Map<Int, ImageBi
         modifier = Modifier.fillMaxSize().testTag(ReaderTestTags.PAGE)
     ) { page ->
         // Single page: bound on the left like a book, with a lighter gutter than an open spread.
-        PagePane(images[page], Alignment.Center, Spine.LEFT, SINGLE_PAGE_GUTTER_STRENGTH)
+        PagePane(page, images[page], Alignment.Center, Spine.LEFT, SINGLE_PAGE_GUTTER_STRENGTH)
     }
 }
 
@@ -153,11 +162,8 @@ internal fun SpreadReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap
                     )
                 }
         ) {
-            PagePane(
-                images[Spreads.leftOf(state.unit, state.pageCount, state.coverAlone)],
-                Alignment.CenterEnd,
-                Spine.RIGHT
-            )
+            val left = Spreads.leftOf(state.unit, state.pageCount, state.coverAlone)
+            PagePane(left, images[left], Alignment.CenterEnd, Spine.RIGHT)
         }
         Box(Modifier.weight(1f).fillMaxHeight()) {
             PageCurl(
@@ -170,11 +176,8 @@ internal fun SpreadReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap
                     latestImages[Spreads.leftOf(unit + 1, state.pageCount, state.coverAlone)]
                 }
             ) { unit ->
-                PagePane(
-                    images[Spreads.rightOf(unit, state.pageCount, state.coverAlone)],
-                    Alignment.CenterStart,
-                    Spine.LEFT
-                )
+                val right = Spreads.rightOf(unit, state.pageCount, state.coverAlone)
+                PagePane(right, images[right], Alignment.CenterStart, Spine.LEFT)
             }
         }
     }
@@ -220,14 +223,27 @@ private fun ReportUnit(curl: PageCurlState, onUnitShown: (Int) -> Unit) {
     LaunchedEffect(curl) { snapshotFlow { curl.current }.collect { callback(it) } }
 }
 
-/** One page image at its exact rendered size (no scaling), on paper. Missing images show blank paper. */
+/**
+ * One page image at its exact rendered size (no scaling), on paper, with its ribbon if the page is bookmarked.
+ * Missing images show blank paper.
+ */
 @Composable
-private fun PagePane(image: ImageBitmap?, alignment: Alignment, spine: Spine, shadingStrength: Float = 1f) {
-    Box(
-        Modifier.fillMaxSize().background(PAPER).pageShading(spine, shadingStrength, isNightPaper),
-        contentAlignment = alignment
-    ) {
-        if (image != null) Image(image, contentDescription = null, contentScale = ContentScale.None)
+internal fun PagePane(
+    page: Int,
+    image: ImageBitmap?,
+    alignment: Alignment,
+    spine: Spine,
+    shadingStrength: Float = 1f,
+    modifier: Modifier = Modifier.fillMaxSize()
+) {
+    val ribbon = LocalRibbons.current[page]
+    Box(modifier.background(PAPER).pageShading(spine, shadingStrength, isDarkPaper), contentAlignment = alignment) {
+        if (image != null) {
+            Box {
+                Image(image, contentDescription = null, contentScale = ContentScale.None)
+                ribbon?.let { Ribbon(it.color, Modifier.align(Alignment.TopEnd).padding(end = RIBBON_INSET)) }
+            }
+        }
     }
 }
 
@@ -242,7 +258,8 @@ private fun Message(text: String, onBack: () -> Unit) {
     }
 }
 
-private const val SWIPE_THRESHOLD_PX = 24f
+internal const val SWIPE_THRESHOLD_PX = 24f
+private val RIBBON_INSET = 26.dp
 private const val SINGLE_PAGE_GUTTER_STRENGTH = 0.6f
 internal val EDGE_GUARD_WIDTH = 32.dp
 internal val EDGE_GUARD_HEIGHT = 200.dp

@@ -4,7 +4,7 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 1: PDF reader with page curl. Build in progress: milestones 1-4 done, milestone 5 (design) in progress: slices 1-3 done** (started 2026-10-16).
+**Phase 1: PDF reader with page curl. Build in progress: milestones 1-4 done, milestone 5 (design) in progress: slices 1-4 done** (started 2026-10-16).
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
 Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
 Build plan approved 2026-10-16: 5 milestones; check in with the product owner at milestone 3 with memory numbers.
@@ -147,7 +147,8 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     zoomed in (tiles shown) the app read 242 MB vs 214 MB unzoomed.
     Since milestone 5 the library "floor" holds the design's GPU caches (glows, backdrop), 365-410 MB, so the script's
     floor-relative verdict no longer means anything. Judge the reader by its absolute memory against the pre-M5 floor
-    (182 MB + 110 = 292 MB): slice 3 build, spread, 300 turns: 263 MB, growth 0.7%.
+    (182 MB + 110 = 292 MB): slice 4 build, spread, Night paper, 300 turns: 263 MB, growth 2.3%. Opened from the
+    library in the same process the reader reads about 456 MB, because the library's glow caches stay allocated.
 15. Measuring on the Fold: logical display 0 is always the active panel; the phone must stay unlocked during runs
     (`tools/measure-reader.ps1` aborts if the lock screen shows). Debug-only intent extras `importPath`,
     `openBookId`, `layout`, `startPage` (0-based; the script sets it, since the position persists) drive the app from
@@ -167,6 +168,11 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 21. GPU memory: never draw blurs with BlurMaskFilter on the GPU for anything repeated or animated; use `softShadow` /
     `blurredShape` (cached CPU bitmaps, `ShadowBitmaps`). Text and glyph glows are still GPU blurs (about 70-100 MB in
     dark mode); the slice 5 "Neon glow" switch turns them off.
+22. Before any adb input or UI dump on the owner's phone, check that FlowFolio is the resumed activity
+    (`dumpsys activity activities | topResumedActivity`) and stop if it is not, so no tap or dump reaches another app
+    or the home screen. Delete pulled dumps after parsing.
+23. The reader bars hide 10 seconds after the last interaction; a UI dump taken later will not find them.
+24. Bookmarks are stored per page (one ribbon per page; adding again recolours it). The Bookmarks tab is slice 5.
 ## Decision log
 
 ADRs 0001–0014 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build

@@ -71,6 +71,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Shelf rows snap to a book when swiped.
   - The unfolded rail spreads its tabs over its full height.
   - Toggle on-colours swapped between dark and light mode.
+- Phase 1 milestone 5, reader slice:
+  - The mock's glass bars: Back, title, Contents, Go to page, "Aa" and the ribbon button on top; page, scrubber and
+    percent below. They hide after 10 seconds, as before.
+  - Bookmarks (Room schema v4, `bookmarks`): the ribbon button opens a strip of the app's five colours to put a
+    ribbon on the page or recolour it, and a remove button. The ribbon hangs from the page's top edge and turns with
+    it.
+  - Page colours in "Aa": Auto, Paper, Sepia, Night and Black. Text and line art are recoloured in PDFium (images
+    keep their colours); the status bar icons follow the paper. Auto gives Night pages in dark mode and printed
+    white in light mode. This replaces the Night pages switch.
+  - Page turns in "Aa": Curl (default), Slide (pages slide like a carousel) and Scroll (one continuous column, single
+    pages).
+  - Edge bounce: turning past the first or last page nudges the page and springs it back.
+  - Reader memory on the unfolded Fold, spread, Night paper, 300 turns: 263 MB, growth 2.3%, 2.25% janky frames.
 
 ### Changed
 - Shadows (cards, chips, buttons, glass, book contact shadows, the plank glow) are rendered once on the CPU into small
@@ -82,6 +95,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   soft shadow in light mode, rounded surfaces, own toggle and outline glyphs, themed dialogs and sheets; library,
   settings and the reader's sheets use it.
 - Night pages (reader setting, dark mode only): text and line art light on dark, images keep their printed colours.
+  Replaced by the page colours of the milestone 5 reader slice.
 - Touch zones: outer 30% on each side turn pages (tap or swipe), the middle 40% is for taps (controls).
 - `ReaderZoomOnDeviceTest` (UiAutomator 2.4.0) for pinch gestures on a device; Compose test tags are exposed as
   resource ids.

@@ -28,7 +28,10 @@ internal object PdfiumNative {
         pageHeight: Int,
         offsetX: Int,
         offsetY: Int,
-        night: Boolean
+        /** 0: as printed; 1: tint; 2: invert lightness, then tint. */
+        mode: Int,
+        paper: Int,
+        ink: Int
     ): Boolean
 
     external fun nativeOutline(handle: Long): Array<String>

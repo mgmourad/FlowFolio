@@ -3,6 +3,8 @@ package com.flowfolio.feature.reader
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.model.PageTurn
+import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.UserSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -25,8 +27,12 @@ class ReaderSettingsViewModel @Inject constructor(private val repository: Settin
         viewModelScope.launch { repository.setSpreadCoverAlone(on) }
     }
 
-    fun setNightPages(on: Boolean) {
-        viewModelScope.launch { repository.setNightPages(on) }
+    fun setPaperStyle(style: PaperStyle) {
+        viewModelScope.launch { repository.setPaperStyle(style) }
+    }
+
+    fun setPageTurn(turn: PageTurn) {
+        viewModelScope.launch { repository.setPageTurn(turn) }
     }
 
     private companion object {
