@@ -11,7 +11,13 @@ internal object PageFrames {
     /** A page's image placed at ([x], [y]) with size [w] x [h] pixels. */
     data class Frame(val page: Int, val x: Int, val y: Int, val w: Int, val h: Int)
 
-    fun of(state: ReaderState.Ready, screen: IntSize, imageSize: (Int) -> IntSize?): List<Frame> {
+    /** [rightToLeft] mirrors the layout, as the reader shows right-to-left books (a spread starts on the right). */
+    fun of(
+        state: ReaderState.Ready,
+        screen: IntSize,
+        rightToLeft: Boolean = false,
+        imageSize: (Int) -> IntSize?
+    ): List<Frame> {
         val frames = mutableListOf<Frame>()
         fun place(page: Int, x: (IntSize) -> Int) {
             val size = imageSize(page) ?: return
@@ -29,7 +35,7 @@ internal object PageFrames {
                 if (right >= 0) place(right) { half }
             }
         }
-        return frames
+        return if (rightToLeft) frames.map { it.copy(x = screen.width - it.x - it.w) } else frames
     }
 
     /** The link under [tap], if any; links are given per page as fractions of the page. */

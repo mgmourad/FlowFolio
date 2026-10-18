@@ -62,6 +62,7 @@ enum class TopLevel(val route: String, val glyph: Glyph, @StringRes val label: I
     Library("library", Glyph.Library, R.string.tab_library),
     Shelves("shelves", Glyph.Shelves, R.string.tab_shelves),
     Bookmarks("bookmarks", Glyph.Bookmark, R.string.tab_bookmarks),
+    Annotations("annotations", Glyph.Highlight, R.string.tab_annotations),
     Settings("settings", Glyph.Settings, R.string.tab_settings);
 
     companion object {
@@ -89,10 +90,15 @@ fun AppShell(current: TopLevel?, onSelect: (TopLevel) -> Unit, content: @Composa
         val wide = maxWidth >= RAIL_MIN_WIDTH
         val shown = current != null
         val haze = rememberHazeState()
-        val chrome = when {
-            !shown -> PaddingValues()
-            wide -> PaddingValues(start = RAIL_WIDTH + CHROME_INSET)
-            else -> PaddingValues(bottom = BAR_HEIGHT + BAR_BOTTOM)
+        // The space the bar or rail takes, whether or not it is showing: a top-level screen keeps its layout while
+        // the rail slides away as a book opens, instead of shifting under it (owner, 2026-10-18: no "kick").
+        val chrome = if (wide) {
+            PaddingValues(start = RAIL_WIDTH + CHROME_INSET)
+        } else {
+            PaddingValues(
+                bottom =
+                    BAR_HEIGHT + BAR_BOTTOM
+            )
         }
         CompositionLocalProvider(
             LocalGlassState provides haze,

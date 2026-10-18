@@ -77,7 +77,8 @@ class BookmarksViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun vm() = BookmarksViewModel(bookmarks, library, reader)
+    private fun vm(book: String? = null) =
+        BookmarksViewModel(androidx.lifecycle.SavedStateHandle(mapOf("bookId" to book)), bookmarks, library, reader)
 
     @Test
     fun listsRibbonsNewestFirstAndSkipsRemovedBooks() = runTest(dispatcher) {

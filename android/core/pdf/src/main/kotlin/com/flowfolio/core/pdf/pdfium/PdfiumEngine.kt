@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.os.ParcelFileDescriptor
 import com.flowfolio.core.model.OutlineEntry
 import com.flowfolio.core.model.PageSize
+import com.flowfolio.core.pdf.PageText
 import com.flowfolio.core.pdf.PageTint
 import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfEngine
@@ -93,6 +94,15 @@ internal class PdfiumDocument(private val handle: Long, override val pageCount: 
     override suspend fun links(index: Int): List<PdfLink> = call {
         checkIndex(index)
         LinkCodec.decode(PdfiumNative.nativeLinks(handle, index))
+    }
+
+    override suspend fun pageText(index: Int): PageText = call {
+        checkIndex(index)
+        val parts = PdfiumNative.nativePageText(handle, index) ?: throw PdfException.PageError(index)
+        val text = parts[0] as String
+        val boxes = parts[1] as FloatArray
+        // PDFium gives one UTF-16 unit per character; keep text and boxes the same length.
+        PageText(text.take(boxes.size / PageText.FIELDS), boxes)
     }
 
     override fun close() {

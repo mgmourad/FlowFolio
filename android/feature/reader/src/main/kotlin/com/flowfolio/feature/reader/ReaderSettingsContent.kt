@@ -68,6 +68,7 @@ internal fun ReaderSettingsContent(viewModel: ReaderSettingsViewModel = hiltView
             { viewModel.setPageTurn(PageTurn.entries[it]) },
             modifier = Modifier.testTag(ReaderTestTags.SETTING_TURN)
         )
+        DirectionChoice(viewModel)
         Heading(R.string.reader_layout, Modifier.padding(top = 22.dp))
         SettingRow(
             title = stringResource(R.string.reader_settings_spreads),
@@ -86,6 +87,24 @@ internal fun ReaderSettingsContent(viewModel: ReaderSettingsViewModel = hiltView
             onChange = viewModel::setCoverAlone
         )
     }
+}
+
+/** Which way this book's pages run (a per-book choice): right to left for Arabic, Hebrew and similar books. */
+@Composable
+private fun DirectionChoice(viewModel: ReaderSettingsViewModel) {
+    val rightToLeft by viewModel.rightToLeft.collectAsStateWithLifecycle()
+    Heading(R.string.reader_direction, Modifier.padding(top = 22.dp))
+    FlowFolioSegmented(
+        listOf(stringResource(R.string.reader_direction_ltr), stringResource(R.string.reader_direction_rtl)),
+        if (rightToLeft) 1 else 0,
+        { viewModel.setRightToLeft(it == 1) },
+        modifier = Modifier.testTag(ReaderTestTags.SETTING_DIRECTION)
+    )
+    Text(
+        stringResource(R.string.reader_direction_note),
+        style = FlowFolioType.rowDetail.merge(FlowFolio.hint),
+        modifier = Modifier.padding(top = 10.dp)
+    )
 }
 
 @Composable

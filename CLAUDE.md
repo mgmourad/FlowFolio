@@ -173,6 +173,9 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     or the home screen. Delete pulled dumps after parsing.
 23. The reader bars hide 10 seconds after the last interaction; a UI dump taken later will not find them.
 24. Bookmarks are stored per page (one ribbon per page; adding again recolours it). The Bookmarks tab is slice 5.
+27. Annotations (ADR-0016): page text from `nativePageText`; selection logic in `TextSelection`, gestures and drawing
+    in `ReaderSelection` / `ReaderAnnotating`. Selection is off in Scroll and while zoomed. Room is at schema v6
+    (`annotations`, `books.right_to_left`). Right to left mirrors the book layer and each page (`LocalMirroredPages`).
 26. Room is at schema v5 (`android/core/database/schemas`): books carry editable details and `book_type`;
     `reading_sessions` holds time read (`ReadingTimeViewModel`, `SessionTracker`). Device checks add real sessions to
     the owner's totals; keep reader visits short or say so.
@@ -181,7 +184,7 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
 ## Decision log
 
-ADRs 0001–0014 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0016 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014, proposed).

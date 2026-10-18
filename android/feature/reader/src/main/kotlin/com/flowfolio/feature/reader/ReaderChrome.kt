@@ -21,6 +21,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +35,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -42,6 +44,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.flowfolio.core.designsystem.FlowFolio
@@ -130,6 +133,10 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions) {
         FlowFolioIconButton(onClick = { actions.onPanel(Panel.GO_TO) }, glass = true, modifier = goTo) {
             FlowFolioGlyph(Glyph.GoTo, stringResource(R.string.reader_go_to))
         }
+        val notes = Modifier.testTag(ReaderTestTags.ANNOTATIONS)
+        FlowFolioIconButton(onClick = { actions.onPanel(Panel.ANNOTATIONS) }, glass = true, modifier = notes) {
+            FlowFolioGlyph(Glyph.Highlight, stringResource(R.string.reader_annotations))
+        }
         val settings = Modifier.testTag(ReaderTestTags.SETTINGS)
         FlowFolioIconButton(onClick = { actions.onPanel(Panel.SETTINGS) }, glass = true, modifier = settings) {
             Text(
@@ -164,24 +171,28 @@ private fun BottomBar(state: ReaderState.Ready, navigation: BookNavigation, acti
             stringResource(R.string.reader_page_short, PageLookup.labelOf(page, navigation.labels)),
             style = FlowFolioType.button.copy(fontSize = 12.sp).merge(FlowFolio.title)
         )
-        Slider(
-            value = page.toFloat(),
-            onValueChange = {
-                dragging = it
-                actions.onInteract()
-            },
-            onValueChangeFinished = {
-                dragging?.let { actions.onScrub(it.roundToInt()) }
-                dragging = null
-            },
-            valueRange = 0f..last.toFloat(),
-            colors = SliderDefaults.colors(
-                thumbColor = p.title,
-                activeTrackColor = p.title,
-                inactiveTrackColor = p.hint.copy(alpha = TRACK_ALPHA)
-            ),
-            modifier = Modifier.weight(1f).testTag(ReaderTestTags.SCRUBBER)
-        )
+        // Right-to-left books scrub from right to left.
+        val direction = if (LocalRightToLeft.current) LayoutDirection.Rtl else LayoutDirection.Ltr
+        CompositionLocalProvider(LocalLayoutDirection provides direction) {
+            Slider(
+                value = page.toFloat(),
+                onValueChange = {
+                    dragging = it
+                    actions.onInteract()
+                },
+                onValueChangeFinished = {
+                    dragging?.let { actions.onScrub(it.roundToInt()) }
+                    dragging = null
+                },
+                valueRange = 0f..last.toFloat(),
+                colors = SliderDefaults.colors(
+                    thumbColor = p.title,
+                    activeTrackColor = p.title,
+                    inactiveTrackColor = p.hint.copy(alpha = TRACK_ALPHA)
+                ),
+                modifier = Modifier.weight(1f).testTag(ReaderTestTags.SCRUBBER)
+            )
+        }
         Text(
             stringResource(R.string.reader_percent, (page * PERCENT) / last),
             style = FlowFolioType.button.copy(fontSize = 12.sp).merge(FlowFolio.hint)

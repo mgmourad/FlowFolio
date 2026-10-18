@@ -50,7 +50,10 @@ enum class Glyph(internal val pathData: String, internal val stroke: Float = 2f,
     Sort("M7 4.5v15 M4 16.5l3 3 3-3 M17 19.5v-15 M14 7.5l3-3 3 3"),
     Book("M4.5 5.5c2.5-1 5-1 7.5.8 2.5-1.8 5-1.8 7.5-.8v13c-2.5-1-5-1-7.5.8-2.5-1.8-5-1.8-7.5-.8z M12 6.3v13.5"),
     Edit("M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z M13.5 8.5l2 2"),
-    Trash("M4 7h16 M10 11v6 M14 11v6 M6 7l1 13h10l1-13 M9 7V4h6v3")
+    Trash("M4 7h16 M10 11v6 M14 11v6 M6 7l1 13h10l1-13 M9 7V4h6v3"),
+
+    /** A highlighter over a line of text (annotations). */
+    Highlight("M14.5 4.5l5 5L11 18H6v-5z M12.5 6.5l5 5 M4 21h16")
 }
 
 /**

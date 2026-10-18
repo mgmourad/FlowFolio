@@ -16,6 +16,7 @@
 
 #include "fpdf_doc.h"
 #include "fpdf_edit.h"
+#include "fpdf_text.h"
 #include "fpdfview.h"
 
 #define LOG_TAG "FlowFolioPdfium"
@@ -385,6 +386,58 @@ JNIEXPORT jobjectArray JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_n
         env->SetObjectArrayElement(result, static_cast<jsize>(i), s);
         env->DeleteLocalRef(s);
     }
+    return result;
+}
+
+// The page's text and where each character sits: returns {String text, float[] boxes} where boxes holds
+// left, top, right, bottom per character as fractions of the page as displayed (rotation applied), or -1s for
+// characters PDFium generates without a box (line breaks). Null when the page cannot be read.
+JNIEXPORT jobjectArray JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_nativePageText(JNIEnv* env, jobject, jlong handle, jint index) {
+    constexpr int kScale = 1000000;
+    constexpr int kMaxChars = 200000;  // a page of tiny print; malformed files can claim far more
+    std::vector<unsigned short> text;
+    std::vector<jfloat> boxes;
+    bool ok = false;
+    {
+        std::lock_guard<std::mutex> guard(g_lock);
+        FPDF_PAGE page = FPDF_LoadPage(asDoc(handle)->doc, index);
+        if (page != nullptr) {
+            FPDF_TEXTPAGE textPage = FPDFText_LoadPage(page);
+            if (textPage != nullptr) {
+                int n = std::min(FPDFText_CountChars(textPage), kMaxChars);
+                if (n > 0) {
+                    text.resize(static_cast<size_t>(n) + 1);
+                    int got = FPDFText_GetText(textPage, 0, n, text.data());
+                    text.resize(got > 0 ? static_cast<size_t>(got - 1) : 0);  // drop the terminating zero
+                    boxes.resize(static_cast<size_t>(n) * 4, -1.0f);
+                    for (int i = 0; i < n; i++) {
+                        double l, r, b, t;
+                        if (!FPDFText_GetCharBox(textPage, i, &l, &r, &b, &t)) continue;
+                        int x1, y1, x2, y2;
+                        FPDF_PageToDevice(page, 0, 0, kScale, kScale, 0, l, t, &x1, &y1);
+                        FPDF_PageToDevice(page, 0, 0, kScale, kScale, 0, r, b, &x2, &y2);
+                        size_t k = static_cast<size_t>(i) * 4;
+                        boxes[k] = static_cast<jfloat>(std::min(x1, x2)) / kScale;
+                        boxes[k + 1] = static_cast<jfloat>(std::min(y1, y2)) / kScale;
+                        boxes[k + 2] = static_cast<jfloat>(std::max(x1, x2)) / kScale;
+                        boxes[k + 3] = static_cast<jfloat>(std::max(y1, y2)) / kScale;
+                    }
+                } else {
+                    text.clear();
+                }
+                FPDFText_ClosePage(textPage);
+                ok = true;
+            }
+            FPDF_ClosePage(page);
+        }
+    }
+    if (!ok) return nullptr;
+    jstring jtext = env->NewString(reinterpret_cast<const jchar*>(text.data()), static_cast<jsize>(text.size()));
+    jfloatArray jboxes = env->NewFloatArray(static_cast<jsize>(boxes.size()));
+    if (!boxes.empty()) env->SetFloatArrayRegion(jboxes, 0, static_cast<jsize>(boxes.size()), boxes.data());
+    jobjectArray result = env->NewObjectArray(2, env->FindClass("java/lang/Object"), nullptr);
+    env->SetObjectArrayElement(result, 0, jtext);
+    env->SetObjectArrayElement(result, 1, jboxes);
     return result;
 }
 

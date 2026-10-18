@@ -1,9 +1,11 @@
 package com.flowfolio.feature.reader
 
+import com.flowfolio.core.model.Annotation
+import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.BookmarkColor
 
 /** What is open on top of the reader. */
-internal enum class Panel { NONE, CONTENTS, GO_TO, SETTINGS, MARK }
+internal enum class Panel { NONE, CONTENTS, GO_TO, SETTINGS, MARK, ANNOTATIONS }
 
 /** What the reader's controls can ask for. */
 internal class ChromeActions(
@@ -22,6 +24,10 @@ internal class ChromeActions(
  */
 internal class ChromeMark(
     val color: BookmarkColor?,
+    /** Every ribbon in the book, by page, for the ribbon panel's list. */
+    val all: List<Bookmark> = emptyList(),
+    /** The book's highlights and notes, for the Annotations panel. */
+    val notes: List<Annotation> = emptyList(),
     val onMark: (BookmarkColor) -> Unit = {},
     val onUnmark: () -> Unit = {}
 )

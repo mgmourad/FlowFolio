@@ -16,7 +16,12 @@ object ReaderTestTags {
     const val SETTING_SPREADS = "reader_setting_spreads"
     const val SETTING_COVER = "reader_setting_cover"
     const val SETTING_TURN = "reader_setting_turn"
+    const val SETTING_DIRECTION = "reader_setting_direction"
     const val PAPER_SWATCHES = "reader_paper_swatches"
     const val BOOKMARK = "reader_bookmark"
     const val BOOKMARK_COLOURS = "reader_bookmark_colours"
+    const val ANNOTATIONS = "reader_annotations"
+    const val ANNOTATION_LIST = "reader_annotation_list"
+    const val HIGHLIGHT_BAR = "reader_highlight_bar"
+    const val NOTE_EDITOR = "reader_note_editor"
 }

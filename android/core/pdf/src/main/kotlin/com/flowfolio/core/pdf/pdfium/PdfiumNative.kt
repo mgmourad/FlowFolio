@@ -3,7 +3,9 @@ package com.flowfolio.core.pdf.pdfium
 import android.graphics.Bitmap
 
 /** JNI entry points in pdfium_jni.cpp. Call only from [PdfiumThread]. */
-internal object PdfiumNative {
+@Suppress("TooManyFunctions")
+internal // one per native entry point
+object PdfiumNative {
     init {
         System.loadLibrary("pdfium")
         System.loadLibrary("flowfolio_pdfium")
@@ -41,4 +43,7 @@ internal object PdfiumNative {
     external fun nativeMetaText(handle: Long, tag: String): String?
 
     external fun nativeLinks(handle: Long, index: Int): Array<String>
+
+    /** {String text, FloatArray boxes} for page [index] (see pdfium_jni.cpp), or null when unreadable. */
+    external fun nativePageText(handle: Long, index: Int): Array<Any>?
 }

@@ -1,5 +1,6 @@
 package com.flowfolio.feature.library
 
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
@@ -66,10 +67,12 @@ import com.flowfolio.core.designsystem.FlowFolioTabs
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalBookOpener
+import com.flowfolio.core.designsystem.LocalCoverFlights
 import com.flowfolio.core.designsystem.Motion
-import com.flowfolio.core.designsystem.coverKey
+import com.flowfolio.core.designsystem.coverLanding
 import com.flowfolio.core.designsystem.coverSpot
-import com.flowfolio.core.designsystem.sharedCover
+import com.flowfolio.core.designsystem.detailsCoverKey
+import com.flowfolio.core.designsystem.shelfCoverKey
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
@@ -107,8 +110,13 @@ fun DetailsScreen(
         val show: () -> Unit = { if (page != null) viewModel.startAt(page) { onRead(book) } else onRead(book) }
         opener?.open(hero, show) ?: show()
     }
+    val flights = LocalCoverFlights.current
     val actions = DetailsActions(
-        onBack = onBack,
+        onBack = {
+            // The cover flies back to the shelf it came from (when there is one).
+            if (origin.isNotEmpty()) flights?.launch(hero, shelfCoverKey(book.id, origin))
+            onBack()
+        },
         onRead = { if (state.availability == Availability.MISSING) locate() else open(null) },
         onChapter = { open(it) },
         onShelves = { picking = true },
@@ -119,7 +127,9 @@ fun DetailsScreen(
         onEdit = { onEdit(book) },
         onBook = onOpenBook
     )
-    DetailsContent(state, book, origin, hero, actions)
+    // System Back flies the cover home too.
+    BackHandler(onBack = actions.onBack)
+    DetailsContent(state, book, hero, actions)
     LibraryDialogs(libraryVm.uiState.collectAsStateWithLifecycle().value.dialog, libraryVm)
     if (picking) ShelveBookFlow(book, state.shelves, shelvesVm) { picking = false }
 }
@@ -137,13 +147,7 @@ internal data class DetailsActions(
 
 /** Folded: hero, then title, actions and tabs under it. Unfolded (600 dp and wider): cover pane and tabs pane. */
 @Composable
-internal fun DetailsContent(
-    state: DetailsUiState,
-    book: Book,
-    origin: String,
-    hero: CoverSpot,
-    actions: DetailsActions
-) {
+internal fun DetailsContent(state: DetailsUiState, book: Book, hero: CoverSpot, actions: DetailsActions) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     BoxWithConstraints(Modifier.fillMaxSize().testTag(LibraryTestTags.DETAILS)) {
         if (maxWidth >= TWO_PANE_WIDTH) {
@@ -152,7 +156,7 @@ internal fun DetailsContent(
             Backdrop(blurred, Modifier.fillMaxWidth().height(maxHeight * BACKDROP_SHARE))
             Row(Modifier.fillMaxSize()) {
                 Column(Modifier.weight(LEFT_PANE).verticalScroll(rememberScrollState())) {
-                    DetailsHero(book, origin, hero, backdrop = false)
+                    DetailsHero(book, hero, backdrop = false)
                     DetailsHeading(state, book, actions, Modifier.offset(y = -HERO_OVERLAP))
                 }
                 Column(
@@ -167,7 +171,7 @@ internal fun DetailsContent(
             }
         } else {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                DetailsHero(book, origin, hero)
+                DetailsHero(book, hero)
                 Column(Modifier.offset(y = -HERO_OVERLAP).padding(horizontal = 22.dp)) {
                     DetailsHeading(state, book, actions)
                     DetailsTabs(state, book, tab, { tab = it }, actions)
@@ -186,7 +190,7 @@ internal fun DetailsContent(
  * the 3D book swaying in front. [hero] records where the book is, for the book-opening animation.
  */
 @Composable
-private fun DetailsHero(book: Book, origin: String, hero: CoverSpot, backdrop: Boolean = true) {
+private fun DetailsHero(book: Book, hero: CoverSpot, backdrop: Boolean = true) {
     val blurred by rememberBackdrop(book)
     val cover by rememberCover(book)
     val sway = rememberInfiniteTransition(label = "sway")
@@ -212,7 +216,7 @@ private fun DetailsHero(book: Book, origin: String, hero: CoverSpot, backdrop: B
                 book.face(cover),
                 COVER_WIDTH,
                 COVER_HEIGHT,
-                modifier = Modifier.sharedCover(coverKey(book.id, origin)),
+                modifier = Modifier.coverLanding(detailsCoverKey(book.id), SWAY_FROM),
                 restAngle = SWAY_FROM + (SWAY_TO - SWAY_FROM) * t
             )
         }

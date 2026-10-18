@@ -48,6 +48,12 @@ fun PaperStyle.tone(appDark: Boolean): PageTone = when (this) {
     PaperStyle.BLACK -> PageTone.BLACK
 }
 
+/** The open book's pages run right to left. */
+internal val LocalRightToLeft = staticCompositionLocalOf { false }
+
+/** Pages are drawn in a mirrored book (right to left) and mirror themselves back. */
+internal val LocalMirroredPages = staticCompositionLocalOf { false }
+
 /** The tone of the book being read. */
 internal val LocalTone = staticCompositionLocalOf { PageTone.PRINTED }
 

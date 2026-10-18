@@ -84,6 +84,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     pages).
   - Edge bounce: turning past the first or last page nudges the page and springs it back.
   - Reader memory on the unfolded Fold, spread, Night paper, 300 turns: 263 MB, growth 2.3%, 2.25% janky frames.
+- Annotations and right-to-left books (ADR-0016, Room schema v6):
+  - Highlights: press and hold a word, drag to select more, adjust with the handles, then pick one of five
+    highlighter colours. Highlights are drawn on the page (multiplied into light paper, a soft wash on dark paper) and
+    turn with it. Tap a highlight to recolour it, add or edit its note, share it, or delete it.
+  - Notes on highlights; Share sends the passage in quotation marks with the book's title, author and page; Copy puts
+    the same on the clipboard.
+  - The page text comes from PDFium's text layer over our JNI bridge (`PdfDocument.pageText`); highlights are stored
+    in FlowFolio's database, never written into the PDF.
+  - An Annotations tab (books with highlights, with counts, colours and the latest passage) and a page per book
+    (open at the passage, swipe to share, edit the note or delete), plus an Annotations panel in the reader's top bar.
+  - Reading direction per book in "Aa": right to left mirrors the book (the curl lifts from the left, a spread starts
+    on the right, the scrubber runs right to left) while pages read normally.
+  - The reader's ribbon panel lists the book's ribbons under the colours; tap one to go there.
+  - Shelf pages: swipe a row right (or press and hold a tile) for Bookmarks, the book's own ribbons page.
+  - Library to details: one 3D book flies on a single smooth path while the library fades; the library no longer
+    shifts left as the rail slides away. Back flies it home.
+  - Closing a book: the flat cover crossfades into the shelf book as it lands, with no snap.
 - Phase 1 milestone 5, data slice (Room schema v5):
   - Editable book details: subtitle, edition, publisher, ISBN, description, language, release date, the author's role
     and bio, and the book's type (Textbook, Novel, Non-fiction, Other). Edit details is in the details page's menu;

@@ -10,6 +10,7 @@ import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.data.SettingsRepository
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.UserSettings
+import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfException
 import com.flowfolio.core.pdf.PdfLink
 import com.flowfolio.feature.reader.cache.PageCache
@@ -94,6 +95,9 @@ class ReaderViewModel @Inject constructor(
     val links: StateFlow<Map<Int, List<PdfLink>>> = _links.asStateFlow()
 
     private var opened: OpenedBook? = null
+
+    /** The open document (for page text when selecting); null until the book is open. */
+    internal val document: PdfDocument? get() = opened?.document
     private var source: PdfPageSource? = null
     private var cache: PageCache? = null
     private var tileCache: TileCache? = null
