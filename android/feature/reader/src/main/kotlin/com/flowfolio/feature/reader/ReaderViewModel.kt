@@ -5,9 +5,11 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flowfolio.core.data.FolioScanner
 import com.flowfolio.core.data.OpenedBook
 import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.model.PageLabels
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.UserSettings
 import com.flowfolio.core.pdf.PdfDocument
@@ -177,12 +179,21 @@ class ReaderViewModel @Inject constructor(
     /** Outline first (the contents list), then labels; both go through the PDFium thread between page renders. */
     private fun loadNavigation(book: OpenedBook) {
         viewModelScope.launch {
-            val outline = runCatching { book.document.outline() }.getOrDefault(emptyList())
+            val doc = book.document
+            val outline = runCatching { doc.outline() }.getOrDefault(emptyList())
             _navigation.value = BookNavigation(outline = outline)
-            val labels = (0 until book.document.pageCount).map { page ->
-                runCatching { book.document.pageLabel(page) }.getOrNull()
+            // Printed page numbers (owner, 2026-10-18): the PDF's labels, else the numbers printed in its margins,
+            // found once and kept with the book; with none, pages count from the cover.
+            val stored = book.book.pageLabels
+            val runs = if (stored != null) {
+                PageLabels.decode(stored)
+            } else {
+                val fromPdf = (0 until doc.pageCount).map { runCatching { doc.pageLabel(it) }.getOrNull() }
+                val found = if (fromPdf.any { it != null }) PageLabels.compress(fromPdf) else FolioScanner.scan(doc)
+                runCatching { repository.savePageLabels(book.book.id, PageLabels.encode(found)) }
+                found
             }
-            _navigation.value = BookNavigation(outline, labels)
+            _navigation.value = BookNavigation(outline, PageLabels.expand(runs, doc.pageCount))
         }
     }
 

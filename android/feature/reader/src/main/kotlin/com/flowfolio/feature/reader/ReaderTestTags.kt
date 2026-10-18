@@ -24,4 +24,5 @@ object ReaderTestTags {
     const val ANNOTATION_LIST = "reader_annotation_list"
     const val HIGHLIGHT_BAR = "reader_highlight_bar"
     const val NOTE_EDITOR = "reader_note_editor"
+    const val TRANSLATE = "reader_translate"
 }

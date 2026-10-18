@@ -81,8 +81,8 @@ internal fun BoxScope.HighlightBar(around: Rect, actions: HighlightActions) {
                 HighlightColor.entries.forEach { c -> ColourDot(c, c == actions.current) { actions.onColour(c) } }
                 BarAction(R.string.reader_note, actions.onNote)
                 BarAction(R.string.reader_share, actions.onShare)
-                actions.onCopy?.let { BarAction(R.string.reader_copy, it) }
-                actions.onDelete?.let { BarAction(R.string.reader_delete, it, warn = true) }
+                BarAction(R.string.reader_translate, actions.onTranslate)
+                BarAction(actions.extra.label, actions.extra.onClick, warn = actions.extra.warn)
             }
         },
         modifier = Modifier.matchParentSize()

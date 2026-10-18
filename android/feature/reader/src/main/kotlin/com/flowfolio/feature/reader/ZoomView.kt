@@ -21,6 +21,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.scale
@@ -76,8 +77,11 @@ internal fun ZoomView(
     images: Map<Int, ImageBitmap>,
     tiles: Map<TileKey, ImageBitmap>,
     onTilesWanted: (List<TileKey>) -> Unit,
+    annotating: Annotating,
     onExit: () -> Unit
 ) {
+    val highlights = annotating.byPage()
+    val dark = isDarkPaper
     var screen by remember { mutableStateOf(IntSize.Zero) }
     val wanted by rememberUpdatedState(onTilesWanted)
     DisposableEffect(zoom) { onDispose { wanted(emptyList()) } } // tiles live only while zoomed
@@ -93,12 +97,16 @@ internal fun ZoomView(
             .onSizeChanged { screen = it }
             .background(PAPER)
             .testTag(ReaderTestTags.ZOOM)
+            // Selecting works zoomed in too: press and hold, as on the page.
+            .annotate(annotating, enabled = true)
             .pinchGestures(
                 onTransform = { c, pan, z, size -> zoom.transform(c, pan, z, size) },
                 onEnd = { if (zoom.isAtRest) onExit() }
             )
             .pointerInput(zoom) { detectPan(zoom, onEnd = { if (zoom.isAtRest) onExit() }) }
-            .pointerInput(zoom) { detectTapGestures(onDoubleTap = { onExit() }) }
+            .pointerInput(zoom) {
+                detectTapGestures(onDoubleTap = { onExit() }, onTap = { annotating.tap(it, size) })
+            }
     ) {
         val placed = frames(IntSize(size.width.toInt(), size.height.toInt()))
         val current = TilePlan.levelFor(zoom.scale)
@@ -113,6 +121,12 @@ internal fun ZoomView(
                     val step = TileKey.TILE_PX / key.level
                     translate(f.x + key.tx * step, f.y + key.ty * step) {
                         scale(1 / key.level, 1 / key.level, pivot = Offset.Zero) { drawImage(tile) }
+                    }
+                }
+                for (f in placed) {
+                    val marks = highlights[f.page] ?: continue
+                    translate(f.x.toFloat(), f.y.toFloat()) {
+                        drawHighlights(marks, dark, Size(f.w.toFloat(), f.h.toFloat()))
                     }
                 }
             }

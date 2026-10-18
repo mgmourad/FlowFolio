@@ -12,6 +12,7 @@ import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.BookmarkColor
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.OutlineEntry
+import com.flowfolio.core.model.pageLabel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -112,7 +113,7 @@ class BookmarksViewModel @Inject constructor(
         val chapter = index?.outline?.let { outline ->
             outline.filter { it.pageIndex in 0..mark.page }.maxByOrNull { it.pageIndex }?.title
         }
-        return BookmarkItem(mark, book, chapter, index?.labels?.get(mark.page) ?: (mark.page + 1).toString())
+        return BookmarkItem(mark, book, chapter, index?.labels?.get(mark.page) ?: book.pageLabel(mark.page))
     }
 
     /** Reads a book's outline and the labels of its marked [pages], off the main thread; the cards fill in after. */

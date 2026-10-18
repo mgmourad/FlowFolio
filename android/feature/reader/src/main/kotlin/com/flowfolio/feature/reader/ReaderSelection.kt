@@ -216,7 +216,7 @@ private fun charNear(point: Offset, frame: PageFrames.Frame, text: PageText): In
  * Draws [highlights] over a page image of this size: marker colours multiplied into light paper (the ink stays
  * crisp), a translucent wash on dark paper; a small dot at the end of a highlight that has a note.
  */
-internal fun DrawScope.drawHighlights(highlights: List<Annotation>, darkPaper: Boolean) {
+internal fun DrawScope.drawHighlights(highlights: List<Annotation>, darkPaper: Boolean, page: Size = size) {
     val alpha = highlightAlpha(darkPaper)
     val blend = if (darkPaper) BlendMode.SrcOver else BlendMode.Multiply
     highlights.forEach { a ->
@@ -224,20 +224,20 @@ internal fun DrawScope.drawHighlights(highlights: List<Annotation>, darkPaper: B
         a.rects.forEach { r ->
             drawRect(
                 colour,
-                topLeft = Offset(r.left * size.width, r.top * size.height),
-                size = Size((r.right - r.left) * size.width, (r.bottom - r.top) * size.height),
+                topLeft = Offset(r.left * page.width, r.top * page.height),
+                size = Size((r.right - r.left) * page.width, (r.bottom - r.top) * page.height),
                 blendMode = blend
             )
         }
         val last = a.rects.lastOrNull()
         if (a.note != null && last != null) {
-            val radius = (last.bottom - last.top) * size.height * NOTE_DOT
+            val radius = (last.bottom - last.top) * page.height * NOTE_DOT
             drawCircle(
                 a.color.marker,
                 radius,
                 Offset(
-                    last.right * size.width + radius * 2,
-                    last.top * size.height + radius
+                    last.right * page.width + radius * 2,
+                    last.top * page.height + radius
                 )
             )
         }

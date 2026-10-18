@@ -118,7 +118,11 @@ internal fun BoxScope.ReadyReader(
     val framesFor = { size: IntSize ->
         PageFrames.of(s, size, rtl) { page -> images[page]?.let { IntSize(it.width, it.height) } }
     }
-    val annotating = rememberAnnotating(s, viewModel, navigation, framesFor)
+    val pageBounds = remember { PageBounds() }
+    // Where the pages are for selecting: as laid out (every turn style), or as the zoomed view shows them.
+    val annotating = rememberAnnotating(s, viewModel, navigation) { size ->
+        overlay.zoom?.let { framesFor(size).zoomed(it) } ?: pageBounds.frames(s, size)
+    }
     val mark = chromeMark(s, marks, bookmarks, annotating.all)
     // A tap on a highlight opens its menu; otherwise links, the centre and page turns as before.
     val onTap = { tap: Offset, size: IntSize ->
@@ -128,7 +132,7 @@ internal fun BoxScope.ReadyReader(
         Modifier
             .fillMaxSize()
             .hazeSource(haze)
-            .annotate(annotating, enabled = overlay.zoom == null && s.turn != PageTurn.SCROLL)
+            .annotate(annotating, enabled = overlay.zoom == null)
             .interceptTaps(onTap)
             .pinchGestures(overlay::pinch, overlay::endPinch)
             .edgeBounce(bounce, atStart = s.unit <= 0, atEnd = s.unit >= s.unitCount - 1, reversed = rtl)
@@ -136,19 +140,23 @@ internal fun BoxScope.ReadyReader(
         // Recreate the page state when the layout or turn style changes (fold/unfold, Aa); the ViewModel keeps the
         // position.
         key(s.layout, s.coverAlone, s.tone, s.turn, rtl) {
-            CompositionLocalProvider(LocalHighlights provides annotating.byPage()) {
+            CompositionLocalProvider(
+                LocalHighlights provides annotating.byPage(),
+                LocalPageBounds provides pageBounds
+            ) {
                 MirroredBook(rtl && s.turn != PageTurn.SCROLL) {
                     BookPages(s, images, s.pageAspect, viewModel::onUnitShown)
                 }
             }
         }
     }
-    overlay.zoom?.let { ZoomView(it, framesFor, images, tiles, viewModel::showTiles, onExit = { overlay.zoom = null }) }
+    overlay.zoom?.let {
+        ZoomView(it, framesFor, images, tiles, viewModel::showTiles, annotating, onExit = { overlay.zoom = null })
+    }
+    // Selection and highlight menus: over the pages, and over the zoomed view too; under the bars.
+    CompositionLocalProvider(LocalGlassState provides haze) { AnnotatingLayer(annotating, s) }
     if (overlay.zoom == null) {
-        CompositionLocalProvider(LocalGlassState provides haze) {
-            AnnotatingLayer(annotating, s)
-            Controls(s, navigation, overlay, mark, onBack, jump)
-        }
+        CompositionLocalProvider(LocalGlassState provides haze) { Controls(s, navigation, overlay, mark, onBack, jump) }
     }
     overlay.webLink?.let { uri ->
         WebLinkDialog(uri, onOpen = { runCatching { uriHandler.openUri(uri) } }, onDismiss = { overlay.webLink = null })

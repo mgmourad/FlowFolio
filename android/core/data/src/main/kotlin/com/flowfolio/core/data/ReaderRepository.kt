@@ -2,6 +2,7 @@ package com.flowfolio.core.data
 
 import android.os.ParcelFileDescriptor
 import com.flowfolio.core.database.BookDao
+import com.flowfolio.core.database.BookReadingDao
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.pdf.PdfDocument
@@ -25,12 +26,16 @@ interface ReaderRepository {
 
     /** Remembers [page] (0-based) as where the reader left off in [bookId]. */
     suspend fun saveProgress(bookId: String, page: Int)
+
+    /** Remembers the book's printed page numbers ([com.flowfolio.core.model.PageLabels] runs). */
+    suspend fun savePageLabels(bookId: String, labels: String)
 }
 
 class OpenedBook(val book: Book, val document: PdfDocument)
 
 class DefaultReaderRepository @Inject constructor(
     private val dao: BookDao,
+    private val reading: BookReadingDao,
     private val source: DocumentSource,
     private val engine: PdfEngine,
     @IoDispatcher private val io: CoroutineDispatcher
@@ -51,4 +56,7 @@ class DefaultReaderRepository @Inject constructor(
     }
 
     override suspend fun saveProgress(bookId: String, page: Int) = withContext(io) { dao.updateLastPage(bookId, page) }
+
+    override suspend fun savePageLabels(bookId: String, labels: String) =
+        withContext(io) { reading.setPageLabels(bookId, labels) }
 }

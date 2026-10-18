@@ -66,6 +66,8 @@ import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.LibrarySort
+import com.flowfolio.core.model.pageLabel
+import com.flowfolio.core.model.printedPages
 
 /** `.hdr`: "Library", the count line, and search, sort and import. */
 @Composable
@@ -212,7 +214,7 @@ internal fun ContinueReadingCard(item: LibraryItem, actions: LibraryActions, mod
                 book.author?.let { Text(it, style = FlowFolioType.sub.merge(FlowFolio.hint), maxLines = 1) }
                 FlowFolioProgressBar(book.progress, Modifier.padding(top = 12.dp, bottom = 6.dp))
                 Text(
-                    stringResource(R.string.page_of, (book.lastPage ?: 0) + 1, book.pageCount),
+                    stringResource(R.string.page_of, book.pageLabel(book.lastPage ?: 0), book.printedPages()),
                     style = FlowFolioType.rowDetail.merge(FlowFolio.hint)
                 )
                 FlowFolioPrimaryButton(

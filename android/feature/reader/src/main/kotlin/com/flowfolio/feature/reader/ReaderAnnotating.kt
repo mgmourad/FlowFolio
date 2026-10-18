@@ -35,14 +35,17 @@ import kotlinx.coroutines.launch
 /** Highlights by page, for the page panes (they turn with the page). */
 internal val LocalHighlights = staticCompositionLocalOf<Map<Int, List<Annotation>>> { emptyMap() }
 
-/** What the highlight bar can do; [onCopy] for a new selection, [onDelete] for an existing highlight. */
+/** The bar's last action: Copy for a new selection, Delete (a [warn]ing) for an existing highlight. */
+internal class BarExtra(val label: Int, val warn: Boolean, val onClick: () -> Unit)
+
+/** What the highlight bar can do. */
 internal class HighlightActions(
     val current: HighlightColor?,
     val onColour: (HighlightColor) -> Unit,
     val onNote: () -> Unit,
     val onShare: () -> Unit,
-    val onCopy: (() -> Unit)? = null,
-    val onDelete: (() -> Unit)? = null
+    val onTranslate: () -> Unit,
+    val extra: BarExtra
 )
 
 /** A note being written: for a new highlight (saved with it) or for an existing one. */
@@ -68,6 +71,9 @@ internal class Annotating(
     var frames: (IntSize) -> List<PageFrames.Frame> = { emptyList() }
     var all: List<Annotation> = emptyList()
     var note by mutableStateOf<NoteTarget?>(null)
+
+    /** A passage being translated (the translate panel is open). */
+    var translating by mutableStateOf<String?>(null)
 
     /** The book, for the reference under a shared quote. */
     var title: String = ""
@@ -199,16 +205,24 @@ internal fun Annotating.byPage(): Map<Int, List<Annotation>> = all.groupBy { it.
 @Composable
 internal fun BoxScope.AnnotatingLayer(annotating: Annotating, s: ReaderState.Ready) {
     val pick = annotating.pick
-    if (!pick.active && annotating.note == null) return
+    if (!pick.active && annotating.note == null && annotating.translating == null) return
     FlowFolioPalette(dark = s.tone.dark) {
         if (pick.range != null) {
             SelectionMarks(pick, annotating.frameOfPick(), FlowFolio.palette.item) { pick.clear() }
         }
         val note = annotating.note
         val editing = pick.editing
+        val translating = annotating.translating
         when {
+            translating != null -> {
+                SelectionCatcher { annotating.translating = null }
+                TranslateOverlay(translating) { annotating.translating = null }
+            }
+
             note != null -> NoteLayer(annotating, note)
+
             editing != null -> EditingBar(annotating, editing)
+
             !annotating.dragging -> SelectionBar(annotating)
         }
     }
@@ -228,7 +242,8 @@ private fun BoxScope.EditingBar(annotating: Annotating, editing: Annotation) {
                 onColour = { annotating.recolour(editing, it) },
                 onNote = { annotating.note = NoteTarget.Existing(editing) },
                 onShare = { share(context, annotating.quote(editing.text, editing.page, editing.label)) },
-                onDelete = { annotating.delete(editing) }
+                onTranslate = { annotating.translating = editing.text },
+                extra = BarExtra(R.string.reader_delete, warn = true) { annotating.delete(editing) }
             )
         )
     }
@@ -248,7 +263,8 @@ private fun BoxScope.SelectionBar(annotating: Annotating) {
             onColour = annotating::save,
             onNote = annotating::noteForSelection,
             onShare = { share(context, quote) },
-            onCopy = {
+            onTranslate = { annotating.translating = selection.text },
+            extra = BarExtra(R.string.reader_copy, warn = false) {
                 copy(context, quote)
                 annotating.pick.clear()
             }

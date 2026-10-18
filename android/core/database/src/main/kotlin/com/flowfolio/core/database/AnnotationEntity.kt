@@ -62,4 +62,8 @@ interface BookReadingDao {
     /** Pages run right to left (Arabic, Hebrew, Persian, Urdu books, manga). Added in schema v6. */
     @Query("UPDATE books SET right_to_left = :on WHERE id = :id")
     suspend fun setRightToLeft(id: String, on: Boolean)
+
+    /** The book's printed page numbers (PageLabels runs). Added in schema v7. */
+    @Query("UPDATE books SET page_labels = :labels WHERE id = :id")
+    suspend fun setPageLabels(id: String, labels: String)
 }
