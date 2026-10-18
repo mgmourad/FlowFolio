@@ -48,3 +48,6 @@ samples/models/
 
 # Local measurement output (contains renders/timings from local test books)
 android/tools/results/
+
+# Local Claude Code preview servers
+.claude/launch.json

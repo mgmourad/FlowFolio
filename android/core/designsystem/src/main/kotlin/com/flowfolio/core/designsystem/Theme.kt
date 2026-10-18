@@ -5,7 +5,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
-import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
@@ -14,24 +13,32 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
-import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import com.flowfolio.core.model.ThemePreference
 
-/** App theme (ADR-0014). Book pages are drawn by the reader and keep their printed colours unless Night pages is on. */
+/**
+ * App theme (ADR-0014, ADR-0015): the mock's palette, fonts and shapes. [glow] is the mock's "Neon glow" switch.
+ * Book pages are drawn by the reader and keep their own paper colours.
+ */
 @Composable
-fun FlowFolioTheme(preference: ThemePreference = ThemePreference.SYSTEM, content: @Composable () -> Unit) {
+fun FlowFolioTheme(
+    preference: ThemePreference = ThemePreference.SYSTEM,
+    glow: Boolean = true,
+    content: @Composable () -> Unit
+) {
     val dark = when (preference) {
         ThemePreference.SYSTEM -> isSystemInDarkTheme()
         ThemePreference.LIGHT -> false
         ThemePreference.DARK -> true
     }
-    val palette = if (dark) DarkPalette else LightPalette
+    val base = if (dark) DarkPalette else LightPalette
+    val palette = if (glow) base else base.withoutGlow()
     CompositionLocalProvider(LocalPalette provides palette) {
         MaterialTheme(
             colorScheme = palette.toColorScheme(),
-            typography = palette.toTypography(Typography()),
+            typography = flowFolioTypography(),
             shapes = RoundedShapes,
             content = content
         )
@@ -44,68 +51,81 @@ object FlowFolio {
         @Composable @ReadOnlyComposable
         get() = LocalPalette.current
 
-    /** Titles and menu entries. */
+    /** Titles and menu entries (`.r-title`). */
     val title: TextStyle
         @Composable @ReadOnlyComposable
-        get() = lit(palette.title)
+        get() = role(palette.title, palette.titleGlow)
 
-    /** Primary items. */
+    /** Primary items (`.r-item`). */
     val item: TextStyle
         @Composable @ReadOnlyComposable
-        get() = lit(palette.item)
+        get() = role(palette.item, palette.itemGlow)
 
-    /** Secondary text. Hints are quiet: a softer glow, a lighter shadow. */
+    /** Secondary text (`.r-hint`). */
     val hint: TextStyle
         @Composable @ReadOnlyComposable
-        get() = lit(palette.hint, strength = HINT_STRENGTH)
+        get() = role(palette.hint, palette.hintGlow)
 
-    /** Sub-items and other. */
+    /** Sub-items and other (`.r-sub`). */
     val subItem: TextStyle
         @Composable @ReadOnlyComposable
-        get() = lit(palette.subItem)
+        get() = role(palette.subItem, palette.subGlow)
 
-    /** Text in [color] with the mode's effect: a glow in its own colour (dark) or a soft drop shadow (light). */
+    /** Plain body text on app surfaces (`--text`). */
+    val text: TextStyle
+        @Composable @ReadOnlyComposable
+        get() = TextStyle(color = palette.text)
+
+    /** Text in [color] with [glow] turned into a text shadow. */
     @Composable
     @ReadOnlyComposable
-    fun lit(color: Color, strength: Float = 1f): TextStyle = TextStyle(color = color, shadow = effect(color, strength))
+    fun role(color: Color, glow: Glow): TextStyle = TextStyle(color = color, shadow = glow.toShadow())
+
+    /** Text in [color] lit like a title (kept for callers from ADR-0014). */
+    @Composable
+    @ReadOnlyComposable
+    fun lit(color: Color): TextStyle = role(color, palette.titleGlow.copy(color = glowColorFor(color)))
 
     @Composable
     @ReadOnlyComposable
-    fun effect(color: Color, strength: Float = 1f): Shadow = if (palette.dark) {
-        Shadow(color.copy(alpha = GLOW_ALPHA * strength), Offset.Zero, GLOW_BLUR)
-    } else {
-        Shadow(Color.Black.copy(alpha = SHADOW_ALPHA * strength), Offset(0f, SHADOW_DROP), SHADOW_BLUR)
+    private fun glowColorFor(color: Color): Color =
+        if (palette.dark) color.copy(alpha = DARK_GLOW_ALPHA) else palette.titleGlow.color
+
+    @Composable
+    @ReadOnlyComposable
+    fun Glow.toShadow(): Shadow? {
+        if (color.alpha == 0f) return null
+        val d = LocalDensity.current
+        return with(d) { Shadow(color, Offset(0f, offsetY.toPx()), blur.toPx()) }
     }
 }
 
 private fun Palette.toColorScheme(): ColorScheme {
-    // Raised surfaces (menus, cards) sit a step away from the background, toward white in light, lighter in dark.
-    val raised = lerp(background, Color.White, if (dark) RAISE_DARK else RAISE_LIGHT)
     val base = if (dark) darkColorScheme() else lightColorScheme()
     return base.copy(
         primary = title,
-        onPrimary = background,
-        primaryContainer = raised,
+        onPrimary = buttonInk,
+        primaryContainer = surface2,
         onPrimaryContainer = title,
         secondary = item,
         onSecondary = background,
-        secondaryContainer = raised,
+        secondaryContainer = surface2,
         onSecondaryContainer = item,
         tertiary = glyph,
         onTertiary = background,
         background = background,
-        onBackground = item,
+        onBackground = text,
         surface = background,
-        onSurface = item,
-        surfaceVariant = raised,
+        onSurface = text,
+        surfaceVariant = surface,
         onSurfaceVariant = hint,
-        surfaceContainerLowest = background,
+        surfaceContainerLowest = backgroundDeep,
         surfaceContainerLow = background,
-        surfaceContainer = background,
-        surfaceContainerHigh = raised,
-        surfaceContainerHighest = raised,
-        surfaceBright = raised,
-        surfaceDim = background,
+        surfaceContainer = surface,
+        surfaceContainerHigh = surface,
+        surfaceContainerHighest = surface2,
+        surfaceBright = surface2,
+        surfaceDim = backgroundDeep,
         outline = edge,
         outlineVariant = edge,
         error = subItem,
@@ -114,38 +134,13 @@ private fun Palette.toColorScheme(): ColorScheme {
     )
 }
 
-/** Material's type scale, with titles and headlines lit like the design's "title". */
-private fun Palette.toTypography(base: Typography): Typography {
-    val titleLit = { s: TextStyle -> s.copy(shadow = glowOrShadow(title)) }
-    return base.copy(
-        headlineLarge = titleLit(base.headlineLarge),
-        headlineMedium = titleLit(base.headlineMedium),
-        headlineSmall = titleLit(base.headlineSmall),
-        titleLarge = titleLit(base.titleLarge),
-        titleMedium = titleLit(base.titleMedium)
-    )
-}
-
-private fun Palette.glowOrShadow(color: Color): Shadow = if (dark) {
-    Shadow(color.copy(alpha = GLOW_ALPHA), Offset.Zero, GLOW_BLUR)
-} else {
-    Shadow(Color.Black.copy(alpha = SHADOW_ALPHA), Offset(0f, SHADOW_DROP), SHADOW_BLUR)
-}
-
-/** The design's generous rounding. */
+/** The mock's rounding: 22 dp cards, pills, 28 dp sheets. */
 private val RoundedShapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp),
-    small = RoundedCornerShape(12.dp),
-    medium = RoundedCornerShape(20.dp),
+    extraSmall = RoundedCornerShape(9.dp),
+    small = RoundedCornerShape(14.dp),
+    medium = RoundedCornerShape(22.dp),
     large = RoundedCornerShape(28.dp),
-    extraLarge = RoundedCornerShape(40.dp)
+    extraLarge = RoundedCornerShape(28.dp)
 )
 
-private const val GLOW_ALPHA = 0.85f
-private const val GLOW_BLUR = 18f
-private const val SHADOW_ALPHA = 0.32f
-private const val SHADOW_DROP = 3f
-private const val SHADOW_BLUR = 6f
-private const val HINT_STRENGTH = 0.5f
-private const val RAISE_DARK = 0.07f
-private const val RAISE_LIGHT = 0.35f
+private const val DARK_GLOW_ALPHA = 0.55f

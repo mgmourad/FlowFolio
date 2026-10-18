@@ -26,6 +26,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   scrubber in the centre-tap controls; PDF links (internal jumps; web links confirmed, http/https/mailto only);
   pinch-zoom up to 6x with 512 px 16-bit tiles rendered after the view settles (at most 40 tiles, freed on exit);
   Reading settings ("Aa"): two pages side by side on/off and cover-alone pairing on/off.
+- Phase 1 milestone 5, foundations slice (ADR-0015, `docs/plans/phase1-m5-design.md`).
+  - The owner's mock (`docs/design/FlowFolio_Mock.html`) is now the design reference: its palettes, surfaces,
+    gradients, glow and shadow values, motion curves and grain.
+  - Bundled Fraunces and Instrument Sans (SIL OFL, 1.17 MB).
+  - Components: card, chip, pill, icon button, primary and ghost buttons, segmented control, sliding tabs, the
+    mock's toggle, gradient progress bar, progress ring.
+  - The 3D book (true perspective, spine depth from the page count, lift on press), the shelf plank and the mock's
+    icons.
+  - A debug-only design catalog (`--ez catalog true`).
 - FlowFolio design language (ADR-0014): the owner's dark and light palettes (pixel-exact), glow in dark mode and
   soft shadow in light mode, rounded surfaces, own toggle and outline glyphs, themed dialogs and sheets; library,
   settings and the reader's sheets use it.

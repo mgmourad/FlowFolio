@@ -46,11 +46,21 @@ Conventional Commits; keep `CHANGELOG.md`; no secrets in the repo; propose a spi
 - Licensing (ADR-0003 as amended by ADR-0009): MIT project. No GPL/LGPL/AGPL code or model weights
   anywhere, since everything ships in the app. Matrix: `docs/licenses.md`.
 
-## Design language (ADR-0014)
+## Design language (ADR-0014, ADR-0015)
 
-Colours, lit text styles (`FlowFolio.title/item/hint/subItem`), `FlowFolioToggle`, `FlowFolioGlyph` and
-`FlowFolioAlertDialog` live in `:core:designsystem`; use them instead of raw Material colours. The reader's
-on-page chrome (page number, title, controls) stays print-style grey on the page.
+**`docs/design/FlowFolio_Mock.html` is the design reference for every milestone and phase.** Keep our 3D page curl;
+on the unfolded Fold use a side rail and wider layouts. M5 plan: `docs/plans/phase1-m5-design.md`.
+
+`:core:designsystem` holds everything visual. Use it instead of raw Material colours:
+- the mock's tokens (`Palette`, `FlowFolioType`, `Motion`);
+- the fonts: Fraunces and Instrument Sans;
+- effects (`card`, `softShadow`, `innerShadow`, `glass`, `appBackground`);
+- components (`FlowFolioCard`, `FlowFolioChip`, `FlowFolioTabs`, `FlowFolioToggle`, `Book3D`, `ShelfPlank`, ...);
+- glyphs.
+
+Check components on a device with the debug catalog:
+`adb shell am start -n com.flowfolio.dev/com.flowfolio.MainActivity --ez catalog true [--es theme light]`.
+When testing on the owner's phone, read every setting before you touch it and restore it afterwards.
 
 ## Conventions
 

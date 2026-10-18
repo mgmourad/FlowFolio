@@ -1,6 +1,7 @@
 # ADR-0014: Adopt the owner's design language and offer Night pages
 
-- **Status:** Proposed
+- **Status:** Proposed; colour table and typeface superseded by ADR-0015 (2026-10-17). The design-system structure
+  and Night pages remain.
 - **Date:** 2026-10-17
 - **Deciders:** product owner, lead engineer
 - **Phase:** 1
