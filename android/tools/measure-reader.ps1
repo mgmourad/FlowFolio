@@ -1,12 +1,14 @@
 # Phase 1 reader measurement: frame timing and memory while turning pages, judged against ADR-0013:
 # the reader may add at most 110 MB over the app's own floor (library screen, same screen and fold state), and total
 # memory may grow at most 10% between turn 50 and the last turn.
-# Usage (from android/):  .\tools\measure-reader.ps1 -Serial <adb serial> -Layout spread|single [-Turns 300] [-Label name]
+# Usage (from android/):  .\tools\measure-reader.ps1 -Serial <adb serial> -Layout spread|single [-Turns 300] [-StartPage 0] [-Label name]
 # Needs the debug app installed with the test textbook imported (see CLAUDE.md). Results: tools/results/<label>/.
 param(
     [string]$Serial = "",
     [ValidateSet("single", "spread")][string]$Layout = "single",
     [int]$Turns = 300,
+    # The page (0-based) the run starts from; the reading position persists between runs, so it is set every time.
+    [int]$StartPage = 0,
     [string]$Label = "",
     [string]$BookId = "93652b69c43197d10dc83438b813b5f7515e61e7ea4336da8636ff902cb4aba8",
     [double]$MaxOverheadMB = 110,
@@ -56,7 +58,7 @@ Start-Sleep 5
 $floor = Memory "floor"
 # 2. The reader.
 Adb shell am force-stop $pkg
-Adb shell am start -W -n "$pkg/com.flowfolio.MainActivity" --es openBookId $BookId --es layout $Layout | Out-Null
+Adb shell am start -W -n "$pkg/com.flowfolio.MainActivity" --es openBookId $BookId --es layout $Layout --ei startPage $StartPage | Out-Null
 Start-Sleep 4
 Adb shell dumpsys gfxinfo $pkg reset | Out-Null
 

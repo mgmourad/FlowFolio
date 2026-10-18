@@ -26,6 +26,7 @@ import dagger.hilt.android.AndroidEntryPoint
 
 private const val EXTRA_OPEN_BOOK = "openBookId"
 private const val EXTRA_LAYOUT = "layout"
+private const val EXTRA_START_PAGE = "startPage"
 private const val EXTRA_IMPORT_PATH = "importPath"
 private const val EXTRA_GC_NOW = "gcNow"
 private const val EXTRA_CATALOG = "catalog"
@@ -81,7 +82,11 @@ class MainActivity : ComponentActivity() {
         // Debug builds: `am start ... --es openBookId <sha256> [--es layout single|spread]` (measurement scripts).
         val debuggable = isDebuggable()
         val bookId = intent.getStringExtra(EXTRA_OPEN_BOOK)
-        if (debuggable && bookId != null) appViewModel.onDirectOpen(bookId, intent.getStringExtra(EXTRA_LAYOUT))
+        // Optional `--ei startPage N` (0-based) sets the saved position first.
+        if (debuggable && bookId != null) {
+            val start = intent.getIntExtra(EXTRA_START_PAGE, -1).takeIf { it >= 0 }
+            appViewModel.onDirectOpen(bookId, intent.getStringExtra(EXTRA_LAYOUT), start)
+        }
         // Debug builds: `--ez gcNow true` collects garbage so tools/measure-reader.ps1 samples retained memory only.
         if (debuggable && intent.getBooleanExtra(EXTRA_GC_NOW, false)) collectGarbageForMeasurement()
         // Debug builds: `--es importPath /data/local/tmp/...` imports a test book as a copy (measurement scripts).

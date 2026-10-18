@@ -25,6 +25,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
@@ -145,9 +147,13 @@ private fun DrawScope.drawContactShadow(w: Float, h: Float, rise: Float) {
     val cx = (left + right) / 2f
     val half = (right - left) / 2f * shrink
     val top = h + 2.dp.toPx()
-    blurred(Color.Black.copy(alpha = 0.55f * (1f - rise * (1f - LIFTED_SHADOW_ALPHA))), 6.dp.toPx()) {
-        drawOval(RectF(cx - half, top, cx + half, top + 16.dp.toPx()), it)
-    }
+    blurredShape(
+        Color.Black.copy(alpha = 0.55f * (1f - rise * (1f - LIFTED_SHADOW_ALPHA))),
+        6.dp.toPx(),
+        BlurShape.Oval,
+        Offset(cx - half, top),
+        Size(2 * half, 16.dp.toPx())
+    )
 }
 
 private fun drawCover(canvas: android.graphics.Canvas, p: Projector, face: BookFace, display: Typeface) {
