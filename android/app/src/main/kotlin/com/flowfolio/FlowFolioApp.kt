@@ -34,6 +34,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioType
+import com.flowfolio.core.designsystem.LocalBookOpener
 import com.flowfolio.core.designsystem.LocalDestinationScope
 import com.flowfolio.core.designsystem.LocalSharedTransition
 import com.flowfolio.core.designsystem.Motion
@@ -167,7 +168,9 @@ private fun NavGraphBuilder.readerDestination(nav: NavHostController) = composab
         }
     )
 ) {
-    ReaderScreen(onBack = { nav.popBackStack() })
+    // Back closes the book: the opening plays in reverse, back to the shelf or page it was opened from.
+    val opener = LocalBookOpener.current
+    ReaderScreen(onBack = { opener?.close { nav.popBackStack() } ?: nav.popBackStack() })
 }
 
 /** Switches tabs the usual way: one copy of each top-level screen, each keeping its state; Back returns to Library. */

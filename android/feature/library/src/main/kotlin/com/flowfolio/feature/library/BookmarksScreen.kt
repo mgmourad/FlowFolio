@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -103,17 +104,18 @@ fun BookmarksScreen(onRead: (Book) -> Unit, viewModel: BookmarksViewModel = hilt
 fun BookmarksContent(state: BookmarksUiState, actions: BookmarkActions) {
     val chrome = LocalChromePadding.current
     val insets = WindowInsets.safeDrawing.asPaddingValues()
-    Box(Modifier.fillMaxSize().chromeStart().testTag(LibraryTestTags.BOOKMARKS)) {
+    BoxWithConstraints(Modifier.fillMaxSize().chromeStart().testTag(LibraryTestTags.BOOKMARKS)) {
+        val twoColumns = maxWidth - GRID_SIDES * 2 >= CARD_MIN_WIDTH * 2 + GRID_GAP
         LazyVerticalGrid(
             columns = GridCells.Adaptive(CARD_MIN_WIDTH),
             contentPadding = PaddingValues(
-                start = 18.dp,
-                end = 18.dp,
+                start = GRID_SIDES,
+                end = GRID_SIDES,
                 top = insets.calculateTopPadding(),
                 bottom = insets.calculateBottomPadding() + chrome.calculateBottomPadding() + 24.dp
             ),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(GRID_GAP),
+            verticalArrangement = Arrangement.spacedBy(GRID_GAP),
             modifier = Modifier.fillMaxSize()
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) { BookmarksHeader(state, Modifier.reveal(0)) }
@@ -125,7 +127,7 @@ fun BookmarksContent(state: BookmarksUiState, actions: BookmarkActions) {
             if (!state.loading && state.total == 0) {
                 item(span = { GridItemSpan(maxLineSpan) }) { EmptyBookmarks(Modifier.reveal(1)) }
             }
-            items(state.items, key = { it.bookmark.id }) { item -> BookmarkRow(item, actions) }
+            items(state.items, key = { it.bookmark.id }) { item -> BookmarkRow(item, actions, twoColumns) }
         }
     }
 }
@@ -203,7 +205,7 @@ private fun ColourChip(colour: BookmarkColor, selected: Boolean, onClick: () -> 
 
 /** A card that slides: right for the colours, left for Remove. */
 @Composable
-private fun BookmarkRow(item: BookmarkItem, actions: BookmarkActions) {
+private fun BookmarkRow(item: BookmarkItem, actions: BookmarkActions, uniform: Boolean) {
     SwipeRow(
         startWidth = SWATCH_STRIP,
         endWidth = REMOVE_WIDTH,
@@ -233,7 +235,7 @@ private fun BookmarkRow(item: BookmarkItem, actions: BookmarkActions) {
                 clipRect(0f, -size.height, size.width, size.height * 2) { this@drawWithContent.drawContent() }
             }
             .testTag(LibraryTestTags.bookmark(item.bookmark.id))
-    ) { BookmarkCard(item) { spot -> actions.onOpen(item, spot) } }
+    ) { BookmarkCard(item, uniform) { spot -> actions.onOpen(item, spot) } }
 }
 
 @Composable
@@ -255,9 +257,12 @@ private fun Swatch(colour: BookmarkColor, current: Boolean, onClick: () -> Unit)
     )
 }
 
-/** `.bm`: the colour tag, the book's cover, "Ribbon · p. N", the title and the chapter in italics. */
+/**
+ * `.bm`: the colour tag, the book's cover, "Ribbon · p. N", the title and the chapter in italics. [uniform] (two
+ * columns) gives every card the same height: two lines of title, one of chapter.
+ */
 @Composable
-private fun BookmarkCard(item: BookmarkItem, onOpen: (CoverSpot) -> Unit) {
+private fun BookmarkCard(item: BookmarkItem, uniform: Boolean, onOpen: (CoverSpot) -> Unit) {
     val spot = remember { CoverSpot().apply { angle = 0f } }
     val cover by rememberCover(item.book)
     spot.face = item.book.face(cover)
@@ -277,11 +282,12 @@ private fun BookmarkCard(item: BookmarkItem, onOpen: (CoverSpot) -> Unit) {
                 Text(
                     item.book.title,
                     style = FlowFolioType.rowLabel.merge(FlowFolio.item),
+                    minLines = if (uniform) 2 else 1,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.padding(top = 2.dp)
                 )
-                item.chapter?.let {
+                (item.chapter ?: if (uniform) "" else null)?.let {
                     Text(
                         it,
                         style = FlowFolioType.sub.copy(
@@ -289,7 +295,7 @@ private fun BookmarkCard(item: BookmarkItem, onOpen: (CoverSpot) -> Unit) {
                             fontStyle = FontStyle.Italic,
                             fontSize = 14.sp
                         ).merge(FlowFolio.hint),
-                        maxLines = 2,
+                        maxLines = if (uniform) 1 else 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 6.dp)
                     )
@@ -365,6 +371,8 @@ private val BookmarkColor.label: Int
     }
 
 private val CARD_MIN_WIDTH = 280.dp
+private val GRID_SIDES = 18.dp
+private val GRID_GAP = 12.dp
 private val SWATCH_STRIP = 220.dp
 private val REMOVE_WIDTH = 84.dp
 private const val TAG_NOTCH = 0.78f

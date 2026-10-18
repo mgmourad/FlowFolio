@@ -84,6 +84,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     pages).
   - Edge bounce: turning past the first or last page nudges the page and springs it back.
   - Reader memory on the unfolded Fold, spread, Night paper, 300 turns: 263 MB, growth 2.3%, 2.25% janky frames.
+- Owner tweaks after the Bookmarks and Settings slice:
+  - On Night and Black pages the Contents, Go to page and "Aa" panels use a nearly opaque glass, so their text stays
+    readable over bright photos on the page.
+  - Unfolded, the book's title sits beside Back at the top left.
+  - Back (button or gesture) closes the book: the opening plays in reverse and the book flies back to where it was
+    opened from.
+  - The rail's tabs sit closer together in the middle of the rail.
+  - Unfolded, bookmark cards in both columns have the same height.
 - Phase 1 milestone 5, Bookmarks and Settings slice:
   - Bookmarks tab: every ribbon in the library as a card with its colour tag, the book's cover, the printed page and
     the chapter it is in (from the PDF's outline), newest first; colour filter chips; tap to open the book there with

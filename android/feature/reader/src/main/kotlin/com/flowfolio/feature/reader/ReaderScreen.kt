@@ -2,6 +2,7 @@ package com.flowfolio.feature.reader
 
 import android.content.ComponentCallbacks2
 import android.content.res.Configuration
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -75,6 +76,8 @@ fun ReaderScreen(
     val images by viewModel.pageImages.collectAsStateWithLifecycle()
     val navigation by viewModel.navigation.collectAsStateWithLifecycle()
     TrimMemoryEffect(viewModel::onTrimMemory)
+    // System Back closes the book the same way as the Back button (open panels catch it first).
+    BackHandler(onBack = onBack)
 
     val tone = (state as? ReaderState.Ready)?.tone ?: PageTone.PRINTED
     val marks by bookmarks.bookmarks.collectAsStateWithLifecycle()

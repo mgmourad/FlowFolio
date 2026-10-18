@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
@@ -94,6 +95,8 @@ internal fun BoxScope.ReaderChrome(
 /** `.r-top`: Back, the title, and the reading tools, each on glass. */
 @Composable
 private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions) {
+    // Unfolded, the title sits beside Back at the top left (owner, 2026-10-18); folded, it is centred.
+    val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
     Row(
         Modifier
             .fillMaxWidth()
@@ -105,7 +108,7 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions) {
         FlowFolioIconButton(onClick = actions.onBack, glass = true) {
             FlowFolioGlyph(Glyph.Back, stringResource(R.string.reader_back), color = FlowFolio.palette.text)
         }
-        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+        Box(Modifier.weight(1f), contentAlignment = if (wide) Alignment.CenterStart else Alignment.Center) {
             Text(
                 title,
                 style = FlowFolioType.rowLabel.copy(fontSize = 13.sp).merge(FlowFolio.item),
@@ -260,3 +263,4 @@ private val BOTTOM_BAR_HEIGHT = 56.dp
 private val PAGE_MARGIN = 32.dp
 private val FOOTER_MARGIN = 14.dp
 private val TITLE_MAX_WIDTH = 520.dp
+private val TITLE_BESIDE_BACK = 600.dp

@@ -61,6 +61,9 @@ fun Modifier.coverSpot(spot: CoverSpot): Modifier = onGloballyPositioned {
 class BookOpener internal constructor() {
     internal var opening by mutableStateOf<Opening?>(null)
 
+    /** The last book opened with the animation, so closing it can fly the cover back to where it came from. */
+    private var opened: Opening? = null
+
     /**
      * Plays the book opening from [spot], calling [onOpen] (show the reader) once the cover covers the page, so the
      * reader appears under the cover as it swings open. Without a known cover it just opens.
@@ -70,12 +73,34 @@ class BookOpener internal constructor() {
         when {
             opening != null -> Unit
             face == null || spot.bounds.isEmpty -> onOpen()
-            else -> opening = Opening(face, spot.bounds, spot.angle, onOpen)
+            else -> opening = Opening(face, spot.bounds, spot.angle, onOpen).also { opened = it }
+        }
+    }
+
+    /**
+     * The opening in reverse (owner, 2026-10-18): the paper rises over the page, the cover swings shut, then
+     * [onClose] (leave the reader) runs and the closed book flies back to where it was opened from. A book that was
+     * not opened with the animation just closes.
+     */
+    fun close(onClose: () -> Unit) {
+        val last = opened
+        opened = null
+        when {
+            opening != null -> Unit
+            last == null -> onClose()
+            else -> opening = Opening(last.face, last.from, last.angle, onClose, closing = true)
         }
     }
 }
 
-internal class Opening(val face: BookFace, val from: Rect, val angle: Float, val onOpen: () -> Unit)
+/** One run of the animation; [onTurn] is called with the cover over the page (to show or leave the reader). */
+internal class Opening(
+    val face: BookFace,
+    val from: Rect,
+    val angle: Float,
+    val onTurn: () -> Unit,
+    val closing: Boolean = false
+)
 
 val LocalBookOpener = staticCompositionLocalOf<BookOpener?> { null }
 
@@ -100,13 +125,21 @@ fun BookOpeningHost(paper: Color, spread: (Float, Float) -> Boolean, content: @C
 
 @Composable
 private fun OpeningOverlay(o: Opening, paper: Color, spread: (Float, Float) -> Boolean, onDone: () -> Unit) {
-    val flight = remember(o) { Animatable(0f) }
-    val hinge = remember(o) { Animatable(0f) }
+    val start = if (o.closing) 1f else 0f
+    val flight = remember(o) { Animatable(start) }
+    val hinge = remember(o) { Animatable(start) }
     LaunchedEffect(o) {
         try {
-            flight.animateTo(1f, tween(FLIGHT_MS, easing = Flight))
-            o.onOpen()
-            hinge.animateTo(1f, tween(HINGE_MS, easing = Hinge))
+            if (o.closing) {
+                // Shut the cover over the page, leave the reader under it, then fly the book home.
+                hinge.animateTo(0f, tween(HINGE_MS, easing = Hinge))
+                o.onTurn()
+                flight.animateTo(0f, tween(FLIGHT_MS, easing = Flight))
+            } else {
+                flight.animateTo(1f, tween(FLIGHT_MS, easing = Flight))
+                o.onTurn()
+                hinge.animateTo(1f, tween(HINGE_MS, easing = Hinge))
+            }
         } finally {
             onDone()
         }
