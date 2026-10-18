@@ -18,8 +18,15 @@ object LibraryTestTags {
     const val READ = "details_read"
     const val ADD_TO_SHELF = "details_add_to_shelf"
     const val CONTENTS = "details_contents"
+    const val SHELF_TILES = "shelf_page_tiles"
+    const val SHELF_LIST = "shelf_page_list"
+    const val SHELF_VIEW = "shelf_page_view"
 
     fun book(id: String) = "book_$id"
 
     fun shelf(id: Long) = "shelf_$id"
+
+    fun shelfCount(id: Long) = "shelf_count_$id"
+
+    fun row(bookId: String) = "row_$bookId"
 }

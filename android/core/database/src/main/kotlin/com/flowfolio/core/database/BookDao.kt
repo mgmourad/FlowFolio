@@ -30,6 +30,9 @@ interface BookDao {
     @Query("UPDATE books SET last_opened_at = :at WHERE id = :id")
     suspend fun markOpened(id: String, at: Long)
 
+    @Query("UPDATE books SET title = :title WHERE id = :id")
+    suspend fun updateTitle(id: String, title: String)
+
     @Query("UPDATE books SET last_page = :page WHERE id = :id")
     suspend fun updateLastPage(id: String, page: Int)
 

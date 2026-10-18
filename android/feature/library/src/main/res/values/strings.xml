@@ -117,4 +117,10 @@
     <string name="info_cover">Cover</string>
     <string name="info_cover_page1">Rendered from page 1 of the file</string>
     <string name="contents_none">This PDF has no table of contents.</string>
+
+    <!-- Shelf page -->
+    <string name="view_tiles">Tiles</string>
+    <string name="view_list">List</string>
+    <string name="rename_book">Rename book</string>
+    <string name="book_title_hint">Title</string>
 </resources>

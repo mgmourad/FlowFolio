@@ -60,6 +60,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Books keep the PDF's Author metadata (schema v3 `books.author`; books imported earlier show none until the
     metadata slice).
   - The backdrop blur is computed once on the CPU from a 40 px copy of the cover, not as a live GPU blur.
+- Owner tweaks after slice 3:
+  - The splash shows the owner's own icon artwork: it pops in, a band of light crosses it, then the wordmark rises.
+  - Launcher icon refitted: the whole book fits the safe circle every launcher shape keeps, on the plate's blue
+    extended to the edges (`tools/icon/make_launcher_icons.ps1` grows the plate's edge colours outward).
+  - A shelf page: tap a shelf's book count to see the whole shelf as 3D tiles or a list. List rows show cover, title,
+    author, progress and size, with a menu; swipe a row left for Rename and Delete, right for Shelves and Locate.
+  - Books can be renamed (the library title; the file is unchanged).
+  - 3D book spines are painted in the cover's dominant colour, with the title in a contrasting ink.
+  - Shelf rows snap to a book when swiped.
+  - The unfolded rail spreads its tabs over its full height.
+  - Toggle on-colours swapped between dark and light mode.
 
 ### Changed
 - Shadows (cards, chips, buttons, glass, book contact shadows, the plank glow) are rendered once on the CPU into small

@@ -47,6 +47,7 @@ Each slice is verified on the Fold with screenshots.
    - Transitions: the cover flight and the book-opening hinge.
 4. **Reader.**
    - Glass bars, ribbon bookmark and scrubber bar.
+   - Bookmarks get a colour chosen when adding them, from the app's palette roles (owner, 2026-10-18).
    - An Aa sheet with paper swatches (Auto, Paper, Sepia, Night, Black), with images kept as printed.
    - Page turn styles Curl, Slide and Scroll, and an edge bounce.
 5. **Bookmarks and Settings.**

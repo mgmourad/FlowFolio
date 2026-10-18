@@ -66,6 +66,9 @@ class FakeLibrary : LibraryRepository {
         books.update { list -> list.filterNot { it.id == bookId } }
     }
 
+    override suspend fun rename(bookId: String, title: String) =
+        books.update { list -> list.map { if (it.id == bookId) it.copy(title = title.trim()) else it } }
+
     override suspend fun markOpened(bookId: String) {
         opened += bookId
     }

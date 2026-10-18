@@ -94,8 +94,9 @@ val DarkPalette = Palette(
     text = Color(0xFFECE8FF),
     toggleOffTrack = Color(0xFF8E8E96),
     toggleOffThumb = Color(0xFF3B2F90),
-    toggleOnTrack = Color(0xFF2ECC8A),
-    toggleOnThumb = Color(0xFFFF8A00),
+    // On-state colours swapped with the light palette at the owner's request (2026-10-18).
+    toggleOnTrack = Color(0xFF2AA3CF),
+    toggleOnThumb = Color(0xFFFF7A00),
     cardStart = Color(0xFF2D1568),
     cardEnd = Color(0xFF1F0A4E),
     paper = Color(0xFF1C1042),
@@ -133,8 +134,9 @@ val LightPalette = Palette(
     text = Color(0xFF2E2219),
     toggleOffTrack = Color(0xFF9B9B9B),
     toggleOffThumb = Color(0xFF7D3326),
-    toggleOnTrack = Color(0xFF2AA3CF),
-    toggleOnThumb = Color(0xFFFF7A00),
+    // On-state colours swapped with the dark palette at the owner's request (2026-10-18).
+    toggleOnTrack = Color(0xFF2ECC8A),
+    toggleOnThumb = Color(0xFFFF8A00),
     cardStart = Color(0xFFFFF8E8),
     cardEnd = Color(0xFFFBE4B9),
     paper = Color(0xFFFFFAF0),

@@ -45,6 +45,8 @@ import com.flowfolio.feature.library.DetailsViewModel
 import com.flowfolio.feature.library.LibraryScreen
 import com.flowfolio.feature.library.LibraryViewModel
 import com.flowfolio.feature.library.SettingsScreen
+import com.flowfolio.feature.library.ShelfPageScreen
+import com.flowfolio.feature.library.ShelfPageViewModel
 import com.flowfolio.feature.library.ShelvesScreen
 import com.flowfolio.feature.reader.ReaderScreen
 
@@ -55,6 +57,10 @@ private object Routes {
     fun reader(bookId: String, layout: String? = null) = "reader/$bookId" + (layout?.let { "?layout=$it" } ?: "")
 
     fun details(bookId: String, origin: String) = "book/$bookId?from=$origin"
+
+    const val SHELF = "shelf/{${ShelfPageViewModel.ARG_SHELF_ID}}"
+
+    fun shelf(id: Long) = "shelf/$id"
 }
 
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -81,6 +87,7 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                             LibraryScreen(
                                 onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) },
                                 onRead = { book -> nav.navigate(Routes.reader(book.id)) },
+                                onOpenShelf = { id -> nav.navigate(Routes.shelf(id)) },
                                 scrollToShelf = shelfToShow,
                                 onScrolledToShelf = { shelfToShow = null },
                                 viewModel = library
@@ -100,19 +107,8 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                     }
                     destination(TopLevel.Settings.route) { ScreenEntrance { SettingsScreen() } }
                     detailsDestination(nav)
-                    composable(
-                        Routes.READER,
-                        arguments = listOf(
-                            navArgument("bookId") { type = NavType.StringType },
-                            navArgument("layout") {
-                                type = NavType.StringType
-                                nullable = true
-                                defaultValue = null
-                            }
-                        )
-                    ) {
-                        ReaderScreen(onBack = { nav.popBackStack() })
-                    }
+                    shelfDestination(nav)
+                    readerDestination(nav)
                 }
             }
         }
@@ -143,6 +139,34 @@ private fun NavGraphBuilder.detailsDestination(nav: NavHostController) = composa
             onRead = { book -> nav.navigate(Routes.reader(book.id)) }
         )
     }
+}
+
+/** A whole shelf, as tiles or a list (opened from a shelf's book count in the library). */
+private fun NavGraphBuilder.shelfDestination(nav: NavHostController) = composable(
+    Routes.SHELF,
+    arguments = listOf(navArgument(ShelfPageViewModel.ARG_SHELF_ID) { type = NavType.LongType })
+) {
+    CompositionLocalProvider(LocalDestinationScope provides this) {
+        ShelfPageScreen(
+            onBack = { nav.popBackStack() },
+            onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) }
+        )
+    }
+}
+
+/** The reader; `layout` (single or spread) is a debug override used by the measurement scripts. */
+private fun NavGraphBuilder.readerDestination(nav: NavHostController) = composable(
+    Routes.READER,
+    arguments = listOf(
+        navArgument("bookId") { type = NavType.StringType },
+        navArgument("layout") {
+            type = NavType.StringType
+            nullable = true
+            defaultValue = null
+        }
+    )
+) {
+    ReaderScreen(onBack = { nav.popBackStack() })
 }
 
 /** Switches tabs the usual way: one copy of each top-level screen, each keeping its state; Back returns to Library. */

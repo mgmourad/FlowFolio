@@ -97,9 +97,15 @@ internal fun ShelfPickerDialog(
     )
 }
 
-/** Name a new shelf, or rename one ([initial] is its current name). */
+/** Name a new shelf, or rename a shelf or book ([initial] is its current name, [hint] the empty-field hint). */
 @Composable
-internal fun ShelfNameDialog(title: String, initial: String, onConfirm: (String) -> Unit, onDismiss: () -> Unit) {
+internal fun ShelfNameDialog(
+    title: String,
+    initial: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
+    hint: String = stringResource(R.string.shelf_name_hint)
+) {
     var name by rememberSaveable { mutableStateOf(initial) }
     val p = FlowFolio.palette
     FlowFolioAlertDialog(
@@ -110,7 +116,7 @@ internal fun ShelfNameDialog(title: String, initial: String, onConfirm: (String)
                 value = name,
                 onValueChange = { name = it.take(MAX_NAME) },
                 singleLine = true,
-                placeholder = { Text(stringResource(R.string.shelf_name_hint), style = FlowFolio.hint) },
+                placeholder = { Text(hint, style = FlowFolio.hint) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = p.title,
                     unfocusedBorderColor = p.edge,
