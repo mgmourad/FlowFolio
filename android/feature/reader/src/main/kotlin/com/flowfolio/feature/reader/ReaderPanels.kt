@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -105,7 +106,7 @@ private fun BoxScope.DropPanel(
         Column(
             sized
                 .then(if (fillDown) Modifier.fillMaxHeight() else Modifier)
-                .glass(PanelShape)
+                .glass(PanelShape, tint = panelTint())
                 .padding(vertical = 4.dp),
             content = content
         )
@@ -128,7 +129,7 @@ private fun BoxScope.SheetPanel(visible: Boolean, content: @Composable ColumnSco
             Modifier
                 .widthIn(max = SHEET_WIDTH)
                 .fillMaxWidth()
-                .glass(RoundedCornerShape(28.dp))
+                .glass(RoundedCornerShape(28.dp), tint = panelTint())
                 .verticalScroll(rememberScrollState())
                 .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 18.dp)
         ) {
@@ -146,6 +147,19 @@ private fun BoxScope.SheetPanel(visible: Boolean, content: @Composable ColumnSco
     }
 }
 
+/**
+ * The panels' glass. On dark papers it is nearly opaque (the app's surface at 88%): text over the light frosted glass
+ * of the bars was hard to read where the page behind had a bright photo (owner, 2026-10-18). On light papers the
+ * light palette's own glass reads well.
+ */
+@Composable
+private fun panelTint(): Color {
+    val p = FlowFolio.palette
+    return if (p.dark) p.surface.copy(alpha = DARK_PANEL_ALPHA) else p.background.copy(alpha = LIGHT_PANEL_ALPHA)
+}
+
+private const val DARK_PANEL_ALPHA = 0.88f
+private const val LIGHT_PANEL_ALPHA = 0.6f
 private val PanelShape = RoundedCornerShape(26.dp)
 private val PANEL_INSET = 14.dp
 
