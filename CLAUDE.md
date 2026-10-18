@@ -46,6 +46,12 @@ Conventional Commits; keep `CHANGELOG.md`; no secrets in the repo; propose a spi
 - Licensing (ADR-0003 as amended by ADR-0009): MIT project. No GPL/LGPL/AGPL code or model weights
   anywhere, since everything ships in the app. Matrix: `docs/licenses.md`.
 
+## Design language (ADR-0014)
+
+Colours, lit text styles (`FlowFolio.title/item/hint/subItem`), `FlowFolioToggle`, `FlowFolioGlyph` and
+`FlowFolioAlertDialog` live in `:core:designsystem`; use them instead of raw Material colours. The reader's
+on-page chrome (page number, title, controls) stays print-style grey on the page.
+
 ## Conventions
 
 - Kotlin: ktlint `android_studio` style via Spotless (no trailing commas), detekt with
@@ -135,6 +141,7 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 19. The OpenStax test PDF has no page labels, so "Go to page" by printed number falls back to the position in the file.
 ## Decision log
 
-ADRs 0001–0013 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0014 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
-PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget.
+PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
+pages (0014, proposed).

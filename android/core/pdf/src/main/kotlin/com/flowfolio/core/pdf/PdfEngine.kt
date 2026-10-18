@@ -26,12 +26,14 @@ interface PdfDocument : Closeable {
 
     /**
      * Renders page [index] into [target] as described by [region]. [target] must be a mutable ARGB_8888 bitmap;
-     * it is filled white before drawing. Defaults to the whole page scaled to the target's size.
+     * it is filled white before drawing. Defaults to the whole page scaled to the target's size. With [night], text
+     * and line art are shown light on dark (lightness inverted, hue kept) while images keep their printed colours.
      */
     suspend fun render(
         index: Int,
         target: Bitmap,
-        region: RenderRegion = RenderRegion.fullPage(target.width, target.height)
+        region: RenderRegion = RenderRegion.fullPage(target.width, target.height),
+        night: Boolean = false
     )
 
     /** The outline (bookmarks) in document order; empty when the PDF has none. */

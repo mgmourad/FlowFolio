@@ -20,30 +20,36 @@ class PdfPageSource(private val document: PdfDocument) :
     private val lock = Mutex()
     private var scratch: Bitmap? = null
 
-    override suspend fun render(key: PageKey): ImageBitmap? =
-        renderRegion(key.page, key.size.width, key.size.height, RenderRegion.fullPage(key.size.width, key.size.height))
+    override suspend fun render(key: PageKey): ImageBitmap? {
+        val (w, h) = key.size
+        return renderRegion(key.page, w, h, RenderRegion.fullPage(w, h), key.night)
+    }
 
     override suspend fun render(key: TileKey): ImageBitmap? = renderRegion(
         key.page,
         key.widthPx,
         key.heightPx,
-        RenderRegion(key.pageWidthPx, key.pageHeightPx, key.tx * TileKey.TILE_PX, key.ty * TileKey.TILE_PX)
+        RenderRegion(key.pageWidthPx, key.pageHeightPx, key.tx * TileKey.TILE_PX, key.ty * TileKey.TILE_PX),
+        key.night
     )
 
-    private suspend fun renderRegion(page: Int, w: Int, h: Int, region: RenderRegion): ImageBitmap? = lock.withLock {
-        if (w <= 0 || h <= 0) return@withLock null
+    private suspend fun renderRegion(page: Int, w: Int, h: Int, region: RenderRegion, night: Boolean): ImageBitmap? =
+        if (w <= 0 || h <= 0) null else lock.withLock { renderLocked(page, w, h, region, night) }
+
+    @Suppress("LongParameterList") // one page render: what, how big, which part, which colours
+    private suspend fun renderLocked(page: Int, w: Int, h: Int, region: RenderRegion, night: Boolean): ImageBitmap? {
         val bitmap = scratchFor(w, h)
         try {
-            document.render(page, bitmap, region)
+            document.render(page, bitmap, region, night)
         } catch (_: PdfException) {
-            return@withLock null // damaged page: the reader shows a blank page instead of crashing
+            return null // damaged page: the reader shows a blank page instead of crashing
         }
         // 16-bit pages (ADR-0013): half the memory; text and line art are visually identical to 32-bit.
         val source = bitmap.copy(Bitmap.Config.RGB_565, false) ?: bitmap
         val image =
             source.copy(Bitmap.Config.HARDWARE, false) ?: source.copy(source.config ?: Bitmap.Config.ARGB_8888, false)
         if (source !== bitmap) source.recycle()
-        image?.asImageBitmap()
+        return image?.asImageBitmap()
     }
 
     /** Releases the scratch bitmap; the document is owned and closed by the caller. */

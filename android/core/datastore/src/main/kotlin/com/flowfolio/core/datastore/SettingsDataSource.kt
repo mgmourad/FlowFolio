@@ -34,7 +34,8 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             storageNoticeSeen = p[NOTICE_SEEN] ?: defaults.storageNoticeSeen,
             librarySort = p[SORT].toEnum(defaults.librarySort),
             readerSpreads = p[READER_SPREADS] ?: defaults.readerSpreads,
-            spreadCoverAlone = p[COVER_ALONE] ?: defaults.spreadCoverAlone
+            spreadCoverAlone = p[COVER_ALONE] ?: defaults.spreadCoverAlone,
+            nightPages = p[NIGHT_PAGES] ?: defaults.nightPages
         )
     }
 
@@ -66,6 +67,10 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         store.edit { it[COVER_ALONE] = on }
     }
 
+    suspend fun setNightPages(on: Boolean) {
+        store.edit { it[NIGHT_PAGES] = on }
+    }
+
     private inline fun <reified T : Enum<T>> String?.toEnum(default: T): T =
         this?.let { name -> enumValues<T>().firstOrNull { it.name == name } } ?: default
 
@@ -77,6 +82,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val SORT = stringPreferencesKey("library_sort")
         val READER_SPREADS = booleanPreferencesKey("reader_spreads")
         val COVER_ALONE = booleanPreferencesKey("spread_cover_alone")
+        val NIGHT_PAGES = booleanPreferencesKey("night_pages")
     }
 }
 

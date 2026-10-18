@@ -18,7 +18,8 @@ data class TileKey(
     val pageWidthPx: Int,
     val pageHeightPx: Int,
     val tx: Int,
-    val ty: Int
+    val ty: Int,
+    val night: Boolean = false
 ) {
     val widthPx: Int get() = minOf(TILE_PX, pageWidthPx - tx * TILE_PX)
     val heightPx: Int get() = minOf(TILE_PX, pageHeightPx - ty * TILE_PX)

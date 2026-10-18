@@ -84,4 +84,6 @@ class FakeSettings(initial: UserSettings = UserSettings()) : SettingsRepository 
     override suspend fun setReaderSpreads(on: Boolean) = state.update { it.copy(readerSpreads = on) }
 
     override suspend fun setSpreadCoverAlone(on: Boolean) = state.update { it.copy(spreadCoverAlone = on) }
+
+    override suspend fun setNightPages(on: Boolean) = state.update { it.copy(nightPages = on) }
 }

@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "fpdf_doc.h"
+#include "fpdf_edit.h"
 #include "fpdfview.h"
 
 #define LOG_TAG "FlowFolioPdfium"
@@ -87,6 +88,79 @@ void walkOutline(FPDF_DOCUMENT doc, FPDF_BOOKMARK parent, int depth, std::vector
         out.push_back(std::move(item));
         if (depth < 32) walkOutline(doc, bm, depth + 1, out, budget);  // malformed files can nest or loop
         bm = FPDFBookmark_GetNextSibling(doc, bm);
+    }
+}
+
+// --- Night pages (reader option, ADR-0014) ----------------------------------------------------------------------
+// Text and line art get their lightness inverted with hue kept (a blue link stays blue), then are tinted toward the
+// app's dark palette; photos (image objects) are restored exactly as printed.
+
+struct Rect {
+    int x0, y0, x1, y1;
+};
+
+bool containsImage(FPDF_PAGEOBJECT obj, int depth) {
+    int type = FPDFPageObj_GetType(obj);
+    if (type == FPDF_PAGEOBJ_IMAGE) return true;
+    if (type != FPDF_PAGEOBJ_FORM || depth > 4) return false;
+    int n = FPDFFormObj_CountObjects(obj);
+    for (int i = 0; i < n && i < 4096; i++) {
+        FPDF_PAGEOBJECT child = FPDFFormObj_GetObject(obj, static_cast<unsigned long>(i));
+        if (child != nullptr && containsImage(child, depth + 1)) return true;
+    }
+    return false;
+}
+
+// Device-space rectangles (clipped to the bitmap) of the page's images; a form that holds images counts as a whole.
+std::vector<Rect> imageRects(FPDF_PAGE page, int offsetX, int offsetY, int pageW, int pageH, int w, int h) {
+    std::vector<Rect> rects;
+    int n = FPDFPage_CountObjects(page);
+    for (int i = 0; i < n && rects.size() < 512; i++) {
+        FPDF_PAGEOBJECT obj = FPDFPage_GetObject(page, i);
+        if (obj == nullptr || !containsImage(obj, 0)) continue;
+        float l, b, r, t;
+        if (!FPDFPageObj_GetBounds(obj, &l, &b, &r, &t)) continue;
+        int x1, y1, x2, y2;
+        FPDF_PageToDevice(page, -offsetX, -offsetY, pageW, pageH, 0, l, t, &x1, &y1);
+        FPDF_PageToDevice(page, -offsetX, -offsetY, pageW, pageH, 0, r, b, &x2, &y2);
+        Rect rc{std::max(0, std::min(x1, x2)), std::max(0, std::min(y1, y2)), std::min(w, std::max(x1, x2) + 1),
+                std::min(h, std::max(y1, y2) + 1)};
+        if (rc.x0 < rc.x1 && rc.y0 < rc.y1) rects.push_back(rc);
+    }
+    return rects;
+}
+
+// Pixels are RGBA bytes (Android ARGB_8888 memory order).
+void nightPage(uint8_t* pixels, int w, int h, int stride, const std::vector<Rect>& keep) {
+    // Save the image areas, transform everything, then put the images back untouched.
+    std::vector<std::vector<uint8_t>> saved;
+    saved.reserve(keep.size());
+    for (const Rect& r : keep) {
+        std::vector<uint8_t> block(static_cast<size_t>(r.x1 - r.x0) * 4 * (r.y1 - r.y0));
+        for (int y = r.y0; y < r.y1; y++) {
+            std::copy_n(pixels + y * stride + r.x0 * 4, (r.x1 - r.x0) * 4, block.data() + (y - r.y0) * (r.x1 - r.x0) * 4);
+        }
+        saved.push_back(std::move(block));
+    }
+    // Paper (#18084A: the app's dark background #1C0A4D moved to the nearest colour a 16-bit page can hold, so the
+    // page and the screen around it match exactly) to ink (#E9E4F5, a soft light lavender).
+    constexpr int kBg[3] = {0x18, 0x08, 0x4A};
+    constexpr int kFg[3] = {0xE9, 0xE4, 0xF5};
+    for (int y = 0; y < h; y++) {
+        uint8_t* row = pixels + y * stride;
+        for (int x = 0; x < w; x++) {
+            uint8_t* px = row + x * 4;
+            int r = px[0], g = px[1], b = px[2];
+            int shift = 255 - std::max(r, std::max(g, b)) - std::min(r, std::min(g, b));  // invert lightness, keep hue
+            int v[3] = {r + shift, g + shift, b + shift};
+            for (int c = 0; c < 3; c++) px[c] = static_cast<uint8_t>(kBg[c] + v[c] * (kFg[c] - kBg[c]) / 255);
+        }
+    }
+    for (size_t i = 0; i < keep.size(); i++) {
+        const Rect& r = keep[i];
+        for (int y = r.y0; y < r.y1; y++) {
+            std::copy_n(saved[i].data() + (y - r.y0) * (r.x1 - r.x0) * 4, (r.x1 - r.x0) * 4, pixels + y * stride + r.x0 * 4);
+        }
     }
 }
 
@@ -175,7 +249,7 @@ JNIEXPORT jfloatArray JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_na
 // bitmap, so a full page uses offset 0 and a zoom tile uses the tile's position. The target is filled white first.
 JNIEXPORT jboolean JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_nativeRender(JNIEnv* env, jobject, jlong handle, jint index,
                                                                                           jobject bitmap, jint pageW, jint pageH,
-                                                                                          jint offsetX, jint offsetY) {
+                                                                                          jint offsetX, jint offsetY, jboolean night) {
     AndroidBitmapInfo info;
     if (AndroidBitmap_getInfo(env, bitmap, &info) != ANDROID_BITMAP_RESULT_SUCCESS || info.format != ANDROID_BITMAP_FORMAT_RGBA_8888) {
         return JNI_FALSE;
@@ -195,6 +269,10 @@ JNIEXPORT jboolean JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_nativ
                 // highlights and notes stored in the PDF.
                 FPDF_RenderPageBitmap(target, page, -offsetX, -offsetY, pageW, pageH, 0, FPDF_ANNOT | FPDF_REVERSE_BYTE_ORDER);
                 FPDFBitmap_Destroy(target);
+                if (night) {
+                    nightPage(static_cast<uint8_t*>(pixels), w, h, static_cast<int>(info.stride),
+                              imageRects(page, offsetX, offsetY, pageW, pageH, w, h));
+                }
                 ok = true;
             }
             FPDF_ClosePage(page);
