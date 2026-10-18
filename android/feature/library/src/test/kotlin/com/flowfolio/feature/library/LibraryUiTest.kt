@@ -4,6 +4,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -14,6 +15,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.flowfolio.core.designsystem.FlowFolioTheme
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
+import com.flowfolio.core.model.Shelf
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.UserSettings
 import org.junit.Assert.assertEquals
@@ -29,22 +31,20 @@ class LibraryUiTest {
 
     private val res = ApplicationProvider.getApplicationContext<android.content.Context>().resources
 
-    private fun content(state: LibraryUiState, onOpen: (LibraryItem) -> Unit = {}, onDelete: (Book) -> Unit = {}) {
+    private fun content(state: LibraryUiState, actions: LibraryActions = LibraryActions()) {
         compose.setContent {
-            FlowFolioTheme {
-                LibraryContent(
-                    state = state,
-                    snackbar = SnackbarHostState(),
-                    onImport = {},
-                    onOpen = onOpen,
-                    onDelete = onDelete,
-                    onLocate = {},
-                    onSort = {},
-                    onSettings = {}
-                )
-            }
+            FlowFolioTheme { LibraryContent(state = state, snackbar = SnackbarHostState(), actions = actions) }
         }
     }
+
+    private fun loaded(vararg items: LibraryItem, shelves: List<Shelf> = emptyList(), hero: LibraryItem? = null) =
+        LibraryUiState(
+            loading = false,
+            items = items.toList(),
+            totalCount = items.size,
+            shelves = shelves,
+            continueReading = hero
+        )
 
     @Test
     fun emptyLibraryExplainsHowToImport() {
@@ -59,8 +59,8 @@ class LibraryUiTest {
             LibraryItem(book("a", "University Physics")),
             LibraryItem(book("b", "Linked One", linked = true), Availability.MISSING)
         )
-        content(LibraryUiState(loading = false, items = items))
-        compose.onNodeWithText("University Physics").assertIsDisplayed()
+        content(loaded(*items.toTypedArray()))
+        compose.onNodeWithContentDescription("University Physics").assertIsDisplayed()
         compose.onNodeWithText(res.getString(R.string.badge_missing)).assertIsDisplayed()
     }
 
@@ -69,16 +69,31 @@ class LibraryUiTest {
         var opened: LibraryItem? = null
         var deleted: Book? = null
         val item = LibraryItem(book("a", "Calculus"))
-        content(
-            LibraryUiState(loading = false, items = listOf(item)),
-            onOpen = { opened = it },
-            onDelete = { deleted = it }
-        )
-        compose.onNodeWithText("Calculus").performClick()
+        content(loaded(item), LibraryActions(onOpen = { tapped, _ -> opened = tapped }, onDelete = { deleted = it }))
+        compose.onNodeWithContentDescription("Calculus").performClick()
         assertEquals(item, opened)
-        compose.onNodeWithText("Calculus").performTouchInput { longClick() }
+        compose.onNodeWithContentDescription("Calculus").performTouchInput { longClick() }
         compose.onNodeWithText(res.getString(R.string.action_delete)).performClick()
         assertEquals(item.book, deleted)
+    }
+
+    @Test
+    fun shelvesAreRowsAndLooseBooksGetTheirOwnRow() {
+        val a = LibraryItem(book("a", "Anatomy"))
+        val b = LibraryItem(book("b", "Biology"))
+        content(loaded(a, b, shelves = listOf(Shelf(1, "Fall Term", listOf("a")))))
+        compose.onNodeWithText("Fall Term").assertIsDisplayed()
+        compose.onNodeWithText(res.getString(R.string.shelf_loose)).assertIsDisplayed()
+    }
+
+    @Test
+    fun continueReadingResumes() {
+        var resumed: LibraryItem? = null
+        val item = LibraryItem(book("a", "Optics").copy(lastPage = 4, lastOpenedAtMillis = 5))
+        content(loaded(item, hero = item), LibraryActions(onResume = { resumed = it }))
+        compose.onNodeWithTag(LibraryTestTags.HERO).assertIsDisplayed()
+        compose.onNodeWithTag(LibraryTestTags.RESUME).performClick()
+        assertEquals(item, resumed)
     }
 
     @Test

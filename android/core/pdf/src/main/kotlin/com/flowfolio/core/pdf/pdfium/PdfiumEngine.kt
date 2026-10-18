@@ -65,6 +65,10 @@ internal class PdfiumDocument(private val handle: Long, override val pageCount: 
         PdfiumNative.nativePageLabel(handle, index)
     }
 
+    override suspend fun author(): String? = call {
+        PdfiumNative.nativeMetaText(handle, "Author")?.trim()?.takeIf { it.isNotEmpty() }
+    }
+
     override suspend fun title(): String? = call {
         PdfiumNative.nativeMetaText(handle, "Title")?.trim()?.takeIf { it.isNotEmpty() }
     }

@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.Flow
 interface LibraryRepository {
     fun observeBooks(sort: LibrarySort): Flow<List<Book>>
 
+    /** One book, or null once it is removed. */
+    fun observeBook(bookId: String): Flow<Book?>
+
     /**
      * Imports the PDF at [uri]. [fromShare] marks files handed over by another app (share sheet, "Open with"):
      * Android does not let FlowFolio keep access to those, so they are always copied regardless of [mode].

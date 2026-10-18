@@ -6,10 +6,12 @@ import com.flowfolio.core.data.ImportResult
 import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.data.RelinkResult
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.data.ShelfRepository
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.LibrarySort
+import com.flowfolio.core.model.Shelf
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.UserSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,13 +35,59 @@ import kotlinx.coroutines.launch
 
 data class LibraryItem(val book: Book, val availability: Availability = Availability.AVAILABLE)
 
+/** The chips under the library header. Type chips (Textbooks, Novels) come with book types in a later slice. */
+enum class LibraryFilter { ALL, IN_PROGRESS, NOT_STARTED, RECENT }
+
 data class LibraryUiState(
+    /** The books that pass [filter] and [query], in the chosen sort order. */
     val items: List<LibraryItem> = emptyList(),
     val loading: Boolean = true,
     val sort: LibrarySort = LibrarySort.RECENT,
     val importing: Boolean = false,
-    val dialog: LibraryDialog? = null
-)
+    val dialog: LibraryDialog? = null,
+    val shelves: List<Shelf> = emptyList(),
+    val filter: LibraryFilter = LibraryFilter.ALL,
+    val query: String = "",
+    /** Books in the library and how many are started, for the header line. */
+    val totalCount: Int = 0,
+    val inProgressCount: Int = 0,
+    /** The most recently opened book with a saved position, for the "Continue reading" card. */
+    val continueReading: LibraryItem? = null
+) {
+    /** Whether the library itself is empty (as opposed to nothing matching the chips or search). */
+    val libraryEmpty: Boolean get() = totalCount == 0
+}
+
+/** One shelf row on the library screen: a shelf with its visible books, or the books on no shelf ([shelf] null). */
+data class ShelfRow(val shelf: Shelf?, val items: List<LibraryItem>)
+
+/**
+ * The library's rows: each shelf with the [items] on it (in the shelf's order), then the books on no shelf. Shelves
+ * with no visible books are left out, except that with no shelves at all every book is in one row.
+ */
+fun shelfRows(items: List<LibraryItem>, shelves: List<Shelf>): List<ShelfRow> {
+    val byId = items.associateBy { it.book.id }
+    val rows = shelves.mapNotNull { shelf ->
+        shelf.bookIds.mapNotNull(byId::get).takeIf { it.isNotEmpty() }?.let { ShelfRow(shelf, it) }
+    }
+    val shelved = shelves.flatMapTo(HashSet()) { it.bookIds }
+    val loose = items.filterNot { it.book.id in shelved }
+    return if (loose.isEmpty()) rows else rows + ShelfRow(null, loose)
+}
+
+internal fun Book.started(): Boolean = (lastPage ?: 0) > 0
+
+internal fun LibraryFilter.accepts(book: Book, now: Long): Boolean = when (this) {
+    LibraryFilter.ALL -> true
+    LibraryFilter.IN_PROGRESS -> book.started() && book.progress < 1f
+    LibraryFilter.NOT_STARTED -> !book.started()
+    LibraryFilter.RECENT -> now - book.addedAtMillis <= RECENT_WINDOW_MS
+}
+
+internal fun Book.matches(query: String): Boolean =
+    query.isBlank() || title.contains(query.trim(), ignoreCase = true) || author?.contains(query.trim(), true) == true
+
+private const val RECENT_WINDOW_MS = 30L * 24 * 60 * 60 * 1000
 
 sealed interface LibraryDialog {
     /** First import ever, or "ask every time": choose copy or read-in-place, with both disclaimers. */
@@ -79,8 +127,10 @@ sealed interface LibraryMessage {
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val library: LibraryRepository,
-    private val settingsRepo: SettingsRepository
+    private val settingsRepo: SettingsRepository,
+    shelfRepo: ShelfRepository
 ) : ViewModel() {
+    private val view = MutableStateFlow(View())
     private val transient = MutableStateFlow(Transient())
     private val availability = MutableStateFlow<Map<String, Availability>>(emptyMap())
     private val messageChannel = Channel<LibraryMessage>(Channel.BUFFERED)
@@ -98,20 +148,36 @@ class LibraryViewModel @Inject constructor(
         .flatMapLatest { library.observeBooks(it) }
         .onEach { list -> checkAvailability(list) }
 
-    val uiState: StateFlow<LibraryUiState> = combine(books, settingsRepo.settings, availability, transient) {
-            list,
+    private val listed = combine(books, availability, shelfRepo.observeShelves()) { list, avail, shelves ->
+        Triple(list.map { LibraryItem(it, avail[it.id] ?: Availability.AVAILABLE) }, avail, shelves)
+    }
+
+    val uiState: StateFlow<LibraryUiState> = combine(listed, settingsRepo.settings, transient, view) {
+            (all, _, shelves),
             s,
-            avail,
-            t
+            t,
+            v
         ->
+        val now = System.currentTimeMillis()
         LibraryUiState(
-            items = list.map { LibraryItem(it, avail[it.id] ?: Availability.AVAILABLE) },
+            items = all.filter { v.filter.accepts(it.book, now) && it.book.matches(v.query) },
             loading = false,
             sort = s.librarySort,
             importing = t.importing,
-            dialog = t.dialog
+            dialog = t.dialog,
+            shelves = shelves,
+            filter = v.filter,
+            query = v.query,
+            totalCount = all.size,
+            inProgressCount = all.count { it.book.started() },
+            continueReading = all.filter { it.book.started() && it.book.lastOpenedAtMillis != null }
+                .maxByOrNull { it.book.lastOpenedAtMillis ?: 0L }
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), LibraryUiState())
+
+    fun onFilter(filter: LibraryFilter) = view.update { it.copy(filter = filter) }
+
+    fun onQuery(query: String) = view.update { it.copy(query = query) }
 
     /** A file chosen with the in-app picker. */
     fun onFilePicked(uri: String) = viewModelScope.launch {
@@ -200,6 +266,8 @@ class LibraryViewModel @Inject constructor(
     }
 
     private data class Transient(val importing: Boolean = false, val dialog: LibraryDialog? = null)
+
+    private data class View(val filter: LibraryFilter = LibraryFilter.ALL, val query: String = "")
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L

@@ -45,6 +45,9 @@ interface PdfDocument : Closeable {
     /** The document's Title metadata, trimmed; null when absent or blank. */
     suspend fun title(): String?
 
+    /** The document's Author metadata, trimmed; null when absent or blank. */
+    suspend fun author(): String?
+
     /** Links on page [index] (internal jumps and web links); empty when there are none or the page is unreadable. */
     suspend fun links(index: Int): List<PdfLink>
 

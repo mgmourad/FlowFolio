@@ -47,6 +47,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Theme changes are revealed in a circle growing from the touch (700 ms).
   - Status and navigation bar icons follow the app's theme.
   - Shelves and Bookmarks are placeholders until their slices.
+- Phase 1 milestone 5, Library, Shelves and Details slice:
+  - Library as in the mock: header with search, sort and import; filter chips (All, In progress, Not started,
+    Recently added); a "Continue reading" card with Resume; a row of 3D books on a plank per shelf, then the books on
+    no shelf. Long-press a book to add it to shelves, locate its file or remove it.
+  - Shelves: user collections (Room schema v3: `shelves`, `shelf_books`), cards with three books fanned out, a "New
+    shelf" card, rename and remove; tapping a shelf scrolls the library to it.
+  - Book details: blurred cover backdrop, swaying 3D cover, title, author, pills, Read/Continue and Add to shelf;
+    Overview, Details and Contents tabs (the PDF's outline; tapping a chapter opens the reader there). Two panes when
+    unfolded.
+  - The cover flies from the shelf to the details page; Read swings the cover open before the reader appears.
+  - Books keep the PDF's Author metadata (schema v3 `books.author`; books imported earlier show none until the
+    metadata slice).
+  - The backdrop blur is computed once on the CPU from a 40 px copy of the cover, not as a live GPU blur.
 - FlowFolio design language (ADR-0014): the owner's dark and light palettes (pixel-exact), glow in dark mode and
   soft shadow in light mode, rounded surfaces, own toggle and outline glyphs, themed dialogs and sheets; library,
   settings and the reader's sheets use it.
