@@ -3,6 +3,8 @@ package com.flowfolio.feature.library
 import app.cash.turbine.test
 import com.flowfolio.core.data.ImportResult
 import com.flowfolio.core.model.Availability
+import com.flowfolio.core.model.BookDetails
+import com.flowfolio.core.model.BookType
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.UserSettings
@@ -59,6 +61,20 @@ class LibraryViewModelTest {
         vm.onFilePicked("content://docs/b")
         assertNull("no dialog once the notice was seen", vm.uiState.value.dialog)
         assertEquals(StorageMode.LINK, library.imports.last().second)
+    }
+
+    @Test
+    fun typeChipsAppearOnceABookHasThatTypeAndFilterByIt() = runTest(dispatcher) {
+        library.books.value = listOf(
+            book("a", "Physics").copy(details = BookDetails(type = BookType.TEXTBOOK)),
+            book("b", "Untyped")
+        )
+        val vm = vm(seen())
+        backgroundScope.launch { vm.uiState.collect {} }
+        assertTrue(LibraryFilter.TEXTBOOKS in vm.uiState.value.filters)
+        assertTrue(LibraryFilter.NOVELS !in vm.uiState.value.filters)
+        vm.onFilter(LibraryFilter.TEXTBOOKS)
+        assertEquals(listOf("a"), vm.uiState.value.items.map { it.book.id })
     }
 
     @Test

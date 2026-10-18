@@ -13,8 +13,10 @@ data class Book(
     val passwordProtected: Boolean,
     /** Where the reader left off (0-based page), or null if the book has not been read yet. */
     val lastPage: Int? = null,
-    /** The PDF's Author metadata, or null when the file names none. */
-    val author: String? = null
+    /** The PDF's Author metadata (or what the reader typed), or null when unknown. */
+    val author: String? = null,
+    /** Subtitle, edition, publisher, description and the rest, as entered by the reader. */
+    val details: BookDetails = BookDetails()
 ) {
     /** How far through the book the reader is, 0..1 (0 when not started). */
     val progress: Float

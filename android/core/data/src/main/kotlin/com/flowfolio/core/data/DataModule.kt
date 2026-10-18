@@ -40,6 +40,9 @@ abstract class DataBindings {
     abstract fun shelves(impl: DefaultShelfRepository): ShelfRepository
 
     @Binds
+    abstract fun reading(impl: DefaultReadingRepository): ReadingRepository
+
+    @Binds
     abstract fun settings(impl: DefaultSettingsRepository): SettingsRepository
 
     @Binds

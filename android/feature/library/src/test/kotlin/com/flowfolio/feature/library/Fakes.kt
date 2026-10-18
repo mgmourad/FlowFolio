@@ -7,6 +7,7 @@ import com.flowfolio.core.data.SettingsRepository
 import com.flowfolio.core.data.ShelfRepository
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
+import com.flowfolio.core.model.BookDetails
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.PageTurn
@@ -70,6 +71,11 @@ class FakeLibrary : LibraryRepository {
 
     override suspend fun rename(bookId: String, title: String) =
         books.update { list -> list.map { if (it.id == bookId) it.copy(title = title.trim()) else it } }
+
+    override suspend fun updateDetails(bookId: String, title: String, author: String?, details: BookDetails) =
+        books.update { list ->
+            list.map { if (it.id == bookId) it.copy(title = title.trim(), author = author, details = details) else it }
+        }
 
     override suspend fun markOpened(bookId: String) {
         opened += bookId

@@ -96,10 +96,11 @@
     <string name="format_pdf">PDF</string>
     <string name="tab_overview">Overview</string>
     <string name="tab_details">Details</string>
+    <string name="tab_author">Author</string>
     <string name="tab_contents">Contents</string>
     <string name="percent_complete">%1$d%% complete</string>
-    <string name="stat_page">Page</string>
-    <string name="stat_pages">Pages</string>
+    <string name="stat_read">Read</string>
+    <string name="stat_ribbons">Ribbons</string>
     <string name="stat_shelves">Shelves</string>
     <string name="info_author">Author</string>
     <string name="info_pages">Pages</string>
@@ -107,7 +108,7 @@
     <string name="info_size">File size</string>
     <string name="info_last_opened">Last opened</string>
     <string name="info_never">Not yet</string>
-    <string name="info_unknown">Not in the file</string>
+    <string name="info_unknown">Not known yet</string>
     <string name="info_storage">Stored</string>
     <string name="info_storage_copy">A copy in FlowFolio</string>
     <string name="info_storage_link">Read from its own location</string>
@@ -162,4 +163,34 @@
     <string name="settings_conversion_where">Where books are converted</string>
     <string name="settings_conversion_detail">Books are prepared on your phone. Nothing is uploaded.</string>
     <string name="settings_conversion_value">On this device</string>
+    <!-- Slice 6: book details, reading time, Edit details -->
+    <string name="read_under_minute">&lt;1m</string>
+    <string name="read_minutes">%1$dm</string>
+    <string name="read_hours">%1$dh</string>
+    <string name="read_hours_minutes">%1$dh %2$02dm</string>
+    <string name="info_isbn">ISBN</string>
+    <string name="info_released">Released</string>
+    <string name="info_edition">Edition</string>
+    <string name="info_publisher">Publisher</string>
+    <string name="info_language">Language</string>
+    <string name="info_type">Type</string>
+    <string name="type_textbook">Textbook</string>
+    <string name="type_novel">Novel</string>
+    <string name="type_nonfiction">Non-fiction</string>
+    <string name="type_other">Other</string>
+    <string name="author_unknown">The author isn\'t known yet. Add one with Edit details in the menu.</string>
+    <string name="author_bio_missing">No bio yet. Add one with Edit details in the menu.</string>
+    <string name="author_more">Also in your library</string>
+    <string name="action_edit_details">Edit details</string>
+    <string name="edit_details_title">Edit details</string>
+    <string name="edit_section_book">Book</string>
+    <string name="edit_section_author">Author</string>
+    <string name="edit_title">Title</string>
+    <string name="edit_subtitle">Subtitle</string>
+    <string name="edit_description">About this book</string>
+    <string name="edit_author_role">Author\'s role or field</string>
+    <string name="edit_author_bio">Author bio</string>
+    <string name="edit_save">Save</string>
+    <string name="filter_textbooks">Textbooks</string>
+    <string name="filter_novels">Novels</string>
 </resources>

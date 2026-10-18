@@ -53,8 +53,8 @@ Each slice is verified on the Fold with screenshots.
 5. **Bookmarks and Settings.**
    - Bookmarks: ribbon bookmarks.
    - Settings: grouped as in the mock, with Neon glow on/off and "Conversion: On this device".
-6. **Data (Room v4).** Shelves (`shelves`, `shelf_books`) and `books.author` moved into slice 3 as Room v3, so
-   Shelves could be real collections there.
+6. **Data (Room v5, done 2026-10-18).** Shelves (`shelves`, `shelf_books`) and `books.author` moved into slice 3
+   as Room v3, and ribbons into slice 4 as v4. This slice is v5: editable details, book type and reading sessions.
    - Ribbons, book type, reading sessions.
    - Editable metadata: subtitle, edition, publisher, ISBN, description, language, release date, author bio.
 7. **Online lookup** (own ADR).

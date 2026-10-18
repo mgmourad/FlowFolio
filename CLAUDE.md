@@ -4,7 +4,7 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 1: PDF reader with page curl. Build in progress: milestones 1-4 done, milestone 5 (design) in progress: slices 1-5 done** (started 2026-10-16).
+**Phase 1: PDF reader with page curl. Build in progress: milestones 1-4 done, milestone 5 (design) in progress: slices 1-6 done** (started 2026-10-16).
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
 Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
 Build plan approved 2026-10-16: 5 milestones; check in with the product owner at milestone 3 with memory numbers.
@@ -173,6 +173,9 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     or the home screen. Delete pulled dumps after parsing.
 23. The reader bars hide 10 seconds after the last interaction; a UI dump taken later will not find them.
 24. Bookmarks are stored per page (one ribbon per page; adding again recolours it). The Bookmarks tab is slice 5.
+26. Room is at schema v5 (`android/core/database/schemas`): books carry editable details and `book_type`;
+    `reading_sessions` holds time read (`ReadingTimeViewModel`, `SessionTracker`). Device checks add real sessions to
+    the owner's totals; keep reader visits short or say so.
 25. The reader's panels (Contents, Go to page, ribbon colours, "Aa") are drawn in the reader's window (`ReaderPanels`),
     not as sheets or dialogs, so glass can blur the page; their tags are resource ids. The bars and panels use
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.

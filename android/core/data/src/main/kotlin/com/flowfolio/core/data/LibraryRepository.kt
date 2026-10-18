@@ -2,6 +2,7 @@ package com.flowfolio.core.data
 
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
+import com.flowfolio.core.model.BookDetails
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.StorageMode
 import kotlinx.coroutines.flow.Flow
@@ -33,6 +34,9 @@ interface LibraryRepository {
 
     /** Gives the book a new title in the library ([title] trimmed, not blank). The file is not changed. */
     suspend fun rename(bookId: String, title: String)
+
+    /** Saves what the reader edited: the title (not blank), the author and the details. Blank fields become unknown. */
+    suspend fun updateDetails(bookId: String, title: String, author: String?, details: BookDetails)
 }
 
 sealed interface ImportResult {
