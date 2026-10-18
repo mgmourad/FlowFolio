@@ -43,4 +43,22 @@
     <string name="reader_turn_slide">Slide</string>
     <string name="reader_turn_scroll">Scroll</string>
     <string name="reader_layout">Layout</string>
+    <string name="reader_ribbons_in_book">Ribbons in this book</string>
+    <string name="reader_direction">Reading direction</string>
+    <string name="reader_direction_ltr">Left to right</string>
+    <string name="reader_direction_rtl">Right to left</string>
+    <string name="reader_direction_note">For Arabic, Hebrew and other right-to-left books. Applies to this book only.</string>
+    <string name="reader_annotations">Annotations</string>
+    <string name="reader_annotations_empty">Press and hold on a word to select it, drag to select more, then pick a highlighter colour or add a note.</string>
+    <string name="reader_note">Note</string>
+    <string name="reader_note_title">Note</string>
+    <string name="reader_share">Share</string>
+    <string name="reader_copy">Copy</string>
+    <string name="reader_delete">Delete</string>
+    <string name="reader_save">Save</string>
+    <string name="highlight_yellow">Yellow</string>
+    <string name="highlight_green">Green</string>
+    <string name="highlight_blue">Blue</string>
+    <string name="highlight_pink">Pink</string>
+    <string name="highlight_purple">Purple</string>
 </resources>

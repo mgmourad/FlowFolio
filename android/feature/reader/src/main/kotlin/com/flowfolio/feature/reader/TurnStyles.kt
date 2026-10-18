@@ -270,31 +270,36 @@ internal class EdgeBounce {
  * Watches (without consuming) horizontal swipes and side taps on the book; when they would go past the first or last
  * unit, plays [bounce]. Applies the bounce offset to the content.
  */
-internal fun Modifier.edgeBounce(bounce: EdgeBounce, atStart: Boolean, atEnd: Boolean): Modifier = composed {
-    val scope = rememberCoroutineScope()
-    val start by rememberUpdatedState(atStart)
-    val end by rememberUpdatedState(atEnd)
-    val distance = with(LocalDensity.current) { BOUNCE_DISTANCE.toPx() }
-    graphicsLayer { translationX = bounce.offset.value }
-        .pointerInput(Unit) {
-            awaitEachGesture {
-                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
-                var dx = 0f
-                var lifted = false
-                while (!lifted) {
-                    val change = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull { it.id == down.id }
-                    if (change == null || !change.pressed) {
-                        lifted = true
-                        val up = change?.position ?: down.position
-                        dx = up.x - down.position.x
-                        val direction = turnDirection(dx, up.x, size.width.toFloat(), viewConfiguration.touchSlop)
-                        val blocked = if (direction < 0) start else direction > 0 && end
-                        if (blocked) scope.launch { bounce.bounce(direction, distance) }
+internal fun Modifier.edgeBounce(bounce: EdgeBounce, atStart: Boolean, atEnd: Boolean, reversed: Boolean): Modifier =
+    composed {
+        val scope = rememberCoroutineScope()
+        val start by rememberUpdatedState(atStart)
+        val end by rememberUpdatedState(atEnd)
+        val rev by rememberUpdatedState(reversed)
+        val distance = with(LocalDensity.current) { BOUNCE_DISTANCE.toPx() }
+        graphicsLayer { translationX = bounce.offset.value }
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                    var dx = 0f
+                    var lifted = false
+                    while (!lifted) {
+                        val change = awaitPointerEvent(PointerEventPass.Initial).changes
+                            .firstOrNull { it.id == down.id }
+                        if (change == null || !change.pressed) {
+                            lifted = true
+                            val up = change?.position ?: down.position
+                            dx = up.x - down.position.x
+                            val direction = turnDirection(dx, up.x, size.width.toFloat(), viewConfiguration.touchSlop)
+                            // Right to left, a swipe right goes forward; the nudge still follows the finger.
+                            val logical = if (rev) -direction else direction
+                            val blocked = if (logical < 0) start else logical > 0 && end
+                            if (blocked) scope.launch { bounce.bounce(direction, distance) }
+                        }
                     }
                 }
             }
-        }
-}
+    }
 
 /**
  * Which way a gesture turns: a swipe of [dx] (right = back, left = forward), or for a tap at [x] (a move under

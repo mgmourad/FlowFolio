@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -27,6 +28,7 @@ import com.flowfolio.core.designsystem.FlowFolioPalette
 import com.flowfolio.core.designsystem.GlassStyle
 import com.flowfolio.core.designsystem.LocalGlassState
 import com.flowfolio.core.designsystem.LocalGlassStyle
+import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.feature.reader.layout.ReaderLayout
@@ -72,6 +74,17 @@ private class Overlay {
         panel = if (panel == which) Panel.NONE else which
     }
 
+    /** Acts on a routed tap; true when it was not a page turn (so the page should not see it). */
+    fun handle(target: PageFrames.TapTarget, jump: (Int) -> Unit): Boolean {
+        when (target) {
+            is PageFrames.TapTarget.Jump -> jump(target.page)
+            is PageFrames.TapTarget.Web -> webLink = target.uri
+            PageFrames.TapTarget.Centre -> toggle()
+            PageFrames.TapTarget.Page -> Unit
+        }
+        return target != PageFrames.TapTarget.Page
+    }
+
     fun closeAll() {
         panel = Panel.NONE
         shownAt = null
@@ -89,59 +102,80 @@ internal fun BoxScope.ReadyReader(
     onBack: () -> Unit
 ) {
     val links by viewModel.links.collectAsStateWithLifecycle()
+    val rtl = LocalRightToLeft.current
     val marks by bookmarks.bookmarks.collectAsStateWithLifecycle()
-    val mark = chromeMark(s, marks, bookmarks)
     val bounce = remember { EdgeBounce() }
     val haze = rememberHazeState()
     val tiles by viewModel.tiles.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
     val overlay = remember { Overlay() }
-    LaunchedEffect(overlay.shownAt, overlay.panel) {
-        if (overlay.shownAt != null && overlay.panel == Panel.NONE) {
-            delay(CONTROLS_VISIBLE_MS)
-            overlay.shownAt = null
-        }
-    }
+    AutoHide(overlay)
     LaunchedEffect(s.unit, s.layout, s.coverAlone) { overlay.zoom = null } // a jump or fold/unfold leaves zoom
     val jump = { page: Int ->
         viewModel.goToPage(page)
         overlay.closeAll()
     }
     val framesFor = { size: IntSize ->
-        PageFrames.of(s, size) { page -> images[page]?.let { IntSize(it.width, it.height) } }
+        PageFrames.of(s, size, rtl) { page -> images[page]?.let { IntSize(it.width, it.height) } }
     }
+    val annotating = rememberAnnotating(s, viewModel, navigation, framesFor)
+    val mark = chromeMark(s, marks, bookmarks, annotating.all)
+    // A tap on a highlight opens its menu; otherwise links, the centre and page turns as before.
     val onTap = { tap: Offset, size: IntSize ->
-        val target = PageFrames.route(tap, size, framesFor(size), links)
-        when (target) {
-            is PageFrames.TapTarget.Jump -> jump(target.page)
-            is PageFrames.TapTarget.Web -> overlay.webLink = target.uri
-            PageFrames.TapTarget.Centre -> overlay.toggle()
-            PageFrames.TapTarget.Page -> Unit
-        }
-        target != PageFrames.TapTarget.Page
+        annotating.tap(tap, size) || overlay.handle(PageFrames.route(tap, size, framesFor(size), links), jump)
     }
     Box(
         Modifier
             .fillMaxSize()
             .hazeSource(haze)
+            .annotate(annotating, enabled = overlay.zoom == null && s.turn != PageTurn.SCROLL)
             .interceptTaps(onTap)
             .pinchGestures(overlay::pinch, overlay::endPinch)
-            .edgeBounce(bounce, atStart = s.unit <= 0, atEnd = s.unit >= s.unitCount - 1)
+            .edgeBounce(bounce, atStart = s.unit <= 0, atEnd = s.unit >= s.unitCount - 1, reversed = rtl)
     ) {
         // Recreate the page state when the layout or turn style changes (fold/unfold, Aa); the ViewModel keeps the
         // position.
-        key(s.layout, s.coverAlone, s.tone, s.turn) {
-            BookPages(s, images, s.pageAspect, viewModel::onUnitShown)
+        key(s.layout, s.coverAlone, s.tone, s.turn, rtl) {
+            CompositionLocalProvider(LocalHighlights provides annotating.byPage()) {
+                MirroredBook(rtl && s.turn != PageTurn.SCROLL) {
+                    BookPages(s, images, s.pageAspect, viewModel::onUnitShown)
+                }
+            }
         }
     }
     overlay.zoom?.let { ZoomView(it, framesFor, images, tiles, viewModel::showTiles, onExit = { overlay.zoom = null }) }
     if (overlay.zoom == null) {
-        CompositionLocalProvider(LocalGlassState provides haze) { Controls(s, navigation, overlay, mark, onBack, jump) }
+        CompositionLocalProvider(LocalGlassState provides haze) {
+            AnnotatingLayer(annotating, s)
+            Controls(s, navigation, overlay, mark, onBack, jump)
+        }
     }
     overlay.webLink?.let { uri ->
         WebLinkDialog(uri, onOpen = { runCatching { uriHandler.openUri(uri) } }, onDismiss = { overlay.webLink = null })
     }
     EdgeGuards()
+}
+
+/** Hides the bars [CONTROLS_VISIBLE_MS] after they were last used, unless a panel is open. */
+@Composable
+private fun AutoHide(overlay: Overlay) {
+    LaunchedEffect(overlay.shownAt, overlay.panel) {
+        if (overlay.shownAt != null && overlay.panel == Panel.NONE) {
+            delay(CONTROLS_VISIBLE_MS)
+            overlay.shownAt = null
+        }
+    }
+}
+
+/**
+ * Right to left: the whole book is mirrored (the curl lifts from the left, a spread starts on the right) and each page
+ * mirrors itself back, so pages read normally. Scroll runs top to bottom either way and is never mirrored.
+ */
+@Composable
+private fun MirroredBook(mirrored: Boolean, content: @Composable () -> Unit) {
+    Box(Modifier.fillMaxSize().graphicsLayer { scaleX = if (mirrored) -1f else 1f }) {
+        CompositionLocalProvider(LocalMirroredPages provides mirrored, content = content)
+    }
 }
 
 /**
@@ -201,10 +235,17 @@ internal fun pagesInView(s: ReaderState.Ready): List<Int> =
  * The bookmark button's view of the pages in view: the ribbon on any of them, and marking puts a ribbon on the first
  * (the left page of a spread); removing takes ribbons off all of them.
  */
-private fun chromeMark(s: ReaderState.Ready, marks: List<Bookmark>, bookmarks: ReaderBookmarksViewModel): ChromeMark {
+private fun chromeMark(
+    s: ReaderState.Ready,
+    marks: List<Bookmark>,
+    bookmarks: ReaderBookmarksViewModel,
+    notes: List<Annotation>
+): ChromeMark {
     val inView = pagesInView(s)
     return ChromeMark(
         color = marks.firstOrNull { it.page in inView }?.color,
+        all = marks,
+        notes = notes,
         onMark = { bookmarks.mark(inView.first(), it) },
         onUnmark = { inView.forEach(bookmarks::unmark) }
     )

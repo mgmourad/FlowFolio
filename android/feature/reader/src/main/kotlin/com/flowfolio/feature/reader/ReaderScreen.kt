@@ -40,9 +40,11 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -72,8 +74,10 @@ fun ReaderScreen(
     onBack: () -> Unit,
     viewModel: ReaderViewModel = hiltViewModel(),
     bookmarks: ReaderBookmarksViewModel = hiltViewModel(),
-    readingTime: ReadingTimeViewModel = hiltViewModel()
+    readingTime: ReadingTimeViewModel = hiltViewModel(),
+    direction: ReaderSettingsViewModel = hiltViewModel()
 ) {
+    val rightToLeft by direction.rightToLeft.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val images by viewModel.pageImages.collectAsStateWithLifecycle()
     val navigation by viewModel.navigation.collectAsStateWithLifecycle()
@@ -90,7 +94,11 @@ fun ReaderScreen(
 
     val tone = (state as? ReaderState.Ready)?.tone ?: PageTone.PRINTED
     val marks by bookmarks.bookmarks.collectAsStateWithLifecycle()
-    CompositionLocalProvider(LocalTone provides tone, LocalRibbons provides marks.associate { it.page to it.color }) {
+    CompositionLocalProvider(
+        LocalTone provides tone,
+        LocalRibbons provides marks.associate { it.page to it.color },
+        LocalRightToLeft provides rightToLeft
+    ) {
         PaperRevealHost(FlowFolio.palette.dark, state, images) {
             StatusBarForPaper(LocalPaperReveal.current?.fromTone ?: tone)
             ReaderRoot(state, images, navigation, viewModel, bookmarks, onBack)
@@ -205,7 +213,7 @@ internal fun SpreadReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap
  * forward on its right half; the right page of a spread taps forward anywhere (its left page taps back).
  */
 @Composable
-private fun swipeAnywhereConfig(rightPageOfSpread: Boolean = false) = rememberPageCurlConfig(
+private fun swipeAnywhereConfig(rightPageOfSpread: Boolean = false): PageCurlConfig = rememberPageCurlConfig(
     backPageColor = PAPER,
     dragInteraction = PageCurlConfig.GestureDragInteraction(),
     tapBackwardEnabled = !rightPageOfSpread,
@@ -214,7 +222,10 @@ private fun swipeAnywhereConfig(rightPageOfSpread: Boolean = false) = rememberPa
     } else {
         PageCurlConfig.TargetTapInteraction()
     }
-)
+).also {
+    // Right to left the book is drawn mirrored; the back of the turning sheet must not be.
+    it.flipBackPage = LocalMirroredPages.current
+}
 
 /**
  * The curl state for this layout, created once from the unit the reader opened at. pagecurl keys its state on
@@ -253,10 +264,21 @@ internal fun PagePane(
     modifier: Modifier = Modifier.fillMaxSize()
 ) {
     val ribbon = LocalRibbons.current[page]
+    val mirrored = LocalMirroredPages.current
     Box(modifier.background(PAPER).pageShading(spine, shadingStrength, isDarkPaper), contentAlignment = alignment) {
         if (image != null) {
-            Box {
-                Image(image, contentDescription = null, contentScale = ContentScale.None)
+            Box(Modifier.graphicsLayer { scaleX = if (mirrored) -1f else 1f }) {
+                val highlights = LocalHighlights.current[page].orEmpty()
+                val dark = isDarkPaper
+                Image(
+                    image,
+                    contentDescription = null,
+                    contentScale = ContentScale.None,
+                    modifier = Modifier.drawWithContent {
+                        drawContent()
+                        drawHighlights(highlights, dark)
+                    }
+                )
                 ribbon?.let {
                     Ribbon(
                         it.color,

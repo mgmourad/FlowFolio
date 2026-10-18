@@ -18,6 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.BookOpeningHost
+import com.flowfolio.core.designsystem.CoverFlightHost
 import com.flowfolio.core.designsystem.DesignCatalog
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioSplash
@@ -69,7 +70,7 @@ class MainActivity : ComponentActivity() {
                         BookOpeningHost(
                             paper = reading.paperStyle.tone(FlowFolio.palette.dark).paper,
                             spread = { w, h -> reading.opensAsSpread(w, h) }
-                        ) { FlowFolioApp(appViewModel) }
+                        ) { CoverFlightHost { FlowFolioApp(appViewModel) } }
                         if (splash) FlowFolioSplash(stringResource(R.string.splash_tagline)) { splash = false }
                     }
                 }

@@ -81,7 +81,9 @@ internal data class BookRowActions(
     val onRename: (Book) -> Unit,
     val onDelete: (Book) -> Unit,
     val onShelves: (Book) -> Unit,
-    val onLocate: (Book) -> Unit
+    val onLocate: (Book) -> Unit,
+    /** The book's ribbons (its Bookmarks page). */
+    val onBookmarks: (Book) -> Unit = {}
 )
 
 /**
@@ -92,6 +94,7 @@ internal data class BookRowActions(
 fun ShelfPageScreen(
     onBack: () -> Unit,
     onOpenDetails: (Book, String) -> Unit,
+    onBookmarks: (Book) -> Unit = {},
     viewModel: ShelfPageViewModel = hiltViewModel(),
     shelvesVm: ShelvesViewModel = hiltViewModel()
 ) {
@@ -118,7 +121,8 @@ fun ShelfPageScreen(
         onLocate = {
             relinkId = it.id
             relink.launch(arrayOf("application/pdf"))
-        }
+        },
+        onBookmarks = onBookmarks
     )
     ShelfPageContent(state, onBack, actions)
     BookPromptDialogs(prompt, state, viewModel, shelvesVm) { prompt = null }
@@ -249,7 +253,8 @@ private fun BookTile(item: LibraryItem, actions: BookRowActions) {
                 onDelete = actions.onDelete,
                 onLocate = actions.onLocate,
                 onAddToShelf = actions.onShelves,
-                onRename = actions.onRename
+                onRename = actions.onRename,
+                onBookmarks = actions.onBookmarks
             ),
             width = TILE_BOOK_WIDTH,
             height = TILE_BOOK_HEIGHT
@@ -273,12 +278,16 @@ private fun BookListRow(item: LibraryItem, actions: BookRowActions) {
     val book = item.book
     val linked = book.storage is BookStorage.Linked
     SwipeRow(
-        startWidth = if (linked) ACTION_WIDTH * 2 else ACTION_WIDTH,
+        startWidth = if (linked) ACTION_WIDTH * 3 else ACTION_WIDTH * 2,
         endWidth = ACTION_WIDTH * 2,
         start = { close ->
             SwipeAction(R.string.action_add_to_shelf, Glyph.Shelves, FlowFolio.palette.item) {
                 close()
                 actions.onShelves(book)
+            }
+            SwipeAction(R.string.action_bookmarks, Glyph.Bookmark, FlowFolio.palette.subItem) {
+                close()
+                actions.onBookmarks(book)
             }
             if (linked) {
                 SwipeAction(R.string.action_locate, Glyph.Search, FlowFolio.palette.title) {

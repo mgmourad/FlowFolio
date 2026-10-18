@@ -16,7 +16,9 @@ data class Book(
     /** The PDF's Author metadata (or what the reader typed), or null when unknown. */
     val author: String? = null,
     /** Subtitle, edition, publisher, description and the rest, as entered by the reader. */
-    val details: BookDetails = BookDetails()
+    val details: BookDetails = BookDetails(),
+    /** Pages run right to left (Arabic and other right-to-left books); set per book in the reader. */
+    val rightToLeft: Boolean = false
 ) {
     /** How far through the book the reader is, 0..1 (0 when not started). */
     val progress: Float

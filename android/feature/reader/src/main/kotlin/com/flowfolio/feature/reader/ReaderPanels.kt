@@ -66,14 +66,18 @@ internal fun BoxScope.ReaderPanels(
     DropPanel(panel == Panel.CONTENTS, CONTENTS_WIDTH, fillDown = true) {
         ContentsList(navigation.outline, navigation.labels, s.anchorPage, jump)
     }
+    DropPanel(panel == Panel.ANNOTATIONS, CONTENTS_WIDTH, fillDown = true) {
+        AnnotationList(mark.notes, navigation, jump)
+    }
     DropPanel(panel == Panel.GO_TO, GO_TO_WIDTH) {
         GoToForm(navigation.labels, s.pageCount, jump, onDismiss)
     }
-    DropPanel(panel == Panel.MARK, width = null) {
+    DropPanel(panel == Panel.MARK, RIBBONS_WIDTH) {
         ColourStrip(mark) { chosen ->
             if (chosen == null) mark.onUnmark() else mark.onMark(chosen)
             onDismiss()
         }
+        RibbonList(mark.all, navigation, jump)
     }
     SheetPanel(panel == Panel.SETTINGS) { ReaderSettingsContent() }
 }
@@ -170,6 +174,7 @@ private val TOP_BAR_CLEARANCE = 64.dp
 private val BOTTOM_BAR_CLEARANCE = 92.dp
 private val CONTENTS_WIDTH = 520.dp
 private val GO_TO_WIDTH = 420.dp
+private val RIBBONS_WIDTH = 380.dp
 private val SHEET_WIDTH = 600.dp
 private val SHEET_INSET = 10.dp
 private const val SHEET_MS = 600

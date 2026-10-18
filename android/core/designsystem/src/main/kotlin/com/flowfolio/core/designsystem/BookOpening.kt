@@ -134,9 +134,9 @@ private fun OpeningOverlay(o: Opening, paper: Color, spread: (Float, Float) -> B
                 // Shut the cover over the page, leave the reader under it, then fly the book home.
                 hinge.animateTo(0f, tween(HINGE_MS, easing = Hinge))
                 o.onTurn()
-                flight.animateTo(0f, tween(FLIGHT_MS, easing = Flight))
+                flight.animateTo(0f, tween(FLIGHT_MS, easing = FlightEasing))
             } else {
-                flight.animateTo(1f, tween(FLIGHT_MS, easing = Flight))
+                flight.animateTo(1f, tween(FLIGHT_MS, easing = FlightEasing))
                 o.onTurn()
                 hinge.animateTo(1f, tween(HINGE_MS, easing = Hinge))
             }
@@ -165,6 +165,9 @@ private fun OpeningOverlay(o: Opening, paper: Color, spread: (Float, Float) -> B
                     transformOrigin = TransformOrigin(0f, 0.5f)
                     // Flight: turned like the shelf book, coming round to face the reader. Swing: open on the spine.
                     rotationY = lerp(o.angle, 0f, f) - OPEN_ANGLE * t
+                    // The flat leaf hands over to (or takes over from) the 3D book on the shelf with a short
+                    // crossfade, so landing does not snap from one drawing to the other.
+                    alpha = (f / HANDOFF).coerceIn(0f, 1f)
                 }
         )
     }
@@ -252,10 +255,13 @@ const val SHELF_ANGLE = 26f
 
 private const val FLIGHT_MS = 520
 private const val HINGE_MS = 720
-private val Flight = CubicBezierEasing(0.2f, 0.9f, 0.2f, 1f)
+private val FlightEasing = CubicBezierEasing(0.2f, 0.9f, 0.2f, 1f)
 private val Hinge = CubicBezierEasing(0.45f, 0.05f, 0.25f, 1f)
 private const val OPEN_ANGLE = 180f
 private const val EDGE_ON = 0.5f
+
+/** The first (or, closing, the last) part of the flight in which the leaf fades in (or out) over the shelf book. */
+private const val HANDOFF = 0.22f
 private const val MELT_FROM = 0.45f
 private const val CAMERA = 14f
 private const val TURN_SHADE = 0.45f

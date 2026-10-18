@@ -224,6 +224,12 @@ public class PageCurlConfig(
     public var backPageContentAlpha: Float by mutableStateOf(backPageContentAlpha)
 
     /**
+     * FlowFolio: flips the back-page image once more, for a book drawn mirrored (right-to-left reading), so the back
+     * of the turning sheet reads the right way round on screen.
+     */
+    public var flipBackPage: Boolean by mutableStateOf(false)
+
+    /**
      * The color of the shadow. In majority of use-cases it should be set to the inverted color to the content
      * background color. Should be a solid color, see [shadowAlpha] to adjust opacity.
      */

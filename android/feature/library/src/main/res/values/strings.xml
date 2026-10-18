@@ -193,4 +193,22 @@
     <string name="edit_save">Save</string>
     <string name="filter_textbooks">Textbooks</string>
     <string name="filter_novels">Novels</string>
+    <string name="action_bookmarks">Bookmarks</string>
+    <string name="bookmarks_of">Ribbons in %1$s</string>
+    <!-- Annotations tab -->
+    <string name="annotations_title">Annotations</string>
+    <plurals name="highlight_count">
+        <item quantity="one">%d highlight</item>
+        <item quantity="other">%d highlights</item>
+    </plurals>
+    <plurals name="note_count">
+        <item quantity="one">%d note</item>
+        <item quantity="other">%d notes</item>
+    </plurals>
+    <string name="annotations_counts">%1$s · %2$s</string>
+    <string name="annotations_empty_title">No highlights yet</string>
+    <string name="annotations_empty_body">While reading, press and hold on a word, drag to select more, then pick a highlighter colour or add a note. Your highlights gather here, book by book.</string>
+    <string name="annotation_where">p. %1$s · %2$s</string>
+    <string name="action_share">Share</string>
+    <string name="action_note">Note</string>
 </resources>

@@ -43,6 +43,9 @@ abstract class DataBindings {
     abstract fun reading(impl: DefaultReadingRepository): ReadingRepository
 
     @Binds
+    abstract fun annotations(impl: DefaultAnnotationRepository): AnnotationRepository
+
+    @Binds
     abstract fun settings(impl: DefaultSettingsRepository): SettingsRepository
 
     @Binds

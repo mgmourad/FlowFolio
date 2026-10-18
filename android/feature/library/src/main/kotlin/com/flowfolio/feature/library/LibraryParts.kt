@@ -44,6 +44,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.flowfolio.core.designsystem.Book3D
+import com.flowfolio.core.designsystem.CoverSpot
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioChip
@@ -54,10 +55,13 @@ import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
 import com.flowfolio.core.designsystem.FlowFolioProgressBar
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.LocalCoverFlights
+import com.flowfolio.core.designsystem.SHELF_ANGLE
 import com.flowfolio.core.designsystem.ShelfPlank
-import com.flowfolio.core.designsystem.coverKey
+import com.flowfolio.core.designsystem.coverLanding
 import com.flowfolio.core.designsystem.coverSpot
-import com.flowfolio.core.designsystem.sharedCover
+import com.flowfolio.core.designsystem.detailsCoverKey
+import com.flowfolio.core.designsystem.shelfCoverKey
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
@@ -282,6 +286,9 @@ internal fun ShelfBook(
     val pressed by source.collectIsPressedAsState()
     var menu by remember { mutableStateOf(false) }
     val cover by rememberCover(book)
+    val flights = LocalCoverFlights.current
+    val spot = remember { CoverSpot() }
+    spot.face = book.face(cover)
     Column(Modifier.width(width + BOOK_SPINE_ROOM)) {
         Box(
             Modifier
@@ -290,7 +297,11 @@ internal fun ShelfBook(
                 .combinedClickable(
                     interactionSource = source,
                     indication = null,
-                    onClick = { actions.onOpen(item, origin) },
+                    onClick = {
+                        // The cover flies to the details page; a missing book goes to Locate instead.
+                        if (item.availability != Availability.MISSING) flights?.launch(spot, detailsCoverKey(book.id))
+                        actions.onOpen(item, origin)
+                    },
                     onLongClick = { menu = true }
                 )
         ) {
@@ -298,7 +309,7 @@ internal fun ShelfBook(
                 book.face(cover),
                 width,
                 height,
-                modifier = Modifier.sharedCover(coverKey(book.id, origin)),
+                modifier = Modifier.coverSpot(spot).coverLanding(shelfCoverKey(book.id, origin), SHELF_ANGLE),
                 lifted = pressed
             )
             BookBadge(item, Modifier.align(Alignment.TopStart))
@@ -323,6 +334,12 @@ private fun BookMenu(item: LibraryItem, open: Boolean, actions: LibraryActions, 
         MenuEntry(R.string.action_add_to_shelf) {
             onClose()
             actions.onAddToShelf(item.book)
+        }
+        actions.onBookmarks?.let { bookmarks ->
+            MenuEntry(R.string.action_bookmarks) {
+                onClose()
+                bookmarks(item.book)
+            }
         }
         actions.onRename?.let { rename ->
             MenuEntry(R.string.action_rename) {

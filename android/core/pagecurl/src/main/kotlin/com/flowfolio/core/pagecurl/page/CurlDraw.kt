@@ -190,10 +190,10 @@ private fun CacheDrawScope.prepareCurl(
                     // own mirror transform shows it the right way round once the sheet lands.
                     drawRect(config.backPageColor)
                     withTransform({ scale(-1f, 1f, pivot = Offset(size.width / 2f, 0f)) }) {
-                        drawImage(
-                            backPage,
-                            topLeft = Offset(size.width - backPage.width, (size.height - backPage.height) / 2f),
-                        )
+                        val topLeft = Offset(size.width - backPage.width, (size.height - backPage.height) / 2f)
+                        val flip = if (config.flipBackPage) -1f else 1f
+                        val centre = Offset(topLeft.x + backPage.width / 2f, 0f)
+                        withTransform({ scale(flip, 1f, pivot = centre) }) { drawImage(backPage, topLeft = topLeft) }
                         // The left page's own gutter shadow at its binding edge, so nothing pops in when it lands.
                         val gutter = size.width * BACK_GUTTER_FRACTION
                         drawRect(

@@ -62,6 +62,7 @@ import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioChip
 import com.flowfolio.core.designsystem.FlowFolioGlyph
+import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalBookOpener
@@ -81,7 +82,11 @@ import com.flowfolio.core.model.BookmarkColor
  * recolour it, left to remove it. Highlights and notes join it once text selection exists.
  */
 @Composable
-fun BookmarksScreen(onRead: (Book) -> Unit, viewModel: BookmarksViewModel = hiltViewModel()) {
+fun BookmarksScreen(
+    onRead: (Book) -> Unit,
+    onBack: (() -> Unit)? = null,
+    viewModel: BookmarksViewModel = hiltViewModel()
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val opener = LocalBookOpener.current
     BookmarksContent(
@@ -95,7 +100,8 @@ fun BookmarksScreen(onRead: (Book) -> Unit, viewModel: BookmarksViewModel = hilt
             },
             onRecolour = viewModel::recolour,
             onRemove = viewModel::remove,
-            onFilter = viewModel::setFilter
+            onFilter = viewModel::setFilter,
+            onBack = onBack
         )
     )
 }
@@ -118,7 +124,7 @@ fun BookmarksContent(state: BookmarksUiState, actions: BookmarkActions) {
             verticalArrangement = Arrangement.spacedBy(GRID_GAP),
             modifier = Modifier.fillMaxSize()
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) { BookmarksHeader(state, Modifier.reveal(0)) }
+            item(span = { GridItemSpan(maxLineSpan) }) { BookmarksHeader(state, actions.onBack, Modifier.reveal(0)) }
             if (state.colours.size > 1) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     ColourFilter(state.colours, state.filter, actions.onFilter, Modifier.reveal(1))
@@ -133,10 +139,24 @@ fun BookmarksContent(state: BookmarksUiState, actions: BookmarkActions) {
 }
 
 @Composable
-private fun BookmarksHeader(state: BookmarksUiState, modifier: Modifier) {
+private fun BookmarksHeader(state: BookmarksUiState, onBack: (() -> Unit)?, modifier: Modifier) {
     Column(modifier.padding(start = 4.dp, top = 10.dp, bottom = 4.dp)) {
-        Text(stringResource(R.string.bookmarks_title), style = FlowFolioType.screenTitle.merge(FlowFolio.title))
-        if (state.total > 0) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            onBack?.let {
+                FlowFolioIconButton(onClick = it, glass = true, modifier = Modifier.padding(end = 14.dp)) {
+                    FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = FlowFolio.palette.text)
+                }
+            }
+            Text(stringResource(R.string.bookmarks_title), style = FlowFolioType.screenTitle.merge(FlowFolio.title))
+        }
+        val book = state.book
+        if (book != null) {
+            Text(
+                stringResource(R.string.bookmarks_of, book.title),
+                style = FlowFolioType.sub.merge(FlowFolio.hint),
+                modifier = Modifier.padding(top = 6.dp)
+            )
+        } else if (state.total > 0) {
             Text(
                 stringResource(
                     R.string.bookmarks_sub,
@@ -323,7 +343,7 @@ private fun BookmarkCard(item: BookmarkItem, uniform: Boolean, onOpen: (CoverSpo
 
 /** `.mini`: a small flat cover with a book's corners and a soft shadow. */
 @Composable
-private fun MiniCover(book: Book, cover: CoverArt?, modifier: Modifier) {
+internal fun MiniCover(book: Book, cover: CoverArt?, modifier: Modifier) {
     val shape = RoundedCornerShape(topStart = 2.dp, bottomStart = 2.dp, topEnd = 5.dp, bottomEnd = 5.dp)
     val colours = cover?.colors ?: BookColors.Default
     Box(

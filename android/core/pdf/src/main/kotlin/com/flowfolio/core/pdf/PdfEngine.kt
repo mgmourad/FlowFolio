@@ -51,6 +51,9 @@ interface PdfDocument : Closeable {
     /** Links on page [index] (internal jumps and web links); empty when there are none or the page is unreadable. */
     suspend fun links(index: Int): List<PdfLink>
 
+    /** Page [index]'s text and where each character is (for selection). @throws PdfException.PageError. */
+    suspend fun pageText(index: Int): PageText
+
     /** Closes the document. Further calls throw [PdfException.Closed]. Safe to call more than once. */
     override fun close()
 }
@@ -88,5 +91,31 @@ data class RenderRegion(val pageWidthPx: Int, val pageHeightPx: Int, val offsetX
 
     companion object {
         fun fullPage(widthPx: Int, heightPx: Int) = RenderRegion(widthPx, heightPx)
+    }
+}
+
+/**
+ * A page's text in reading order (PDFium's), with a box per character in [boxes]: left, top, right, bottom as
+ * fractions of the page (0..1 from the top left), or -1s for characters without a box (generated line breaks).
+ */
+class PageText(val text: String, val boxes: FloatArray) {
+    val length: Int get() = text.length
+
+    fun hasBox(i: Int): Boolean = boxes[i * FIELDS] >= 0f
+
+    fun left(i: Int) = boxes[i * FIELDS]
+
+    fun top(i: Int) = boxes[i * FIELDS + TOP]
+
+    fun right(i: Int) = boxes[i * FIELDS + RIGHT]
+
+    fun bottom(i: Int) = boxes[i * FIELDS + BOTTOM]
+
+    companion object {
+        /** Floats per character in [boxes]: left, top, right, bottom. */
+        const val FIELDS = 4
+        private const val TOP = 1
+        private const val RIGHT = 2
+        private const val BOTTOM = 3
     }
 }

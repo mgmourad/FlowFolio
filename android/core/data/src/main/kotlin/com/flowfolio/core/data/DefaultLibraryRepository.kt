@@ -217,7 +217,8 @@ internal fun BookEntity.toBook() = Book(
         authorRole = authorRole,
         authorBio = authorBio,
         type = BookType.entries.firstOrNull { it.name == bookType }
-    )
+    ),
+    rightToLeft = rightToLeft
 )
 
 /** Trimmed, and null when blank, so an emptied field reads as unknown. */

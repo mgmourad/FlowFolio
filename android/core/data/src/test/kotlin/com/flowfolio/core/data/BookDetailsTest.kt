@@ -7,6 +7,9 @@ import com.flowfolio.core.database.BookEntity
 import com.flowfolio.core.database.FlowFolioDatabase
 import com.flowfolio.core.model.BookDetails
 import com.flowfolio.core.model.BookType
+import com.flowfolio.core.model.HighlightColor
+import com.flowfolio.core.model.PageRect
+import com.flowfolio.core.model.Passage
 import java.io.File
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -82,5 +85,26 @@ class BookDetailsTest {
         assertEquals(120_000L, reading.observeReadMillis("b").first())
         db.bookDao().delete("b")
         assertEquals(0L, reading.observeReadMillis("b").first())
+    }
+
+    @Test
+    fun annotationsKeepTheirPlaceColourAndNote() = runTest {
+        insert()
+        val repo =
+            DefaultAnnotationRepository(db.annotationDao(), db.bookReadingDao(), { 5L }, UnconfinedTestDispatcher())
+        val rects = listOf(PageRect(0.1f, 0.2f, 0.5f, 0.23f), PageRect(0.1f, 0.24f, 0.3f, 0.27f))
+        val id = repo.add("b", Passage(4, "285", 10..42, "Drag force is", rects), HighlightColor.GREEN, note = "  ")
+        repo.setNote(id, "Exam!")
+        val a = repo.observe("b").first().single()
+        assertEquals(4, a.page)
+        assertEquals("285", a.label)
+        assertEquals(10, a.start)
+        assertEquals(rects, a.rects)
+        assertEquals(HighlightColor.GREEN, a.color)
+        assertEquals("Exam!", a.note)
+        repo.setRightToLeft("b", true)
+        assertEquals(true, library.observeBook("b").first()!!.rightToLeft)
+        db.bookDao().delete("b")
+        assertEquals(0, repo.observeAll().first().size)
     }
 }

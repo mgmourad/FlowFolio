@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -35,13 +36,18 @@ import androidx.navigation.navArgument
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.LocalBookOpener
+import com.flowfolio.core.designsystem.LocalChromePadding
 import com.flowfolio.core.designsystem.LocalDestinationScope
 import com.flowfolio.core.designsystem.LocalSharedTransition
 import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.ScreenEntrance
 import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.reveal
+import com.flowfolio.feature.library.AnnotationsScreen
+import com.flowfolio.feature.library.AnnotationsViewModel
+import com.flowfolio.feature.library.BookAnnotationsScreen
 import com.flowfolio.feature.library.BookmarksScreen
+import com.flowfolio.feature.library.BookmarksViewModel
 import com.flowfolio.feature.library.DetailsScreen
 import com.flowfolio.feature.library.DetailsViewModel
 import com.flowfolio.feature.library.EditDetailsScreen
@@ -63,6 +69,13 @@ private object Routes {
     fun details(bookId: String, origin: String) = "book/$bookId?from=$origin"
 
     fun edit(bookId: String) = "book/$bookId/edit"
+
+    const val BOOK_BOOKMARKS = "book/{${BookmarksViewModel.ARG_BOOK_ID}}/bookmarks"
+    const val BOOK_ANNOTATIONS = "book/{${AnnotationsViewModel.ARG_BOOK_ID}}/annotations"
+
+    fun bookAnnotations(bookId: String) = "book/$bookId/annotations"
+
+    fun bookBookmarks(bookId: String) = "book/$bookId/bookmarks"
 
     const val SHELF = "shelf/{${ShelfPageViewModel.ARG_SHELF_ID}}"
 
@@ -94,6 +107,7 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                                 onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) },
                                 onRead = { book -> nav.navigate(Routes.reader(book.id)) },
                                 onOpenShelf = { id -> nav.navigate(Routes.shelf(id)) },
+                                onBookmarks = { book -> nav.navigate(Routes.bookBookmarks(book.id)) },
                                 scrollToShelf = shelfToShow,
                                 onScrolledToShelf = { shelfToShow = null },
                                 viewModel = library
@@ -111,9 +125,16 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                     destination(TopLevel.Bookmarks.route) {
                         ScreenEntrance { BookmarksScreen(onRead = { book -> nav.navigate(Routes.reader(book.id)) }) }
                     }
+                    destination(TopLevel.Annotations.route) {
+                        ScreenEntrance {
+                            AnnotationsScreen(onOpenBook = { book -> nav.navigate(Routes.bookAnnotations(book.id)) })
+                        }
+                    }
                     destination(TopLevel.Settings.route) { ScreenEntrance { SettingsScreen() } }
                     detailsDestination(nav)
                     editDestination(nav)
+                    bookBookmarksDestination(nav)
+                    bookAnnotationsDestination(nav)
                     shelfDestination(nav)
                     readerDestination(nav)
                 }
@@ -150,6 +171,25 @@ private fun NavGraphBuilder.detailsDestination(nav: NavHostController) = composa
     }
 }
 
+/** One book's ribbons (from a shelf row, a tile's menu or a library book's menu). */
+private fun NavGraphBuilder.bookBookmarksDestination(nav: NavHostController) = composable(
+    Routes.BOOK_BOOKMARKS,
+    arguments = listOf(navArgument(BookmarksViewModel.ARG_BOOK_ID) { type = NavType.StringType })
+) {
+    // Not a tab: no bar or rail here, so no room kept for one.
+    CompositionLocalProvider(LocalChromePadding provides PaddingValues()) {
+        BookmarksScreen(onRead = { book -> nav.navigate(Routes.reader(book.id)) }, onBack = { nav.popBackStack() })
+    }
+}
+
+/** One book's highlights and notes (from the Annotations tab). */
+private fun NavGraphBuilder.bookAnnotationsDestination(nav: NavHostController) = composable(
+    Routes.BOOK_ANNOTATIONS,
+    arguments = listOf(navArgument(AnnotationsViewModel.ARG_BOOK_ID) { type = NavType.StringType })
+) {
+    BookAnnotationsScreen(onBack = { nav.popBackStack() }, onRead = { book -> nav.navigate(Routes.reader(book.id)) })
+}
+
 /** Edit details for a book (from the details page's menu). */
 private fun NavGraphBuilder.editDestination(nav: NavHostController) = composable(
     Routes.EDIT,
@@ -166,7 +206,8 @@ private fun NavGraphBuilder.shelfDestination(nav: NavHostController) = composabl
     CompositionLocalProvider(LocalDestinationScope provides this) {
         ShelfPageScreen(
             onBack = { nav.popBackStack() },
-            onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) }
+            onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) },
+            onBookmarks = { book -> nav.navigate(Routes.bookBookmarks(book.id)) }
         )
     }
 }

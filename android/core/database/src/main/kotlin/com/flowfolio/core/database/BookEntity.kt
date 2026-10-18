@@ -34,5 +34,7 @@ data class BookEntity(
     @ColumnInfo(name = "author_role") val authorRole: String? = null,
     @ColumnInfo(name = "author_bio") val authorBio: String? = null,
     /** A BookType name; null or unknown means not set. */
-    @ColumnInfo(name = "book_type") val bookType: String? = null
+    @ColumnInfo(name = "book_type") val bookType: String? = null,
+    /** Pages run right to left. Added in schema v6. */
+    @ColumnInfo(name = "right_to_left", defaultValue = "0") val rightToLeft: Boolean = false
 )

@@ -1,0 +1,171 @@
+package com.flowfolio.feature.library
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioCard
+import com.flowfolio.core.designsystem.FlowFolioGlyph
+import com.flowfolio.core.designsystem.FlowFolioType
+import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.LocalChromePadding
+import com.flowfolio.core.designsystem.chromeStart
+import com.flowfolio.core.designsystem.marker
+import com.flowfolio.core.designsystem.reveal
+import com.flowfolio.core.model.Book
+
+/**
+ * The Annotations tab (owner, 2026-10-18): the books you have highlighted in, most recent first, each with how many
+ * highlights and notes it has, their colours and the latest passage. Tap a book for its annotations.
+ */
+@Composable
+fun AnnotationsScreen(onOpenBook: (Book) -> Unit, viewModel: AnnotationsViewModel = hiltViewModel()) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    AnnotationsContent(state, onOpenBook)
+}
+
+@Composable
+fun AnnotationsContent(state: AnnotationsUiState, onOpenBook: (Book) -> Unit) {
+    val chrome = LocalChromePadding.current
+    val insets = WindowInsets.safeDrawing.asPaddingValues()
+    Box(Modifier.fillMaxSize().chromeStart().testTag(LibraryTestTags.ANNOTATIONS)) {
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(CARD_MIN),
+            contentPadding = PaddingValues(
+                start = 18.dp,
+                end = 18.dp,
+                top = insets.calculateTopPadding(),
+                bottom = insets.calculateBottomPadding() + chrome.calculateBottomPadding() + 24.dp
+            ),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Column(Modifier.padding(start = 4.dp, top = 10.dp, bottom = 4.dp).reveal(0)) {
+                    Text(
+                        stringResource(R.string.annotations_title),
+                        style = FlowFolioType.screenTitle.merge(FlowFolio.title)
+                    )
+                    if (state.total > 0) {
+                        Text(
+                            stringResource(
+                                R.string.bookmarks_sub,
+                                pluralStringResource(R.plurals.highlight_count, state.total, state.total),
+                                pluralStringResource(R.plurals.book_count, state.books.size, state.books.size)
+                            ),
+                            style = FlowFolioType.sub.merge(FlowFolio.hint),
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
+                    }
+                }
+            }
+            if (!state.loading && state.total == 0) {
+                item(span = { GridItemSpan(maxLineSpan) }) { NoAnnotations(Modifier.reveal(1)) }
+            }
+            items(state.books, key = { it.book.id }) { AnnotatedBookCard(it) { onOpenBook(it.book) } }
+        }
+    }
+}
+
+/** A book with annotations: its cover, title and author, the counts, its colours and the latest passage. */
+@Composable
+private fun AnnotatedBookCard(item: AnnotatedBook, onClick: () -> Unit) {
+    val cover by rememberCover(item.book)
+    FlowFolioCard(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).testTag(LibraryTestTags.annotatedBook(item.book.id)),
+        radius = 22.dp,
+        padding = PaddingValues(14.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            MiniCover(item.book, cover, Modifier)
+            Column(Modifier.weight(1f)) {
+                Text(
+                    item.book.title,
+                    style = FlowFolioType.rowLabel.merge(FlowFolio.item),
+                    maxLines = 2,
+                    minLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    stringResource(
+                        R.string.annotations_counts,
+                        pluralStringResource(R.plurals.highlight_count, item.highlights, item.highlights),
+                        pluralStringResource(R.plurals.note_count, item.notes, item.notes)
+                    ),
+                    style = FlowFolioType.pill.merge(FlowFolio.subItem),
+                    modifier = Modifier.padding(top = 2.dp)
+                )
+                Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    item.colours.forEach { c -> Dot(c.marker) }
+                }
+                Text(
+                    "“${item.latest.text}”",
+                    style = FlowFolioType.sub.copy(
+                        fontFamily = FlowFolioType.heroTitle.fontFamily,
+                        fontStyle = FontStyle.Italic
+                    )
+                        .merge(FlowFolio.hint),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 6.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun Dot(colour: Color) {
+    Canvas(Modifier.size(10.dp)) { drawCircle(colour) }
+}
+
+@Composable
+private fun NoAnnotations(modifier: Modifier) {
+    FlowFolioCard(modifier.fillMaxWidth().padding(top = 12.dp), radius = 24.dp, padding = PaddingValues(24.dp)) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+            FlowFolioGlyph(Glyph.Highlight, contentDescription = null, color = FlowFolio.palette.title, size = 34.dp)
+            Text(
+                stringResource(R.string.annotations_empty_title),
+                style = FlowFolioType.rowLabel.merge(FlowFolio.item),
+                modifier = Modifier.padding(top = 12.dp)
+            )
+            Text(
+                stringResource(R.string.annotations_empty_body),
+                style = FlowFolioType.sub.merge(FlowFolio.hint),
+                modifier = Modifier.padding(top = 6.dp)
+            )
+        }
+    }
+}
+
+private val CARD_MIN = 300.dp

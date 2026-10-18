@@ -22,6 +22,8 @@ object LibraryTestTags {
     const val SHELF_LIST = "shelf_page_list"
     const val SHELF_VIEW = "shelf_page_view"
     const val BOOKMARKS = "bookmarks"
+    const val ANNOTATIONS = "annotations"
+    const val BOOK_ANNOTATIONS = "book_annotations"
     const val SETTINGS = "settings"
     const val EDIT_MENU = "details_edit"
     const val EDIT_DETAILS = "edit_details"
@@ -36,4 +38,8 @@ object LibraryTestTags {
     fun row(bookId: String) = "row_$bookId"
 
     fun bookmark(id: Long) = "bookmark_$id"
+
+    fun annotatedBook(id: String) = "annotated_$id"
+
+    fun annotation(id: Long) = "annotation_$id"
 }

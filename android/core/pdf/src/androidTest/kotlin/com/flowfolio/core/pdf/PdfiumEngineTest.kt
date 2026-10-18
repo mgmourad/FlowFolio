@@ -65,6 +65,19 @@ class PdfiumEngineTest {
     }
 
     @Test
+    fun pageTextHasABoxPerCharacterWhereItIsDrawn() = runBlocking {
+        open("labels-outline.pdf").use { doc ->
+            val text = doc.pageText(0)
+            assertTrue(text.length > 0)
+            assertEquals(text.length * 4, text.boxes.size)
+            // The label is drawn at x = 72 of 612 points, baseline 400 of 792 from the bottom.
+            assertTrue(text.hasBox(0))
+            assertTrue(text.left(0) in 0.10f..0.14f)
+            assertTrue(text.bottom(0) in 0.45f..0.52f)
+        }
+    }
+
+    @Test
     fun missingLabelsAndOutlineAreEmptyNotErrors() = runBlocking {
         open("rotated.pdf").use { doc ->
             assertNull(doc.pageLabel(0))
