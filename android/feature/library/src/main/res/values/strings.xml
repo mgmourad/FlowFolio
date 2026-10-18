@@ -48,8 +48,6 @@
     <string name="settings_title">Settings</string>
     <string name="settings_import_section">When importing books</string>
     <string name="settings_ask_each">Ask every time</string>
-    <string name="settings_theme_section">App theme</string>
-    <string name="theme_system">Follow system</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
     <!-- Library (milestone 5, slice 3) -->
@@ -123,4 +121,45 @@
     <string name="view_list">List</string>
     <string name="rename_book">Rename book</string>
     <string name="book_title_hint">Title</string>
+    <!-- Bookmarks tab (milestone 5, slice 5) -->
+    <string name="bookmarks_title">Bookmarks</string>
+    <string name="bookmarks_sub">%1$s in %2$s</string>
+    <plurals name="ribbon_count">
+        <item quantity="one">%d ribbon</item>
+        <item quantity="other">%d ribbons</item>
+    </plurals>
+    <string name="bookmarks_empty_title">No ribbons yet</string>
+    <string name="bookmarks_empty_body">While reading, tap the ribbon at the top right to mark a page in one of your colours. Your ribbons gather here.</string>
+    <string name="bookmarks_filter_all">All</string>
+    <string name="bookmarks_kind">Ribbon · p. %1$s</string>
+    <string name="bookmarks_colour">%1$s ribbons</string>
+    <string name="bookmark_colour_red">Red</string>
+    <string name="bookmark_colour_orange">Orange</string>
+    <string name="bookmark_colour_cyan">Cyan</string>
+    <string name="bookmark_colour_magenta">Magenta</string>
+    <string name="bookmark_colour_green">Green</string>
+
+    <!-- Settings, grouped as in the mock (slice 5) -->
+    <string name="settings_sub">Make it yours</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_theme">Theme</string>
+    <string name="settings_theme_detail">Changes with a circular reveal</string>
+    <string name="theme_system_short">System</string>
+    <string name="settings_glow">Neon glow</string>
+    <string name="settings_glow_detail">Soft light bloom on text and icons</string>
+    <string name="settings_turn">Page turn</string>
+    <string name="settings_turn_detail">How pages turn in the reader</string>
+    <string name="turn_curl">Curl</string>
+    <string name="turn_slide">Slide</string>
+    <string name="turn_scroll">Scroll</string>
+    <string name="settings_reading">Reading</string>
+    <string name="settings_spreads">Two pages side by side</string>
+    <string name="settings_spreads_detail">On wide screens, like the unfolded Fold</string>
+    <string name="settings_cover">Cover on its own</string>
+    <string name="settings_cover_detail">Pair pages like a printed book</string>
+    <string name="settings_library">Library</string>
+    <string name="settings_conversion">Conversion</string>
+    <string name="settings_conversion_where">Where books are converted</string>
+    <string name="settings_conversion_detail">Books are prepared on your phone. Nothing is uploaded.</string>
+    <string name="settings_conversion_value">On this device</string>
 </resources>

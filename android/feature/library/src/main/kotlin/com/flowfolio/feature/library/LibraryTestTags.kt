@@ -21,6 +21,8 @@ object LibraryTestTags {
     const val SHELF_TILES = "shelf_page_tiles"
     const val SHELF_LIST = "shelf_page_list"
     const val SHELF_VIEW = "shelf_page_view"
+    const val BOOKMARKS = "bookmarks"
+    const val SETTINGS = "settings"
 
     fun book(id: String) = "book_$id"
 
@@ -29,4 +31,6 @@ object LibraryTestTags {
     fun shelfCount(id: Long) = "shelf_count_$id"
 
     fun row(bookId: String) = "row_$bookId"
+
+    fun bookmark(id: Long) = "bookmark_$id"
 }

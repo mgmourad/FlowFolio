@@ -6,7 +6,6 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
@@ -15,26 +14,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
-import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.model.BookmarkColor
 
 /** Ribbons by page, for the page panes. */
 internal val LocalRibbons = staticCompositionLocalOf<Map<Int, BookmarkColor>> { emptyMap() }
-
-/** The colour of a ribbon in the current theme (bookmark colours are the app's colour roles, plus a green). */
-internal val BookmarkColor.color: Color
-    @Composable @ReadOnlyComposable
-    get() {
-        val p = FlowFolio.palette
-        return when (this) {
-            BookmarkColor.SUB_ITEM -> p.subItem
-            BookmarkColor.TITLE -> p.title
-            BookmarkColor.ITEM -> p.item
-            BookmarkColor.ACCENT -> p.glyph
-            BookmarkColor.GREEN -> p.green
-        }
-    }
 
 /**
  * The mock's ribbon (`.ribbon`): a flat, solid silk ribbon with a swallowtail notch, hanging from just above the

@@ -40,6 +40,7 @@ import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.ScreenEntrance
 import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.reveal
+import com.flowfolio.feature.library.BookmarksScreen
 import com.flowfolio.feature.library.DetailsScreen
 import com.flowfolio.feature.library.DetailsViewModel
 import com.flowfolio.feature.library.LibraryScreen
@@ -103,7 +104,7 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                         }
                     }
                     destination(TopLevel.Bookmarks.route) {
-                        ScreenEntrance { Placeholder(R.string.tab_bookmarks, R.string.bookmarks_placeholder) }
+                        ScreenEntrance { BookmarksScreen(onRead = { book -> nav.navigate(Routes.reader(book.id)) }) }
                     }
                     destination(TopLevel.Settings.route) { ScreenEntrance { SettingsScreen() } }
                     detailsDestination(nav)
@@ -175,25 +176,5 @@ private fun NavHostController.switchTo(destination: TopLevel) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
         restoreState = true
-    }
-}
-
-/** Bookmarks until its slice lands: the screen title and a line on what is coming. */
-@Composable
-private fun Placeholder(title: Int, body: Int) {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .safeDrawingPadding()
-            .chromeStart()
-            .padding(horizontal = 22.dp, vertical = 18.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
-    ) {
-        Text(
-            stringResource(title),
-            style = FlowFolioType.screenTitle.merge(FlowFolio.title),
-            modifier = Modifier.reveal(0)
-        )
-        Text(stringResource(body), style = FlowFolioType.sub.merge(FlowFolio.hint), modifier = Modifier.reveal(1))
     }
 }

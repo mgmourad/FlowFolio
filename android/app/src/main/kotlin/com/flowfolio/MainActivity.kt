@@ -62,7 +62,8 @@ class MainActivity : ComponentActivity() {
             } else {
                 var splash by rememberSaveable { mutableStateOf(splashOnStart) }
                 ThemeRevealHost(theme) { shown ->
-                    FlowFolioTheme(shown) {
+                    val look by appViewModel.readerSettings.collectAsStateWithLifecycle()
+                    FlowFolioTheme(shown, glow = look.neonGlow) {
                         SystemBarsFollowTheme(FlowFolio.palette.dark)
                         val reading by appViewModel.readerSettings.collectAsStateWithLifecycle()
                         BookOpeningHost(

@@ -58,7 +58,9 @@ data class UserSettings(
     /** The page colour in the reader (the Aa sheet's swatches); images always keep their printed colours. */
     val paperStyle: PaperStyle = PaperStyle.AUTO,
     /** How pages turn in the reader. */
-    val pageTurn: PageTurn = PageTurn.CURL
+    val pageTurn: PageTurn = PageTurn.CURL,
+    /** The mock's "Neon glow": the soft light on text and icons in dark mode (and soft shadows in light mode). */
+    val neonGlow: Boolean = true
 )
 
 /**

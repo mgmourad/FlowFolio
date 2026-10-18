@@ -97,6 +97,8 @@ class FakeSettings(initial: UserSettings = UserSettings()) : SettingsRepository 
     override suspend fun setPaperStyle(style: PaperStyle) = state.update { it.copy(paperStyle = style) }
 
     override suspend fun setPageTurn(turn: PageTurn) = state.update { it.copy(pageTurn = turn) }
+
+    override suspend fun setNeonGlow(on: Boolean) = state.update { it.copy(neonGlow = on) }
 }
 
 class FakeShelves(initial: List<Shelf> = emptyList()) : ShelfRepository {

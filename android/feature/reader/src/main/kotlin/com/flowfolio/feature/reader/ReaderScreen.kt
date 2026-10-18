@@ -53,6 +53,7 @@ import androidx.core.view.WindowCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.color
 import com.flowfolio.core.pagecurl.config.PageCurlConfig
 import com.flowfolio.core.pagecurl.config.rememberPageCurlConfig
 import com.flowfolio.core.pagecurl.page.PageCurl
