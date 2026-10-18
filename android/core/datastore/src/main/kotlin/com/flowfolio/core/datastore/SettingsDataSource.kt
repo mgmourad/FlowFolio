@@ -39,7 +39,9 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             spreadCoverAlone = p[COVER_ALONE] ?: defaults.spreadCoverAlone,
             paperStyle = p[PAPER_STYLE].toEnum(defaults.paperStyle),
             pageTurn = p[PAGE_TURN].toEnum(defaults.pageTurn),
-            neonGlow = p[NEON_GLOW] ?: defaults.neonGlow
+            neonGlow = p[NEON_GLOW] ?: defaults.neonGlow,
+            onlineLookup = p[ONLINE_LOOKUP] ?: defaults.onlineLookup,
+            onlineLookupAsked = p[ONLINE_LOOKUP_ASKED] ?: defaults.onlineLookupAsked
         )
     }
 
@@ -83,6 +85,14 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         store.edit { it[NEON_GLOW] = on }
     }
 
+    /** Turning the lookup on or off also counts as having been asked. */
+    suspend fun setOnlineLookup(on: Boolean) {
+        store.edit {
+            it[ONLINE_LOOKUP] = on
+            it[ONLINE_LOOKUP_ASKED] = true
+        }
+    }
+
     private inline fun <reified T : Enum<T>> String?.toEnum(default: T): T =
         this?.let { name -> enumValues<T>().firstOrNull { it.name == name } } ?: default
 
@@ -97,6 +107,8 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val PAPER_STYLE = stringPreferencesKey("reader_paper")
         val PAGE_TURN = stringPreferencesKey("reader_page_turn")
         val NEON_GLOW = booleanPreferencesKey("neon_glow")
+        val ONLINE_LOOKUP = booleanPreferencesKey("online_lookup")
+        val ONLINE_LOOKUP_ASKED = booleanPreferencesKey("online_lookup_asked")
     }
 }
 

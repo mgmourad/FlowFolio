@@ -26,6 +26,7 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class LibraryViewModelTest {
     private val library = FakeLibrary()
+    private val lookup = FakeLookup()
 
     // One scheduler for the test body, viewModelScope (Main) and collectors, so state updates are observed eagerly.
     private val dispatcher = UnconfinedTestDispatcher()
@@ -36,14 +37,23 @@ class LibraryViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun vm(settings: FakeSettings) = LibraryViewModel(library, settings, FakeShelves())
+    private fun vm(settings: FakeSettings) = LibraryViewModel(library, settings, FakeShelves(), lookup)
 
-    private fun seen(mode: StorageMode = StorageMode.COPY, ask: Boolean = false) =
-        FakeSettings(UserSettings(storageMode = mode, askStorageEachImport = ask, storageNoticeSeen = true))
+    private fun seen(mode: StorageMode = StorageMode.COPY, ask: Boolean = false) = FakeSettings(
+        UserSettings(
+            storageMode = mode,
+            askStorageEachImport = ask,
+            storageNoticeSeen = true,
+            onlineLookupAsked = true
+        )
+    )
+
+    /** Storage already chosen, the lookup question not asked yet. */
+    private fun notAsked() = FakeSettings(UserSettings(storageNoticeSeen = true))
 
     @Test
     fun firstImportAsksOnceAndRemembersTheChoice() = runTest(dispatcher) {
-        val settings = FakeSettings()
+        val settings = FakeSettings(UserSettings(onlineLookupAsked = true))
         val vm = vm(settings)
         backgroundScope.launch { vm.uiState.collect {} }
         vm.onFilePicked("content://docs/a")
@@ -78,6 +88,35 @@ class LibraryViewModelTest {
     }
 
     @Test
+    fun theFirstImportAsksAboutTheLookupOnceAndLooksUpOnYes() = runTest(dispatcher) {
+        lookup.result = com.flowfolio.core.data.Found(author = "Ling")
+        val settings = notAsked()
+        val vm = vm(settings)
+        backgroundScope.launch { vm.uiState.collect {} }
+        vm.onFilePicked("content://docs/a")
+        val ask = vm.uiState.value.dialog as LibraryDialog.AskLookup
+        assertTrue(lookup.asked.isEmpty()) // nothing is sent before the reader agrees
+        vm.onLookupAnswer(ask, allow = true)
+        assertTrue(settings.state.value.onlineLookup)
+        assertEquals(listOf("a"), lookup.asked)
+        assertEquals("Ling", library.books.value.single().author)
+        vm.onFilePicked("content://docs/b")
+        assertNull("asked only once", vm.uiState.value.dialog)
+    }
+
+    @Test
+    fun noMeansNoLookupAndNoMoreQuestions() = runTest(dispatcher) {
+        val settings = notAsked()
+        val vm = vm(settings)
+        backgroundScope.launch { vm.uiState.collect {} }
+        vm.onFilePicked("content://docs/a")
+        vm.onLookupAnswer(vm.uiState.value.dialog as LibraryDialog.AskLookup, allow = false)
+        vm.onFilePicked("content://docs/b")
+        assertNull(vm.uiState.value.dialog)
+        assertTrue(lookup.asked.isEmpty())
+    }
+
+    @Test
     fun askEveryTimeShowsTheChoiceWithoutChangingTheSetting() = runTest(dispatcher) {
         val settings = seen(ask = true)
         val vm = vm(settings)
@@ -91,7 +130,7 @@ class LibraryViewModelTest {
 
     @Test
     fun sharedFilesAreCopiedWithoutAsking() = runTest(dispatcher) {
-        val vm = vm(FakeSettings(UserSettings(storageMode = StorageMode.LINK)))
+        val vm = vm(FakeSettings(UserSettings(storageMode = StorageMode.LINK, onlineLookupAsked = true)))
         backgroundScope.launch { vm.uiState.collect {} }
         vm.onFileShared("content://other.app/file")
         assertEquals(Triple("content://other.app/file", StorageMode.COPY, true), library.imports.single())

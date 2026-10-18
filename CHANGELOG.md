@@ -84,6 +84,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     pages).
   - Edge bounce: turning past the first or last page nudges the page and springs it back.
   - Reader memory on the unfolded Fold, spread, Night paper, 300 turns: 263 MB, growth 2.3%, 2.25% janky frames.
+- Phase 1 milestone 5, online lookup slice (ADR-0017):
+  - Book details from Open Library: by ISBN, else by title and author, preferring an edition in the phone's language;
+    a description in another language is left out. Only the ISBN, or the title and author, are sent.
+  - Off by default. After the first import FlowFolio asks once; Settings > Library > "Look up book details online"
+    changes it. When on, each imported book is looked up in the background.
+  - Found details fill only empty fields, never what the reader typed. Edit details has "Look up online" to run it on
+    demand and review before saving.
+  - Built on Android's own HTTP and JSON; no new dependency, no key.
 - Fixes after annotations (Room schema v7):
   - Closing a book: screens no longer replay their entrance when you come back, so the cover lands on a still shelf.
   - Selecting text works in every turn style (Curl, Slide, Scroll) and zoomed in: pages report where they are on

@@ -19,6 +19,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -30,6 +32,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.data.Found
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioGhostButton
@@ -42,20 +45,30 @@ import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookDetails
 import com.flowfolio.core.model.BookType
+import kotlinx.coroutines.launch
 
 /** Edit details: the fields the details page shows, as the reader knows them. Opened from the details page's menu. */
 @Composable
-fun EditDetailsScreen(onDone: () -> Unit, viewModel: DetailsViewModel = hiltViewModel()) {
+fun EditDetailsScreen(
+    onDone: () -> Unit,
+    viewModel: DetailsViewModel = hiltViewModel(),
+    lookup: LookupViewModel = hiltViewModel()
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val book = state.book ?: return
-    EditDetailsContent(book, onCancel = onDone) { title, author, details ->
+    EditDetailsContent(book, onCancel = onDone, onLookUp = lookup::find) { title, author, details ->
         viewModel.saveDetails(title, author, details, onDone)
     }
 }
 
 /** The form, filled from [book] once; Save hands back the edited title, author and details. */
 @Composable
-fun EditDetailsContent(book: Book, onCancel: () -> Unit, onSave: (String, String?, BookDetails) -> Unit) {
+fun EditDetailsContent(
+    book: Book,
+    onCancel: () -> Unit,
+    onLookUp: (suspend (Book) -> Found?)? = null,
+    onSave: (String, String?, BookDetails) -> Unit
+) {
     val d = book.details
     val form = rememberSaveable(book.id, saver = EditForm.Saver) { EditForm.of(book) }
     var type by rememberSaveable(book.id) { mutableStateOf(d.type) }
@@ -86,6 +99,7 @@ fun EditDetailsContent(book: Book, onCancel: () -> Unit, onSave: (String, String
                 Field(R.string.edit_author_role, form.authorRole) { form.authorRole = it }
                 Field(R.string.edit_author_bio, form.authorBio, lines = DESCRIPTION_LINES) { form.authorBio = it }
             }
+            onLookUp?.let { LookUpRow(book, form, type, it) { found -> type = type ?: found } }
             Row(
                 Modifier.fillMaxWidth().padding(vertical = 22.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
@@ -127,6 +141,56 @@ private fun BookFields(form: EditForm, type: BookType?, onType: (BookType?) -> U
         { onType(BookType.entries[it].takeIf { t -> t != type }) }
     )
     Field(R.string.edit_description, form.description, lines = DESCRIPTION_LINES) { form.description = it }
+}
+
+/**
+ * "Look up online" (ADR-0017): asks Open Library about the book as typed so far and fills only the empty fields, for
+ * the reader to check before saving.
+ */
+@Composable
+private fun LookUpRow(
+    book: Book,
+    form: EditForm,
+    type: BookType?,
+    onLookUp: suspend (Book) -> Found?,
+    onType: (BookType?) -> Unit
+) {
+    val scope = rememberCoroutineScope()
+    var busy by remember { mutableStateOf(false) }
+    var outcome by remember { mutableStateOf<Int?>(null) }
+    Row(Modifier.fillMaxWidth().padding(top = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+        FlowFolioGhostButton(stringResource(R.string.edit_lookup), onClick = {
+            if (busy) return@FlowFolioGhostButton
+            busy = true
+            scope.launch {
+                val typed = book.copy(
+                    title = form.title,
+                    author = form.author.ifBlank {
+                        null
+                    },
+                    details = form.details(type)
+                )
+                val found = onLookUp(typed)
+                outcome =
+                    if (found != null &&
+                        form.fillEmpty(found)
+                    ) {
+                        R.string.edit_lookup_found
+                    } else {
+                        R.string.edit_lookup_none
+                    }
+                found?.details?.type?.let { onType(it) }
+                busy = false
+            }
+        }, modifier = Modifier.testTag(LibraryTestTags.LOOKUP))
+        outcome?.let {
+            Text(
+                stringResource(it),
+                style = FlowFolioType.rowDetail.merge(FlowFolio.hint),
+                modifier = Modifier.padding(start = 12.dp)
+            )
+        }
+    }
 }
 
 @Composable

@@ -211,4 +211,14 @@
     <string name="annotation_where">p. %1$s · %2$s</string>
     <string name="action_share">Share</string>
     <string name="action_note">Note</string>
+    <!-- Slice 7: online lookup (ADR-0017) -->
+    <string name="settings_lookup">Look up book details online</string>
+    <string name="settings_lookup_detail">From Open Library. Only the ISBN, or the title and author, are sent. Fills empty fields only.</string>
+    <string name="lookup_ask_title">Find book details online?</string>
+    <string name="lookup_ask_body">FlowFolio can fill in a book\'s description, publisher, edition and author bio from Open Library. Only the book\'s ISBN, or its title and author, are sent. You can change this in Settings.</string>
+    <string name="lookup_ask_yes">Look up details</string>
+    <string name="lookup_ask_no">Not now</string>
+    <string name="edit_lookup">Look up online</string>
+    <string name="edit_lookup_found">Filled in what Open Library knows. Check it, then save.</string>
+    <string name="edit_lookup_none">Open Library has nothing more for this book.</string>
 </resources>
