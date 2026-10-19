@@ -49,8 +49,20 @@ internal fun Modifier.leftPageDrag(curl: PageCurlState, scope: CoroutineScope): 
 }
 
 /**
- * The spread whose left page lies under the turning sheet, taken from the curl itself so it changes in the same frame
- * as the sheet. While a sheet is lifted back off the left page (progress below zero), the previous spread's left page
- * shows underneath; otherwise the current one. The reader's own unit catches up a frame or more later.
+ * The spread whose left page shows in the left pane, taken from the curl itself so it changes in the same frame as the
+ * sheet. While a sheet is lifted back off the left page (progress below zero), the previous spread's left page shows
+ * underneath. When a forward sheet has fully landed (progress 1) the curl stops drawing it a frame before it moves to
+ * the next page, so the next spread's left page shows from that frame on; otherwise the old one flickered through.
+ * The reader's own unit catches up a frame or more later.
  */
-internal fun leftPaneUnit(curl: PageCurlState): Int = if (curl.progress < 0f) curl.current - 1 else curl.current
+internal fun leftPaneUnit(curl: PageCurlState): Int {
+    val progress = curl.progress
+    return when {
+        progress < 0f -> curl.current - 1
+        progress >= LANDED -> curl.current + 1
+        else -> curl.current
+    }
+}
+
+/** A forward sheet this far through its turn lies flat on the left page. */
+private const val LANDED = 0.999f
