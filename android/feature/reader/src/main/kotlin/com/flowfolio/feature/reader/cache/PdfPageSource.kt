@@ -7,8 +7,10 @@ import com.flowfolio.core.pdf.PageTint
 import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfException
 import com.flowfolio.core.pdf.RenderRegion
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /**
  * Renders into one reusable CPU bitmap, then keeps only a 16-bit GPU-backed (HARDWARE) copy. Measured on the reference
@@ -45,12 +47,16 @@ class PdfPageSource(private val document: PdfDocument) :
         } catch (_: PdfException) {
             return null // damaged page: the reader shows a blank page instead of crashing
         }
-        // 16-bit pages (ADR-0013): half the memory; text and line art are visually identical to 32-bit.
-        val source = bitmap.copy(Bitmap.Config.RGB_565, false) ?: bitmap
-        val image =
-            source.copy(Bitmap.Config.HARDWARE, false) ?: source.copy(source.config ?: Bitmap.Config.ARGB_8888, false)
-        if (source !== bitmap) source.recycle()
-        return image?.asImageBitmap()
+        // Off the main thread: the caches run in the view model's scope, and converting a page to 16 bits and
+        // uploading it to the GPU took a frame or two of the turn animation on the reference Fold.
+        return withContext(Dispatchers.Default) {
+            // 16-bit pages (ADR-0013): half the memory; text and line art are visually identical to 32-bit.
+            val source = bitmap.copy(Bitmap.Config.RGB_565, false) ?: bitmap
+            val image = source.copy(Bitmap.Config.HARDWARE, false)
+                ?: source.copy(source.config ?: Bitmap.Config.ARGB_8888, false)
+            if (source !== bitmap) source.recycle()
+            image?.asImageBitmap()
+        }
     }
 
     /** Releases the scratch bitmap; the document is owned and closed by the caller. */

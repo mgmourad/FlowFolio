@@ -111,6 +111,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - A magnifier above the finger while selecting; selection state is read while drawing, so a drag no longer
     recomposes the reader. Page text is prepared for the pages in view, so a press selects at once.
   - Highlights made while zoomed in show straight away.
+  - Turns no longer hitch when they land: each curl page keeps its own key, so a turn reorders the pages instead
+    of rebuilding them; new page images are converted to 16 bits and uploaded off the main thread; the page under the
+    current one is not drawn while it is hidden. Unfolded Fold, spread, release-like build (not debuggable): turns
+    2-4% janky frames, p99 12-18 ms; slow drags 1-2%; selection drag p95 7 ms.
   - Translate runs on the phone with Google ML Kit, in our own glass panel: detected source language, From and To
     menus with swap, Copy and Share, and a history of recent translations (`translations` table) with Clear.
     Language models download once (about 30 MB each); the passage never leaves the phone. Replaces the Google
