@@ -108,6 +108,8 @@ class FakeSettings(initial: UserSettings = UserSettings()) : SettingsRepository 
 
     override suspend fun setOnlineLookup(on: Boolean) =
         state.update { it.copy(onlineLookup = on, onlineLookupAsked = true) }
+
+    override suspend fun setTranslateTo(language: String) = state.update { it.copy(translateTo = language) }
 }
 
 class FakeShelves(initial: List<Shelf> = emptyList()) : ShelfRepository {

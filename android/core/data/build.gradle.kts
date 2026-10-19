@@ -18,6 +18,8 @@ dependencies {
     implementation(projects.core.datastore)
     api(projects.core.pdf)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.mlkit.translate)
+    implementation(libs.mlkit.language.id)
 
     testImplementation(libs.junit4)
     testImplementation(libs.robolectric)

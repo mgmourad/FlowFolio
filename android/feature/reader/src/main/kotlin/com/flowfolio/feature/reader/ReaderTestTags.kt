@@ -25,4 +25,6 @@ object ReaderTestTags {
     const val HIGHLIGHT_BAR = "reader_highlight_bar"
     const val NOTE_EDITOR = "reader_note_editor"
     const val TRANSLATE = "reader_translate"
+    const val TRANSLATION = "reader_translation"
+    const val TRANSLATE_HISTORY = "reader_translate_history"
 }

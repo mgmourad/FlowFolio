@@ -411,11 +411,13 @@ JNIEXPORT jobjectArray JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_n
                     text.resize(got > 0 ? static_cast<size_t>(got - 1) : 0);  // drop the terminating zero
                     boxes.resize(static_cast<size_t>(n) * 4, -1.0f);
                     for (int i = 0; i < n; i++) {
-                        double l, r, b, t;
-                        if (!FPDFText_GetCharBox(textPage, i, &l, &r, &b, &t)) continue;
+                        // The loose box spans the font's full height (ascent to descent), so a highlighted line is
+                        // one even band rather than the tight outline of each glyph.
+                        FS_RECTF box{};
+                        if (!FPDFText_GetLooseCharBox(textPage, i, &box)) continue;
                         int x1, y1, x2, y2;
-                        FPDF_PageToDevice(page, 0, 0, kScale, kScale, 0, l, t, &x1, &y1);
-                        FPDF_PageToDevice(page, 0, 0, kScale, kScale, 0, r, b, &x2, &y2);
+                        FPDF_PageToDevice(page, 0, 0, kScale, kScale, 0, box.left, box.top, &x1, &y1);
+                        FPDF_PageToDevice(page, 0, 0, kScale, kScale, 0, box.right, box.bottom, &x2, &y2);
                         size_t k = static_cast<size_t>(i) * 4;
                         boxes[k] = static_cast<jfloat>(std::min(x1, x2)) / kScale;
                         boxes[k + 1] = static_cast<jfloat>(std::min(y1, y2)) / kScale;

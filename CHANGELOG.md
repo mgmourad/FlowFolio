@@ -101,6 +101,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Page numbers follow the book's own numbering: the PDF's page labels, or else the numbers printed in its margins
     (found once and kept as `books.page_labels`), including roman front matter and prefixed appendices; books with no
     numbering count from the cover as page 1. The library, details, bookmarks and the reader all use them.
+- Reader fixes and on-device translation (ADR-0018, Room schema v8):
+  - Turning back no longer stalls: the vendored pagecurl keyed every page on the moving edge, so all pages were
+    rebuilt each frame; it now keys on the current page and reads the edge while drawing.
+  - The left page of a spread follows the finger when dragged right, like a grab on the right page, and finishes or
+    lays back the sheet on release.
+  - Highlights cover the full line height (PDFium's loose character boxes), and the lines of a paragraph meet so a
+    highlight is one block.
+  - A magnifier above the finger while selecting; selection state is read while drawing, so a drag no longer
+    recomposes the reader. Page text is prepared for the pages in view, so a press selects at once.
+  - Highlights made while zoomed in show straight away.
+  - Translate runs on the phone with Google ML Kit, in our own glass panel: detected source language, From and To
+    menus with swap, Copy and Share, and a history of recent translations (`translations` table) with Clear.
+    Language models download once (about 30 MB each); the passage never leaves the phone. Replaces the Google
+    Translate web view. Adds about 17 MB to the install on arm64.
 - Annotations and right-to-left books (ADR-0016, Room schema v6):
   - Highlights: press and hold a word, drag to select more, adjust with the handles, then pick one of five
     highlighter colours. Highlights are drawn on the page (multiplied into light paper, a soft wash on dark paper) and

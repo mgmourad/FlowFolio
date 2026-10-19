@@ -5,7 +5,6 @@ import android.content.res.Configuration
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -41,6 +40,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
@@ -65,6 +65,7 @@ import com.flowfolio.core.pagecurl.page.PageCurlState
 import com.flowfolio.core.pagecurl.page.rememberPageCurlState
 import com.flowfolio.feature.reader.layout.ReaderLayout
 import com.flowfolio.feature.reader.layout.Spreads
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -171,20 +172,7 @@ internal fun SpreadReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap
                 .weight(1f)
                 .fillMaxHeight()
                 .pointerInput(curl) { detectTapGestures { scope.launch { curl.prev() } } }
-                .pointerInput(curl) {
-                    var dragged = 0f
-                    detectHorizontalDragGestures(
-                        onDragStart = { dragged = 0f },
-                        onHorizontalDrag = { _, delta -> dragged += delta },
-                        // iOS Books behaviour: direction decides, even a short swipe. Right = back, left = forward.
-                        onDragEnd = {
-                            when {
-                                dragged > SWIPE_THRESHOLD_PX -> scope.launch { curl.prev() }
-                                dragged < -SWIPE_THRESHOLD_PX -> scope.launch { curl.next() }
-                            }
-                        }
-                    )
-                }
+                .leftPageDrag(curl, scope)
         ) {
             val left = Spreads.leftOf(state.unit, state.pageCount, state.coverAlone)
             PagePane(left, images[left], Alignment.CenterEnd, Spine.RIGHT)

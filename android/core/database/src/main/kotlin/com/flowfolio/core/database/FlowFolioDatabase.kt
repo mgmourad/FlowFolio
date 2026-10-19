@@ -19,9 +19,10 @@ import javax.inject.Singleton
         ShelfBookEntity::class,
         BookmarkEntity::class,
         ReadingSessionEntity::class,
-        AnnotationEntity::class
+        AnnotationEntity::class,
+        TranslationEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
     // v2: books.last_page (reading position, Phase 1 milestone 4).
     // v3: books.author, shelves and shelf_books (milestone 5, slice 3).
@@ -29,13 +30,15 @@ import javax.inject.Singleton
     // v5: editable book details and type, reading_sessions (slice 6).
     // v6: annotations (highlights and notes) and books.right_to_left.
     // v7: books.page_labels (printed page numbers).
+    // v8: translations (the reader's translation history).
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
         AutoMigration(from = 3, to = 4),
         AutoMigration(from = 4, to = 5),
         AutoMigration(from = 5, to = 6),
-        AutoMigration(from = 6, to = 7)
+        AutoMigration(from = 6, to = 7),
+        AutoMigration(from = 7, to = 8)
     ]
 )
 abstract class FlowFolioDatabase : RoomDatabase() {
@@ -50,6 +53,8 @@ abstract class FlowFolioDatabase : RoomDatabase() {
     abstract fun annotationDao(): AnnotationDao
 
     abstract fun bookReadingDao(): BookReadingDao
+
+    abstract fun translationDao(): TranslationDao
 }
 
 @Module
@@ -77,4 +82,7 @@ object DatabaseModule {
 
     @Provides
     fun bookReadingDao(db: FlowFolioDatabase): BookReadingDao = db.bookReadingDao()
+
+    @Provides
+    fun translationDao(db: FlowFolioDatabase): TranslationDao = db.translationDao()
 }

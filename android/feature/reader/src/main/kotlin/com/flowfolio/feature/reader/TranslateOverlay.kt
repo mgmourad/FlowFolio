@@ -1,44 +1,71 @@
 package com.flowfolio.feature.reader
 
-import android.annotation.SuppressLint
-import android.net.Uri
-import android.webkit.WebResourceRequest
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioCard
+import com.flowfolio.core.designsystem.FlowFolioGlyph
+import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioType
+import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.glass
+import com.flowfolio.core.model.Translation
 import java.util.Locale
 
 /**
- * Translate a passage without leaving the book (owner, 2026-10-18): Google Translate's own page in a glass panel over
- * the reader, from the detected language into the phone's. The view never navigates away from Google's sites, so
- * links and sign-in prompts stay inside it or go nowhere. The passage is sent to Google (ADR-0017).
+ * FlowFolio's Translate panel (owner, 2026-10-18; ADR-0018): glass, in the reader's palette. The source language
+ * (detected, or chosen) and the target language as chips with a swap between them, the passage, its translation, Copy
+ * and Share, and the recent translations below. Translation happens on the phone (Google ML Kit).
  */
 @Composable
-internal fun BoxScope.TranslateOverlay(text: String, onClose: () -> Unit) {
+internal fun BoxScope.TranslateOverlay(
+    text: String,
+    onClose: () -> Unit,
+    viewModel: TranslateViewModel = hiltViewModel()
+) {
+    LaunchedEffect(text) { viewModel.start(text) }
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val history by viewModel.history.collectAsStateWithLifecycle()
     Column(
         Modifier
             .align(Alignment.Center)
@@ -48,69 +75,218 @@ internal fun BoxScope.TranslateOverlay(text: String, onClose: () -> Unit) {
             .widthIn(max = PANEL_WIDTH)
             .fillMaxWidth()
             .fillMaxHeight(HEIGHT_SHARE)
-            .glass(RoundedCornerShape(26.dp))
-            .padding(14.dp)
+            .glass(RoundedCornerShape(28.dp))
+            .padding(18.dp)
             .testTag(ReaderTestTags.TRANSLATE)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.reader_translate),
-                    style = MaterialTheme.typography.titleLarge.merge(FlowFolio.title)
-                )
-                Text(
-                    stringResource(R.string.reader_translate_note),
-                    style = FlowFolioType.rowDetail.merge(FlowFolio.hint)
-                )
-            }
-            TextButton(onClick = onClose) { Text(stringResource(R.string.reader_close)) }
+        Header(onClose)
+        LanguageRow(state, viewModel)
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+            Passage(state)
+            Result(state)
         }
-        Box(Modifier.padding(top = 10.dp).fillMaxWidth().weight(1f).clip(RoundedCornerShape(18.dp))) {
-            TranslatePage(text)
+        History(history, viewModel::show, viewModel::clearHistory)
+    }
+}
+
+@Composable
+private fun Header(onClose: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                stringResource(R.string.reader_translate),
+                style = FlowFolioType.screenTitle.copy(fontSize = 26.sp).merge(FlowFolio.title)
+            )
+            Text(stringResource(R.string.reader_translate_note), style = FlowFolioType.rowDetail.merge(FlowFolio.hint))
+        }
+        FlowFolioIconButton(onClick = onClose, glass = true) {
+            FlowFolioGlyph(Glyph.Back, stringResource(R.string.reader_close), color = FlowFolio.palette.text)
         }
     }
 }
 
-/** Google Translate's page for [text], kept on Google's own sites. */
-@SuppressLint("SetJavaScriptEnabled") // Google Translate's page needs scripts; it only ever shows Google's pages.
+/** Source chip, swap, target chip. */
 @Composable
-private fun TranslatePage(text: String) {
-    AndroidView(
-        factory = { context ->
-            WebView(context).apply {
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.allowFileAccess = false
-                settings.allowContentAccess = false
-                webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
-                        !isGoogle(request.url)
-                }
-                loadUrl(translateUrl(text))
+private fun LanguageRow(state: TranslateUiState, viewModel: TranslateViewModel) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        val from = state.from
+        LanguageChip(
+            label = from?.let { languageName(it) } ?: stringResource(R.string.reader_translate_detecting),
+            badge = if (state.detected && from != null) stringResource(R.string.reader_translate_detected) else null,
+            languages = viewModel.languages,
+            onPick = viewModel::setFrom,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            "⇄",
+            style = FlowFolioType.button.copy(fontSize = 22.sp).merge(FlowFolio.title),
+            modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = viewModel::swap).padding(8.dp)
+        )
+        LanguageChip(languageName(state.to), null, viewModel.languages, viewModel::setTo, Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun LanguageChip(
+    label: String,
+    badge: String?,
+    languages: List<String>,
+    onPick: (String) -> Unit,
+    modifier: Modifier
+) {
+    var open by remember { mutableStateOf(false) }
+    Box(modifier) {
+        FlowFolioCard(
+            Modifier.fillMaxWidth().clickable {
+                open = true
+            },
+            radius = 18.dp,
+            padding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+        ) {
+            Column {
+                badge?.let { Text(it.uppercase(), style = FlowFolioType.eyebrow.merge(FlowFolio.subItem)) }
+                Text(
+                    label,
+                    style = FlowFolioType.rowLabel.merge(FlowFolio.item),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
-        },
-        onRelease = { it.destroy() },
-        modifier = Modifier.fillMaxWidth().fillMaxHeight()
+        }
+        DropdownMenu(expanded = open, onDismissRequest = {
+            open = false
+        }, modifier = Modifier.heightIn(max = MENU_HEIGHT)) {
+            languages.sortedBy { languageName(it) }.forEach { code ->
+                DropdownMenuItem(
+                    text = { Text(languageName(code), style = FlowFolio.item) },
+                    onClick = {
+                        open = false
+                        onPick(code)
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun Passage(state: TranslateUiState) {
+    Text(
+        "“${state.source}”",
+        style = FlowFolioType.sub.copy(
+            fontFamily = FlowFolioType.heroTitle.fontFamily,
+            fontStyle = FontStyle.Italic,
+            fontSize = 15.sp
+        )
+            .merge(FlowFolio.hint),
+        maxLines = PASSAGE_LINES,
+        overflow = TextOverflow.Ellipsis
     )
 }
 
-/** Google Translate for [text], from any language into the phone's language. */
-internal fun translateUrl(text: String, target: String = Locale.getDefault().language): String =
-    Uri.Builder().scheme("https").authority("translate.google.com").path("/")
-        .appendQueryParameter("sl", "auto")
-        .appendQueryParameter("tl", target.ifBlank { "en" })
-        .appendQueryParameter("text", text.take(MAX_CHARS))
-        .appendQueryParameter("op", "translate")
-        .build().toString()
+@Composable
+private fun Result(state: TranslateUiState) {
+    val context = LocalContext.current
+    Column(Modifier.padding(top = 16.dp)) {
+        when (state.status) {
+            TranslateStatus.DONE -> {
+                val result = state.result.orEmpty()
+                Text(
+                    result,
+                    style = FlowFolioType.rowLabel.copy(fontSize = 19.sp, lineHeight = 27.sp).merge(FlowFolio.text),
+                    modifier = Modifier.testTag(ReaderTestTags.TRANSLATION)
+                )
+                Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Action(R.string.reader_copy) { copy(context, result) }
+                    Action(R.string.reader_share) { share(context, result) }
+                }
+            }
 
-/** Pages the view may show: Google's (Translate, and its consent and account pages), over HTTPS only. */
-internal fun isGoogle(url: Uri): Boolean {
-    val host = url.host.orEmpty()
-    return url.scheme == "https" && (host == "google.com" || host.endsWith(".google.com"))
+            TranslateStatus.FAILED -> Text(
+                stringResource(R.string.reader_translate_failed),
+                style = FlowFolioType.sub.merge(FlowFolio.subItem)
+            )
+
+            TranslateStatus.CHOOSE -> Text(
+                stringResource(R.string.reader_translate_choose),
+                style = FlowFolioType.sub.merge(FlowFolio.title)
+            )
+
+            else -> Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = FlowFolio.palette.title)
+                val label = when (state.status) {
+                    TranslateStatus.DOWNLOADING -> R.string.reader_translate_downloading
+                    TranslateStatus.DETECTING -> R.string.reader_translate_detecting
+                    else -> R.string.reader_translate_working
+                }
+                Text(
+                    stringResource(label),
+                    style = FlowFolioType.sub.merge(FlowFolio.hint),
+                    modifier = Modifier.padding(start = 10.dp)
+                )
+            }
+        }
+    }
 }
 
-private val PANEL_WIDTH = 640.dp
-private const val HEIGHT_SHARE = 0.72f
+@Composable
+private fun Action(label: Int, onClick: () -> Unit) {
+    Text(
+        stringResource(label),
+        style = FlowFolioType.pill.copy(fontSize = 14.sp).merge(FlowFolio.title),
+        modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onClick).padding(vertical = 6.dp)
+    )
+}
 
-/** Google Translate's page takes up to 5,000 characters. */
-private const val MAX_CHARS = 5000
+/** Earlier translations, newest first; a tap shows one again. */
+@Composable
+private fun History(history: List<Translation>, onShow: (Translation) -> Unit, onClear: () -> Unit) {
+    if (history.isEmpty()) return
+    HorizontalDivider(color = FlowFolio.palette.edge, modifier = Modifier.padding(top = 12.dp))
+    Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            stringResource(R.string.reader_translate_history).uppercase(),
+            style = FlowFolioType.eyebrow.merge(FlowFolio.subItem),
+            modifier = Modifier.weight(1f)
+        )
+        Action(R.string.reader_translate_clear, onClear)
+    }
+    LazyColumn(Modifier.heightIn(max = HISTORY_HEIGHT).testTag(ReaderTestTags.TRANSLATE_HISTORY)) {
+        items(history, key = { it.id }) { t ->
+            Column(Modifier.fillMaxWidth().clickable { onShow(t) }.padding(vertical = 8.dp)) {
+                Text(
+                    "${languageName(t.from)} → ${languageName(t.to)}",
+                    style = FlowFolioType.pill.merge(FlowFolio.hint)
+                )
+                Text(
+                    t.source,
+                    style = FlowFolioType.rowDetail.merge(FlowFolio.item),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    t.translated,
+                    style = FlowFolioType.rowDetail.merge(FlowFolio.text),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+/** "es" -> "Spanish" (in the phone's language). */
+internal fun languageName(code: String): String = Locale.forLanguageTag(code).let {
+    it.getDisplayLanguage(Locale.getDefault()).replaceFirstChar { c -> c.titlecase(Locale.getDefault()) }
+}
+    .ifBlank { code }
+
+private val PANEL_WIDTH = 640.dp
+private const val HEIGHT_SHARE = 0.8f
+private val MENU_HEIGHT = 420.dp
+private val HISTORY_HEIGHT = 220.dp
+private const val PASSAGE_LINES = 5

@@ -37,11 +37,14 @@ import kotlin.math.atan2
 
 internal fun Modifier.drawCurl(
     config: PageCurlConfig,
-    posA: Offset,
-    posB: Offset,
+    edge: () -> Edge,
     backPage: ImageBitmap? = null,
     gradientShadow: Boolean = false,
 ): Modifier = drawWithCache {
+    // FlowFolio: the fold is read here, in the draw phase, so a moving fold only redraws (no recomposition).
+    val current = edge()
+    val posA = current.top
+    val posB = current.bottom
     // Fast-check if curl is in left most position (gesture is fully completed)
     // In such case do not bother and draw nothing
     if (posA == size.toRect().topLeft && posB == size.toRect().bottomLeft) {

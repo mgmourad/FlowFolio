@@ -86,22 +86,25 @@ public fun PageCurl(
                     onTapBackward = state::prev,
                 )
         ) {
-            // Wrap in key to synchronize state updates
-            key(updatedCurrent, internalState.forward.value, internalState.backward.value) {
+            // FlowFolio: keyed on the page only. Upstream also keyed on the moving fold edges, which rebuilt every page
+            // (images, ribbons, highlights) on every frame of a turn; the edges are now read in the draw phase.
+            key(updatedCurrent) {
                 if (updatedCurrent + 1 < state.max) {
                     content(updatedCurrent + 1)
                 }
 
                 if (updatedCurrent < state.max) {
-                    val forward = internalState.forward.value
-                    Box(Modifier.drawCurl(updatedConfig, forward.top, forward.bottom, backPage?.invoke(updatedCurrent), gradientShadow)) {
+                    val forward = internalState.forward
+                    val back = backPage?.invoke(updatedCurrent)
+                    Box(Modifier.drawCurl(updatedConfig, { forward.value }, back, gradientShadow)) {
                         content(updatedCurrent)
                     }
                 }
 
                 if (updatedCurrent > 0) {
-                    val backward = internalState.backward.value
-                    Box(Modifier.drawCurl(updatedConfig, backward.top, backward.bottom, backPage?.invoke(updatedCurrent - 1), gradientShadow)) {
+                    val backward = internalState.backward
+                    val back = backPage?.invoke(updatedCurrent - 1)
+                    Box(Modifier.drawCurl(updatedConfig, { backward.value }, back, gradientShadow)) {
                         content(updatedCurrent - 1)
                     }
                 }

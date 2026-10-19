@@ -74,6 +74,26 @@ internal object TextSelection {
             }
         }
         current?.let(out::add)
+        return closeGaps(out)
+    }
+
+    /**
+     * Consecutive lines meet halfway across the leading between them, so a highlighted paragraph is one solid block
+     * like a marker stroke, not stripes. Lines further apart (a paragraph break, a column) keep their own band.
+     */
+    private fun closeGaps(lines: List<PageRect>): List<PageRect> {
+        val out = lines.toMutableList()
+        for (i in 0 until out.size - 1) {
+            val a = out[i]
+            val b = out[i + 1]
+            val gap = b.top - a.bottom
+            val height = minOf(a.bottom - a.top, b.bottom - b.top)
+            if (gap > 0f && gap < height * MAX_LEADING) {
+                val mid = (a.bottom + b.top) / 2f
+                out[i] = a.copy(bottom = mid)
+                out[i + 1] = b.copy(top = mid)
+            }
+        }
         return out
     }
 
@@ -101,4 +121,5 @@ internal object TextSelection {
     private val SPACES = Regex("\\s+")
     private const val LINE_REACH = 0.06f
     private const val SAME_LINE_SLACK = 0.5f
+    private const val MAX_LEADING = 0.9f
 }

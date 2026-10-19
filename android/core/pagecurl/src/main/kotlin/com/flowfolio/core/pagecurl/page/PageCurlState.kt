@@ -5,6 +5,9 @@
  */
 package com.flowfolio.core.pagecurl.page
 
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.AnimationVector4D
 import androidx.compose.animation.core.TwoWayConverter
@@ -200,6 +203,42 @@ public class PageCurlState(
         )
     }
 
+    /** FlowFolio: a [dragBackwardTo] is in progress. */
+    private var externalDrag: Boolean = false
+
+    /**
+     * FlowFolio: a backward turn driven from outside the curl (the left page of a book spread), following the finger.
+     * [start] is where the drag began and [position] where the finger is, both in the curl's coordinates (a finger
+     * moving right from the spine is at x = distance moved).
+     */
+    public suspend fun dragBackwardTo(start: Offset, position: Offset) {
+        val s = internalState ?: return
+        if (current <= 0) return
+        if (!externalDrag) {
+            s.animateJob?.cancel()
+            s.reset()
+            externalDrag = true
+        }
+        val size = IntSize(s.constraints.maxWidth, s.constraints.maxHeight)
+        s.backward.snapTo(NewEdgeCreator.Default().createNew(size, start, position))
+    }
+
+    /** Ends [dragBackwardTo]: finishes the turn when [turn], else lays the page back, at the pace of a full turn. */
+    public suspend fun releaseBackward(turn: Boolean) {
+        val s = internalState ?: return
+        if (!externalDrag) return
+        externalDrag = false
+        val width = s.constraints.maxWidth.toFloat().coerceAtLeast(1f)
+        val target = if (turn) s.rightEdge else s.leftEdge
+        val ms = (EXTERNAL_TURN_MS * kotlin.math.abs(s.backward.value.centerX - target.centerX) / width).toInt()
+        try {
+            s.backward.animateTo(target, tween(ms.coerceIn(EXTERNAL_MIN_MS, EXTERNAL_TURN_MS), easing = LinearOutSlowInEasing))
+        } finally {
+            if (turn) current = (current - 1).coerceAtLeast(0)
+            s.backward.snapTo(s.leftEdge)
+        }
+    }
+
     internal inner class InternalState(
         val constraints: Constraints,
         val leftEdge: Edge,
@@ -304,3 +343,6 @@ private val Size.middle: Edge
 
 private val Size.end: Edge
     get() = Edge(Offset(width, height), Offset(width, height))
+
+private const val EXTERNAL_TURN_MS = 450
+private const val EXTERNAL_MIN_MS = 180

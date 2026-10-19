@@ -52,6 +52,12 @@ abstract class DataBindings {
     abstract fun http(impl: UrlConnectionGet): HttpGet
 
     @Binds
+    abstract fun translator(impl: MlKitTranslator): Translator
+
+    @Binds
+    abstract fun translations(impl: DefaultTranslationRepository): TranslationRepository
+
+    @Binds
     abstract fun settings(impl: DefaultSettingsRepository): SettingsRepository
 
     @Binds

@@ -62,6 +62,14 @@
     <string name="highlight_pink">Pink</string>
     <string name="highlight_purple">Purple</string>
     <string name="reader_translate">Translate</string>
-    <string name="reader_translate_note">By Google Translate. The passage is sent to Google.</string>
+    <string name="reader_translate_note">On your phone, by Google ML Kit. Nothing is sent.</string>
     <string name="reader_close">Close</string>
+    <string name="reader_translate_detected">Detected</string>
+    <string name="reader_translate_detecting">Finding the language…</string>
+    <string name="reader_translate_downloading">Downloading the language (about 30 MB, once)…</string>
+    <string name="reader_translate_working">Translating…</string>
+    <string name="reader_translate_failed">Couldn\'t translate. Check the connection for the first download, then try again.</string>
+    <string name="reader_translate_history">Recent</string>
+    <string name="reader_translate_clear">Clear</string>
+    <string name="reader_translate_choose">This passage is already in that language. Choose the language to translate into above.</string>
 </resources>
