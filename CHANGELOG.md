@@ -117,7 +117,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     2-4% janky frames, p99 12-18 ms; slow drags 1-2%; selection drag p95 7 ms.
   - The left page of a spread follows the curl: while a sheet is lifted back, the previous spread's left page shows
     underneath (it used to keep the current one), and after a forward turn it changes in the same frame the sheet
-    lands instead of a moment later.
+    lands instead of a moment later. When a forward sheet lands, the next left page shows in that same frame (the old
+    one flickered through for a frame before).
   - Translate runs on the phone with Google ML Kit, in our own glass panel: detected source language, From and To
     menus with swap, Copy and Share, and a history of recent translations (`translations` table) with Clear.
     Language models download once (about 30 MB each); the passage never leaves the phone. Replaces the Google
