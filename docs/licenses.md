@@ -36,6 +36,8 @@ Release dates were checked on Maven Central, Google Maven, PyPI, or GitHub Relea
 | Instrument Sans (variable font) | google/fonts main, 2026-10-17 | 2022-2024 (Instrument) | SIL OFL 1.1 | app | UI font (ADR-0015). Same locations. 396 KB (roman + italic) |
 | dev.chrisbanes.haze:haze | 2.0.1 | 2026-09-29 | Apache-2.0 | app | Backdrop blur for glass surfaces (ADR-0015). Real blur on Android 12+, tint on older. ~250 KB. Owner-approved 2026-10-17 |
 | dev.chrisbanes.haze:haze-blur | 2.0.1 | 2026-09-29 | Apache-2.0 | app | Same project as Haze; in 2.0 the blur effect is its own module, so it comes with the approved Haze. ~160 KB |
+| com.google.mlkit:translate | 17.0.3 | latest on Google Maven, 2026-10-18 | Google APIs ToS + ML Kit terms (proprietary, not GPL) | app | On-device translation (ADR-0018). 16.4 MB native library on arm64; downloads ~30 MB models per language from Google; sends anonymous usage data to Google. Owner-approved 2026-10-18 |
+| com.google.mlkit:language-id | 17.0.6 | latest on Google Maven, 2026-10-18 | Google APIs ToS + ML Kit terms (proprietary, not GPL) | app | Detects the passage's language for the Translate panel. 1.0 MB on arm64. Added with translate; disclosed to the owner 2026-10-19 |
 | Spotless Gradle plugin | 8.10.4 | 2026-10-08 | Apache-2.0 | build | |
 | ktlint | 1.8.0 | 2025-11-14 | MIT | build | |
 | detekt | 1.23.8 | 2025-02-21 | Apache-2.0 | build | **Maintenance risk:** last 1.x release is 20 months old; 2.0 is still alpha. Works with Kotlin 2.4 today; re-evaluate when 2.0 is stable |

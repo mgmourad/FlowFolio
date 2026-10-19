@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -52,7 +54,11 @@ internal class TextPick {
     /** Where the selection was started, so dragging back over it keeps the first word. */
     private var anchor: IntRange = IntRange.EMPTY
 
-    val active: Boolean get() = range != null || editing != null
+    /** Something is selected or tapped; changes only when that starts or ends, not as the selection grows. */
+    val active: Boolean by derivedStateOf { range != null || editing != null }
+
+    /** A selection is being made (as opposed to a tapped highlight). */
+    val selecting: Boolean by derivedStateOf { range != null }
 
     fun start(page: Int, text: PageText, at: Int) {
         this.page = page
@@ -160,46 +166,73 @@ internal fun Modifier.selectText(
  * elsewhere ends the selection instead of turning the page.
  */
 @Composable
-internal fun BoxScope.SelectionMarks(pick: TextPick, frame: PageFrames.Frame?, tint: Color, onDismiss: () -> Unit) {
-    val text = pick.text
-    val range = pick.range
+internal fun BoxScope.SelectionMarks(
+    pick: TextPick,
+    frame: () -> PageFrames.Frame?,
+    tint: Color,
+    onLens: (Offset) -> Unit = {},
+    onDismiss: () -> Unit
+) {
     Box(Modifier.matchParentSize().pointerInput(Unit) { detectTapGestures { onDismiss() } })
-    if (text == null || range == null || frame == null) return
-    val rects = TextSelection.rects(text, range).map { it.on(frame) }
-    if (rects.isEmpty()) return
-    Canvas(Modifier.matchParentSize()) {
-        rects.forEach { drawRect(tint.copy(alpha = SELECTION_ALPHA), it.topLeft, it.size) }
+    // The selection is read only while drawing and placing (owner, 2026-10-18: smooth): a moving finger redraws the
+    // marks and moves the handles, without recomposing anything.
+    val rects = remember(pick) {
+        derivedStateOf {
+            val text = pick.text
+            val range = pick.range
+            val f = frame()
+            if (text == null || range == null ||
+                f == null
+            ) {
+                emptyList()
+            } else {
+                TextSelection.rects(text, range).map { it.on(f) }
+            }
+        }
     }
-    Handle(
-        rects.first().let {
-            Offset(it.left, it.bottom)
-        },
-        tint
-    ) { p -> charNear(p, frame, text)?.let { pick.moveEnd(true, it) } }
-    Handle(
-        rects.last().let {
-            Offset(it.right, it.bottom)
-        },
-        tint
-    ) { p -> charNear(p, frame, text)?.let { pick.moveEnd(false, it) } }
+    Canvas(Modifier.matchParentSize()) {
+        rects.value.forEach { drawRect(tint.copy(alpha = SELECTION_ALPHA), it.topLeft, it.size) }
+    }
+    val end = { start: Boolean ->
+        { p: Offset ->
+            onLens(p)
+            val f = frame()
+            val text = pick.text
+            if (f != null && text != null) charNear(p, f, text)?.let { pick.moveEnd(start, it) }
+        }
+    }
+    Handle({
+        rects.value.firstOrNull()?.let { Offset(it.left, it.bottom) }
+    }, tint, { onLens(Offset.Unspecified) }, end(true))
+    Handle({
+        rects.value.lastOrNull()?.let { Offset(it.right, it.bottom) }
+    }, tint, { onLens(Offset.Unspecified) }, end(false))
 }
 
-/** A slim handle hanging under the selection's end (a stem and a knob); dragging it moves that end. */
+/**
+ * A slim handle hanging under the selection's end (a stem and a knob); dragging it moves that end. [at] is read while
+ * placing, so the handle follows the selection without recomposing.
+ */
 @Composable
-private fun Handle(at: Offset, tint: Color, onMove: (Offset) -> Unit) {
+private fun Handle(at: () -> Offset?, tint: Color, onEnd: () -> Unit, onMove: (Offset) -> Unit) {
     val half = with(LocalDensity.current) { HANDLE_WIDTH.toPx() } / 2f
     val reach = with(LocalDensity.current) { HANDLE_REACH.toPx() }
-    val topLeft by rememberUpdatedState(Offset(at.x - half, at.y))
     val move by rememberUpdatedState(onMove)
+    val done by rememberUpdatedState(onEnd)
+    val place by rememberUpdatedState(at)
     Canvas(
         Modifier
-            .offset { IntOffset(topLeft.x.roundToInt(), topLeft.y.roundToInt()) }
+            .offset {
+                val p = place() ?: Offset(OFF_SCREEN, OFF_SCREEN)
+                IntOffset((p.x - half).roundToInt(), p.y.roundToInt())
+            }
             .size(HANDLE_WIDTH, HANDLE_HEIGHT)
             .pointerInput(Unit) {
-                detectDragGestures { change, _ ->
+                detectDragGestures(onDragEnd = { done() }, onDragCancel = { done() }) { change, _ ->
                     change.consume()
+                    val p = place() ?: return@detectDragGestures
                     // Aim a little above the finger, at the line the handle hangs from.
-                    move(topLeft + change.position - Offset(0f, reach))
+                    move(Offset(p.x - half, p.y) + change.position - Offset(0f, reach))
                 }
             }
     ) {
@@ -248,6 +281,7 @@ internal fun DrawScope.drawHighlights(highlights: List<Annotation>, darkPaper: B
 internal fun highlightAlpha(darkPaper: Boolean) = if (darkPaper) DARK_ALPHA else LIGHT_ALPHA
 
 private const val SELECTION_ALPHA = 0.32f
+private const val OFF_SCREEN = -10_000f
 private const val NOTE_DOT = 0.22f
 private const val DARK_ALPHA = 0.38f
 private const val LIGHT_ALPHA = 0.6f

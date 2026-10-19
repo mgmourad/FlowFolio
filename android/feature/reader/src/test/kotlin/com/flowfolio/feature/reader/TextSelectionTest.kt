@@ -41,7 +41,16 @@ class TextSelectionTest {
         val rects = TextSelection.rects(page, 5..15)
         assertEquals(2, rects.size)
         assertEquals(0.20f, rects[0].left, 1e-4f)
-        assertEquals(0.15f, rects[1].top, 1e-4f)
+        assertEquals(0.18f, rects[1].bottom, 1e-4f)
+    }
+
+    @Test
+    fun linesOfAParagraphMeetSoTheHighlightIsOneBlock() {
+        val rects = TextSelection.rects(page, 0..18)
+        assertEquals(2, rects.size)
+        // Line 1 ends at 0.13, line 2 starts at 0.15: they meet halfway, at 0.14.
+        assertEquals(0.14f, rects[0].bottom, 1e-4f)
+        assertEquals(0.14f, rects[1].top, 1e-4f)
     }
 
     @Test

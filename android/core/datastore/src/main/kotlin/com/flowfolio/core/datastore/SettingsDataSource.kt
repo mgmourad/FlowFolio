@@ -41,7 +41,8 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             pageTurn = p[PAGE_TURN].toEnum(defaults.pageTurn),
             neonGlow = p[NEON_GLOW] ?: defaults.neonGlow,
             onlineLookup = p[ONLINE_LOOKUP] ?: defaults.onlineLookup,
-            onlineLookupAsked = p[ONLINE_LOOKUP_ASKED] ?: defaults.onlineLookupAsked
+            onlineLookupAsked = p[ONLINE_LOOKUP_ASKED] ?: defaults.onlineLookupAsked,
+            translateTo = p[TRANSLATE_TO]
         )
     }
 
@@ -85,6 +86,10 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         store.edit { it[NEON_GLOW] = on }
     }
 
+    suspend fun setTranslateTo(language: String) {
+        store.edit { it[TRANSLATE_TO] = language }
+    }
+
     /** Turning the lookup on or off also counts as having been asked. */
     suspend fun setOnlineLookup(on: Boolean) {
         store.edit {
@@ -109,6 +114,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val NEON_GLOW = booleanPreferencesKey("neon_glow")
         val ONLINE_LOOKUP = booleanPreferencesKey("online_lookup")
         val ONLINE_LOOKUP_ASKED = booleanPreferencesKey("online_lookup_asked")
+        val TRANSLATE_TO = stringPreferencesKey("translate_to")
     }
 }
 

@@ -35,6 +35,8 @@ interface SettingsRepository {
     suspend fun setNeonGlow(on: Boolean)
 
     suspend fun setOnlineLookup(on: Boolean)
+
+    suspend fun setTranslateTo(language: String)
 }
 
 class DefaultSettingsRepository @Inject constructor(private val source: SettingsDataSource) : SettingsRepository {
@@ -82,5 +84,9 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setOnlineLookup(on: Boolean) {
         source.setOnlineLookup(on)
+    }
+
+    override suspend fun setTranslateTo(language: String) {
+        source.setTranslateTo(language)
     }
 }

@@ -173,21 +173,27 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     or the home screen. Delete pulled dumps after parsing.
 23. The reader bars hide 10 seconds after the last interaction; a UI dump taken later will not find them.
 24. Bookmarks are stored per page (one ribbon per page; adding again recolours it). The Bookmarks tab is slice 5.
-28. Network (ADR-0017): INTERNET is used only by Translate (Google Translate in a WebView limited to *.google.com) and
-    the Open Library lookup (`BookLookup`, off until the reader agrees). Page numbers: `PageLabels` runs in
+28. Network (ADR-0017, ADR-0018): INTERNET is used by the Open Library lookup (`BookLookup`, off until the reader
+    agrees) and by ML Kit, which downloads translation models (~30 MB per language) and sends anonymous usage data.
+    Translation itself runs on the phone (`MlKitTranslator`, `TranslateOverlay`); history is Room v8 `translations`. Page numbers: `PageLabels` runs in
     `books.page_labels` (Room v7), from PDF labels or `FolioScanner` (margin folios).
 27. Annotations (ADR-0016): page text from `nativePageText`; selection logic in `TextSelection`, gestures and drawing
-    in `ReaderSelection` / `ReaderAnnotating`. Selection is off in Scroll and while zoomed. Room is at schema v6
+    in `ReaderSelection` / `ReaderAnnotating`. Selection works in every turn style and zoomed in (`PageBounds`). Room was at schema v6
     (`annotations`, `books.right_to_left`). Right to left mirrors the book layer and each page (`LocalMirroredPages`).
 26. Room is at schema v5 (`android/core/database/schemas`): books carry editable details and `book_type`;
     `reading_sessions` holds time read (`ReadingTimeViewModel`, `SessionTracker`). Device checks add real sessions to
     the owner's totals; keep reader visits short or say so.
+29. Vendored pagecurl: never key composables on the moving edge (it rebuilt every page each frame); key on `current`
+    and read the edge in `drawWithCache`. Never add fields to `PageCurlState.InternalState` (an inner class): the
+    Compose compiler's `$stable` field goes missing at run time (`NoSuchFieldError`); keep extra state on the outer
+    class. Selection state is read in draw/placement lambdas so a drag doesn't recompose the reader.
 25. The reader's panels (Contents, Go to page, ribbon colours, "Aa") are drawn in the reader's window (`ReaderPanels`),
     not as sheets or dialogs, so glass can blur the page; their tags are resource ids. The bars and panels use
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
 ## Decision log
 
-ADRs 0001–0017 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0018 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
-pages (0014, proposed).
+pages (0014, proposed), annotations (0016), online services (0017), on-device translation (0018, supersedes the
+Translate part of 0017).

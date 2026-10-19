@@ -73,7 +73,9 @@ data class UserSettings(
     /** Look book details up online (Open Library, ADR-0017). Off until the reader agrees. */
     val onlineLookup: Boolean = false,
     /** Whether the first import has asked about the online lookup yet. */
-    val onlineLookupAsked: Boolean = false
+    val onlineLookupAsked: Boolean = false,
+    /** The language passages are translated into last (BCP-47); null means the phone's language. */
+    val translateTo: String? = null
 )
 
 /**

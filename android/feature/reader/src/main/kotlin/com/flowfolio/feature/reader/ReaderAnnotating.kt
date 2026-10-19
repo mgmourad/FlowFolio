@@ -3,9 +3,12 @@ package com.flowfolio.feature.reader
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.magnifier
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -16,10 +19,14 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.FlowFolio
@@ -30,6 +37,7 @@ import com.flowfolio.core.model.PageRect
 import com.flowfolio.core.model.Passage
 import com.flowfolio.core.model.shareQuote
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Highlights by page, for the page panes (they turn with the page). */
@@ -69,7 +77,15 @@ internal class Annotating(
     val pick = TextPick()
     var size by mutableStateOf(IntSize.Zero)
     var frames: (IntSize) -> List<PageFrames.Frame> = { emptyList() }
-    var all: List<Annotation> = emptyList()
+
+    /** The book's highlights; observable, so the page and the zoomed view redraw as soon as one is saved. */
+    var all by mutableStateOf<List<Annotation>>(emptyList())
+
+    /** Highlights by page, recomputed only when [all] changes. */
+    val byPage: Map<Int, List<Annotation>> by derivedStateOf { all.groupBy { it.page } }
+
+    /** Where the magnifier looks (the finger while selecting or moving a handle); unspecified hides it. */
+    var lens by mutableStateOf(Offset.Unspecified)
     var note by mutableStateOf<NoteTarget?>(null)
 
     /** A passage being translated (the translate panel is open). */
@@ -81,7 +97,13 @@ internal class Annotating(
     var dragging by mutableStateOf(false)
     private var lastColour = HighlightColor.YELLOW
 
+    /** Reads [page]'s text ahead of a selection. */
+    suspend fun prefetch(page: Int) {
+        texts.get(page)
+    }
+
     fun startAt(point: Offset) {
+        lens = point
         val (frame, at) = frameAt(point, frames(size)) ?: return
         dragging = true
         scope.launch {
@@ -91,6 +113,7 @@ internal class Annotating(
     }
 
     fun dragTo(point: Offset) {
+        lens = point
         val text = pick.text
         val hit = frameAt(point, frames(size))?.takeIf { it.first.page == pick.page }
         if (text != null && hit != null) TextSelection.charAt(text, hit.second.x, hit.second.y)?.let(pick::extendTo)
@@ -185,18 +208,26 @@ internal fun rememberAnnotating(
     annotating.all = all
     annotating.title = book?.title ?: s.title
     annotating.author = book?.author
-    // A turn, a jump or a new layout ends a selection on the old page.
-    LaunchedEffect(s.unit, s.layout) { annotating.pick.clear() }
+    // A turn, a jump or a new layout ends a selection on the old page. Once the turn has settled, the text of the pages
+    // in view is read ahead, so a press and hold selects at once instead of waiting for PDFium.
+    LaunchedEffect(s.unit, s.layout) {
+        annotating.pick.clear()
+        delay(TEXT_PREFETCH_DELAY_MS)
+        pagesInView(s).forEach { annotating.prefetch(it) }
+    }
     return annotating
 }
 
 /** The page box's part: presses that select, and the box's size (for page frames). */
 internal fun Modifier.annotate(annotating: Annotating, enabled: Boolean): Modifier =
     onSizeChanged { annotating.size = it }
-        .selectText(enabled, annotating::startAt, annotating::dragTo) { annotating.dragging = false }
+        .selectText(enabled, annotating::startAt, annotating::dragTo) {
+            annotating.dragging = false
+            annotating.lens = Offset.Unspecified
+        }
 
 /** Highlights by page, for [LocalHighlights]. */
-internal fun Annotating.byPage(): Map<Int, List<Annotation>> = all.groupBy { it.page }
+internal fun Annotating.byPage(): Map<Int, List<Annotation>> = byPage
 
 /**
  * What floats over the pages while annotating: the selection with its handles, the highlight bar, and the note
@@ -205,10 +236,13 @@ internal fun Annotating.byPage(): Map<Int, List<Annotation>> = all.groupBy { it.
 @Composable
 internal fun BoxScope.AnnotatingLayer(annotating: Annotating, s: ReaderState.Ready) {
     val pick = annotating.pick
+    Lens(annotating)
     if (!pick.active && annotating.note == null && annotating.translating == null) return
     FlowFolioPalette(dark = s.tone.dark) {
-        if (pick.range != null) {
-            SelectionMarks(pick, annotating.frameOfPick(), FlowFolio.palette.item) { pick.clear() }
+        if (pick.selecting) {
+            SelectionMarks(pick, annotating::frameOfPick, FlowFolio.palette.item, onLens = { annotating.lens = it }) {
+                pick.clear()
+            }
         }
         val note = annotating.note
         val editing = pick.editing
@@ -216,7 +250,7 @@ internal fun BoxScope.AnnotatingLayer(annotating: Annotating, s: ReaderState.Rea
         when {
             translating != null -> {
                 SelectionCatcher { annotating.translating = null }
-                TranslateOverlay(translating) { annotating.translating = null }
+                TranslateOverlay(translating, onClose = { annotating.translating = null })
             }
 
             note != null -> NoteLayer(annotating, note)
@@ -282,6 +316,35 @@ private fun BoxScope.NoteLayer(annotating: Annotating, target: NoteTarget) {
     SelectionCatcher { annotating.note = null }
     NoteEditor(quote, initial, annotating::saveNote) { annotating.note = null }
 }
+
+/**
+ * The magnifier over the finger while selecting (owner, 2026-10-18: precision), like the system's text magnifier:
+ * the text under the finger, enlarged, just above it, so the finger never hides what is being selected.
+ */
+@Composable
+private fun BoxScope.Lens(annotating: Annotating) {
+    val lift = with(LocalDensity.current) { LENS_LIFT.toPx() }
+    Spacer(
+        Modifier.matchParentSize().magnifier(
+            sourceCenter = { annotating.lens },
+            magnifierCenter = {
+                annotating.lens.takeIf { it.isSpecified }?.let { it - Offset(0f, lift) }
+                    ?: Offset.Unspecified
+            },
+            zoom = LENS_ZOOM,
+            size = DpSize(LENS_WIDTH, LENS_HEIGHT),
+            cornerRadius = LENS_HEIGHT / 2
+        )
+    )
+}
+
+private const val LENS_ZOOM = 1.6f
+
+/** After a turn: long enough for the pages themselves to render first (PDFium does one thing at a time). */
+private const val TEXT_PREFETCH_DELAY_MS = 700L
+private val LENS_WIDTH = 140.dp
+private val LENS_HEIGHT = 56.dp
+private val LENS_LIFT = 72.dp
 
 /** A tap anywhere outside the bar or editor closes it. */
 @Composable
