@@ -47,3 +47,10 @@ internal fun Modifier.leftPageDrag(curl: PageCurlState, scope: CoroutineScope): 
         onDragCancel = { if (following) scope.launch { curl.releaseBackward(turn = false) } }
     )
 }
+
+/**
+ * The spread whose left page lies under the turning sheet, taken from the curl itself so it changes in the same frame
+ * as the sheet. While a sheet is lifted back off the left page (progress below zero), the previous spread's left page
+ * shows underneath; otherwise the current one. The reader's own unit catches up a frame or more later.
+ */
+internal fun leftPaneUnit(curl: PageCurlState): Int = if (curl.progress < 0f) curl.current - 1 else curl.current

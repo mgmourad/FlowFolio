@@ -28,6 +28,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -174,7 +175,9 @@ internal fun SpreadReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap
                 .pointerInput(curl) { detectTapGestures { scope.launch { curl.prev() } } }
                 .leftPageDrag(curl, scope)
         ) {
-            val left = Spreads.leftOf(state.unit, state.pageCount, state.coverAlone)
+            val left by remember(curl, state.pageCount, state.coverAlone) {
+                derivedStateOf { Spreads.leftOf(leftPaneUnit(curl), state.pageCount, state.coverAlone) }
+            }
             PagePane(left, images[left], Alignment.CenterEnd, Spine.RIGHT)
         }
         Box(Modifier.weight(1f).fillMaxHeight()) {
