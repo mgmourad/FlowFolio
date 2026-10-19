@@ -187,6 +187,10 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     and read the edge in `drawWithCache`. Never add fields to `PageCurlState.InternalState` (an inner class): the
     Compose compiler's `$stable` field goes missing at run time (`NoSuchFieldError`); keep extra state on the outer
     class. Selection state is read in draw/placement lambdas so a drag doesn't recompose the reader.
+30. Measure smoothness on a non-debuggable build: a debuggable app runs Compose mostly in ART's interpreter, so frame
+    times look 2-3x worse than users see. Temporarily set `isDebuggable = false` in the debug build type (same
+    package and signature, library kept; don't commit it), install, `cmd package compile -m speed-profile -f`, open
+    the book from the library (debug intent extras need a debuggable build), then reinstall the normal debug build.
 25. The reader's panels (Contents, Go to page, ribbon colours, "Aa") are drawn in the reader's window (`ReaderPanels`),
     not as sheets or dialogs, so glass can blur the page; their tags are resource ids. The bars and panels use
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.

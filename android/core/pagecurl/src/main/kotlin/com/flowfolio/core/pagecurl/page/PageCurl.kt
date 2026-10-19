@@ -16,6 +16,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.ImageBitmap
 import com.flowfolio.core.pagecurl.config.PageCurlConfig
 import com.flowfolio.core.pagecurl.config.rememberPageCurlConfig
@@ -86,27 +87,28 @@ public fun PageCurl(
                     onTapBackward = state::prev,
                 )
         ) {
-            // FlowFolio: keyed on the page only. Upstream also keyed on the moving fold edges, which rebuilt every page
-            // (images, ribbons, highlights) on every frame of a turn; the edges are now read in the draw phase.
-            key(updatedCurrent) {
-                if (updatedCurrent + 1 < state.max) {
-                    content(updatedCurrent + 1)
-                }
-
-                if (updatedCurrent < state.max) {
-                    val forward = internalState.forward
-                    val back = backPage?.invoke(updatedCurrent)
-                    Box(Modifier.drawCurl(updatedConfig, { forward.value }, back, gradientShadow)) {
-                        content(updatedCurrent)
+            // FlowFolio: each page is keyed on its own number, so a turn only reorders the pages already built (the
+            // next page becomes the current one, the current one the previous) instead of rebuilding all of them in
+            // one frame. Upstream also keyed on the moving fold edges, which rebuilt every page on every frame of a
+            // turn; the edges are read in the draw phase. Drawn bottom to top: next, current, previous.
+            for (page in updatedCurrent + 1 downTo updatedCurrent - 1) {
+                if (page < 0 || page >= state.max) continue
+                key(page) {
+                    val edge: (() -> Edge)? = when (page) {
+                        updatedCurrent -> internalState.forward.let { { it.value } }
+                        updatedCurrent - 1 -> internalState.backward.let { { it.value } }
+                        else -> null
                     }
-                }
-
-                if (updatedCurrent > 0) {
-                    val backward = internalState.backward
-                    val back = backPage?.invoke(updatedCurrent - 1)
-                    Box(Modifier.drawCurl(updatedConfig, { backward.value }, back, gradientShadow)) {
-                        content(updatedCurrent - 1)
+                    val curl = if (edge == null) {
+                        // The next page lies wholly under the current one until the current sheet starts to turn;
+                        // skipping it saves a full page of overdraw on every frame of a backward turn.
+                        val forward = internalState.forward
+                        val rest = internalState.rightEdge
+                        Modifier.drawWithContent { if (forward.value != rest) drawContent() }
+                    } else {
+                        Modifier.drawCurl(updatedConfig, edge, backPage?.invoke(page), gradientShadow)
                     }
+                    Box(curl) { content(page) }
                 }
             }
         }
