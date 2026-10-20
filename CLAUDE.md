@@ -214,16 +214,19 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     tables as CSS borders, since phone fonts have no stretchy glyphs. The WebView sometimes has nothing drawn for a frame:
     blank captures are retried before being kept. A layout moves page numbers, so `EpubSession.revision` (a layout
     counter plus the islands' revision) is part of every `PageKey`; without it the cache shows old pages. Islands are
-    measured at their full width and scaled down to the column. Islands cost memory and frames while turning pages
-    (Linear Algebra: up to ~650 MB and ~20% janky frames, against ~330 MB and ~5% without islands; see
-    `docs/plans/phase2-m2.md`).
+    measured at their full width and scaled down to the column. ADR-0021: `IslandStore` keeps sizes and PNGs in
+    `cacheDir/islands/<book>/v<version>-<textPx>-<columnPx>/` (200 MB cap, oldest layouts trimmed); equations are stored
+    in black and tinted on load. After the reader's own work, the queue draws every island ahead while the reader is
+    still (1.5 s after the last turn). While that runs the WebView keeps the window busy, so `uiautomator dump` fails
+    ("could not get idle state"): tap by coordinates, or wait until the book is cached. Bump `IslandStore.VERSION`
+    whenever the parser could number islands differently.
 25. The reader's panels (Contents, Go to page, ribbon colours, "Aa") are drawn in the reader's window (`ReaderPanels`),
     not as sheets or dialogs, so glass can blur the page; their tags are resource ids. The bars and panels use
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
 ## Decision log
 
-ADRs 0001–0020 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0021 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
-Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020).
+Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021).
