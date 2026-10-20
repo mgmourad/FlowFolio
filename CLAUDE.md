@@ -4,9 +4,10 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 2: EPUB reading and pagination engine. Milestone 1 (EPUB in the library) built; milestone 2 (the paginated EPUB
-reader, `docs/plans/phase2-m2.md`) built and checked; sign-off report `docs/plans/phase2-m2-signoff.md` awaits the owner
-(open: EPUB links and footnotes, EPUB memory over budget)** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
+**Phase 2: EPUB reading and pagination engine. Milestone 1 (EPUB in the library) built; milestone 2 (the paginated EPUB reader) signed off 2026-10-20
+(`docs/plans/phase2-m2-signoff.md`). Now M2b, the riffle scrubber (spec `docs/design/riffle-scrubber-spec.md`, mock
+`docs/design/FlowFolio_Riffle_Scrubber.html`, ADR-0022/0023): R1 (logic) built; next R2 (drawing and physics). EPUB
+links and footnote popovers follow it** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
 spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).
 Phase 1 signed off by the owner 2026-10-20 (`docs/plans/phase1-signoff.md`); ADRs 0014, 0016-0018 accepted.
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
@@ -35,7 +36,7 @@ Conventional Commits; keep `CHANGELOG.md`; no secrets in the repo; propose a spi
 ## Architecture summary
 
 - Android modules (ADR-0012): `:app`, `:core:model` (JVM), `:core:pdf` (PDFium JNI, NDK), `:core:database` (Room),
-  `:core:datastore`, `:core:epub` (EPUB parsing, ADR-0020), `:core:reflow` (EPUB pagination and page drawing, ADR-0019), `:core:data` (repositories, import, reader access), `:core:designsystem`, `:core:pagecurl`
+  `:core:datastore`, `:core:epub` (EPUB parsing, ADR-0020), `:core:reflow` (EPUB pagination and page drawing, ADR-0019), `:feature:reader:riffle` (the riffle scrubber, ADR-0022), `:core:data` (repositories, import, reader access), `:core:designsystem`, `:core:pagecurl`
   (vendored), `:feature:library` (library + settings), `:feature:reader` (curl, spreads, page cache).
 - Monorepo: `android/` app (including, from Phase 3, the on-device conversion engine). The Python
   `converter/` is no longer the product path (ADR-0009); its fate is decided in the Phase 3 plan.
@@ -226,8 +227,8 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
 ## Decision log
 
-ADRs 0001–0021 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0023 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
-Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021).
+Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023).
