@@ -64,6 +64,10 @@ it is written up in `docs/spikes/2026-10-epub-pagination.md`.
 | **C. Hybrid** | B for text, plus a hidden WebView that renders islands (MathML, SVG, complex tables) into images placed in the flow | As B | B's speed with A's fidelity where it matters | Two engines; island sizing and baselines; selection inside islands |
 | **R. Readium** | Readium Kotlin toolkit 3.4.0 (BSD-3-Clause, 2026-09-11): EPUB parsing (streamer) and a WebView navigator | Its navigator pages in its own View, so the curl would also need snapshots | Mature, maintained, handles spec edge cases and locators | Large; its navigator UI does not fit our curl; we would likely keep only its parser and locator model |
 
+**Readium was dropped on 2026-10-20 (owner decision).** It needs Google's `desugar_jdk_libs`, which is GPL-2.0
+with the Classpath Exception, and ADR-0003 allows no GPL code in the app. Instead, we write our own EPUB parser,
+prototyped in the spike with protection against hostile files. ADR-0020 will record this.
+
 ### What is measured, on the unfolded Fold, release build
 
 - **Correctness:** joined page text equals source text at 80, 100, 130, 170 and 220% font sizes. Also no split lines,
@@ -149,8 +153,7 @@ and annotations are restored after every device session.
 
 ## Approvals needed before or during the spike
 
-1. **Downloads:** the seven IDPF samples listed above, about 9 MB in total, from
+1. **Downloads (approved and done 2026-10-20):** the seven IDPF samples listed above, about 9 MB in total, from
    `github.com/IDPF/epub3-samples` (release 20230704).
-2. **A spike-only dependency:** Readium Kotlin toolkit 3.4.0 (BSD-3-Clause, released 2026-09-11), used only in the
-   spike module to compare its parser and navigator. Adding it to the app would be a separate decision, recorded in
-   ADR-0020.
+2. **Readium in the spike:** approved, then dropped by the owner because of the GPL-licensed desugaring library it
+   requires (see the note under Candidates).
