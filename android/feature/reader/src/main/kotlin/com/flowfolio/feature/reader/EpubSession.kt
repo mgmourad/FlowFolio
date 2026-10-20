@@ -58,6 +58,12 @@ internal class EpubSession private constructor(
         override fun sizeOf(key: String, value: Bitmap) = value.allocationByteCount
     }
 
+    /** Raised by every layout: page numbers may now show other text, so cached page images no longer match them. */
+    @Volatile private var layouts = 0
+
+    /** Changes whenever a page's image would: a new layout, or islands drawn. Part of every [PageKey]. */
+    val revision: Int get() = layouts + islands.revision
+
     /** Lays the book out for a pane of [size] with text at [bodyPx]; returns the page now showing [keep]. */
     suspend fun layOut(size: PixelSize, bodyPx: Float, density: Float, keep: Locator?): Int = lock.withLock {
         withContext(Dispatchers.Default) {
@@ -74,6 +80,7 @@ internal class EpubSession private constructor(
             pane = size
             column = bodyPx to spec.width
             drawer = PageDrawer(book, ::image, islands::image)
+            layouts++
             keep?.let(book::pageOf) ?: 0
         }
     }
@@ -81,8 +88,13 @@ internal class EpubSession private constructor(
     /** Lays [chapter] out again (its islands got their sizes); returns the page now showing [keep]. */
     suspend fun relayOut(chapter: Int, keep: Locator?): Int = lock.withLock {
         withContext(Dispatchers.Default) {
+            val first = book.pageOf(Locator(chapter, 0))
             paginator?.let { book.repaginate(chapter, it) }
-            keep?.let(book::pageOf) ?: 0
+            val page = keep?.let(book::pageOf) ?: 0
+            // Pages before the chapter keep their numbers and text; only a chapter near or before the reader's place
+            // can change pages that are cached.
+            if (first <= page + NEAR_PAGES) layouts++
+            page
         }
     }
 
@@ -175,6 +187,9 @@ internal class EpubSession private constructor(
         private const val TOP_DP = 56f
         private const val BOTTOM_DP = 64f
         private const val IMAGE_BYTES = 24 * 1024 * 1024
+
+        /** Pages past the reader's place that may be cached (the planned neighbours, with room to spare). */
+        private const val NEAR_PAGES = 16
         private const val RGB = 0x00FFFFFF
         private const val FAINT_ALPHA = 0x22000000
     }

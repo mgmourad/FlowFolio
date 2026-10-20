@@ -208,7 +208,8 @@ private fun BottomBar(state: ReaderState.Ready, navigation: BookNavigation, acti
 private fun BoxScope.PageNumber(state: ReaderState.Ready, labels: List<String?>) {
     val spread = state.layout == ReaderLayout.SPREAD
     val pages = if (spread) Spreads.pagesOf(state.unit, state.pageCount, state.coverAlone) else listOf(state.anchorPage)
-    val shown = pages.joinToString("–") { PageLookup.labelOf(it, labels) }
+    // Two screen pages of one printed page (a reflowed book's page list) show its number once.
+    val shown = pages.map { PageLookup.labelOf(it, labels) }.distinct().joinToString("–")
     // The book's own numbers stand alone ("48–49"); counting from the cover, "62–63 of 959".
     val printed = pages.any { labels.getOrNull(it) != null }
     Text(

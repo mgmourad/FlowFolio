@@ -467,7 +467,7 @@ class ReaderViewModel @Inject constructor(
             listOf(ready.unit, ready.unit + 1, ready.unit - 1, ready.unit + 2).filter { it in 0 until ready.unitCount }
         val pages =
             units.flatMap { u -> if (spread) Spreads.pagesOf(u, ready.pageCount, ready.coverAlone) else listOf(u) }
-        val keys = pages.map { PageKey(it, pane, ready.tone, session.islands.revision) }
+        val keys = pages.map { PageKey(it, pane, ready.tone, session.revision) }
         wanted = keys
         currentKeys.value = keys.associateBy { it.page }
         cache?.request(keys, newBudgetBytes = minOf(keys.sumOf { it.size.argbBytes }, MAX_CACHE_BYTES))

@@ -66,13 +66,18 @@ internal class EpubIslands(private val book: ReflowBook) {
         applySpans()
     }
 
-    /** Inline islands take their measured size in the text (until then, a few ems). */
+    /**
+     * Inline islands take their measured size in the text (until then, a few ems), scaled down to the column when
+     * wider.
+     */
     private fun applySpans() {
+        val column = measuredFor?.second ?: 0
         spans.values.forEach { span ->
             val box = sizes[span.id]
-            span.width = box?.w ?: 0
-            span.ascent = box?.baseline ?: 0
-            span.descent = box?.let { it.h - it.baseline } ?: 0
+            val scale = if (box != null && column in 1 until box.w) column.toFloat() / box.w else 1f
+            span.width = box?.let { (it.w * scale).toInt() } ?: 0
+            span.ascent = box?.let { (it.baseline * scale).toInt() } ?: 0
+            span.descent = box?.let { ((it.h - it.baseline) * scale).toInt() } ?: 0
         }
     }
 

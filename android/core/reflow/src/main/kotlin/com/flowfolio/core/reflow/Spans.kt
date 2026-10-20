@@ -3,6 +3,7 @@ package com.flowfolio.core.reflow
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.RectF
 import android.text.TextPaint
 import android.text.style.CharacterStyle
 import android.text.style.ReplacementSpan
@@ -52,8 +53,14 @@ class IslandSpan(val id: Int, val kind: String, val xml: String) : ReplacementSp
         bottom: Int,
         paint: Paint
     ) {
-        image?.let { canvas.drawBitmap(it, x, (y - ascent).toFloat(), null) }
+        // Into its box, which is smaller than the image when the island was scaled down to fit the column.
+        val bmp = image ?: return
+        dst.set(x, (y - ascent).toFloat(), x + width, (y + descent).toFloat())
+        canvas.drawBitmap(bmp, null, dst, filter)
     }
+
+    private val filter = Paint(Paint.FILTER_BITMAP_FLAG)
+    private val dst = RectF()
 
     private companion object {
         const val PLACEHOLDER_EMS = 3f

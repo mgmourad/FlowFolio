@@ -41,14 +41,15 @@ internal fun IslandHost(viewModel: ReaderViewModel) {
         onRelease = { it.destroy() }
     )
     LaunchedEffect(work, renderer) {
-        val w = work ?: return@LaunchedEffect
         val r = renderer ?: return@LaunchedEffect
-        val boxes = try {
-            r.measure(w)
-        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
-            Log.w(TAG, "islands timed out in ${w.chapterPath}", e)
-            emptyMap()
-        }
+        val w = work ?: return@LaunchedEffect r.idle()
+        // Let the WebView take the column's width first (it is 1 px wide until the first work arrives); loading into
+        // it before that sometimes hung the first measure after a cold start.
+        withFrameNanos { }
+        // Drawing loads only the islands it draws, not the whole chapter (hundreds of equations): far less for the
+        // WebView to lay out and hold. Their sizes match the chapter's, with the same width and styles.
+        val page = if (w.render.isEmpty()) w else w.copy(items = w.items.filter { it.id in w.render })
+        val boxes = measureWithRetry(r, page)
         val images = HashMap<Int, Bitmap>()
         for (id in w.render) {
             val box = boxes[id] ?: continue
@@ -67,6 +68,23 @@ internal fun IslandHost(viewModel: ReaderViewModel) {
     }
 }
 
+/**
+ * Lays [work] out, trying again once when the WebView hangs (seen now and then on the first page after a cold start);
+ * after that the chapter's islands keep placeholder sizes.
+ */
+private suspend fun measureWithRetry(r: IslandRenderer, work: IslandWork): Map<Int, IslandBox> {
+    repeat(MEASURE_ATTEMPTS) { attempt ->
+        try {
+            return r.measure(work)
+        } catch (e: IslandTimeoutException) {
+            Log.w(TAG, "islands in ${work.chapterPath}: ${e.message} (attempt ${attempt + 1})")
+            r.stop()
+        }
+    }
+    return emptyMap()
+}
+
 private val HOST_HEIGHT = 400.dp
+private const val MEASURE_ATTEMPTS = 2
 private const val BLANK_RETRIES = 3
 private const val TAG = "FlowFolioIslands"

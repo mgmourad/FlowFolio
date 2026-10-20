@@ -12,9 +12,12 @@ import java.io.ByteArrayInputStream
 import kotlin.coroutines.resume
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.json.JSONArray
 import org.json.JSONObject
+
+/** The WebView did not finish [stage] in time. */
+internal class IslandTimeoutException(stage: String) : Exception("timed out $stage")
 
 /** An island's size in screen pixels, its baseline from the top, and where it sits on the islands page. */
 internal data class IslandBox(val id: Int, val w: Int, val h: Int, val baseline: Int, val top: Int, val left: Int)
@@ -50,7 +53,8 @@ internal class IslandRenderer(private val web: WebView, private val archive: Epu
                 serve(request)
 
             override fun onPageFinished(view: WebView, url: String) {
-                loaded?.complete(Unit)
+                // Only the islands page: the blank page loaded when idle must not stand in for it.
+                if (url.endsWith(ISLANDS)) loaded?.complete(Unit)
             }
         }
     }
@@ -89,21 +93,23 @@ internal class IslandRenderer(private val web: WebView, private val archive: Epu
         val done = CompletableDeferred<Unit>()
         loaded = done
         web.loadUrl("https://$HOST/${if (pageBase.isEmpty()) "" else "$pageBase/"}$ISLANDS")
-        withTimeout(TIMEOUT_MS) { done.await() }
+        withTimeoutOrNull(TIMEOUT_MS) { done.await() } ?: throw IslandTimeoutException("loading the page")
         val json = js(MEASURE)
         val rows = JSONArray(JSONObject("{\"v\":$json}").getString("v"))
-        return (0 until rows.length()).associate { i ->
-            val a = rows.getJSONObject(i)
-            val id = a.getInt("id")
-            id to IslandBox(
-                id = id,
-                w = (a.getDouble("w") * dpr).toInt() + 1,
-                h = (a.getDouble("h") * dpr).toInt() + 1,
-                baseline = (a.getDouble("b") * dpr).toInt(),
-                top = (a.getDouble("t") * dpr).toInt(),
-                left = (a.getDouble("l") * dpr).toInt()
-            )
-        }
+        return boxesOf(rows, dpr)
+    }
+
+    private fun boxesOf(rows: JSONArray, dpr: Float): Map<Int, IslandBox> = (0 until rows.length()).associate { i ->
+        val a = rows.getJSONObject(i)
+        val id = a.getInt("id")
+        id to IslandBox(
+            id = id,
+            w = (a.getDouble("w") * dpr).toInt() + 1,
+            h = (a.getDouble("h") * dpr).toInt() + 1,
+            baseline = (a.getDouble("b") * dpr).toInt(),
+            top = (a.getDouble("t") * dpr).toInt(),
+            left = (a.getDouble("l") * dpr).toInt()
+        )
     }
 
     /** Draws one measured island (from the page [measure] loaded last) into a bitmap of its size. */
@@ -115,8 +121,18 @@ internal class IslandRenderer(private val web: WebView, private val archive: Epu
         return bmp
     }
 
-    private suspend fun js(script: String): String = withTimeout(TIMEOUT_MS) {
+    private suspend fun js(script: String): String = withTimeoutOrNull(TIMEOUT_MS) {
         suspendCancellableCoroutine { cont -> web.evaluateJavascript(script) { cont.resume(it ?: "null") } }
+    } ?: throw IslandTimeoutException("measuring")
+
+    /** Stops a page load that hangs, so the next [measure] starts afresh. */
+    fun stop() = web.stopLoading()
+
+    /** Nothing left to do: drops the islands page, whose drawing can hold a lot of memory, until the next [measure]. */
+    fun idle() {
+        if (page.isEmpty()) return
+        page = ""
+        web.loadUrl("about:blank")
     }
 
     private fun islandsPage(items: List<IslandItem>, bodyCss: Float, widthCss: Int, ink: Int): String = buildString {
@@ -127,7 +143,7 @@ internal class IslandRenderer(private val web: WebView, private val archive: Epu
         append("<style>")
         append("html,body{margin:0;padding:0;background:transparent;}")
         append("body{font-family:serif;font-size:${bodyCss}px;width:${widthCss}px;color:$color;}")
-        // Each island alone on its own band, far from the next, so no capture can reach a neighbour.
+        // Each island alone on its own band, a little apart from the next: captures are its exact rectangle.
         append(".b{display:block;margin:0 0 ${GAP_CSS}px 0;}.i{display:inline-block;max-width:${widthCss}px;}")
         append("table{border-collapse:collapse;}th,td{border:1px solid $color;padding:0.2em 0.5em;}")
         append("svg,img{max-width:100%;height:auto;}math[display=block]{display:block;}")
@@ -143,8 +159,11 @@ internal class IslandRenderer(private val web: WebView, private val archive: Epu
         const val HOST = "book.local"
         private const val ISLANDS = "__flowfolio_islands.html"
         private const val FORBIDDEN = 403
-        private const val TIMEOUT_MS = 20_000L
-        private const val GAP_CSS = 200
+
+        // A chapter's islands load and measure in well under a second on the Fold (500 islands: about 0.3 s); a rare
+        // hang after a cold start is retried this long after.
+        private const val TIMEOUT_MS = 10_000L
+        private const val GAP_CSS = 24
         private const val RGB = 0xFFFFFF
 
         /** The reader sets text sizes itself; the system's font scale must not change them again. */
@@ -182,12 +201,16 @@ internal class IslandRenderer(private val web: WebView, private val archive: Epu
             .ffl-dbl{border-left-style:double;border-left-width:.25em}
             .ffr-dbl{border-right-style:double;border-right-width:.25em}"""
 
-        /** Size, baseline, and position on the page (CSS pixels) of every island, measured with a zero-size probe. */
+        /**
+         * Size, baseline, and position on the page (CSS pixels) of every island, measured with a zero-size probe. The
+         * size includes content wider than the column (an equation cannot wrap); the page scales such islands down.
+         */
         private const val MEASURE = """(function(){var out=[];document.querySelectorAll('.i').forEach(function(e){
             var r=e.getBoundingClientRect();var p=document.createElement('span');
             p.style.cssText='display:inline-block;width:0;height:0;vertical-align:baseline';e.appendChild(p);
             var b=p.getBoundingClientRect().top-r.top;e.removeChild(p);
-            out.push({id:parseInt(e.id.substring(1)),w:r.width,h:r.height,b:b,t:r.top+window.scrollY,
+            out.push({id:parseInt(e.id.substring(1)),w:Math.max(r.width,e.scrollWidth),
+            h:Math.max(r.height,e.scrollHeight),b:b,t:r.top+window.scrollY,
             l:r.left+window.scrollX});});
             return JSON.stringify(out);})()"""
 
