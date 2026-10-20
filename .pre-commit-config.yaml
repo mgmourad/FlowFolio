@@ -16,6 +16,8 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
         args: [--maxkb=1024]
+        # Generated baseline profiles (about 2 MB of text each) are committed by design; git compresses them well.
+        exclude: ^android/app/src/release/generated/baselineProfiles/
       - id: detect-private-key
       - id: mixed-line-ending
         args: [--fix=no]

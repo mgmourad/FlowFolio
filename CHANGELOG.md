@@ -101,6 +101,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Page numbers follow the book's own numbering: the PDF's page labels, or else the numbers printed in its margins
     (found once and kept as `books.page_labels`), including roman front matter and prefixed appendices; books with no
     numbering count from the cover as page 1. The library, details, bookmarks and the reader all use them.
+- Phase 1 close-out (`docs/plans/phase1-signoff.md`):
+  - Baseline profile (startup and page turns) shipped with `profileinstaller`; `:benchmark` module with startup and
+    page-turn macrobenchmarks and the profile generator. Release build, unfolded Fold: turn frames 2.6-2.9 ms CPU P50,
+    5-10 ms P99; cold start to the library 0.20-0.24 s. The profile made no measurable difference on the Fold.
+  - Reader memory re-measured: 282 MB after 300 spread turns (ceiling 292 MB), growth 6.9%.
+  - `measure-reader.ps1` stops if FlowFolio is not in front and keeps the screen on.
 - Reader fixes and on-device translation (ADR-0018, Room schema v8):
   - Turning back no longer stalls: the vendored pagecurl keyed every page on the moving edge, so all pages were
     rebuilt each frame; it now keys on the current page and reads the edge while drawing.

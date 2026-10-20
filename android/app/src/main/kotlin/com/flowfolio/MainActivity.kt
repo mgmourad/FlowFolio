@@ -121,7 +121,9 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun isDebuggable() = applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
+    /** Debug builds, and the benchmark builds :benchmark drives (`BuildConfig.MEASUREMENT_HOOKS`), accept adb hooks. */
+    private fun isDebuggable() = BuildConfig.MEASUREMENT_HOOKS ||
+        applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
 
     /** Debug builds only: lets the memory script sample retained memory (ADR-0013). Never called in release use. */
     @Suppress("ExplicitGarbageCollectionCall")

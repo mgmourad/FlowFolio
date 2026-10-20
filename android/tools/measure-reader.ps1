@@ -66,6 +66,12 @@ Adb shell dumpsys gfxinfo $pkg reset | Out-Null
 $x1 = [int]($w * 0.85); $x2 = [int]($w * $(if ($Layout -eq "spread") { 0.45 } else { 0.2 })); $y1 = [int]($h * 0.6); $y2 = [int]($h * 0.55)
 $samples = @()
 for ($i = 1; $i -le $Turns; $i++) {
+    if ($i % 10 -eq 1) {
+        # Never send input to another app: stop if FlowFolio is not in front (CLAUDE.md, known issue 22).
+        $top = (Adb shell dumpsys activity activities | Select-String "topResumedActivity" | Select-Object -First 1).Line
+        if ($top -notmatch [regex]::Escape("$pkg/")) { throw "FlowFolio is not in front (turn $i); stopping." }
+        Adb shell input keyevent 59 # a harmless key (left shift) keeps the screen on (known issue 15)
+    }
     Adb shell input swipe $x1 $y1 $x2 $y2 300
     Start-Sleep -Milliseconds 250
     if ($i -eq 50 -and $Turns -gt 50) { $samples += Memory "turn50" }
