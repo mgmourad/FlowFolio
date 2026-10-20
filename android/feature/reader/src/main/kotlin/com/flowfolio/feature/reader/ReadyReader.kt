@@ -128,6 +128,8 @@ internal fun BoxScope.ReadyReader(
     val onTap = { tap: Offset, size: IntSize ->
         annotating.tap(tap, size) || overlay.handle(PageFrames.route(tap, size, framesFor(size), links), jump)
     }
+    // Under the pages, which cover it: lays out and draws an EPUB's equations, SVG and tables.
+    if (s.reflowable) IslandHost(viewModel)
     Box(
         Modifier
             .fillMaxSize()

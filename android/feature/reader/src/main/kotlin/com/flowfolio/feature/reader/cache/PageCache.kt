@@ -14,7 +14,13 @@ import kotlinx.coroutines.launch
  * One rendered page at one size and paper tone. Size and tone are part of the key, so a layout or paper
  * change never shows a stale image.
  */
-data class PageKey(val page: Int, val size: PixelSize, val tone: PageTone = PageTone.PRINTED)
+data class PageKey(
+    val page: Int,
+    val size: PixelSize,
+    val tone: PageTone = PageTone.PRINTED,
+    /** Raised when something drawn on the page changed (an EPUB's equations became ready), to draw it again. */
+    val revision: Int = 0
+)
 
 /** Renders pages. The reader's implementation returns GPU-backed (HARDWARE) images to avoid a second CPU copy. */
 fun interface PageSource {

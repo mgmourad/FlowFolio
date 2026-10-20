@@ -1,5 +1,6 @@
 package com.flowfolio.feature.reader
 
+import android.content.Context
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.lifecycle.SavedStateHandle
@@ -10,6 +11,7 @@ import com.flowfolio.core.data.NotYetReadableException
 import com.flowfolio.core.data.OpenedBook
 import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.designsystem.R as DesignR
 import com.flowfolio.core.epub.EpubException
 import com.flowfolio.core.model.PageLabels
 import com.flowfolio.core.model.PageTurn
@@ -28,6 +30,7 @@ import com.flowfolio.feature.reader.layout.ReaderLayout
 import com.flowfolio.feature.reader.layout.Spreads
 import com.flowfolio.feature.reader.layout.chooseLayout
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.FileNotFoundException
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -87,7 +90,8 @@ data class Viewport(
 class ReaderViewModel @Inject constructor(
     private val repository: ReaderRepository,
     settingsRepository: SettingsRepository,
-    private val saved: SavedStateHandle
+    private val saved: SavedStateHandle,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
     private val bookId: String = checkNotNull(saved[ARG_BOOK_ID]) { "reader needs a bookId" }
     private val forcedLayout: ReaderLayout? = saved.get<String>(ARG_LAYOUT)?.let {
@@ -122,6 +126,14 @@ class ReaderViewModel @Inject constructor(
 
     /** The pane a layout is under way for. */
     private var pendingPane: PixelSize? = null
+
+    private val _islandWork = MutableStateFlow<IslandWork?>(null)
+
+    /** The next equations, SVG or tables for the island WebView to lay out or draw (EPUBs only). */
+    internal val islandWork: StateFlow<IslandWork?> = _islandWork.asStateFlow()
+
+    /** The open EPUB's files, for the island WebView. */
+    internal val epubArchive get() = epub?.opened?.archive
 
     /** The open document (for page text when selecting); null until the book is open. */
     internal val document: PdfDocument? get() = opened?.document
@@ -207,7 +219,9 @@ class ReaderViewModel @Inject constructor(
     /** An EPUB: parse it, then lay it out once the reader knows its pane ([ensureEpubLayout]). */
     private suspend fun openEpub() {
         val session = try {
-            EpubSession.open(repository.openEpub(bookId))
+            // Headings in the app's display face (Fraunces), as on the library's covers.
+            val heading = runCatching { context.resources.getFont(DesignR.font.fraunces) }.getOrNull()
+            EpubSession.open(repository.openEpub(bookId), heading)
         } catch (_: FileNotFoundException) {
             _state.value = ReaderState.Failed(missingFile = true)
             return
@@ -268,6 +282,7 @@ class ReaderViewModel @Inject constructor(
             _navigation.value = session.navigation()
             publishReady()
             replan()
+            nextIslandWork()
         }
     }
 
@@ -442,10 +457,49 @@ class ReaderViewModel @Inject constructor(
             listOf(ready.unit, ready.unit + 1, ready.unit - 1, ready.unit + 2).filter { it in 0 until ready.unitCount }
         val pages =
             units.flatMap { u -> if (spread) Spreads.pagesOf(u, ready.pageCount, ready.coverAlone) else listOf(u) }
-        val keys = pages.map { PageKey(it, pane, ready.tone) }
+        val keys = pages.map { PageKey(it, pane, ready.tone, session.islands.revision) }
         wanted = keys
         currentKeys.value = keys.associateBy { it.page }
         cache?.request(keys, newBudgetBytes = minOf(keys.sumOf { it.size.argbBytes }, MAX_CACHE_BYTES))
+        if (pendingPane == null) nextIslandWork()
+    }
+
+    /**
+     * What the island WebView does next: lay out the chapter being read (its pages depend on it), draw the islands on
+     * the pages in view and about to be, then lay out the other chapters, nearest first.
+     */
+    private fun nextIslandWork() {
+        val session = epub ?: return
+        val chapter = session.chapterOf(anchorPage)
+        val tone = (_state.value as? ReaderState.Ready)?.tone ?: PageTone.PRINTED
+        _islandWork.value = session.islands.toMeasure(chapter, onlyCurrent = true)
+            ?: session.islandsToRender(wanted.map { it.page }, tone)
+            ?: session.islands.toMeasure(chapter)
+    }
+
+    /**
+     * The island WebView finished [work]: sizes lay the book out again (keeping the reader's place); images are drawn
+     * into the pages showing them.
+     */
+    internal fun onIslandsDone(
+        work: IslandWork,
+        boxes: Map<Int, IslandBox>,
+        images: Map<Int, android.graphics.Bitmap>
+    ) {
+        val session = epub ?: return
+        if (session.column != work.bodyPx to work.widthPx) return
+        if (work.render.isEmpty()) {
+            session.islands.addSizes(work, boxes)
+            layoutJob = viewModelScope.launch {
+                anchorPage = session.relayOut(work.chapter, locator)
+                _navigation.value = session.navigation()
+                publishReady()
+                replan()
+            }
+        } else {
+            session.islands.addImages(work, images)
+            replan()
+        }
     }
 
     /** Links are small; once read for a page they are kept for the session. */

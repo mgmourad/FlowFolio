@@ -29,10 +29,21 @@ import kotlinx.coroutines.withContext
  * for the page cache. A pane of another size (fold, unfold, spreads on or off) lays the book out again; positions are
  * kept as [Locator]s so the reader stays on the same text.
  */
-internal class EpubSession private constructor(val opened: OpenedEpub, private val book: ReflowBook) : PageSource {
+internal class EpubSession private constructor(
+    val opened: OpenedEpub,
+    private val book: ReflowBook,
+    private val heading: android.graphics.Typeface?
+) : PageSource {
     private val lock = Mutex()
     private var paginator: Paginator? = null
     private var drawer = PageDrawer(book, ::image) { null }
+
+    /** Equations, SVG and complex tables, laid out and drawn by the island WebView. */
+    val islands = EpubIslands(book)
+
+    /** The text size and column width of the current layout (what islands are measured for). */
+    var column: Pair<Float, Int>? = null
+        private set
 
     /** The pane the book is laid out for (pixels), or null before the first layout. */
     var pane: PixelSize? = null
@@ -55,16 +66,34 @@ internal class EpubSession private constructor(val opened: OpenedEpub, private v
                 width = (size.width - margins.left - margins.right).coerceAtLeast(1),
                 height = (size.height - margins.top - margins.bottom).coerceAtLeast(1),
                 bodyPx = bodyPx,
-                locale = book.locale
+                locale = book.locale,
+                heading = heading
             )
-            paginator = book.paginate(spec, density)
+            islands.prepare(bodyPx, spec.width)
+            paginator = book.paginate(spec, density, islands::size)
             pane = size
-            drawer = PageDrawer(book, ::image) { null }
+            column = bodyPx to spec.width
+            drawer = PageDrawer(book, ::image, islands::image)
+            keep?.let(book::pageOf) ?: 0
+        }
+    }
+
+    /** Lays [chapter] out again (its islands got their sizes); returns the page now showing [keep]. */
+    suspend fun relayOut(chapter: Int, keep: Locator?): Int = lock.withLock {
+        withContext(Dispatchers.Default) {
+            paginator?.let { book.repaginate(chapter, it) }
             keep?.let(book::pageOf) ?: 0
         }
     }
 
     fun locatorOf(page: Int): Locator = book.locatorOf(page)
+
+    /** The chapter [page] is in. */
+    fun chapterOf(page: Int): Int = book.pages.getOrNull(page)?.chapter ?: 0
+
+    /** Islands to draw for [pages] (the ones in view and about to be). */
+    fun islandsToRender(pages: List<Int>, tone: PageTone): IslandWork? =
+        islands.toRender(pages.mapNotNull(book.pages::getOrNull), colorsOf(tone).ink)
 
     fun pageOf(locator: Locator): Int = book.pageOf(locator)
 
@@ -131,8 +160,8 @@ internal class EpubSession private constructor(val opened: OpenedEpub, private v
 
     companion object {
         /** Parses the book's chapters off the main thread. */
-        suspend fun open(opened: OpenedEpub): EpubSession =
-            withContext(Dispatchers.Default) { EpubSession(opened, ReflowBook(opened.archive, opened.pkg)) }
+        suspend fun open(opened: OpenedEpub, heading: android.graphics.Typeface?): EpubSession =
+            withContext(Dispatchers.Default) { EpubSession(opened, ReflowBook(opened.archive, opened.pkg), heading) }
 
         fun colorsOf(tone: PageTone): PageColors {
             val ink = (tone.ink ?: androidx.compose.ui.graphics.Color.Black).toArgb()

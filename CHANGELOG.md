@@ -101,6 +101,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Page numbers follow the book's own numbering: the PDF's page labels, or else the numbers printed in its margins
     (found once and kept as `books.page_labels`), including roman front matter and prefixed appendices; books with no
     numbering count from the cover as page 1. The library, details, bookmarks and the reader all use them.
+- Phase 2 milestone 2, EPUB reading (ADR-0019, Room schema v10, in progress):
+  - `:core:reflow`: chapters parsed into text, image and island blocks; pages cut natively with StaticLayout
+    (justified, hyphenated, widows, orphans and headings kept with their text); positions saved as chapter and
+    character offset (`books.last_locator`), so a new size, fold state or layout keeps the reader on the same text.
+  - The reader opens EPUBs with the same curl, spreads, contents, Go to page and papers as PDFs; headings in
+    Fraunces.
+  - Islands: MathML, SVG and complex tables are laid out by a hidden WebView (book files only, no network), one
+    chapter at a time starting with the one being read, and drawn into the pages in the paper's ink on a
+    transparent background. MathML's `mfenced` is rewritten for MathML Core, and brackets around matrices are drawn
+    as borders, since phone fonts cannot stretch them.
 - Phase 2 milestone 1, EPUB in the library (ADR-0020, Room schema v9):
   - Books without a cover image show the drawn title cover in list rows and small covers too (`FlatCover`), as on
     the shelf.
