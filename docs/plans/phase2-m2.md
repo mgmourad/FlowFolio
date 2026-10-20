@@ -82,12 +82,17 @@ and complex tables are rendered by a hidden WebView. The reading position surviv
   | Linear Algebra, island WebView switched off, 100 | 332 / 325 MB | 59 MB | 8.2% |
   | Linear Algebra, islands on, 300 | 485–620 / 545–660 MB | 160–280 MB | 18–21% |
 
+  | Linear Algebra, island disk cache warm (ADR-0021), 300 | 395 / 401 MB | 71 MB | 4.6% |
+  | Linear Algebra, island disk cache empty (first visit), 300 | 502 / 607 MB | 82–250 MB | 6.5% |
+
   Text pages alone are near budget (about 40 MB over 292 MB, mostly page images at 158 MB of graphics; to look at in
-  M3). Islands cost up to about 300 MB more, mostly short-lived WebView memory while it lays out and draws islands
-  during page turns, and they triple janky frames. Frame times are from the debug build (CLAUDE.md issue 30); the
-  comparison between rows holds. **Proposed fix, for the owner to decide:** draw each chapter's islands once, in the
-  background, into a small on-disk image cache (per book, text size, column width and paper ink), so that page turns
-  only decode small images and the WebView is idle while reading.
+  M3). Before the cache, islands cost up to about 300 MB more and tripled janky frames: the WebView laid out and drew
+  islands during page turns. **ADR-0021 (accepted 2026-10-20)** draws each chapter's islands once into an on-disk
+  cache (sizes and PNGs; equations in black, tinted when shown). With the cache warm, Linear Algebra matches books
+  without islands (401 MB, 4.6% janky; a turn draws 63 frames in either book). On a first visit frames stay smooth;
+  memory peaks higher while islands are drawn (native heap falls back to about 145 MB once collected), and the book
+  is fully cached after about 3 minutes still on a page (Linear Algebra: 10,000 files, 78 MB). Frame times are from
+  the debug build (CLAUDE.md issue 30); the comparison between rows holds.
 - **Noted for M3:** justified short lines in lists look gappy; the reader's error and notice pages are plain white;
   Scroll shows each page's margins as a gap mid-text (continuous scroll for reflowed books); a very wide table of
   equations becomes very small on the cover screen (island zoom).
