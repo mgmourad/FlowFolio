@@ -65,9 +65,32 @@ and complex tables are rendered by a hidden WebView. The reading position surviv
 - **Checked on the Fold (unfolded, spreads):** Moby-Dick (justified, hyphenated text, contents jumps); Linear Algebra
   (inline and block MathML, matrices with brackets, Paper and Night papers); the position survives a layout change
   and every chapter relayout. `PaginationOnDeviceTest` passes for the corpus at five sizes.
-- **Still to check on the Fold:** folded (cover screen) and fold/unfold; Slide and Scroll on EPUBs; the RTL sample;
-  Accessible EPUB 3 and the synthetic textbook; frames and memory with `measure-reader.ps1` on a non-debuggable build.
-- **Noted for M3:** justified short lines in lists look gappy; the reader's error and notice pages are plain white.
+- **Device checks (2026-10-20, all on the Fold):**
+  - Curl, Slide and Scroll on Moby-Dick; switching turn style keeps the text. Scroll lays the book out as single pages.
+  - RTL sample (Arabic shaping, first page alone on the left, left-to-right swipe goes forward); Accessible EPUB 3
+    (images, definition lists, code faces).
+  - Folded (cover screen) and fold/unfold keep the reader on the same text, with Moby-Dick and Linear Algebra.
+- **Bugs found and fixed by these checks:** stale page images after a chapter was laid out again (page numbers move,
+  so the page key now carries a layout counter); equations wider than the narrow cover column were cut off (they are
+  measured at full width and scaled down); the first island measure after a cold start sometimes hung (the WebView
+  now takes its width before loading, with one retry after 10 s); a spread inside one printed page read "1–1".
+- **Memory and frames (debug build, unfolded, spreads; `measure-reader.ps1`; ADR-0013 absolute target 292 MB):**
+
+  | Book, turns | Total PSS (turn 50 / last) | Native heap | Janky frames |
+  |---|---|---|---|
+  | Moby-Dick (no islands), 100 | 333 / 338 MB | 59 MB | 5.4% |
+  | Linear Algebra, island WebView switched off, 100 | 332 / 325 MB | 59 MB | 8.2% |
+  | Linear Algebra, islands on, 300 | 485–620 / 545–660 MB | 160–280 MB | 18–21% |
+
+  Text pages alone are near budget (about 40 MB over 292 MB, mostly page images at 158 MB of graphics; to look at in
+  M3). Islands cost up to about 300 MB more, mostly short-lived WebView memory while it lays out and draws islands
+  during page turns, and they triple janky frames. Frame times are from the debug build (CLAUDE.md issue 30); the
+  comparison between rows holds. **Proposed fix, for the owner to decide:** draw each chapter's islands once, in the
+  background, into a small on-disk image cache (per book, text size, column width and paper ink), so that page turns
+  only decode small images and the WebView is idle while reading.
+- **Noted for M3:** justified short lines in lists look gappy; the reader's error and notice pages are plain white;
+  Scroll shows each page's margins as a gap mid-text (continuous scroll for reflowed books); a very wide table of
+  equations becomes very small on the cover screen (island zoom).
 
 ## Out of scope for M2
 

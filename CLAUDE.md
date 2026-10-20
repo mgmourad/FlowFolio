@@ -212,8 +212,11 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     nearest first, each followed by `ReflowBook.repaginate` of that chapter only. `IslandRenderer` serves only the
     book's files and runs only our own scripts: one rewrites `mfenced` (gone from MathML Core) and draws brackets around
     tables as CSS borders, since phone fonts have no stretchy glyphs. The WebView sometimes has nothing drawn for a frame:
-    blank captures are retried before being kept. On opening, the spread can re-pair once or twice in the first
-    seconds while chapters before the current one gain pages; the text being read always stays on screen.
+    blank captures are retried before being kept. A layout moves page numbers, so `EpubSession.revision` (a layout
+    counter plus the islands' revision) is part of every `PageKey`; without it the cache shows old pages. Islands are
+    measured at their full width and scaled down to the column. Islands cost memory and frames while turning pages
+    (Linear Algebra: up to ~650 MB and ~20% janky frames, against ~330 MB and ~5% without islands; see
+    `docs/plans/phase2-m2.md`).
 25. The reader's panels (Contents, Go to page, ribbon colours, "Aa") are drawn in the reader's window (`ReaderPanels`),
     not as sheets or dialogs, so glass can blur the page; their tags are resource ids. The bars and panels use
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
