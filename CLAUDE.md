@@ -4,7 +4,8 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 1: PDF reader with page curl. Build complete (milestones 1-5); close-out done 2026-10-20, awaiting the owner's sign-off** (`docs/plans/phase1-signoff.md`; started 2026-10-16).
+**Phase 2: EPUB reading and pagination engine. Planning** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`).
+Phase 1 signed off by the owner 2026-10-20 (`docs/plans/phase1-signoff.md`); ADRs 0014, 0016-0018 accepted.
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
 Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
 Build plan approved 2026-10-16: 5 milestones; check in with the product owner at milestone 3 with memory numbers.
@@ -208,5 +209,5 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 ADRs 0001–0018 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
-pages (0014, proposed), annotations (0016), online services (0017), on-device translation (0018, supersedes the
+pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
 Translate part of 0017).

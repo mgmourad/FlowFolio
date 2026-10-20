@@ -1,6 +1,6 @@
 # ADR-0017: Use two online services, Google Translate in a web view and Open Library for book details
 
-- **Status:** Proposed
+- **Status:** Accepted (product owner, 2026-10-20); the Translate part is superseded by ADR-0018
 - **Date:** 2026-10-18
 - **Deciders:** product owner, lead engineer
 - **Phase:** 1 (milestone 5, slice 7)

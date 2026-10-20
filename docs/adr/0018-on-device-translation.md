@@ -1,6 +1,6 @@
 # ADR-0018: Translate selected text on the phone with ML Kit
 
-- **Status:** Proposed
+- **Status:** Accepted (product owner, 2026-10-20)
 - **Date:** 2026-10-19
 - **Deciders:** product owner, lead engineer
 - **Phase:** 1 (milestone 5, after slice 7)

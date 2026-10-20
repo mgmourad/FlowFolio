@@ -1,6 +1,6 @@
 # ADR-0016: Keep annotations in our database, selected from PDFium's text layer
 
-- **Status:** Proposed
+- **Status:** Accepted (product owner, 2026-10-20)
 - **Date:** 2026-10-18
 - **Deciders:** product owner, lead engineer
 - **Phase:** 1 (milestone 5 follow-up)
