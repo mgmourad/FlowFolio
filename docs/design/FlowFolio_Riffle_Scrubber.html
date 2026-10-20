@@ -1,0 +1,885 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>FlowFolio Riffle Scrubber</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..900,0..100,0..1;1,9..144,300..900,0..100,0..1&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   FLOWFOLIO TOKENS (same as the app mock)
+   ========================================================= */
+:root{
+  --font-display:"Fraunces", Georgia, serif;
+  --font-ui:"Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --noise:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .07 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  --book:#0f766e; --book2:#064e3b;
+}
+html[data-theme="dark"]{
+  --bg:#1d0a47; --bg-deep:#0f0428; --surface:#26105a; --surface-2:#311770; --line:rgba(170,150,255,.15);
+  --title:#ff8a00; --item:#00f0ff; --hint:#9b9aa6; --sub:#ff2d5a; --accent:#c02f9a; --text:#ece8ff;
+  --glow-title:0 0 16px rgba(255,138,0,.5); --glow-item:0 0 14px rgba(0,240,255,.45); --glow-sub:0 0 10px rgba(255,45,90,.4);
+  --card:linear-gradient(160deg,#2d1568,#1f0a4e);
+  --shadow-soft:0 22px 44px -16px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,255,255,.06);
+  --shadow-press:inset 0 2px 6px rgba(0,0,0,.45);
+  --paper:#1c1042; --paper-ink:#ddd6f3; --gutter:rgba(0,0,0,.5); --edge-a:#2a1a5c; --edge-b:#140a33;
+  --glass:rgba(29,10,71,.62);
+}
+html[data-theme="light"]{
+  --bg:#fdeac6; --bg-deep:#f1d39c; --surface:#fff4de; --surface-2:#fbe6c0; --line:rgba(120,70,20,.16);
+  --title:#8b4d12; --item:#0f5f59; --hint:#4e4842; --sub:#c8102e; --accent:#4a2bb0; --text:#2e2219;
+  --glow-title:0 1px 2px rgba(90,50,10,.25); --glow-item:0 1px 2px rgba(10,60,55,.22); --glow-sub:0 1px 2px rgba(120,10,30,.2);
+  --card:linear-gradient(160deg,#fff8e8,#fbe4b9);
+  --shadow-soft:0 20px 38px -16px rgba(120,70,20,.5), inset 0 1px 0 rgba(255,255,255,.75);
+  --shadow-press:inset 0 2px 6px rgba(120,70,20,.3);
+  --paper:#fffaf0; --paper-ink:#2c241c; --gutter:rgba(80,50,20,.24); --edge-a:#f3eadb; --edge-b:#cdbd9f;
+  --glass:rgba(255,244,222,.7);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:var(--font-ui);color:var(--text);overflow:hidden;
+  background:radial-gradient(1200px 760px at 50% 0%,var(--surface) 0%,var(--bg-deep) 72%);transition:background .6s var(--ease-out)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.r-title{color:var(--title);text-shadow:var(--glow-title)}
+.r-item{color:var(--item);text-shadow:var(--glow-item)}
+.r-hint{color:var(--hint)}
+.r-sub{color:var(--sub);text-shadow:var(--glow-sub)}
+.display{font-family:var(--font-display);font-variation-settings:"SOFT" 100,"WONK" 1,"opsz" 96}
+
+/* ---------- Stage ---------- */
+.stage{height:100%;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:34px;padding:20px 28px}
+.panel{align-self:stretch;overflow:auto;padding:14px 4px;max-width:330px;scrollbar-width:thin}
+.panel.left{justify-self:end}.panel.right{justify-self:start}
+.panel h3{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--hint);margin:22px 0 10px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand b{font-family:var(--font-display);font-size:24px;font-weight:650;font-variation-settings:"SOFT" 100,"WONK" 1}
+.h1{font-family:var(--font-display);font-size:30px;font-weight:700;line-height:1.05;margin-top:18px;font-variation-settings:"SOFT" 100,"WONK" 1,"opsz" 110}
+.note{font-size:13px;line-height:1.58;color:var(--hint)}
+.note b{color:var(--text)}
+.ctl{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}
+.ctl span{font-size:13.5px;font-weight:600}
+.seg{display:inline-flex;padding:3px;border-radius:12px;background:var(--card);box-shadow:var(--shadow-press)}
+.seg button{padding:6px 11px;border-radius:9px;font-size:12px;font-weight:700;color:var(--hint);transition:all .3s var(--ease-out)}
+.seg button.on{background:var(--surface-2);color:var(--title);text-shadow:var(--glow-title);box-shadow:var(--shadow-soft)}
+html[data-theme="light"] .seg button.on{background:#fffaf0}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;font-weight:700;font-size:13px;margin-top:6px;
+  background:linear-gradient(180deg,#ffa133,#ff7a00);color:#2a0c00;box-shadow:0 10px 22px -8px rgba(255,138,0,.7),inset 0 1px 0 rgba(255,255,255,.45);transition:transform .25s var(--ease-spring)}
+.btn:active{transform:scale(.94)}
+.spec li{list-style:none;font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}
+.spec code{font-family:ui-monospace,Menlo,monospace;color:var(--item);font-size:11px;text-align:right}
+.map p{font-size:12.5px;line-height:1.55;color:var(--hint);margin-bottom:9px}
+.map code{font-family:ui-monospace,Menlo,monospace;color:var(--item);font-size:11px}
+
+/* ---------- Galaxy Z Fold8 Ultra (unfolded) ---------- */
+.dev-col{display:grid;justify-items:center;gap:12px}
+.scaler{position:relative}
+.fold{position:absolute;top:0;left:0;transform-origin:0 0;padding:11px;border-radius:30px;
+  background:linear-gradient(145deg,#3c3d44,#141418 45%,#2a2b31);
+  box-shadow:0 60px 110px -40px rgba(0,0,0,.8),0 0 0 1.5px #4a4b53,inset 0 0 0 1.5px #0a0a0d,inset 0 1px 0 rgba(255,255,255,.15)}
+.fold::before{content:"";position:absolute;inset:5px;border-radius:25px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);pointer-events:none}
+.dev-label{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--hint);font-weight:700}
+.screen{position:relative;border-radius:20px;overflow:hidden;background:var(--bg);isolation:isolate;transition:background .6s var(--ease-out)}
+.screen::before{content:"";position:absolute;inset:0;background-image:var(--noise);opacity:.5;pointer-events:none}
+.crease{position:absolute;z-index:95;pointer-events:none;top:0;bottom:0;left:50%;width:26px;margin-left:-13px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.03) 38%,rgba(0,0,0,.09) 50%,rgba(255,255,255,.03) 62%,transparent)}
+.landscape .crease{top:50%;bottom:auto;left:0;right:0;width:auto;height:26px;margin:-13px 0 0;
+  background:linear-gradient(180deg,transparent,rgba(255,255,255,.03) 38%,rgba(0,0,0,.09) 50%,rgba(255,255,255,.03) 62%,transparent)}
+.punch{position:absolute;z-index:96;top:11px;left:76%;width:11px;height:11px;border-radius:50%;background:#040406;box-shadow:inset 0 0 0 2px #17171d}
+.landscape .punch{top:auto;bottom:24%;left:auto;right:11px}
+.status{position:absolute;top:0;left:0;right:0;height:32px;display:flex;align-items:center;justify-content:space-between;padding:4px 22px 0;font-size:13px;font-weight:650;z-index:20}
+.status .ic{display:flex;gap:6px;align-items:center}
+
+/* ---------- Reader chrome ---------- */
+.topbar{position:absolute;top:32px;left:16px;right:16px;height:52px;display:flex;align-items:center;gap:10px;z-index:20;transition:opacity .45s var(--ease-out),transform .55s var(--ease-out)}
+.icon-btn{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--glass);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);box-shadow:var(--shadow-soft);transition:transform .25s var(--ease-spring)}
+.icon-btn:active{transform:scale(.9)}
+.icon-btn svg{width:19px;height:19px}
+.tb-title{flex:1;text-align:center;min-width:0}
+.tb-title b{display:block;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-title span{font-size:12px;font-weight:600}
+.status{transition:opacity .5s var(--ease-out)}
+.book{transition:transform .8s cubic-bezier(.22,1,.36,1);will-change:transform}
+.immersive .book{transform:translateY(var(--iy)) scale(var(--is))}
+.immersive .topbar{opacity:0;transform:translateY(-16px);pointer-events:none}
+.immersive .dock{opacity:0;transform:translateY(26px);pointer-events:none}
+.immersive .status,.immersive .pv,.immersive .pop{opacity:0!important;pointer-events:none}
+.timer{height:2px;margin:0 6px 4px;border-radius:2px;background:color-mix(in srgb,var(--hint) 18%,transparent);overflow:hidden}
+.timer i{display:block;height:100%;background:color-mix(in srgb,var(--item) 45%,transparent);transform-origin:left center;transition:opacity .3s}
+.pop{position:absolute;z-index:70;top:88px;right:16px;width:300px;padding:16px;border-radius:22px;
+  background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border:1px solid var(--line);
+  box-shadow:0 26px 50px -18px rgba(0,0,0,.7);opacity:0;transform:translateY(-8px) scale(.97);transform-origin:90% 0;pointer-events:none;
+  transition:opacity .3s var(--ease-out),transform .45s var(--ease-spring)}
+.pop.open{opacity:1;transform:none;pointer-events:auto}
+.pop h4{font-size:11px;letter-spacing:.16em;text-transform:uppercase;font-weight:800;margin:4px 0 9px}
+.pop h4+.seg{margin-bottom:14px}
+.pop p{font-size:11.5px;line-height:1.45;color:var(--hint);margin-top:-4px}
+
+.read{position:absolute;top:88px;bottom:166px;left:0;right:0;display:grid;place-items:center}
+.book{position:relative;display:flex;align-items:center}
+.edge{align-self:center;height:97%;border-radius:4px;transition:width .7s var(--ease-out);
+  background:repeating-linear-gradient(90deg,var(--edge-a) 0 1px,var(--edge-b) 1px 2px)}
+.edge.l{border-radius:5px 0 0 5px;box-shadow:-6px 14px 22px -12px rgba(0,0,0,.6)}
+.edge.r{border-radius:0 5px 5px 0;box-shadow:6px 14px 22px -12px rgba(0,0,0,.6)}
+.spread{position:relative;display:grid;grid-template-columns:1fr 1fr;perspective:2400px;box-shadow:0 34px 60px -26px rgba(0,0,0,.75)}
+.dim{position:absolute;inset:0;background:var(--bg-deep);opacity:0;pointer-events:none;z-index:40;transition:opacity .2s}
+.page{position:relative;overflow:hidden;background:var(--paper);background-image:var(--noise);color:var(--paper-ink);container-type:inline-size}
+.page.L{border-radius:6px 1px 1px 6px}.page.R{border-radius:1px 6px 6px 1px}
+.page.L::after,.page.R::after{content:"";position:absolute;top:0;bottom:0;width:16%;pointer-events:none}
+.page.L::after{right:0;background:linear-gradient(90deg,transparent,var(--gutter))}
+.page.R::after{left:0;background:linear-gradient(270deg,transparent,var(--gutter))}
+.page.L::before,.page.R::before{content:"";position:absolute;top:0;bottom:0;width:6%;pointer-events:none;z-index:2}
+.page.L::before{left:0;background:linear-gradient(90deg,rgba(255,255,255,.07),transparent)}
+.page.R::before{right:0;background:linear-gradient(270deg,rgba(0,0,0,.08),transparent)}
+.zones{position:absolute;inset:0;display:grid;grid-template-columns:28% 44% 28%;z-index:30}
+
+/* Page typography (container-relative so it scales with the fold) */
+.pg{position:absolute;inset:0;padding:7cqw 8.5cqw 10cqw;font-family:var(--font-display);font-variation-settings:"opsz" 14,"SOFT" 40;font-size:3.25cqw;line-height:1.56}
+.rh{font-family:var(--font-ui);font-size:2cqw;letter-spacing:.16em;text-transform:uppercase;opacity:.6;padding-bottom:1.2cqw;margin-bottom:3.4cqw;border-bottom:1px solid currentColor;display:flex}
+.recto .rh{justify-content:flex-end}
+.body{height:calc(100% - 7cqw);overflow:hidden}
+.body p{margin:0 0 .55em;text-align:justify;hyphens:auto;text-indent:1.3em}
+.body p.ni,.body h3+p,.body .op+p{text-indent:0}
+.drop::first-letter{float:left;font-size:3.3em;line-height:.84;padding:.06em .07em 0 0;color:var(--title);font-weight:700;font-variation-settings:"opsz" 120,"SOFT" 100,"WONK" 1}
+.body h3{font-size:4.1cqw;font-weight:700;color:var(--title);margin:.7em 0 .35em;line-height:1.15;font-variation-settings:"opsz" 60,"SOFT" 100,"WONK" 1}
+.body h3 span{color:var(--sub);margin-right:.4em}
+.op{padding-top:9cqw;margin-bottom:5cqw}
+.op-n{font-family:var(--font-ui);font-size:2.3cqw;font-weight:800;letter-spacing:.26em;text-transform:uppercase;color:var(--sub)}
+.op h2{font-size:9cqw;line-height:.98;font-weight:720;color:var(--title);text-shadow:var(--glow-title);margin:2cqw 0 3cqw;font-variation-settings:"opsz" 144,"SOFT" 100,"WONK" 1}
+.op .epi{font-style:italic;opacity:.75;font-size:.95em;text-indent:0}
+figure{margin:.3em 0 .9em;padding:2.6cqw;border-radius:2.6cqw;background:color-mix(in srgb,var(--paper-ink) 6%,transparent)}
+figure svg{display:block;width:100%;height:auto}
+figcaption{font-family:var(--font-ui);font-size:2.3cqw;line-height:1.45;margin-top:1.8cqw;opacity:.85}
+figcaption b{color:var(--sub)}
+.tbl{width:100%;border-collapse:collapse;font-family:var(--font-ui);font-size:2.4cqw;margin:.3em 0 .9em}
+.tbl th{text-align:left;color:var(--sub);font-size:2cqw;letter-spacing:.1em;text-transform:uppercase;padding:1.2cqw .8cqw;border-bottom:1.5px solid currentColor}
+.tbl td{padding:1.2cqw .8cqw;border-bottom:1px solid color-mix(in srgb,var(--paper-ink) 16%,transparent)}
+.call{margin:.3em 0 .9em;padding:2.6cqw 3cqw;border-radius:2.4cqw;border-left:.7cqw solid var(--item);background:color-mix(in srgb,var(--item) 9%,transparent);font-size:.93em;line-height:1.5}
+.call b{display:block;font-family:var(--font-ui);font-size:2cqw;letter-spacing:.18em;text-transform:uppercase;color:var(--item);margin-bottom:.8cqw}
+.eq{text-align:center;font-style:italic;margin:.5em 0 .8em;font-size:1.05em}
+.gl dt{font-weight:700;color:var(--title);margin-top:.45em}
+.gl dd{font-size:.92em;opacity:.85}
+.ix{columns:2;column-gap:5cqw;font-family:var(--font-ui);font-size:2.55cqw;line-height:1.75}
+.ix b{color:var(--title);display:block;margin-top:.4em}
+.folio{position:absolute;bottom:4.2cqw;left:0;right:0;text-align:center;font-family:var(--font-ui);font-size:2.4cqw;font-weight:700;letter-spacing:.08em;opacity:.55}
+.endp{position:absolute;inset:0;background:
+  radial-gradient(circle at 25% 25%,rgba(255,255,255,.13) 0 6%,transparent 6.5%) 0 0/9cqw 9cqw,
+  radial-gradient(circle at 75% 75%,rgba(0,0,0,.18) 0 6%,transparent 6.5%) 0 0/9cqw 9cqw,
+  linear-gradient(160deg,var(--book),var(--book2));display:grid;place-items:center}
+.endp span{font-family:var(--font-display);font-size:5cqw;font-style:italic;color:rgba(255,255,255,.55)}
+
+/* Main page-turn sheets */
+.sheet{position:absolute;top:0;bottom:0;width:50%;transform-style:preserve-3d;pointer-events:none;will-change:transform}
+.sheet.fw{left:50%;transform-origin:left center}
+.sheet.bw{left:0;transform-origin:right center}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.face.b{transform:rotateY(180deg)}
+.face .sh{position:absolute;inset:0;pointer-events:none;z-index:5;opacity:0}
+.sheet.fw .face.a .sh{background:linear-gradient(90deg,rgba(0,0,0,.35),transparent 60%)}
+.sheet.fw .face.b .sh{background:linear-gradient(270deg,rgba(0,0,0,.35),transparent 60%)}
+.sheet.bw .face.a .sh{background:linear-gradient(270deg,rgba(0,0,0,.35),transparent 60%)}
+.sheet.bw .face.b .sh{background:linear-gradient(90deg,rgba(0,0,0,.35),transparent 60%)}
+.hold{position:absolute;top:0;bottom:0;width:50%;z-index:1}
+
+/* ---------- Dock with the riffle strip ---------- */
+.dock{position:absolute;left:0;right:0;bottom:0;height:166px;padding:0 24px 10px;z-index:25;transition:opacity .45s var(--ease-out),transform .55s var(--ease-out)}
+.dock-head{display:flex;justify-content:space-between;align-items:baseline;height:26px;padding:0 6px;font-size:12.5px;font-weight:700;gap:10px}
+.dock-head span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.strip-wrap{position:relative;height:124px;touch-action:none}
+#strip{position:absolute;inset:0;width:100%;height:100%}
+.hint{position:absolute;left:50%;top:-34px;transform:translateX(-50%);padding:7px 14px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;
+  background:var(--glass);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);box-shadow:var(--shadow-soft);
+  color:var(--item);animation:bob 2.4s ease-in-out infinite;transition:opacity .5s}
+.hint.gone{opacity:0;pointer-events:none}
+@keyframes bob{50%{transform:translate(-50%,-4px)}}
+
+/* ---------- Riffle preview loupe ---------- */
+.pv{position:absolute;left:0;top:0;z-index:60;pointer-events:none;width:252px;padding:12px 12px 10px;border-radius:20px;
+  background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);border:1px solid var(--line);
+  box-shadow:0 28px 50px -18px rgba(0,0,0,.75),inset 0 1px 0 rgba(255,255,255,.08);
+  opacity:0;transform-origin:50% 100%;will-change:transform,opacity;transition:opacity .22s var(--ease-out)}
+.pv.show{opacity:1}
+.pv-book{position:relative;width:228px;height:162px;perspective:900px;border-radius:4px;box-shadow:0 14px 22px -10px rgba(0,0,0,.6)}
+#pvBase{position:absolute;inset:0;width:100%;height:100%;border-radius:4px}
+.pv-gutter{position:absolute;top:0;bottom:0;left:50%;width:22px;margin-left:-11px;background:linear-gradient(90deg,transparent,var(--gutter) 45%,var(--gutter) 55%,transparent);z-index:9;pointer-events:none}
+.mf{position:absolute;top:0;bottom:0;width:50%;transform-style:preserve-3d}
+.mf.fw{left:50%;transform-origin:left center}.mf.bw{left:0;transform-origin:right center}
+.mf canvas{position:absolute;inset:0;width:100%;height:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.mf canvas.b{transform:rotateY(180deg)}
+.pv-cap{display:flex;justify-content:space-between;align-items:baseline;margin-top:9px;gap:8px}
+.pv-ch{font-size:11px;font-weight:800;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pv-pg{font-size:18px;font-weight:700;white-space:nowrap}
+.pv-bar{height:4px;border-radius:4px;margin-top:7px;background:color-mix(in srgb,var(--hint) 25%,transparent);overflow:hidden}
+.pv-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--title),var(--sub));border-radius:4px}
+.pv-tail{position:absolute;bottom:-9px;width:18px;height:18px;margin-left:-9px;transform:rotate(45deg);background:inherit;border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+  backdrop-filter:none;background:color-mix(in srgb,var(--surface) 90%,transparent)}
+
+/* ---------- Bare mode: running on a real unfolded Fold ---------- */
+body.bare .stage{display:block;padding:0}
+body.bare .panel,body.bare .dev-label{display:none}
+body.bare .fold{position:fixed;inset:0;padding:0;border-radius:0;box-shadow:none;background:none;transform:none!important}
+body.bare .fold::before,body.bare .punch,body.bare .crease,body.bare .status{display:none}
+body.bare .screen{border-radius:0}
+body.bare .topbar{top:max(10px,env(safe-area-inset-top))}
+body.bare .read{top:68px}
+@media (max-width:1240px){.panel.right{display:none}.stage{grid-template-columns:minmax(0,1fr) auto}}
+@media (max-width:900px){.panel.left{display:none}.stage{display:grid;grid-template-columns:1fr;justify-items:center}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="stage">
+  <aside class="panel left">
+    <div class="brand">
+      <svg width="42" height="42" viewBox="0 0 200 200" aria-hidden="true">
+        <defs><linearGradient id="gBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2f8cf6"/><stop offset="1" stop-color="#1f2fb0"/></linearGradient>
+        <linearGradient id="gRib" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#3ee6e0"/><stop offset=".5" stop-color="#4f8ff0"/><stop offset="1" stop-color="#8a4fe0"/></linearGradient></defs>
+        <rect width="200" height="200" rx="46" fill="url(#gBg)"/><rect x="28" y="44" width="144" height="122" rx="10" fill="#3b7bf0" stroke="#7fb4ff" stroke-width="3"/>
+        <path d="M36 56 Q66 46 98 58 L98 156 Q66 146 36 154 Z" fill="#fffaf0"/><path d="M102 58 Q134 46 164 56 L164 154 Q134 146 102 156 Z" fill="#fffaf0"/>
+        <path d="M58 172 C66 128 92 126 102 100 C112 72 120 52 152 44" fill="none" stroke="url(#gRib)" stroke-width="17" stroke-linecap="round"/>
+      </svg>
+      <div><b><span class="r-item">Flow</span><span class="r-title">Folio</span></b><div class="note">Feature mock · Riffle Scrubber</div></div>
+    </div>
+    <div class="h1 r-title">Riffle through<br>the page edges</div>
+    <p class="note" style="margin-top:10px">The strip is a front view of the book's fore edge, like a cross-section seen from the front: front cover board on the left, back cover board on the right, and every leaf standing between them edge-on. Chapter bleed tabs print as stepped colour bars on the edge. The red ribbon hangs from a pin at your position; it is the only thing that riffles.</p>
+    <h3>Controls</h3>
+    <div class="ctl"><span>Theme</span><div class="seg" data-ctl="theme"><button data-v="dark" class="on">Dark</button><button data-v="light">Light</button></div></div>
+    <div class="ctl"><span>Fold posture</span><div class="seg" data-ctl="orient"><button data-v="portrait" class="on">Upright</button><button data-v="landscape">Rotated</button></div></div>
+    <div class="ctl"><span>Auto-hide</span><div class="seg" data-ctl="hide"><button data-v="3000">3s</button><button data-v="5000" class="on">5s</button><button data-v="8000">8s</button><button data-v="15000">15s</button><button data-v="0">Off</button></div></div>
+    <div class="ctl"><span>Paper sound</span><div class="seg" data-ctl="sound"><button data-v="on" class="on">On</button><button data-v="off">Off</button></div></div>
+    <div class="ctl"><span>Haptics</span><div class="seg" data-ctl="haptic"><button data-v="on" class="on">On</button><button data-v="off">Off</button></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="demoBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>Replay riffle demo</button><button class="btn" id="showBtn" style="background:var(--card);color:var(--item);box-shadow:var(--shadow-soft)">Toggle controls</button></div>
+    <h3>Try this</h3>
+    <p class="note"><b>Slide the ribbon</b> left or right: the pin opens a gap in the fore edge, leaves spring across it bowing with their own speed, and the loupe riffles miniature spreads. <b>Release</b> to land with a multi-sheet page turn. <b>Tap a flag</b> on top to jump straight to that bookmark (hover one with a mouse to preview it). Flags never drag, and tapping the page block itself only nudges the ribbon. After the auto-hide delay the controls fade and the spread grows to a clean full-screen book; <b>tap the middle of the page</b> to bring them back.</p>
+  </aside>
+
+  <div class="dev-col">
+    <div class="scaler" id="scaler">
+      <div class="fold" id="fold">
+        <div class="screen" id="screen">
+          <div class="crease"></div><div class="punch"></div>
+          <div class="status"><span>9:41</span>
+            <span class="ic"><svg width="16" height="12" viewBox="0 0 16 12" fill="currentColor"><path d="M8 3c2.3 0 4.4.9 6 2.4l1.3-1.4A10.4 10.4 0 0 0 8 1 10.4 10.4 0 0 0 .7 4L2 5.4A8.5 8.5 0 0 1 8 3Zm0 4c1.2 0 2.3.4 3.2 1.2l1.3-1.4A6.6 6.6 0 0 0 8 5a6.6 6.6 0 0 0-4.5 1.8l1.3 1.4C5.7 7.4 6.8 7 8 7Zm0 2.2-1.6 1.6L8 12.4l1.6-1.6L8 9.2Z"/></svg>
+            <svg width="24" height="12" viewBox="0 0 24 12"><rect x=".5" y=".5" width="20" height="11" rx="3" fill="none" stroke="currentColor" opacity=".5"/><rect x="2" y="2" width="14" height="8" rx="1.6" fill="currentColor"/><rect x="21.5" y="4" width="2" height="4" rx="1" fill="currentColor" opacity=".5"/></svg></span>
+          </div>
+          <div class="topbar">
+            <button class="icon-btn" aria-label="Back"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+            <div class="tb-title"><b class="r-item">Cellular Biology · Systems &amp; Signals</b><span class="r-sub" id="tbCh"></span></div>
+            <button class="icon-btn" id="aaBtn" aria-label="Reading settings"><span class="display r-title" style="font-weight:700;font-size:15px">Aa</span></button>
+            <button class="icon-btn" id="flagBtn" aria-label="Flag this spread"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" class="r-sub" style="color:var(--sub)"><path d="M6 3h12v18l-6-4-6 4V3Z"/></svg></button>
+          </div>
+          <div class="read" id="read">
+            <div class="book" id="book">
+              <div class="edge l" id="edgeL"></div>
+              <div class="spread" id="spread">
+                <div class="page L" id="pgL"></div><div class="page R" id="pgR"></div>
+                <div class="dim" id="dim"></div>
+                <div class="zones"><div data-z="-1"></div><div data-z="0"></div><div data-z="1"></div></div>
+              </div>
+              <div class="edge r" id="edgeR"></div>
+            </div>
+          </div>
+          <div class="dock" id="dock">
+            <div class="dock-head"><span class="r-sub" id="dhL"></span><span class="r-hint" id="dhR"></span></div>
+            <div class="timer" title="Controls auto-hide"><i id="timerBar"></i></div>
+            <div class="strip-wrap" id="stripWrap" tabindex="0" aria-label="Page riffle scrubber" role="slider" aria-valuemin="1" aria-valuemax="842">
+              <div class="hint" id="hint">Slide the ribbon to riffle · tap a flag to jump</div>
+              <canvas id="strip"></canvas>
+            </div>
+          </div>
+          <div class="pop" id="pop">
+            <h4 class="r-sub">Auto-hide controls</h4>
+            <div class="seg" data-ctl="hide"><button data-v="3000">3s</button><button data-v="5000" class="on">5s</button><button data-v="8000">8s</button><button data-v="15000">15s</button><button data-v="0">Never</button></div>
+            <h4 class="r-sub">Theme</h4>
+            <div class="seg" data-ctl="theme"><button data-v="dark" class="on">Dark</button><button data-v="light">Light</button></div>
+            <p>Tap the middle of the page any time to bring the controls back or send them away.</p>
+          </div>
+          <div class="pv" id="pv">
+            <div class="pv-book"><canvas id="pvBase"></canvas><div id="pvFlips"></div><i class="pv-gutter"></i></div>
+            <div class="pv-cap"><span class="pv-ch r-sub" id="pvCh"></span><span class="pv-pg display r-title" id="pvPg"></span></div>
+            <div class="pv-bar"><i id="pvBar"></i></div>
+            <span class="pv-tail" id="pvTail"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="dev-label" id="devLabel">Galaxy Z Fold8 Ultra · unfolded · 8″ 2256 × 2504</div>
+  </div>
+
+  <aside class="panel right">
+    <h3>Interaction spec</h3>
+    <ul class="spec">
+      <li>View<code>fore edge, front-on</code></li>
+      <li>Leaves<code>1 per sheet (421)</code></li>
+      <li>Leaf spring (x position)<code>k 700 · c 22</code></li>
+      <li>Leaf bow<code>v × 0.022 px, ±14</code></li>
+      <li>Gap at the pin<code>4 + 30e px, tanh</code></li>
+      <li>Gap radius<code>20 + 14e px</code></li>
+      <li>Riffle handle<code>ribbon only, ±26 px</code></li>
+      <li>Flag tap<code>13 px radius, cancels at 10 px move</code></li>
+      <li>Flag jump travel<code>ribbon glides, e 0.55, 900 ms</code></li>
+      <li>Loupe riffle flip<code>110–320 ms, by speed</code></li>
+      <li>Land turn<code>≤ 7 sheets · 520 ms · 70 ms stagger</code></li>
+      <li>Auto-hide<code>3 · 5 · 8 · 15 s · never</code></li>
+      <li>Immersive transition<code>800 ms, book scales to fit</code></li>
+    </ul>
+    <h3>Mapping to Compose</h3>
+    <div class="map">
+      <p>Draw the block in one <code>Canvas</code>, batching leaf curves into ~16 shade buckets of <code>Path</code> so a frame is about 20 draw calls, not 421.</p>
+      <p>Keep leaf angles and velocities in two <code>FloatArray</code>s integrated inside a <code>withFrameNanos</code> loop; per-leaf <code>Animatable</code>s would be far too heavy.</p>
+      <p>Gestures via <code>pointerInput</code> + <code>awaitEachGesture</code>, with separate hit regions: ribbon (drag), flags (tap only). Haptics: <code>SEGMENT_FREQUENT_TICK</code> while riffling and <code>CONFIRM</code> on chapters (API 34+, <code>CLOCK_TICK</code> fallback). Paper flicks from a small <code>SoundPool</code>.</p>
+      <p>Auto-hide is a coroutine timer reset on every interaction; immersive mode hides system bars via <code>WindowInsetsControllerCompat</code> and animates the book with <code>graphicsLayer { scaleX; scaleY }</code>.</p>
+      <p>Loupe thumbnails come from the page bitmap cache at low resolution; the riffle flips use <code>graphicsLayer { rotationY; cameraDistance }</code>.</p>
+    </div>
+  </aside>
+</div>
+
+<script>
+/* =================== BOOK DATA =================== */
+const BOOK = {title:'Cellular Biology', pages:842};
+const CH = [[1,'The Chemistry of Life'],[37,'Cell Architecture'],[71,'Proteins at Work'],[109,'Enzymes and Catalysis'],[143,'Energy and Metabolism'],
+ [181,'Membrane Structure'],[213,'Membrane Transport'],[259,'Cell Signaling'],[301,'The Cytoskeleton'],[355,'The Nucleus and DNA'],[409,'Gene Expression'],
+ [467,'Protein Sorting'],[527,'The Cell Cycle'],[589,'Cell Death'],[647,'Stem Cells and Development'],[703,'Cancer Biology'],[761,'Cells in Tissues']];
+const SECS = CH.map((c,i)=>({start:c[0],title:c[1],n:i+1,kind:'ch'})).concat([{start:803,title:'Glossary',kind:'gloss'},{start:817,title:'Index',kind:'index'}]);
+const L = BOOK.pages/2;                 // 421 leaves (sheets)
+let flags = new Set([88,233,433,590,702]);
+let cur = 108;                          // committed spread index: pages 216-217
+const leafOf = p => Math.floor((p-1)/2);
+const secOf = p => { let s=SECS[0]; for(const x of SECS) if(x.start<=p) s=x; return s; };
+const spreadPages = s => [2*s, 2*s+1];  // left (even), right (odd)
+const spreadLabel = s => { const [a,b]=spreadPages(s); const A=a>=1&&a<=842, B=b>=1&&b<=842; return A&&B?`pp. ${a}–${b}`:A?`p. ${a}`:B?`p. ${b}`:'Cover'; };
+const secLabel = s => { const [a,b]=spreadPages(s); const p=b<=842?b:a; const x=secOf(Math.max(1,p)); return x.kind==='ch'?`Chapter ${x.n} · ${x.title}`:x.title; };
+
+/* =================== DETERMINISTIC PAGE CONTENT =================== */
+function rng(seed){ let a=seed>>>0; return ()=>{ a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+const SENT = ["Every living cell is an argument about boundaries, and the plasma membrane is where that argument is settled.",
+"Small nonpolar molecules such as oxygen and carbon dioxide slip through the bilayer by simple diffusion.",
+"Charged particles face a steep energetic barrier because they must shed their shell of water to enter the hydrophobic core.",
+"Channel proteins form aqueous pores that open and close in response to voltage, ligands or mechanical stretch.",
+"Carrier proteins bind their cargo, change shape, and release it on the opposite side of the membrane.",
+"The sodium potassium pump spends one molecule of ATP to move three sodium ions out and two potassium ions in.",
+"Because the pump is electrogenic, it contributes directly to the voltage across the membrane.",
+"Secondary active transport borrows energy stored in an existing gradient rather than spending ATP directly.",
+"Glucose enters intestinal cells against its gradient by riding alongside sodium ions through a symporter.",
+"Water crosses membranes rapidly through aquaporins, which exclude protons while admitting single-file water molecules.",
+"In a hypotonic solution an animal cell swells, and without a wall to resist the pressure it may burst.",
+"Plant cells instead build turgor pressure, which keeps stems upright and leaves extended toward the light.",
+"Experimental measurements of transport rates often follow saturation kinetics, a hallmark of carrier mediated movement.",
+"When every carrier is occupied, adding more substrate no longer increases the rate of transport.",
+"Researchers use patch clamp recordings to observe the opening of a single ion channel in real time.",
+"The resting potential of a neuron sits close to the equilibrium potential for potassium.",
+"Large particles enter the cell by endocytosis, wrapped in a patch of membrane that pinches off as a vesicle.",
+"Receptor mediated endocytosis concentrates specific cargo in coated pits before internalization.",
+"Exocytosis reverses the process, fusing vesicles with the plasma membrane to release their contents.",
+"Each of these mechanisms trades energy for control, and the cell budgets that energy with remarkable precision.",
+"Mutations in a single chloride channel underlie cystic fibrosis, thickening the mucus that lines the airways.",
+"Gradients are a form of stored energy, much like water held behind a dam.",
+"The direction of passive flux is always set by the electrochemical gradient, never by the needs of the cell.",
+"Regulation often occurs through phosphorylation, which can switch a transporter on or off within seconds.",
+"Comparing permeability across species reveals how membranes have been tuned to very different environments.",
+"Lipid composition shifts with temperature so that membranes remain fluid in cold water and stable in warm water.",
+"Cholesterol acts as a fluidity buffer, stiffening membranes when warm and preventing crystallization when cold.",
+"Signals from outside the cell are often converted into changes in ion flux before any gene is ever expressed.",
+"The cytoskeleton anchors many transport proteins, organizing them into functional domains.",
+"In polarized epithelia, different transporters sit on the apical and basolateral faces of the same cell."];
+const HEADS = ["Diffusion Down a Gradient","Channels and Carriers","Primary Active Transport","Coupled Transporters","Osmosis and Water Balance","Vesicular Traffic",
+ "Measuring Transport Rates","Regulation by Phosphorylation","Signals Across the Membrane","Experimental Approaches","Energy Budgets","Clinical Connections"];
+const EQS = ["J = −P · A · ΔC","ΔG = RT ln(C₂ / C₁) + zFΔV","V = Vmax [S] / (Km + [S])","E = (RT / zF) · ln([X]ₒ / [X]ᵢ)","Π = iMRT"];
+const CAPS = ["A model of the structure discussed in the text, with the key components labeled.","Measured rates under increasing substrate concentration.",
+ "The phospholipid bilayer with an integral channel protein spanning both leaflets.","Saturation kinetics of a carrier protein compared with simple diffusion."];
+const GLOSS = [["Active transport","Movement of a solute against its gradient, powered by an energy source."],["Aquaporin","A channel protein that conducts water across membranes."],
+ ["Carrier protein","A transporter that changes shape to move its cargo."],["Endocytosis","Uptake of material by inward budding of the membrane."],["Gradient","A difference in concentration or charge across space."],
+ ["Ligand","A molecule that binds specifically to a receptor."],["Osmosis","Net movement of water across a selectively permeable membrane."],["Symporter","A carrier that moves two solutes in the same direction."],
+ ["Turgor","Pressure exerted by fluid inside a plant cell against its wall."],["Uniporter","A carrier that moves a single solute."]];
+const IXW = ["Actin","Adhesion","ATP synthase","Calcium","Carrier","Chaperone","Chromatin","Cilia","Cyclin","Diffusion","Dynein","Endosome","Enzyme","Exocytosis","Flagella",
+ "Glycolysis","Golgi","Histone","Kinase","Lipid raft","Lysosome","Microtubule","Mitosis","Myosin","Nucleolus","Osmosis","Peroxisome","Ribosome","Signal","Telomere","Vesicle"];
+
+const layoutCache = new Map();
+function layout(p){
+  if(layoutCache.has(p)) return layoutCache.get(p);
+  const sec = secOf(p), R = rng(p*7919+13); let B = [];
+  if(sec.kind==='gloss') B=[{t:'gloss',u:27}];
+  else if(sec.kind==='index') B=[{t:'index',u:27}];
+  else{
+    let u=0, lastH=false;
+    if(p===sec.start){ B.push({t:'op',u:11}); B.push({t:'p',u:6,drop:true}); u=17; }
+    while(u<27){
+      const r=R(), room=27-u;
+      if(r<.11 && room>=10){ B.push({t:'fig',u:10,k:Math.floor(R()*4)}); u+=10; }
+      else if(r<.18 && room>=8){ B.push({t:'tbl',u:7}); u+=7; }
+      else if(r<.27 && !lastH && room>=6){ B.push({t:'h',u:2}); u+=2; lastH=true; continue; }
+      else if(r<.34 && room>=5){ B.push({t:'call',u:4}); u+=4; }
+      else if(r<.40){ B.push({t:'eq',u:2}); u+=2; }
+      else { const n=3+Math.floor(R()*5); B.push({t:'p',u:n}); u+=n; }
+      lastH=false;
+    }
+  }
+  layoutCache.set(p,B); return B;
+}
+const FIGSVG = [
+ `<svg viewBox="0 0 300 120"><ellipse cx="150" cy="60" rx="138" ry="52" fill="none" stroke="var(--item)" stroke-width="2.5"/><circle cx="120" cy="58" r="22" fill="color-mix(in srgb,var(--accent) 40%,transparent)" stroke="var(--accent)" stroke-width="2"/><ellipse cx="205" cy="45" rx="20" ry="9" fill="none" stroke="var(--title)" stroke-width="2"/><ellipse cx="200" cy="80" rx="16" ry="7" fill="none" stroke="var(--title)" stroke-width="2"/><g fill="var(--sub)"><circle cx="60" cy="50" r="3"/><circle cx="74" cy="76" r="3"/><circle cx="240" cy="64" r="3"/></g></svg>`,
+ `<svg viewBox="0 0 300 120"><path d="M20 105H285M20 105V10" stroke="currentColor" stroke-width="1.5" opacity=".5"/>${[38,52,47,70,64,88,82,96].map((h,i)=>`<rect x="${35+i*31}" y="${105-h}" width="18" height="${h}" rx="3" fill="${i%2?'var(--item)':'var(--title)'}" opacity=".85"/>`).join('')}</svg>`,
+ `<svg viewBox="0 0 300 120"><g fill="var(--item)">${Array.from({length:14},(_,i)=>`<circle cx="${12+i*21}" cy="22" r="7"/><circle cx="${12+i*21}" cy="98" r="7"/>`).join('')}</g><g stroke="currentColor" stroke-width="2" opacity=".5">${Array.from({length:14},(_,i)=>`<path d="M${9+i*21} 29v24M${15+i*21} 29v24M${9+i*21} 91V67M${15+i*21} 91V67"/>`).join('')}</g><rect x="128" y="8" width="44" height="104" rx="18" fill="var(--sub)" opacity=".85"/><rect x="144" y="8" width="12" height="104" rx="6" fill="var(--paper)"/></svg>`,
+ `<svg viewBox="0 0 300 120"><path d="M20 108H285M20 108V8" stroke="currentColor" stroke-width="1.5" opacity=".5"/><path d="M20 108 C60 40 120 26 285 20" fill="none" stroke="var(--title)" stroke-width="3"/><path d="M20 108 L285 34" fill="none" stroke="var(--item)" stroke-width="2.5" stroke-dasharray="6 5"/></svg>`];
+
+function pageHTML(p){
+  if(p<1||p>BOOK.pages) return `<div class="endp"><span>FlowFolio</span></div>`;
+  const sec=secOf(p), B=layout(p), R=rng(p*31+7);
+  const pick = a => a[Math.floor(R()*a.length)];
+  const para = u => { let s=''; while(s.length<u*60) s+=pick(SENT)+' '; return s.trim(); };
+  const head = p===sec.start ? '' : `<div class="rh"><span>${p%2 ? (sec.kind==='ch'?'Chapter '+sec.n+' · ':'')+sec.title : BOOK.title}</span></div>`;
+  let h = `<div class="pg ${p%2?'recto':'verso'}">${head}<div class="body" style="${p===sec.start?'height:100%':''}">`;
+  let figN=0, hN=0; const secNo = () => sec.kind==='ch' ? `${sec.n}.${1+Math.floor((p-sec.start)/3)+(hN++)}` : '';
+  for(const b of B){
+    if(b.t==='op') h+=`<div class="op"><div class="op-n">Chapter ${sec.n}</div><h2>${sec.title}</h2><p class="epi">“${pick(SENT)}”</p></div>`;
+    else if(b.t==='p') h+=`<p class="${b.drop?'drop ni':''}">${para(b.u)}</p>`;
+    else if(b.t==='h') h+=`<h3><span>${secNo()}</span>${pick(HEADS)}</h3>`;
+    else if(b.t==='fig') h+=`<figure>${FIGSVG[b.k]}<figcaption><b>Figure ${sec.n}.${1+Math.floor((p-sec.start)/2)+(figN++)}</b> ${CAPS[b.k]}</figcaption></figure>`;
+    else if(b.t==='tbl') h+=`<table class="tbl"><tr><th>Ion</th><th>Inside</th><th>Outside</th><th>E</th></tr><tr><td>K⁺</td><td>140</td><td>5</td><td>−89 mV</td></tr><tr><td>Na⁺</td><td>15</td><td>145</td><td>+61 mV</td></tr><tr><td>Cl⁻</td><td>10</td><td>110</td><td>−64 mV</td></tr></table>`;
+    else if(b.t==='call') h+=`<div class="call"><b>Key concept</b>${pick(SENT)}</div>`;
+    else if(b.t==='eq') h+=`<div class="eq">${pick(EQS)}</div>`;
+    else if(b.t==='gloss'){ h+=`<dl class="gl">`; for(let i=0;i<7;i++){ const g=GLOSS[(p*3+i)%GLOSS.length]; h+=`<dt>${g[0]}</dt><dd>${g[1]}</dd>`; } h+=`</dl>`; }
+    else if(b.t==='index'){ h+=`<div class="ix">`; const L0=String.fromCharCode(65+((p-817)%20)); h+=`<b>${L0}</b>`;
+      for(let i=0;i<24;i++){ const w=IXW[(p*5+i)%IXW.length]; const a=1+Math.floor(R()*780); h+=`${w}, ${a}, ${a+Math.floor(R()*30)}<br>`; } h+=`</div>`; }
+  }
+  return h+`</div><div class="folio">${p}</div></div>`;
+}
+
+/* =================== MINI PAGE (loupe thumbnails) =================== */
+let C = {};
+function readColors(){ const cs=getComputedStyle(document.documentElement); for(const k of ['paper','paper-ink','title','item','sub','hint','accent','book','book2']) C[k]=cs.getPropertyValue('--'+k).trim(); }
+function drawMini(ctx,p,x,y,w,h){
+  ctx.save(); ctx.translate(x,y); ctx.beginPath(); ctx.rect(0,0,w,h); ctx.clip();
+  if(p<1||p>BOOK.pages){
+    const g=ctx.createLinearGradient(0,0,w,h); g.addColorStop(0,C.book); g.addColorStop(1,C.book2); ctx.fillStyle=g; ctx.fillRect(0,0,w,h);
+    ctx.fillStyle='rgba(255,255,255,.12)'; for(let yy=4;yy<h;yy+=9) for(let xx=(yy/9%2)*4.5+3;xx<w;xx+=9){ ctx.beginPath(); ctx.arc(xx,yy,1.2,0,7); ctx.fill(); }
+    ctx.restore(); return;
+  }
+  ctx.fillStyle=C.paper; ctx.fillRect(0,0,w,h);
+  const sec=secOf(p), B=layout(p), mx=w*.1, cw=w-2*mx, top=h*.075, U=(h*.82)/27;
+  const ink=C['paper-ink']; let yy=top;
+  const bar=(xx,y0,ww,hh,col,a)=>{ ctx.globalAlpha=a; ctx.fillStyle=col; ctx.fillRect(xx,y0,ww,hh); ctx.globalAlpha=1; };
+  if(p!==sec.start){ bar(p%2?mx+cw*.55:mx, top, cw*.45, U*.22, ink, .35); bar(mx,top+U*.55,cw,.6,ink,.3); yy=top+U*1.2; }
+  const R=rng(p*131+3);
+  for(const b of B){
+    if(yy>h*.9) break;
+    if(b.t==='op'){ yy+=U*2.2; bar(mx,yy,cw*.25,U*.32,C.sub,.9); yy+=U*.9; bar(mx,yy,cw*.85,U*1.05,C.title,.95); yy+=U*1.45; bar(mx,yy,cw*.55,U*1.05,C.title,.95); yy+=U*2; bar(mx,yy,cw*.9,U*.3,ink,.35); yy+=U*.7; bar(mx,yy,cw*.6,U*.3,ink,.35); yy+=U*2.4; }
+    else if(b.t==='p'){ for(let i=0;i<b.u;i++){ const ind=(i===0&&!b.drop)?cw*.08:0; const last=i===b.u-1; let ww=last?cw*(.3+R()*.5):cw-ind;
+        if(b.drop&&i<2){ if(i===0) bar(mx,yy,U*1.6,U*1.6,C.title,.9); bar(mx+U*1.9,yy+U*.3,ww-U*1.9,U*.32,ink,.5); } else bar(mx+ind,yy+U*.3,ww,U*.32,ink,.5);
+        yy+=U; } yy+=U*.3; }
+    else if(b.t==='h'){ yy+=U*.4; bar(mx,yy+U*.2,cw*(.4+R()*.3),U*.55,C.title,.9); yy+=U*1.6; }
+    else if(b.t==='fig'){ ctx.globalAlpha=.16; ctx.fillStyle=C.item; ctx.beginPath(); ctx.roundRect(mx,yy,cw,U*8,U*.6); ctx.fill(); ctx.globalAlpha=1;
+      ctx.strokeStyle=[C.item,C.title,C.accent,C.sub][b.k]; ctx.lineWidth=1.4; ctx.beginPath();
+      if(b.k===0){ ctx.ellipse(mx+cw/2,yy+U*4,cw*.38,U*3,0,0,7); } else if(b.k===1){ for(let i=0;i<6;i++){ const hh=U*(1.5+((i*37)%5)); ctx.rect(mx+cw*.12+i*cw*.13,yy+U*7-hh,cw*.07,hh);} }
+      else if(b.k===2){ ctx.moveTo(mx+cw*.08,yy+U*2.2); ctx.lineTo(mx+cw*.92,yy+U*2.2); ctx.moveTo(mx+cw*.08,yy+U*5.8); ctx.lineTo(mx+cw*.92,yy+U*5.8); ctx.rect(mx+cw*.44,yy+U*1,cw*.12,U*6); }
+      else { ctx.moveTo(mx+cw*.08,yy+U*7); ctx.quadraticCurveTo(mx+cw*.3,yy+U*1.6,mx+cw*.92,yy+U*1.4); }
+      ctx.stroke(); yy+=U*8.5; bar(mx,yy,cw*.18,U*.3,C.sub,.8); bar(mx+cw*.2,yy,cw*.7,U*.3,ink,.4); yy+=U*1.5; }
+    else if(b.t==='tbl'){ bar(mx,yy+U*.3,cw,U*.35,C.sub,.75); for(let i=1;i<5;i++){ for(let c=0;c<4;c++) bar(mx+c*cw*.26,yy+U*(.3+i*1.3),cw*.16,U*.28,ink,.45); } yy+=U*7; }
+    else if(b.t==='call'){ ctx.globalAlpha=.14; ctx.fillStyle=C.item; ctx.fillRect(mx,yy,cw,U*3.5); ctx.globalAlpha=1; bar(mx,yy,U*.2,U*3.5,C.item,.9);
+      bar(mx+U*.7,yy+U*.5,cw*.3,U*.3,C.item,.9); bar(mx+U*.7,yy+U*1.4,cw*.8,U*.3,ink,.45); bar(mx+U*.7,yy+U*2.3,cw*.55,U*.3,ink,.45); yy+=U*4; }
+    else if(b.t==='eq'){ bar(mx+cw*.25,yy+U*.6,cw*.5,U*.4,ink,.6); yy+=U*2; }
+    else if(b.t==='gloss'){ for(let i=0;i<9;i++){ bar(mx,yy,cw*(.25+R()*.2),U*.42,C.title,.85); yy+=U*.9; bar(mx,yy,cw*.95,U*.3,ink,.4); yy+=U*.8; bar(mx,yy,cw*.6,U*.3,ink,.4); yy+=U*1.2; } }
+    else if(b.t==='index'){ for(let c=0;c<2;c++){ let y2=yy; for(let i=0;i<22;i++){ bar(mx+c*cw*.53,y2,cw*(.2+R()*.24),U*.3,ink,.5); y2+=U*1.05; } } yy+=U*23; }
+  }
+  bar(w/2-w*.04,h-h*.05,w*.08,U*.3,ink,.45);
+  const gs=ctx.createLinearGradient(p%2?0:w,0,p%2?w*.18:w*.82,0); gs.addColorStop(0,'rgba(0,0,0,.28)'); gs.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=gs; ctx.fillRect(0,0,w,h);
+  ctx.restore();
+}
+
+/* =================== LAYOUT / FOLD SCALING =================== */
+const $=s=>document.querySelector(s);
+const screen=$('#screen'), fold=$('#fold'), scaler=$('#scaler');
+const params=new URLSearchParams(location.search);
+const BARE = params.has('bare') || (matchMedia('(pointer:coarse)').matches && Math.min(innerWidth,innerHeight)>=600);
+if(BARE) document.body.classList.add('bare');
+let orient='portrait', SCALE=1, DPR=Math.min(3,window.devicePixelRatio||1);
+// Fold8 Ultra inner display: 2256 x 2504 px, rendered at ~2.667 px per dp
+const FOLD = {w:Math.round(2256/2.667), h:Math.round(2504/2.667)};
+
+function fit(){
+  let W,H;
+  if(BARE){ W=innerWidth; H=innerHeight; SCALE=1; }
+  else{
+    W = orient==='portrait'?FOLD.w:FOLD.h; H = orient==='portrait'?FOLD.h:FOLD.w;
+    const fw=W+22, fh=H+22;
+    const panels = innerWidth>1240?690:innerWidth>900?370:0;
+    const availW = innerWidth - panels - 80, availH = innerHeight - 70;
+    SCALE = Math.min(1, availW/fw, availH/fh);
+    fold.style.transform=`scale(${SCALE})`;
+    scaler.style.width=fw*SCALE+'px'; scaler.style.height=fh*SCALE+'px';
+  }
+  screen.style.width=W+'px'; screen.style.height=H+'px';
+  screen.classList.toggle('landscape', orient==='landscape' && !BARE);
+  const rd=$('#read'), aw=rd.clientWidth-60, ah=rd.clientHeight-20;
+  const ratio=Math.max(1.18,Math.min(1.45,aw/ah)); let sw=Math.min(aw, ah*ratio); let sh=sw/ratio;
+  $('#spread').style.width=sw+'px'; $('#spread').style.height=sh+'px';
+  updateEdges();
+  const bk=$('#book'), bw=bk.offsetWidth+4, bh=sh;
+  const is=Math.min((W-26)/bw,(H-22)/bh), iy=H/2-(rd.offsetTop+rd.offsetHeight/2);
+  screen.style.setProperty('--is',is.toFixed(4)); screen.style.setProperty('--iy',iy.toFixed(1)+'px');
+  sizeStrip(); sizePv();
+}
+
+/* =================== MAIN SPREAD =================== */
+function renderSpread(s){
+  const [a,b]=spreadPages(s);
+  $('#pgL').innerHTML=pageHTML(a); $('#pgR').innerHTML=pageHTML(b);
+  $('#tbCh').textContent=secLabel(s);
+  updateDockHead(s,false);
+  $('#stripWrap').setAttribute('aria-valuenow', Math.max(1,a));
+}
+function updateEdges(){
+  const max=Math.max(6, $('#spread').clientWidth*.016);
+  $('#edgeL').style.width=(2+max*cur/L)+'px'; $('#edgeR').style.width=(2+max*(1-cur/L))+'px';
+}
+function updateDockHead(s,live){
+  $('#dhL').textContent=secLabel(s);
+  const pct=Math.round(s/L*100);
+  $('#dhR').innerHTML=`<span class="${live?'r-title':''}" style="font-weight:800">${spreadLabel(s)}</span> of ${BOOK.pages} · ${pct}%`;
+}
+let turning=null;
+function goSpread(t){
+  t=Math.max(0,Math.min(L,t)); if(t===cur) return;
+  if(turning){ turning.forEach(e=>e.remove()); turning=null; }
+  const from=cur, dir=Math.sign(t-from), n=Math.min(7,Math.abs(t-from));
+  const steps=[from]; for(let k=1;k<=n;k++) steps.push(Math.round(from+(t-from)*k/n));
+  const sp=$('#spread'), els=[];
+  // keep the old facing page visible until sheets cover it
+  const hold=document.createElement('div'); hold.className='hold page '+(dir>0?'L':'R'); hold.style.left=dir>0?'0':'50%';
+  hold.innerHTML=pageHTML(spreadPages(from)[dir>0?0:1]); sp.insertBefore(hold,$('#dim')); els.push(hold);
+  cur=t; renderSpread(t); updateEdges();
+  const dur = n===1?700:520, stag = n===1?0:70;
+  for(let k=1;k<=n;k++){
+    const sh=document.createElement('div'); sh.className='sheet '+(dir>0?'fw':'bw');
+    const [pa,pb] = dir>0 ? [spreadPages(steps[k-1])[1], spreadPages(steps[k])[0]] : [spreadPages(steps[k-1])[0], spreadPages(steps[k])[1]];
+    sh.innerHTML=`<div class="face a page ${dir>0?'R':'L'}">${pageHTML(pa)}<i class="sh"></i></div><div class="face b page ${dir>0?'L':'R'}">${pageHTML(pb)}<i class="sh"></i></div>`;
+    sh.style.zIndex=20-k; sp.insertBefore(sh,$('#dim')); els.push(sh);
+    const delay=(k-1)*stag, opt={duration:dur,delay,easing:'cubic-bezier(.45,.05,.25,1)',fill:'both'};
+    sh.animate([{transform:'rotateY(0deg)'},{transform:`rotateY(${dir>0?-180:180}deg)`}],opt);
+    sh.querySelectorAll('.sh').forEach(x=>x.animate([{opacity:0},{opacity:1,offset:.5},{opacity:0}],opt));
+    setTimeout(()=>{ sh.style.zIndex=30+k; },delay+dur/2);
+    setTimeout(()=>paperWhoosh(n>1?.8:1.2),delay+dur*.25);
+  }
+  turning=els;
+  setTimeout(()=>{ els.forEach(e=>e.remove()); if(turning===els) turning=null; }, (n-1)*stag+dur+30);
+}
+
+/* =================== RIFFLE STRIP: front view of the fore edge ===================
+   Left = front cover board, right = back cover board, between them every leaf is seen
+   edge-on as a vertical line. The spine is behind the strip, away from the viewer.     */
+const strip=$('#strip'), sctx=strip.getContext('2d'), wrap=$('#stripWrap');
+let SW=600, SH=124, x0=26, x1=574;
+const yT=24, yB=74;                         // top and bottom of the fore edge
+const lx=new Float32Array(L), lv=new Float32Array(L), lb=new Float32Array(L);
+let leavesInit=false;
+let fx=0, fxVel=0, eng=0, dragging=false, grabOff=0, demo=null, pointerX=0;
+let hoverFlag=null, hoverRibbon=false, flagDown=null, downX=0, travelUntil=0, wiggleT=-9999, ghost=0;
+function sizeStrip(){
+  SW=wrap.clientWidth; SH=wrap.clientHeight; x0=26; x1=SW-26;
+  const k=DPR*Math.max(1,SCALE); strip.width=Math.round(SW*k); strip.height=Math.round(SH*k); sctx.setTransform(k,0,0,k,0,0);
+  fx=bx(cur); leavesInit=false;
+}
+const bx = j => x0 + j/L*(x1-x0);
+const sFrom = x => Math.max(0,Math.min(L,Math.round((x-x0)/(x1-x0)*L)));
+const spreadOfPage = p => Math.floor(p/2);
+const PAPER={dark:[214,203,184],light:[243,235,219]};
+const FLAGCOL={dark:['#00f0ff','#ff8a00','#c02f9a','#2ecc8a','#ffd166'],light:['#0e7490','#b45309','#7e22ce','#15803d','#a16207']};
+const flagColor = p => FLAGCOL[document.documentElement.dataset.theme==='dark'?'dark':'light'][(p*7)%5];
+let clothPat=null;
+function makeCloth(){
+  const c=document.createElement('canvas'); c.width=c.height=24; const g=c.getContext('2d'); const R=rng(9);
+  for(let i=0;i<160;i++){ g.fillStyle=`rgba(${R()<.5?'255,255,255':'0,0,0'},${.04+R()*.07})`; g.fillRect(Math.floor(R()*24),Math.floor(R()*24),1,1); }
+  g.strokeStyle='rgba(255,255,255,.05)'; for(let i=0;i<24;i+=3){ g.beginPath(); g.moveTo(0,i); g.lineTo(24,i); g.stroke(); }
+  clothPat=sctx.createPattern(c,'repeat');
+}
+// chapter bleed tabs printed on the page edge (visible on the fore edge as stepped colour bars)
+const bleed=[]; SECS.forEach((s,i)=>{ const a=leafOf(s.start), b=i+1<SECS.length?leafOf(SECS[i+1].start):L; bleed.push({a,b,s,band:s.kind==='ch'?(s.n-1)%7:7}); });
+const ribbonX = () => fx;
+function drawStrip(t,dt){
+  const ctx=sctx, dark=document.documentElement.dataset.theme==='dark';
+  ctx.clearRect(0,0,SW,SH);
+  const G=4+30*eng, r=20+14*eng;
+  const ta=Math.tanh((x0-fx)/r), tb=Math.tanh((x1-fx)/r);
+  const disp = x => { const u=(x-x0)/(x1-x0); return G*(Math.tanh((x-fx)/r)-(ta*(1-u)+tb*u)); };
+  const step=(x1-x0)/L, mid=(yT+yB)/2, BH=yB-yT;
+  if(!leavesInit){ for(let j=0;j<L;j++){ const b=x0+(j+.5)*step; lx[j]=b+disp(b); lv[j]=0; } leavesInit=true; }
+
+  // soft floor shadow + theme glow
+  let g=ctx.createRadialGradient(SW/2,yB+6,10,SW/2,yB+6,SW*.55); g.addColorStop(0,'rgba(0,0,0,.42)'); g.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=g; ctx.fillRect(0,yB-4,SW,18);
+  // interior of the book: only visible where leaves separate
+  g=ctx.createLinearGradient(0,yT,0,yB); g.addColorStop(0,dark?'#120b26':'#2a1e14'); g.addColorStop(.5,dark?'#05020c':'#0d0805'); g.addColorStop(1,dark?'#120b26':'#2a1e14');
+  ctx.fillStyle=g; ctx.fillRect(x0,yT,x1-x0,BH);
+  // the pin's needle, seen through the open gap
+  const rx=ribbonX();
+  if(eng>.03){ ctx.save(); ctx.globalAlpha=Math.min(1,eng*1.5); ctx.strokeStyle=dark?'#ff2d5a':'#d4163b'; ctx.lineWidth=1.2;
+    ctx.shadowColor='#ff2d5a'; ctx.shadowBlur=dark?8:0; ctx.beginPath(); ctx.moveTo(rx,yB); ctx.lineTo(rx,yT+6); ctx.stroke(); ctx.restore(); }
+
+  // leaves: spring-driven x positions, bowed by their own velocity (middle leads, corners lag)
+  const base=PAPER[dark?'dark':'light'], buckets=Array.from({length:18},()=>new Path2D());
+  const lw=Math.max(.9,step*.94), k=700, c=22;
+  for(let j=0;j<L;j++){
+    const b=x0+(j+.5)*step, tgt=b+disp(b);
+    for(let s=0;s<2;s++){ const h=dt/2; const a=k*(tgt-lx[j])-c*lv[j]; lv[j]+=a*h; lx[j]+=lv[j]*h; }
+    const v=lv[j], bow=Math.max(-14,Math.min(14,v*.022)); lb[j]=bow;
+    const d=Math.abs(b-fx);
+    let m=.9-((j*7)%5)*.014+Math.min(.12,Math.abs(v)*.0007)+.14*eng*Math.exp(-d/9)-.05*((j*13)%3===0);
+    m=Math.max(.55,Math.min(1.04,m));
+    const bi=Math.max(0,Math.min(17,Math.round((m-.55)/.49*17)));
+    buckets[bi].moveTo(lx[j],yT); buckets[bi].quadraticCurveTo(lx[j]+bow*2,mid,lx[j],yB);
+  }
+  ctx.lineWidth=lw; ctx.lineCap='butt';
+  buckets.forEach((p,i)=>{ const m=.55+i/17*.49; ctx.strokeStyle=`rgb(${base[0]*m|0},${base[1]*m|0},${base[2]*m|0})`; ctx.stroke(p); });
+  // bleed tabs: short coloured segments on each leaf of a chapter, following the leaf's bow
+  const tabCols=dark?['#14b8a6','#ff8a00','#c02f9a','#00b8d9']:['#0f766e','#b45309','#7e22ce','#0e7490'];
+  const bandH=(BH-6)/8;
+  ctx.globalAlpha=dark?.38:.32;
+  for(const t0 of bleed){
+    const y0=yT+3+t0.band*bandH, y1=y0+bandH*.8, u0=(y0-yT)/BH, u1=(y1-yT)/BH, p=new Path2D();
+    for(let j=t0.a;j<t0.b&&j<L;j++){ p.moveTo(lx[j]+4*u0*(1-u0)*lb[j],y0); p.lineTo(lx[j]+4*u1*(1-u1)*lb[j],y1); }
+    ctx.strokeStyle=t0.s.kind==='ch'?tabCols[t0.s.n%4]:(dark?'#9b9aa6':'#6b625a'); ctx.stroke(p);
+  }
+  ctx.globalAlpha=1;
+  // edge shading: block curvature (darker toward top, bottom and both covers)
+  g=ctx.createLinearGradient(0,yT,0,yB); g.addColorStop(0,'rgba(0,0,0,.28)'); g.addColorStop(.18,'rgba(0,0,0,0)'); g.addColorStop(.82,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.32)');
+  ctx.fillStyle=g; ctx.fillRect(x0,yT,x1-x0,BH);
+  g=ctx.createLinearGradient(x0,0,x1,0); g.addColorStop(0,'rgba(0,0,0,.3)'); g.addColorStop(.05,'rgba(0,0,0,0)'); g.addColorStop(.95,'rgba(0,0,0,0)'); g.addColorStop(1,'rgba(0,0,0,.3)');
+  ctx.fillStyle=g; ctx.fillRect(x0,yT,x1-x0,BH);
+
+  // cover boards, edge-on: front cover left, back cover right, overhanging the block slightly
+  for(const side of [-1,1]){
+    const X=side<0?x0-15:x1+3, Wb=12;
+    g=ctx.createLinearGradient(X,0,X+Wb,0);
+    if(side<0){ g.addColorStop(0,C.book2); g.addColorStop(.55,C.book); g.addColorStop(1,C.book2); } else { g.addColorStop(0,C.book2); g.addColorStop(.45,C.book); g.addColorStop(1,C.book2); }
+    ctx.fillStyle=g; ctx.beginPath(); ctx.roundRect(X,yT-5,Wb,BH+10,side<0?[5,2,2,5]:[2,5,5,2]); ctx.fill();
+    if(clothPat){ ctx.fillStyle=clothPat; ctx.fill(); }
+    ctx.fillStyle='rgba(255,255,255,.2)'; ctx.fillRect(side<0?X+2:X+Wb-3.2,yT-3,1.2,BH+6);
+    ctx.fillStyle='rgba(255,215,140,.55)'; ctx.fillRect(side<0?X+5.5:X+5.5,yT+4,1,BH-8);   // gilt fillet on the board edge
+  }
+  ctx.font='700 8px "Instrument Sans", system-ui'; ctx.textAlign='center';
+  ctx.fillStyle=dark?'rgba(236,232,255,.5)':'rgba(46,34,25,.55)';
+  ctx.fillText('FRONT',x0-9,yB+16); ctx.fillText('BACK',x1+9,yB+16);
+
+  // bookmark flags on top (tap targets only, never draggable)
+  for(const p of [...flags].sort((a,b)=>a-b)){
+    const j=leafOf(p); if(j<0||j>=L) continue;
+    const hov=hoverFlag===p, lift=hov?4:0, X=lx[j];
+    ctx.save(); ctx.translate(X,yT);
+    ctx.shadowColor='rgba(0,0,0,.35)'; ctx.shadowBlur=4; ctx.shadowOffsetY=1;
+    ctx.fillStyle=flagColor(p); ctx.globalAlpha=.92;
+    ctx.beginPath(); ctx.roundRect(-1,-18-lift,10,22+lift,[3,3,0,0]); ctx.fill();
+    ctx.shadowBlur=0; ctx.globalAlpha=1; ctx.fillStyle='rgba(255,255,255,.4)'; ctx.fillRect(-1,-18-lift+1.5,10,1.4);
+    if(hov){ ctx.strokeStyle=dark?'#fff':'#2e2219'; ctx.lineWidth=1.2; ctx.beginPath(); ctx.roundRect(-1.5,-18.5-lift,11,23+lift,[3,3,0,0]); ctx.stroke(); }
+    ctx.restore();
+  }
+
+  // pin + satin ribbon (the only riffle handle)
+  const grab=dragging?1:hoverRibbon?.6:0, sway=Math.sin(t/700)*1.4*(1-grab)+fxVel*-.004, wig=Math.max(0,1-(t-wiggleT)/600)*Math.sin((t-wiggleT)/40)*3;
+  const RW=12+grab*2, top=yB+3, bot=SH-3, X=rx+wig;
+  g=ctx.createLinearGradient(X-RW/2,0,X+RW/2,0); g.addColorStop(0,'#6e0820'); g.addColorStop(.38,dark?'#ff2d5a':'#d4163b'); g.addColorStop(.5,dark?'#ff6d8a':'#ee4d6c'); g.addColorStop(.62,dark?'#e81f4c':'#c8102e'); g.addColorStop(1,'#7a0a24');
+  ctx.save();
+  if(dark){ ctx.shadowColor='rgba(255,45,90,.55)'; ctx.shadowBlur=10+grab*10; }
+  ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(X-RW/2+1,top); ctx.lineTo(X+RW/2-1,top);
+  ctx.quadraticCurveTo(X+RW/2+sway*.5,(top+bot)/2,X+RW/2+sway,bot); ctx.lineTo(X+sway,bot-7); ctx.lineTo(X-RW/2+sway,bot);
+  ctx.quadraticCurveTo(X-RW/2+sway*.5,(top+bot)/2,X-RW/2+1,top); ctx.closePath(); ctx.fill(); ctx.restore();
+  // grip chevrons on the ribbon
+  ctx.strokeStyle='rgba(255,255,255,.75)'; ctx.lineWidth=1.3; ctx.lineCap='round'; const gy=(top+bot)/2+2, gx=X+sway*.5;
+  ctx.beginPath(); ctx.moveTo(gx-2,gy-3.5); ctx.lineTo(gx-4.5,gy); ctx.lineTo(gx-2,gy+3.5); ctx.moveTo(gx+2,gy-3.5); ctx.lineTo(gx+4.5,gy); ctx.lineTo(gx+2,gy+3.5); ctx.stroke(); ctx.lineCap='butt';
+  // the pin head where the ribbon is hooked to the book
+  const pr=6.5+grab*1.5;
+  ctx.save(); if(dark||grab){ ctx.shadowColor='rgba(255,45,90,.8)'; ctx.shadowBlur=8+grab*10; }
+  g=ctx.createRadialGradient(X-2,yB+1-2,1,X,yB+1,pr); g.addColorStop(0,'#ffd0da'); g.addColorStop(.35,dark?'#ff2d5a':'#e0173f'); g.addColorStop(1,'#6e0820');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(X,yB+1,pr,0,7); ctx.fill(); ctx.restore();
+  ctx.fillStyle='rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(X-2.2,yB-1.4,1.6,0,7); ctx.fill();
+  // demo ghost fingertip on the ribbon
+  if(ghost>.02){ ctx.save(); ctx.globalAlpha=ghost*.55; ctx.fillStyle=dark?'#ffffff':'#2e2219'; ctx.beginPath(); ctx.arc(X,(top+bot)/2+2,15,0,7); ctx.fill();
+    ctx.globalAlpha=ghost*.9; ctx.strokeStyle=dark?'#fff':'#2e2219'; ctx.lineWidth=1.5; ctx.stroke(); ctx.restore(); }
+}
+
+/* =================== LOUPE PREVIEW =================== */
+const pv=$('#pv'), pvBase=$('#pvBase'), pvCtx=pvBase.getContext('2d'), pvFlips=$('#pvFlips');
+const MW=114, MH=162; let pvS=null, pvX=0, pvTilt=0, lastPvT=0, pvAnchor=0;
+function sizePv(){ const k=DPR*Math.max(1,SCALE); pvBase.width=MW*2*k; pvBase.height=MH*k; pvCtx.setTransform(k,0,0,k,0,0); if(pvS!=null) drawPvBase(pvS); }
+function drawPvBase(s){ const [a,b]=spreadPages(s); drawMini(pvCtx,a,0,0,MW,MH); drawMini(pvCtx,b,MW,0,MW,MH); }
+function miniCanvas(p,cls){ const c=document.createElement('canvas'), k=DPR*Math.max(1,SCALE); c.width=MW*k; c.height=MH*k; if(cls) c.className=cls;
+  const x=c.getContext('2d'); x.setTransform(k,0,0,k,0,0); drawMini(x,p,0,0,MW,MH); return c; }
+function setPreview(s,live=true){
+  if(s===pvS) return;
+  const old=pvS; pvS=s; drawPvBase(s);
+  $('#pvCh').textContent=secLabel(s); $('#pvPg').textContent=spreadLabel(s); $('#pvBar').style.width=(s/L*100)+'%';
+  if(live) updateDockHead(s,true);
+  if(old==null) return;
+  const now=performance.now(), gap=now-lastPvT; lastPvT=now;
+  const dir=Math.sign(s-old), dur=Math.max(110,Math.min(320,gap*2.4));
+  const f=document.createElement('div'); f.className='mf '+(dir>0?'fw':'bw');
+  const [oa,ob]=spreadPages(old), [na,nb]=spreadPages(s);
+  f.appendChild(miniCanvas(dir>0?ob:oa,'')); f.appendChild(miniCanvas(dir>0?na:nb,'b'));
+  pvFlips.appendChild(f);
+  f.animate([{transform:'rotateY(0deg)'},{transform:`rotateY(${dir>0?-180:180}deg)`}],{duration:dur,easing:'cubic-bezier(.3,.1,.3,1)',fill:'forwards'}).onfinish=()=>f.remove();
+  while(pvFlips.children.length>6) pvFlips.firstChild.remove();
+  if(live) feedback(old,s);
+}
+function placePv(dt){
+  const sr=screen.getBoundingClientRect(), wr=wrap.getBoundingClientRect(), k=sr.width/screen.offsetWidth;
+  const wl=(wr.left-sr.left)/k, wt=(wr.top-sr.top)/k, sw=screen.offsetWidth;
+  const PW=pv.offsetWidth, PH=pv.offsetHeight;
+  const target=Math.max(12,Math.min(sw-PW-12, wl+pvAnchor-PW/2));
+  pvX += (target-pvX)*Math.min(1,dt*18);
+  const tilt=Math.max(-7,Math.min(7,-fxVel*.0035)); pvTilt += (tilt-pvTilt)*Math.min(1,dt*10);
+  const sc=.86+.14*Math.min(1,Math.max(eng,hoverFlag?1:0)*1.3);
+  pv.style.transform=`translate3d(${pvX}px,${wt-PH-12}px,0) rotate(${pvTilt}deg) scale(${sc})`;
+  $('#pvTail').style.left=Math.max(22,Math.min(PW-22,wl+pvAnchor-pvX))+'px';
+}
+
+/* =================== SOUND + HAPTICS =================== */
+let soundOn=true, hapticOn=true, actx=null, noiseBuf=null, lastTick=0;
+function ensureAudio(){
+  if(!actx){ try{ actx=new (window.AudioContext||window.webkitAudioContext)(); const n=actx.sampleRate*.12|0; noiseBuf=actx.createBuffer(1,n,actx.sampleRate);
+    const d=noiseBuf.getChannelData(0); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*(1-i/n); }catch(e){ actx=null; } }
+  if(actx&&actx.state==='suspended') actx.resume();
+}
+function tick(strength=1,low=false){
+  if(!soundOn||!actx) return; const now=actx.currentTime; if(now-lastTick<.018) return; lastTick=now;
+  const src=actx.createBufferSource(), f=actx.createBiquadFilter(), g=actx.createGain();
+  src.buffer=noiseBuf; f.type='bandpass'; f.frequency.value=low?950:2300+Math.random()*2600; f.Q.value=low?1.4:.9;
+  g.gain.setValueAtTime(0,now); g.gain.linearRampToValueAtTime(.05*strength,now+.002); g.gain.exponentialRampToValueAtTime(.0001,now+(low?.09:.035));
+  src.connect(f).connect(g).connect(actx.destination); src.start(now); src.stop(now+.12);
+}
+function paperWhoosh(s=1){
+  if(!soundOn||!actx) return; const now=actx.currentTime;
+  const src=actx.createBufferSource(), f=actx.createBiquadFilter(), g=actx.createGain(); src.buffer=noiseBuf; src.playbackRate.value=.45;
+  f.type='bandpass'; f.Q.value=.7; f.frequency.setValueAtTime(700,now); f.frequency.exponentialRampToValueAtTime(3200,now+.18);
+  g.gain.setValueAtTime(0,now); g.gain.linearRampToValueAtTime(.06*s,now+.04); g.gain.exponentialRampToValueAtTime(.0001,now+.24);
+  src.connect(f).connect(g).connect(actx.destination); src.start(now); src.stop(now+.27);
+}
+function vib(p){ if(hapticOn && navigator.vibrate) try{ navigator.vibrate(p); }catch(e){} }
+function feedback(a,b){
+  if(!dragging) return;
+  const lo=Math.min(a,b), hi=Math.max(a,b);
+  let chap=false, flag=false;
+  for(const s of SECS){ const j=leafOf(s.start); if(j>=lo&&j<hi) chap=true; }
+  for(const p of flags){ const j=leafOf(p); if(j>=lo&&j<hi) flag=true; }
+  const n=Math.min(6,hi-lo); for(let i=0;i<n;i++) tick(.6+Math.random()*.6);
+  if(chap){ tick(1.4,true); vib(12); } else if(flag){ vib([6,40,6]); } else if(Math.floor(a/4)!==Math.floor(b/4)) vib(3);
+}
+
+/* =================== AUTO-HIDE (immersive reading) =================== */
+let hideAfter=5000, lastPoke=performance.now(), chromeOn=true, popOpen=false;
+function poke(){ lastPoke=performance.now(); }
+function showChrome(){ chromeOn=true; poke(); screen.classList.remove('immersive'); }
+function hideChrome(){ chromeOn=false; closePop(); stopDemo(); dragging=false; hoverFlag=null; hoverRibbon=false; screen.classList.add('immersive'); }
+function openPop(){ popOpen=true; $('#pop').classList.add('open'); poke(); }
+function closePop(){ popOpen=false; $('#pop').classList.remove('open'); poke(); }
+$('#aaBtn').addEventListener('click',e=>{ e.stopPropagation(); popOpen?closePop():openPop(); });
+['#dock','.topbar','#pop'].forEach(s=>$(s).addEventListener('pointerdown',()=>poke()));
+
+/* =================== INPUT =================== */
+const local = e => { const r=wrap.getBoundingClientRect(); return [(e.clientX-r.left)/(r.width/SW),(e.clientY-r.top)/(r.height/SH)]; };
+function flagAt(x,y){ if(y>yT+10) return null; let best=null, bd=13; for(const p of flags){ const d=Math.abs(lx[leafOf(p)]+4-x); if(d<bd){ bd=d; best=p; } } return best; }
+const onRibbon = (x,y) => y>yB-12 && Math.abs(x-ribbonX())<26;
+function hideHint(){ $('#hint').classList.add('gone'); }
+function jumpTo(s){ travelUntil=performance.now()+900; goSpread(s); }
+wrap.addEventListener('pointerdown',e=>{
+  ensureAudio(); stopDemo(); poke();
+  const [x,y]=local(e);
+  const f=flagAt(x,y);
+  if(f){ flagDown=f; downX=x; return; }                       // flags: tap only, no swipe
+  if(onRibbon(x,y)){ dragging=true; grabOff=x-ribbonX(); pointerX=ribbonX(); wrap.setPointerCapture(e.pointerId);
+    pvS=null; lastPvT=performance.now(); setPreview(sFrom(pointerX)); hideHint(); return; }
+  wiggleT=performance.now();                                   // tapped the block: nudge the ribbon as a hint
+});
+wrap.addEventListener('pointermove',e=>{
+  const [x,y]=local(e);
+  if(dragging){ pointerX=x-grabOff; poke(); return; }
+  if(flagDown!=null && Math.abs(x-downX)>10) flagDown=null;      // moved too far: cancel the tap, never drag a flag
+  if(e.pointerType==='mouse'){ hoverFlag=flagAt(x,y); hoverRibbon=!hoverFlag&&onRibbon(x,y);
+    wrap.style.cursor=hoverFlag?'pointer':hoverRibbon?'grab':'default'; }
+});
+wrap.addEventListener('pointerup',e=>{
+  if(dragging){ dragging=false; goSpread(sFrom(pointerX)); poke(); return; }
+  if(flagDown!=null){ const p=flagDown; flagDown=null; hoverFlag=null; jumpTo(spreadOfPage(p)); poke(); }
+});
+wrap.addEventListener('pointercancel',()=>{ dragging=false; flagDown=null; });
+wrap.addEventListener('pointerleave',()=>{ if(!dragging){ hoverFlag=null; hoverRibbon=false; } });
+wrap.addEventListener('keydown',e=>{ poke(); if(e.key==='ArrowRight') goSpread(cur+1); if(e.key==='ArrowLeft') goSpread(cur-1);
+  if(e.key==='PageDown') jumpTo(cur+10); if(e.key==='PageUp') jumpTo(cur-10); });
+document.querySelectorAll('.zones div').forEach(z=>z.addEventListener('click',()=>{ ensureAudio();
+  const d=+z.dataset.z;
+  if(d===0){ chromeOn?hideChrome():showChrome(); return; }
+  goSpread(cur+d); if(chromeOn) poke(); }));
+document.addEventListener('keydown',e=>{ if(document.activeElement===wrap) return;
+  if(e.key==='ArrowRight') goSpread(cur+1); if(e.key==='ArrowLeft') goSpread(cur-1); if(e.key===' '||e.key==='Enter'){ chromeOn?hideChrome():showChrome(); } });
+$('#flagBtn').addEventListener('click',()=>{ poke(); const p=Math.max(1,spreadPages(cur)[0]||1); flags.has(p)?flags.delete(p):flags.add(p); });
+
+/* =================== DEMO: a ghost thumb slides the ribbon =================== */
+function startDemo(){
+  if(!chromeOn) showChrome();
+  const a=bx(cur), b=bx(Math.round(L*.72)), c=bx(Math.round(L*.38));
+  demo={t0:performance.now(), keys:[[0,a],[500,a],[2100,b],[2700,b],[4000,c],[4600,c],[5500,a],[6000,a]]}; pvS=null; hideHint();
+}
+function stopDemo(){ if(demo){ demo=null; pvS=null; } }
+const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+function demoX(now){
+  const t=now-demo.t0, k=demo.keys; if(t>=k[k.length-1][0]){ demo=null; poke(); return null; }
+  for(let i=1;i<k.length;i++) if(t<=k[i][0]){ const u=(t-k[i-1][0])/(k[i][0]-k[i-1][0]); return k[i-1][1]+(k[i][1]-k[i-1][1])*ease(u); }
+}
+
+/* =================== FRAME LOOP =================== */
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000); last=now;
+  let riffling=dragging;
+  if(demo){ const x=demoX(now); if(x!=null){ pointerX=x; riffling=true; } }
+  const travel=now<travelUntil;
+  const engT = riffling?1 : travel?.55 : 0;
+  eng += (engT-eng)*(1-Math.exp(-dt*(engT>eng?14:6)));
+  ghost += ((demo?1:0)-ghost)*(1-Math.exp(-dt*10));
+  const fxT = riffling ? Math.max(x0,Math.min(x1,pointerX)) : bx(cur);
+  const prev=fx; fx += (fxT-fx)*(1-Math.exp(-dt*(riffling?32:travel?5:9)));
+  fxVel += ((fx-prev)/Math.max(dt,1e-3)-fxVel)*.25;
+  // loupe: follows the ribbon while riffling, or shows a hovered flag's spread
+  let show=false;
+  if(riffling){ setPreview(sFrom(fx)); pvAnchor=fx; show=eng>.12; }
+  else if(hoverFlag!=null){ setPreview(spreadOfPage(hoverFlag),false); pvAnchor=lx[leafOf(hoverFlag)]+4; show=true; }
+  else if(pvS!=null && eng<.08){ pvS=null; updateDockHead(cur,false); }
+  pv.classList.toggle('show', show && chromeOn);
+  $('#dim').style.opacity=(eng*.3).toFixed(3);
+  // auto-hide countdown
+  let frac=1;
+  if(chromeOn && hideAfter>0 && !dragging && !demo && !popOpen && hoverFlag==null && !hoverRibbon){
+    const left=hideAfter-(now-lastPoke); frac=Math.max(0,left/hideAfter); if(left<=0) hideChrome();
+  } else if(chromeOn) poke();
+  $('#timerBar').style.transform=`scaleX(${hideAfter>0?frac:1})`;
+  $('#timerBar').style.opacity=hideAfter>0?1:0;
+  if(chromeOn || eng>.01) drawStrip(now,dt);
+  placePv(dt);
+  requestAnimationFrame(frame);
+}
+
+/* =================== CONTROLS =================== */
+document.querySelectorAll('.seg').forEach(seg=>seg.addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return; e.stopPropagation(); poke();
+  const v=b.dataset.v, c=seg.dataset.ctl;
+  document.querySelectorAll(`.seg[data-ctl="${c}"] button`).forEach(x=>x.classList.toggle('on',x.dataset.v===v));
+  if(c==='theme'){ document.documentElement.dataset.theme=v; readColors(); if(pvS!=null) drawPvBase(pvS); }
+  if(c==='orient'){ orient=v; $('#devLabel').textContent=`Galaxy Z Fold8 Ultra · unfolded${v==='landscape'?' · rotated':''} · 8″ 2256 × 2504`; fit(); }
+  if(c==='sound'){ soundOn=v==='on'; if(soundOn) ensureAudio(); }
+  if(c==='haptic') hapticOn=v==='on';
+  if(c==='hide'){ hideAfter=+v; showChrome(); }
+}));
+$('#demoBtn').addEventListener('click',()=>{ ensureAudio(); startDemo(); });
+$('#showBtn').addEventListener('click',()=>{ chromeOn?hideChrome():showChrome(); });
+
+/* =================== BOOT =================== */
+readColors(); makeCloth(); renderSpread(cur); fit();
+addEventListener('resize',fit);
+document.fonts && document.fonts.ready.then(()=>{ fit(); });
+requestAnimationFrame(frame);
+setTimeout(startDemo, 1200);
+</script>
+</body>
+</html>

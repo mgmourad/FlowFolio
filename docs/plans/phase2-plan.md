@@ -128,6 +128,10 @@ how EPUBs are parsed (our own code or Readium).
    - Bookmarks, highlights and notes with locators; the Annotations tab; Share, Copy and Translate.
    - Right to left; the image viewer; fixed-layout EPUBs, one spine item per page, if the spike shows it is cheap.
      Otherwise they move to Phase 8.
+2b. **M2b, the riffle scrubber** (added by the owner 2026-10-20; spec `docs/design/riffle-scrubber-spec.md`, mock
+    `docs/design/FlowFolio_Riffle_Scrubber.html`, ADR-0022 and ADR-0023). It replaces the reader's scrubber for PDFs
+    and EPUBs, in five phases (R1 logic, R2 drawing, R3 gestures and loupe, R4 landing and auto-hide, R5 the real
+    reader, accessibility and performance). EPUB links and footnote popovers follow it.
 5. **M5, close-out.** Memory and benchmarks, the robustness corpus, tests, and a sign-off report with the owner.
 
 Each milestone is checked on the Fold with screenshots and measurements, as in Phase 1. The owner's position, settings

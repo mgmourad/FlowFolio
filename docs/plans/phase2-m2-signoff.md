@@ -1,6 +1,7 @@
 # Phase 2, milestone 2 sign-off: the paginated EPUB reader
 
-- **Status:** Ready for the product owner's review (2026-10-20)
+- **Status:** Signed off by the product owner, 2026-10-20. Decisions: EPUB links and footnote popovers come after the
+  riffle scrubber (M2b, ADR-0022); EPUB memory is investigated in M3 as proposed.
 - **Plans:** [`phase2-plan.md`](phase2-plan.md) (M2) and [`phase2-m2.md`](phase2-m2.md); ADR-0019 (engine), ADR-0020
   (parser), ADR-0021 (island image cache, accepted 2026-10-20)
 - **Checked on:** the reference Galaxy Z Fold, unfolded (2256 x 2504) and folded (cover screen 1080 x 2520), with the
