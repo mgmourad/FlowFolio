@@ -33,6 +33,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.FileNotFoundException
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,6 +44,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 sealed interface ReaderState {
     data object Loading : ReaderState
@@ -224,7 +226,7 @@ class ReaderViewModel @Inject constructor(
         val session = try {
             // Headings in the app's display face (Fraunces), as on the library's covers.
             val heading = runCatching { context.resources.getFont(DesignR.font.fraunces) }.getOrNull()
-            EpubSession.open(repository.openEpub(bookId), heading)
+            EpubSession.open(repository.openEpub(bookId), heading, java.io.File(context.cacheDir, ISLAND_DIR))
         } catch (_: FileNotFoundException) {
             _state.value = ReaderState.Failed(missingFile = true)
             return
@@ -319,6 +321,7 @@ class ReaderViewModel @Inject constructor(
 
     /** Jumps to [page] (contents, Go to page, scrubber). The curl follows the published unit. */
     fun goToPage(page: Int) {
+        lastTurnAt = android.os.SystemClock.uptimeMillis()
         val ready = _state.value as? ReaderState.Ready ?: return
         anchorPage = page.coerceIn(0, (ready.pageCount - 1).coerceAtLeast(0))
         publishReady()
@@ -336,6 +339,7 @@ class ReaderViewModel @Inject constructor(
 
     /** The page curl settled on [unit] (a page in single layout, a spread in spread layout). */
     fun onUnitShown(unit: Int) {
+        lastTurnAt = android.os.SystemClock.uptimeMillis()
         val ready = _state.value as? ReaderState.Ready ?: return
         if (unit == ready.unit) return
         val pageCount = ready.pageCount
@@ -485,7 +489,13 @@ class ReaderViewModel @Inject constructor(
         _islandWork.value = session.islands.toMeasure(chapter, onlyCurrent = true)
             ?: session.islandsToRender(wanted.map { it.page }, tone)
             ?: session.islands.toMeasure(chapter)
+            ?: session.islandsToCache(anchorPage, tone)
     }
+
+    /** When the reader last turned or jumped (uptime ms): drawing ahead for the disk cache waits for a still moment. */
+    @Volatile
+    internal var lastTurnAt = 0L
+        private set
 
     /**
      * The island WebView finished [work]: sizes lay the book out again (keeping the reader's place); images are drawn
@@ -498,8 +508,11 @@ class ReaderViewModel @Inject constructor(
     ) {
         val session = epub ?: return
         if (session.column != work.bodyPx to work.widthPx) return
+        val disk = session.islands.disk
         if (work.render.isEmpty()) {
-            session.islands.addSizes(work, boxes)
+            session.islands.addSizes(work, boxes)?.let { measured ->
+                viewModelScope.launch(Dispatchers.IO) { disk?.saveSizes(work.chapter, measured) }
+            }
             layoutJob = viewModelScope.launch {
                 anchorPage = session.relayOut(work.chapter, locator)
                 _navigation.value = session.navigation()
@@ -507,8 +520,17 @@ class ReaderViewModel @Inject constructor(
                 replan()
             }
         } else {
-            session.islands.addImages(work, images)
-            replan()
+            val drawn = session.islands.addImages(work, images)
+            viewModelScope.launch(Dispatchers.IO) {
+                drawn.forEach { d ->
+                    disk?.save(d.id, d.ink, d.bitmap)
+                    // Freed now rather than at the next garbage collection: a first visit draws many.
+                    if (!d.inUse) d.bitmap.recycle()
+                }
+                // Background work is only stored; what comes next waits until it is on disk.
+                if (work.background) withContext(Dispatchers.Main) { nextIslandWork() }
+            }
+            if (!work.background) replan()
         }
     }
 
@@ -546,6 +568,9 @@ class ReaderViewModel @Inject constructor(
         const val ARG_LAYOUT = "layout"
         private const val KEY_ANCHOR = "anchorPage"
         private const val KEY_LOCATOR = "locator"
+
+        /** The island disk cache (ADR-0021), under the app's cache directory. */
+        private const val ISLAND_DIR = "islands"
 
         /** Long enough for any frame that still referenced an evicted page to finish. */
         private const val RELEASE_DELAY_MS = 1_000L
