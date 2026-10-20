@@ -105,6 +105,32 @@ fun Book3D(
     }
 }
 
+/**
+ * The book's front cover, flat (list rows, thumbnails): its cover image when it has one, otherwise the same generated
+ * cover the 3D book shows (gradient and title), so books without a cover image look alike everywhere.
+ */
+@Composable
+fun FlatCover(face: BookFace, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val display =
+        remember(context) { runCatching { context.resources.getFont(R.font.fraunces) }.getOrDefault(Typeface.SERIF) }
+    Canvas(modifier) {
+        drawIntoCanvas { c ->
+            val cover = face.cover
+            if (cover != null) {
+                c.nativeCanvas.drawBitmap(
+                    cover.asAndroidBitmap(),
+                    null,
+                    android.graphics.RectF(0f, 0f, size.width, size.height),
+                    Paint(Paint.FILTER_BITMAP_FLAG)
+                )
+            } else {
+                drawGeneratedCover(c.nativeCanvas, size.width, size.height, face, display)
+            }
+        }
+    }
+}
+
 /** Spine depth in CSS px for [pageCount] pages (the mock's `Math.min(28, 9 + pages/62)`). */
 fun bookDepth(pageCount: Int): Float = min(MAX_DEPTH, BASE_DEPTH + pageCount / PAGES_PER_PX)
 

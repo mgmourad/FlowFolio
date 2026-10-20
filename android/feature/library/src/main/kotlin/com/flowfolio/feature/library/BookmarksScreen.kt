@@ -58,6 +58,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.BookColors
 import com.flowfolio.core.designsystem.CoverSpot
+import com.flowfolio.core.designsystem.FlatCover
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioChip
@@ -345,22 +346,15 @@ private fun BookmarkCard(item: BookmarkItem, uniform: Boolean, onOpen: (CoverSpo
 @Composable
 internal fun MiniCover(book: Book, cover: CoverArt?, modifier: Modifier) {
     val shape = RoundedCornerShape(topStart = 2.dp, bottomStart = 2.dp, topEnd = 5.dp, bottomEnd = 5.dp)
-    val colours = cover?.colors ?: BookColors.Default
     Box(
         modifier
             .size(48.dp, 70.dp)
             .softShadow(shape, Color.Black.copy(alpha = MINI_SHADOW), blur = 14.dp, offsetY = 8.dp, spread = (-6).dp)
             .clip(shape)
-            .drawBehind { drawRect(Brush.linearGradient(listOf(colours.start, colours.end))) }
+            .semantics { contentDescription = book.title }
     ) {
-        cover?.image?.let {
-            Image(
-                it,
-                contentDescription = book.title,
-                contentScale = ContentScale.FillBounds,
-                modifier = Modifier.fillMaxSize()
-            )
-        }
+        // The cover image, or the drawn title cover the shelf shows for books without one.
+        FlatCover(book.face(cover), Modifier.fillMaxSize())
     }
 }
 

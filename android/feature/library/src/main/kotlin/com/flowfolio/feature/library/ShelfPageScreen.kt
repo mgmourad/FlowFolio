@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.designsystem.FlatCover
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioAlertDialog
 import com.flowfolio.core.designsystem.FlowFolioCard
@@ -332,9 +333,8 @@ private fun BookRowCard(item: LibraryItem, actions: BookRowActions) {
                     .clip(RoundedCornerShape(4.dp))
                     .background(FlowFolio.palette.surface2)
             ) {
-                cover?.let {
-                    Image(it.image, null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                }
+                // The same face as the shelf: the cover image, or the drawn title cover when the book has none.
+                FlatCover(book.face(cover), Modifier.fillMaxSize())
             }
             Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
                 Text(
