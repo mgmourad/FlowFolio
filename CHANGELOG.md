@@ -109,7 +109,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Import recognises EPUBs by content, keeps them as `<id>.epub`, writes their cover and fills author, language,
     publisher, description, ISBN, date and reading direction from the book. "Open with", the share sheet, the file
     picker and Locate file accept EPUB.
-  - Library and details show EPUB books (format pill, printed pages from the page list when there is one). Reading
+  - Library and details show EPUB books (format pill, printed pages from the page list when there is one, the book's own
+    contents in the Contents tab). Reading
     them comes in milestone 2; opening one says so.
   - New import messages: not a PDF or EPUB, and DRM-protected EPUB.
 - Phase 1 close-out (`docs/plans/phase1-signoff.md`):

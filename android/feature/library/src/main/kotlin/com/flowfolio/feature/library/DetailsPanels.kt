@@ -213,10 +213,12 @@ private fun ChapterRow(entry: OutlineEntry, label: String, index: Int, current: 
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f).padding(start = 10.dp, end = 12.dp)
         )
-        Text(
-            stringResource(R.string.page_short, label),
-            style = FlowFolioType.sub.merge(FlowFolio.hint)
-        )
+        if (entry.pageIndex >= 0) {
+            Text(
+                stringResource(R.string.page_short, label),
+                style = FlowFolioType.sub.merge(FlowFolio.hint)
+            )
+        }
     }
 }
 
