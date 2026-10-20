@@ -10,7 +10,14 @@ import android.text.TextPaint
 import java.util.Locale
 
 /** The page box text is laid out in (pixels, margins already removed), and the body text size. */
-data class PageSpec(val width: Int, val height: Int, val bodyPx: Float, val locale: Locale = Locale.getDefault())
+data class PageSpec(
+    val width: Int,
+    val height: Int,
+    val bodyPx: Float,
+    val locale: Locale = Locale.getDefault(),
+    /** The typeface for headings (the app's display face); null for the system serif. */
+    val heading: Typeface? = null
+)
 
 /** A laid-out piece of one block on one page. [y] is from the top of the page box. */
 sealed interface Slice {
@@ -43,7 +50,17 @@ class Paginator(private val spec: PageSpec, private val boxSize: (Block) -> Pair
         color = Color.BLACK
         textLocale = spec.locale
     }
-    private val bold = Typeface.create(Typeface.SERIF, Typeface.BOLD)
+    private val bold = Typeface.create(
+        spec.heading ?: Typeface.SERIF,
+        if (spec.heading !=
+            null
+        ) {
+            HEADING_WEIGHT
+        } else {
+            BOLD_WEIGHT
+        },
+        false
+    )
 
     fun layout(block: Block.Text): StaticLayout {
         val p = TextPaint(paint).apply {
@@ -153,6 +170,8 @@ class Paginator(private val spec: PageSpec, private val boxSize: (Block) -> Pair
 
     companion object {
         const val LINE_SPACING = 1.4f
+        private const val BOLD_WEIGHT = 700
+        private const val HEADING_WEIGHT = 600
         const val MIN_LINES = 2
         const val BOX_SPACE_EM = 0.8f
         const val PLACEHOLDER_EMS = 4f

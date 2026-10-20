@@ -71,6 +71,19 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
         return paginator
     }
 
+    /**
+     * Lays out one chapter again with [paginator] (from the last [paginate]), for example once its islands have their
+     * sizes. Other chapters keep their pages; only page numbers after it move.
+     */
+    fun repaginate(chapter: Int, paginator: Paginator) {
+        val first = chapterStart[chapter]
+        val end = if (chapter + 1 < chapters.size) chapterStart[chapter + 1] else pages.size
+        val fresh = paginator.paginate(chapter, chapters[chapter])
+        pages = pages.subList(0, first) + fresh + pages.subList(end, pages.size)
+        val shift = fresh.size - (end - first)
+        for (i in chapter + 1 until chapters.size) chapterStart[i] += shift
+    }
+
     fun imageSize(path: String): Pair<Int, Int>? = imageSizes.getOrPut(path) {
         archive.read(path)?.let { bytes ->
             val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
