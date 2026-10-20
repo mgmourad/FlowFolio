@@ -124,6 +124,9 @@ class ReaderViewModel @Inject constructor(
         }
     private var layoutJob: Job? = null
 
+    /** An EPUB's saved page when it has no locator yet, used by its first layout. */
+    private var startPage: Int? = null
+
     /** The pane a layout is under way for. */
     private var pendingPane: PixelSize? = null
 
@@ -231,6 +234,8 @@ class ReaderViewModel @Inject constructor(
         }
         epub = session
         if (locator == null) locator = Locator.decode(session.opened.book.lastLocator)
+        // No locator but a saved page (set by the measurement scripts): open there once laid out.
+        if (locator == null) startPage = session.opened.book.lastPage
         cache = PageCache(session, viewModelScope, budgetBytes = 0, onEvicted = ::releaseLater).also { c ->
             viewModelScope.launch { c.images.collect { cacheImages.value = it } }
         }
@@ -278,6 +283,11 @@ class ReaderViewModel @Inject constructor(
         layoutJob = viewModelScope.launch {
             val density = v.widthPx / v.widthDp
             anchorPage = session.layOut(pane, EpubSession.BODY_SP * density, density, locator)
+            startPage?.let { page ->
+                anchorPage = page.coerceIn(0, (session.pageCount - 1).coerceAtLeast(0))
+                locator = session.locatorOf(anchorPage)
+                startPage = null
+            }
             pendingPane = null
             _navigation.value = session.navigation()
             publishReady()

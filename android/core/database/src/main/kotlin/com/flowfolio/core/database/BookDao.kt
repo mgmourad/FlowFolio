@@ -53,7 +53,8 @@ interface BookDao {
         bookType: String?
     )
 
-    @Query("UPDATE books SET last_page = :page WHERE id = :id")
+    /** A page position; an EPUB's locator is cleared, so it opens at this page (measurement scripts set it). */
+    @Query("UPDATE books SET last_page = :page, last_locator = NULL WHERE id = :id")
     suspend fun updateLastPage(id: String, page: Int)
 
     @Query("DELETE FROM books WHERE id = :id")
