@@ -112,6 +112,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     transparent background. MathML's `mfenced` is rewritten for MathML Core, and brackets around matrices are drawn
     as borders, since phone fonts cannot stretch them.
   - The `startPage` debug extra now opens EPUBs at that page (saving a page position clears the locator).
+  - Fixes from the device checks: the reader no longer shows stale pages after a chapter is laid out again; wide
+    equations scale down to the column instead of being cut off; the first island measure after a cold start no
+    longer hangs (and is retried if it does); one printed page across a spread reads "1", not "1–1".
 - Phase 2 milestone 1, EPUB in the library (ADR-0020, Room schema v9):
   - Books without a cover image show the drawn title cover in list rows and small covers too (`FlatCover`), as on
     the shelf.
