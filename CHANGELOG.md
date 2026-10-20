@@ -102,6 +102,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     (found once and kept as `books.page_labels`), including roman front matter and prefixed appendices; books with no
     numbering count from the cover as page 1. The library, details, bookmarks and the reader all use them.
 - Phase 2 milestone 1, EPUB in the library (ADR-0020, Room schema v9):
+  - Books without a cover image show the drawn title cover in list rows and small covers too (`FlatCover`), as on
+    the shelf.
   - `:core:epub`: our own EPUB 2/3 reader: container, package document (metadata, manifest, spine, reading direction,
     fixed layout), the EPUB 3 nav document or EPUB 2 NCX (contents, page list, landmarks) and the cover. Hostile books
     are refused or contained: paths stay inside the book, entries are capped by inflated size, DOCTYPE processing is
