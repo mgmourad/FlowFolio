@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.delay
 
 /**
  * The island WebView (ADR-0019), kept in the reader's window under the pages (which cover it), so the system treats it
@@ -49,9 +50,11 @@ internal fun IslandHost(viewModel: ReaderViewModel) {
         // Drawing loads only the islands it draws, not the whole chapter (hundreds of equations): far less for the
         // WebView to lay out and hold. Their sizes match the chapter's, with the same width and styles.
         val page = if (w.render.isEmpty()) w else w.copy(items = w.items.filter { it.id in w.render })
+        if (w.background) awaitStill(viewModel)
         val boxes = measureWithRetry(r, page)
         val images = HashMap<Int, Bitmap>()
         for (id in w.render) {
+            if (w.background) awaitStill(viewModel)
             val box = boxes[id] ?: continue
             var bmp = r.render(box)
             // Now and then the WebView has nothing drawn for a frame; an island that stays blank is kept as it is.
@@ -84,7 +87,14 @@ private suspend fun measureWithRetry(r: IslandRenderer, work: IslandWork): Map<I
     return emptyMap()
 }
 
+/** Drawing ahead waits while pages are being turned, so it never takes frames from a turn (ADR-0021). */
+private suspend fun awaitStill(viewModel: ReaderViewModel) {
+    while (android.os.SystemClock.uptimeMillis() - viewModel.lastTurnAt < STILL_MS) delay(STILL_POLL_MS)
+}
+
 private val HOST_HEIGHT = 400.dp
+private const val STILL_MS = 1_500L
+private const val STILL_POLL_MS = 400L
 private const val MEASURE_ATTEMPTS = 2
 private const val BLANK_RETRIES = 3
 private const val TAG = "FlowFolioIslands"

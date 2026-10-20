@@ -115,6 +115,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Fixes from the device checks: the reader no longer shows stale pages after a chapter is laid out again; wide
     equations scale down to the column instead of being cut off; the first island measure after a cold start no
     longer hangs (and is retried if it does); one printed page across a spread reads "1", not "1–1".
+  - Island disk cache (ADR-0021): each book's equations, SVG and tables are drawn once, in the background while the
+    reader is still, into the app's cache (sizes and images, 200 MB cap); page turns load small images instead of
+    waiting for the WebView, and a cached book opens laid out at once. Linear Algebra: 401 MB and 4.6% janky frames
+    with the cache warm, against 545–660 MB and 19% before.
 - Phase 2 milestone 1, EPUB in the library (ADR-0020, Room schema v9):
   - Books without a cover image show the drawn title cover in list rows and small covers too (`FlatCover`), as on
     the shelf.

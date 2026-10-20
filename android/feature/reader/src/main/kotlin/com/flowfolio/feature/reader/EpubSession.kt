@@ -32,7 +32,9 @@ import kotlinx.coroutines.withContext
 internal class EpubSession private constructor(
     val opened: OpenedEpub,
     private val book: ReflowBook,
-    private val heading: android.graphics.Typeface?
+    private val heading: android.graphics.Typeface?,
+    /** Where islands are kept on disk ([IslandStore]), all books. */
+    private val islandRoot: java.io.File
 ) : PageSource {
     private val lock = Mutex()
     private var paginator: Paginator? = null
@@ -75,7 +77,9 @@ internal class EpubSession private constructor(
                 locale = book.locale,
                 heading = heading
             )
-            islands.prepare(bodyPx, spec.width)
+            val store = IslandStore(islandRoot, opened.book.id, bodyPx, spec.width)
+            IslandStore.trim(islandRoot, keep = store.dir)
+            islands.prepare(bodyPx, spec.width, store)
             paginator = book.paginate(spec, density, islands::size)
             pane = size
             column = bodyPx to spec.width
@@ -107,6 +111,9 @@ internal class EpubSession private constructor(
     fun islandsToRender(pages: List<Int>, tone: PageTone): IslandWork? =
         islands.toRender(pages.mapNotNull(book.pages::getOrNull), colorsOf(tone).ink)
 
+    /** Islands to draw ahead for the disk cache, nearest the reader's [page] first. */
+    fun islandsToCache(page: Int, tone: PageTone): IslandWork? = islands.toCache(chapterOf(page), colorsOf(tone).ink)
+
     fun pageOf(locator: Locator): Int = book.pageOf(locator)
 
     /** Contents with the page each entry starts on, and the printed page each screen page starts in. */
@@ -123,6 +130,9 @@ internal class EpubSession private constructor(
         withContext(Dispatchers.Default) {
             val bmp = Bitmap.createBitmap(key.size.width, key.size.height, Bitmap.Config.ARGB_8888)
             val colors = colorsOf(key.tone)
+            // The page's equations and tables, from memory or the disk cache, before it is drawn.
+            islands.useInk(colors.ink)
+            islands.loadFor(page)
             bmp.eraseColor(colors.paper)
             drawer.draw(PageDrawer.Target(Canvas(bmp), margins.left.toFloat(), margins.top.toFloat(), p), page, colors)
             // 16-bit GPU pages, as for PDFs (ADR-0013).
@@ -172,8 +182,13 @@ internal class EpubSession private constructor(
 
     companion object {
         /** Parses the book's chapters off the main thread. */
-        suspend fun open(opened: OpenedEpub, heading: android.graphics.Typeface?): EpubSession =
-            withContext(Dispatchers.Default) { EpubSession(opened, ReflowBook(opened.archive, opened.pkg), heading) }
+        suspend fun open(
+            opened: OpenedEpub,
+            heading: android.graphics.Typeface?,
+            islandRoot: java.io.File
+        ): EpubSession = withContext(Dispatchers.Default) {
+            EpubSession(opened, ReflowBook(opened.archive, opened.pkg), heading, islandRoot)
+        }
 
         fun colorsOf(tone: PageTone): PageColors {
             val ink = (tone.ink ?: androidx.compose.ui.graphics.Color.Black).toArgb()
