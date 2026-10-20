@@ -3,6 +3,7 @@
     <string name="reader_back">Back</string>
     <string name="reader_page_of">%1$s of %2$d</string>
     <string name="reader_missing">This book\'s file can\'t be found. Go back and choose Locate file to find it again.</string>
+    <string name="reader_epub_soon">Reading EPUBs arrives in the next update. Your book is safe in your library.</string>
     <string name="reader_damaged">This PDF is damaged and can\'t be opened.</string>
     <string name="reader_password_title">This PDF is password-protected</string>
     <string name="reader_password_label">Password</string>

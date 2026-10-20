@@ -1,6 +1,6 @@
 # ADR-0019: Paginate reflowable books natively, with a WebView only for equations, SVG and tables
 
-- **Status:** Proposed
+- **Status:** Accepted (product owner, 2026-10-20)
 - **Date:** 2026-10-20
 - **Deciders:** product owner, lead engineer
 - **Phase:** 2

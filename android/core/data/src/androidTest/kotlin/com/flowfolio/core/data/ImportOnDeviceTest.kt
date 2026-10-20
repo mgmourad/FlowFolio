@@ -39,7 +39,7 @@ class ImportOnDeviceTest {
         repo = DefaultLibraryRepository(
             db.bookDao(),
             AndroidDocumentSource(context),
-            PdfiumInspector(PdfiumEngine()),
+            BookInspectors(PdfiumInspector(PdfiumEngine()), CoreEpubInspector()),
             BookFiles(File(root, "app")),
             { System.currentTimeMillis() },
             Dispatchers.IO
@@ -85,9 +85,54 @@ class ImportOnDeviceTest {
         assertEquals("encrypted-rc4", book.title)
     }
 
+    /** A small EPUB 3 with a PNG cover, a page list and right-to-left pages, built on the device. */
+    private fun epub(name: String, encrypted: Boolean = false): Uri {
+        val cover = java.io.ByteArrayOutputStream().also { out ->
+            android.graphics.Bitmap.createBitmap(600, 900, android.graphics.Bitmap.Config.ARGB_8888)
+                .apply { eraseColor(android.graphics.Color.RED) }
+                .compress(android.graphics.Bitmap.CompressFormat.PNG, 100, out)
+        }.toByteArray()
+        val file = File(root, name)
+        java.util.zip.ZipOutputStream(file.outputStream()).use { z ->
+            fun put(path: String, data: ByteArray) {
+                z.putNextEntry(java.util.zip.ZipEntry(path))
+                z.write(data)
+            }
+            put("mimetype", "application/epub+zip".toByteArray())
+            put("META-INF/container.xml", CONTAINER.toByteArray())
+            if (encrypted) put("META-INF/encryption.xml", ENCRYPTION.toByteArray())
+            put("OPS/book.opf", PACKAGE.toByteArray())
+            put("OPS/nav.xhtml", NAV.toByteArray())
+            put("OPS/ch.xhtml", CHAPTER.toByteArray())
+            put("OPS/c.png", cover)
+        }
+        return Uri.fromFile(file)
+    }
+
+    @Test
+    fun epubImportReadsMetadataAndWritesCover() = runBlocking {
+        val book = (repo.import(epub("device.epub").toString(), StorageMode.COPY) as ImportResult.Imported).book
+        assertEquals(com.flowfolio.core.model.BookFormat.EPUB, book.format)
+        assertEquals("On-device EPUB", book.title)
+        assertEquals("Test Author", book.author)
+        assertEquals(2, book.pageCount)
+        assertTrue(book.rightToLeft)
+        assertTrue((book.storage as BookStorage.Copied).path.endsWith(".epub"))
+        val cover = BitmapFactory.decodeFile(book.coverPath)
+        assertNotNull("cover should decode", cover)
+        assertEquals(360, cover.width)
+        assertEquals(540, cover.height)
+    }
+
+    @Test
+    fun drmEpubIsRefused() = runBlocking {
+        val result = repo.import(epub("locked.epub", encrypted = true).toString(), StorageMode.COPY)
+        assertEquals(ImportResult.DrmProtected, result)
+    }
+
     @Test
     fun nonPdfIsRejected() = runBlocking {
-        assertEquals(ImportResult.NotAPdf, repo.import(fixture("not-a-pdf.pdf").toString(), StorageMode.COPY))
+        assertEquals(ImportResult.NotABook, repo.import(fixture("not-a-pdf.pdf").toString(), StorageMode.COPY))
     }
 
     @Test
@@ -109,5 +154,33 @@ class ImportOnDeviceTest {
         )
         assertEquals(959, imported.pageCount)
         assertEquals("93652b69c43197d10dc83438b813b5f7515e61e7ea4336da8636ff902cb4aba8", imported.id)
+    }
+
+    private companion object {
+        val CONTAINER = """
+            <container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0"><rootfiles>
+            <rootfile full-path="OPS/book.opf" media-type="application/oebps-package+xml"/></rootfiles></container>
+        """.trimIndent()
+        val ENCRYPTION = """
+            <encryption xmlns="urn:oasis:names:tc:opendocument:xmlns:container"
+              xmlns:enc="http://www.w3.org/2001/04/xmlenc#"><enc:EncryptedData>
+            <enc:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#aes128-cbc"/></enc:EncryptedData>
+            </encryption>
+        """.trimIndent()
+        val PACKAGE = """
+            <package xmlns="http://www.idpf.org/2007/opf" version="3.0">
+            <metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>On-device EPUB</dc:title>
+            <dc:creator>Test Author</dc:creator><dc:language>ar</dc:language></metadata><manifest>
+            <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>
+            <item id="c" href="c.png" media-type="image/png" properties="cover-image"/>
+            <item id="ch" href="ch.xhtml" media-type="application/xhtml+xml"/></manifest>
+            <spine page-progression-direction="rtl"><itemref idref="ch"/></spine></package>
+        """.trimIndent()
+        val NAV = """
+            <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><body>
+            <nav epub:type="page-list"><ol><li><a href="ch.xhtml#p1">1</a></li>
+            <li><a href="ch.xhtml#p2">2</a></li></ol></nav></body></html>
+        """.trimIndent()
+        const val CHAPTER = "<html xmlns=\"http://www.w3.org/1999/xhtml\"><body><p>Hi</p></body></html>"
     }
 }

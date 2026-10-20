@@ -70,6 +70,9 @@ abstract class DataBindings {
     abstract fun inspector(impl: PdfiumInspector): PdfInspector
 
     @Binds
+    abstract fun epubInspector(impl: CoreEpubInspector): EpubInspector
+
+    @Binds
     abstract fun clock(impl: SystemClock): Clock
 }
 

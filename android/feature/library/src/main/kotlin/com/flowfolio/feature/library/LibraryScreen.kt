@@ -46,7 +46,8 @@ import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.LibrarySort
 
-private val PDF_TYPES = arrayOf("application/pdf")
+/** What the file picker offers: PDFs and EPUBs (Phase 2). */
+private val PDF_TYPES = arrayOf("application/pdf", "application/epub+zip")
 
 /** What the library screen can ask for. [onOpen] gets the row the book was tapped in, for the cover flight. */
 data class LibraryActions(
@@ -278,7 +279,9 @@ internal fun LibraryMessage.text(context: android.content.Context): String = whe
 
     is LibraryMessage.Duplicate -> context.getString(R.string.msg_duplicate, title)
 
-    LibraryMessage.NotAPdf -> context.getString(R.string.msg_not_a_pdf)
+    LibraryMessage.NotABook -> context.getString(R.string.msg_not_a_pdf)
+
+    LibraryMessage.DrmProtected -> context.getString(R.string.msg_drm)
 
     LibraryMessage.Unreadable -> context.getString(R.string.msg_unreadable)
 

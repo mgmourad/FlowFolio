@@ -15,6 +15,7 @@ extensions.configure<com.android.build.api.dsl.LibraryExtension> {
 dependencies {
     api(projects.core.model)
     implementation(projects.core.database)
+    implementation(projects.core.epub)
     implementation(projects.core.datastore)
     api(projects.core.pdf)
     implementation(libs.kotlinx.coroutines.android)

@@ -45,7 +45,11 @@ sealed interface ImportResult {
     /** The same file (by content) is already in the library. */
     data class Duplicate(val existing: Book) : ImportResult
 
-    data object NotAPdf : ImportResult
+    /** Not a PDF or EPUB FlowFolio can open. */
+    data object NotABook : ImportResult
+
+    /** An EPUB whose content is encrypted (DRM). */
+    data object DrmProtected : ImportResult
 
     /** The file could not be read at all. */
     data object Unreadable : ImportResult

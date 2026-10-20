@@ -22,7 +22,7 @@ import javax.inject.Singleton
         AnnotationEntity::class,
         TranslationEntity::class
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
     // v2: books.last_page (reading position, Phase 1 milestone 4).
     // v3: books.author, shelves and shelf_books (milestone 5, slice 3).
@@ -31,6 +31,7 @@ import javax.inject.Singleton
     // v6: annotations (highlights and notes) and books.right_to_left.
     // v7: books.page_labels (printed page numbers).
     // v8: translations (the reader's translation history).
+    // v9: books.format (PDF or EPUB, Phase 2).
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -38,7 +39,8 @@ import javax.inject.Singleton
         AutoMigration(from = 4, to = 5),
         AutoMigration(from = 5, to = 6),
         AutoMigration(from = 6, to = 7),
-        AutoMigration(from = 7, to = 8)
+        AutoMigration(from = 7, to = 8),
+        AutoMigration(from = 8, to = 9)
     ]
 )
 abstract class FlowFolioDatabase : RoomDatabase() {

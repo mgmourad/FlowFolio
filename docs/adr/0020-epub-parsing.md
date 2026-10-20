@@ -1,6 +1,6 @@
 # ADR-0020: Parse EPUBs with our own hardened code, not Readium
 
-- **Status:** Proposed
+- **Status:** Accepted (product owner, 2026-10-20)
 - **Date:** 2026-10-20
 - **Deciders:** product owner, lead engineer
 - **Phase:** 2

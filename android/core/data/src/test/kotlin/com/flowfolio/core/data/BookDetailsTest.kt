@@ -37,9 +37,19 @@ class BookDetailsTest {
             .build()
         val io = UnconfinedTestDispatcher()
         library =
-            DefaultLibraryRepository(db.bookDao(), FakeDocumentSource(), FakeInspector(), BookFiles(File("x")), {
-                1L
-            }, io)
+            DefaultLibraryRepository(
+                db.bookDao(),
+                FakeDocumentSource(),
+                BookInspectors(
+                    FakeInspector(),
+                    FakeEpubInspector()
+                ),
+                BookFiles(File("x")),
+                {
+                    1L
+                },
+                io
+            )
         reading = DefaultReadingRepository(db.readingSessionDao(), io)
     }
 

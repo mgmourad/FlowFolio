@@ -157,9 +157,9 @@ class LibraryViewModelTest {
         vm.messages.test {
             vm.onFilePicked("content://docs/physics")
             assertEquals(LibraryMessage.Imported("Book physics"), awaitItem())
-            library.nextResult = { ImportResult.NotAPdf }
+            library.nextResult = { ImportResult.NotABook }
             vm.onFilePicked("content://docs/notes")
-            assertEquals(LibraryMessage.NotAPdf, awaitItem())
+            assertEquals(LibraryMessage.NotABook, awaitItem())
             library.nextResult = { ImportResult.NotEnoughSpace(99) }
             vm.onFilePicked("content://docs/huge")
             assertEquals(LibraryMessage.NotEnoughSpace(99), awaitItem())

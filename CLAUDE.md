@@ -4,8 +4,8 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 2: EPUB reading and pagination engine. Spike done** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
-spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, both proposed).
+**Phase 2: EPUB reading and pagination engine. Milestone 1 (EPUB in the library) built** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
+spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).
 Phase 1 signed off by the owner 2026-10-20 (`docs/plans/phase1-signoff.md`); ADRs 0014, 0016-0018 accepted.
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
 Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
@@ -33,7 +33,7 @@ Conventional Commits; keep `CHANGELOG.md`; no secrets in the repo; propose a spi
 ## Architecture summary
 
 - Android modules (ADR-0012): `:app`, `:core:model` (JVM), `:core:pdf` (PDFium JNI, NDK), `:core:database` (Room),
-  `:core:datastore`, `:core:data` (repositories, import, reader access), `:core:designsystem`, `:core:pagecurl`
+  `:core:datastore`, `:core:epub` (EPUB parsing, ADR-0020), `:core:data` (repositories, import, reader access), `:core:designsystem`, `:core:pagecurl`
   (vendored), `:feature:library` (library + settings), `:feature:reader` (curl, spreads, page cache).
 - Monorepo: `android/` app (including, from Phase 3, the on-device conversion engine). The Python
   `converter/` is no longer the product path (ADR-0009); its fate is decided in the Phase 3 plan.
@@ -202,6 +202,9 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     `app/build.gradle.kts` (the plugin overwrites DSL settings on those build types); real release builds keep it false.
     Gradle's connected run uninstalls the test APK and hides crashes: when a run reports 0 tests, install both APKs and
     run `am instrument -w -r -e class ... -e androidx.benchmark.enabledRules BaselineProfile` by hand.
+32. Room is at schema v9: `books.format` (PDF or EPUB). EPUB books store `pageCount` = printed pages from the page list
+    (0 when none) until the reader paginates them (Phase 2 M2). `tools/testepubs/make_test_epubs.py` makes the
+    synthetic and hostile EPUBs; the IDPF samples are in `samples/corpus/manifest.yaml`.
 25. The reader's panels (Contents, Go to page, ribbon colours, "Aa") are drawn in the reader's window (`ReaderPanels`),
     not as sheets or dialogs, so glass can blur the page; their tags are resource ids. The bars and panels use
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
@@ -211,4 +214,4 @@ ADRs 0001–0020 in `docs/adr/`: record decisions, monorepo, licensing policy, u
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
-Translate part of 0017), EPUB pagination engine (0019, proposed), EPUB parsing (0020, proposed).
+Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020).

@@ -125,7 +125,9 @@ sealed interface LibraryMessage {
 
     data class Duplicate(val title: String) : LibraryMessage
 
-    data object NotAPdf : LibraryMessage
+    data object NotABook : LibraryMessage
+
+    data object DrmProtected : LibraryMessage
 
     data object Unreadable : LibraryMessage
 
@@ -283,7 +285,9 @@ class LibraryViewModel @Inject constructor(
 
                 is ImportResult.Duplicate -> messageChannel.send(LibraryMessage.Duplicate(r.existing.title))
 
-                ImportResult.NotAPdf -> messageChannel.send(LibraryMessage.NotAPdf)
+                ImportResult.NotABook -> messageChannel.send(LibraryMessage.NotABook)
+
+                ImportResult.DrmProtected -> messageChannel.send(LibraryMessage.DrmProtected)
 
                 ImportResult.Unreadable -> messageChannel.send(LibraryMessage.Unreadable)
 

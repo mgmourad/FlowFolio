@@ -7,6 +7,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.cash.turbine.test
 import com.flowfolio.core.database.FlowFolioDatabase
 import com.flowfolio.core.model.Availability
+import com.flowfolio.core.model.BookFormat
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.StorageMode
@@ -36,6 +37,8 @@ class DefaultLibraryRepositoryTest {
     private lateinit var repo: DefaultLibraryRepository
     private var now = 1_000L
 
+    private val inspectors = BookInspectors(FakeInspector(), FakeEpubInspector())
+
     @Before
     fun setUp() {
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), FlowFolioDatabase::class.java)
@@ -45,7 +48,7 @@ class DefaultLibraryRepositoryTest {
         files = BookFiles(appFiles)
         source = FakeDocumentSource()
         repo =
-            DefaultLibraryRepository(db.bookDao(), source, FakeInspector(), files, {
+            DefaultLibraryRepository(db.bookDao(), source, inspectors, files, {
                 now++
             }, UnconfinedTestDispatcher())
     }
@@ -108,11 +111,40 @@ class DefaultLibraryRepositoryTest {
     @Test
     fun notAPdfLeavesNothingBehindAndReleasesAccess() = runTest {
         val uri = source.add("content://docs/notes.pdf", tmp.newFile("notes.pdf").apply { writeText("just text") })
-        assertEquals(ImportResult.NotAPdf, repo.import(uri, StorageMode.COPY))
+        assertEquals(ImportResult.NotABook, repo.import(uri, StorageMode.COPY))
         assertTrue(File(appFiles, "books").listFiles().isNullOrEmpty())
-        assertEquals(ImportResult.NotAPdf, repo.import(uri, StorageMode.LINK))
+        assertEquals(ImportResult.NotABook, repo.import(uri, StorageMode.LINK))
         assertFalse(uri in source.persisted)
         repo.observeBooks(LibrarySort.RECENT).test { assertEquals(0, awaitItem().size) }
+    }
+
+    private fun epub(name: String, body: String) = source.add(
+        "content://docs/$name",
+        tmp.newFile(name).apply { writeBytes(byteArrayOf(0x50, 0x4B, 0x03, 0x04) + body.toByteArray()) }
+    )
+
+    @Test
+    fun epubsAreRecognisedByContentAndKeepTheirMetadata() = runTest {
+        val book = (repo.import(epub("novel.epub", "good"), StorageMode.COPY) as ImportResult.Imported).book
+        assertEquals(BookFormat.EPUB, book.format)
+        assertEquals("${book.id}.epub", File((book.storage as BookStorage.Copied).path).name)
+        assertEquals("An EPUB", book.title)
+        assertEquals("Ann Author", book.author)
+        assertEquals("9780306406157", book.details.isbn)
+        assertEquals("ar", book.details.language)
+        assertTrue(book.rightToLeft)
+        assertEquals(12, book.pageCount)
+        // A PDF named .epub is still a PDF: the content decides.
+        val odd = repo.import(pdf("odd.epub"), StorageMode.COPY) as ImportResult.Imported
+        assertEquals(BookFormat.PDF, odd.book.format)
+    }
+
+    @Test
+    fun drmAndDamagedEpubsAreRefusedAndLeaveNothing() = runTest {
+        assertEquals(ImportResult.DrmProtected, repo.import(epub("locked.epub", "drm"), StorageMode.COPY))
+        assertEquals(ImportResult.NotABook, repo.import(epub("broken.epub", "broken"), StorageMode.COPY))
+        assertTrue(File(appFiles, "books").listFiles().isNullOrEmpty())
+        assertTrue(File(appFiles, "covers").listFiles().isNullOrEmpty())
     }
 
     @Test
@@ -198,6 +230,24 @@ internal class FakeDocumentSource : DocumentSource {
 
     override fun releaseReadAccess(uri: String) {
         persisted -= uri
+    }
+}
+
+/** EPUB stand-in: "good" books carry metadata, "drm" ones are encrypted, anything else is damaged. */
+internal class FakeEpubInspector : EpubInspector {
+    override suspend fun inspect(fd: ParcelFileDescriptor, coverOut: File, coverWidthPx: Int): EpubInfo {
+        val text = FileInputStream(fd.fileDescriptor).readBytes().drop(4).toByteArray().decodeToString()
+        when (text) {
+            "drm" -> throw DrmProtectedException()
+            "good" -> Unit
+            else -> throw NotAPdfException()
+        }
+        coverOut.parentFile?.mkdirs()
+        coverOut.writeText("cover")
+        return EpubInfo(
+            title = "An EPUB", author = "Ann Author", language = "ar", publisher = "Pub", isbn = "9780306406157",
+            description = "About it", released = "2026", printedPages = 12, rightToLeft = true
+        )
     }
 }
 

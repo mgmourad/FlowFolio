@@ -128,7 +128,13 @@ private fun ReaderRoot(
             is ReaderState.NeedsPassword -> PasswordPrompt(s.wrongPassword, viewModel::submitPassword, onBack)
 
             is ReaderState.Failed -> Message(
-                stringResource(if (s.missingFile) R.string.reader_missing else R.string.reader_damaged),
+                stringResource(
+                    when {
+                        s.notYetReadable -> R.string.reader_epub_soon
+                        s.missingFile -> R.string.reader_missing
+                        else -> R.string.reader_damaged
+                    }
+                ),
                 onBack
             )
 
