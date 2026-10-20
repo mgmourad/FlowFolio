@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.FolioScanner
+import com.flowfolio.core.data.NotYetReadableException
 import com.flowfolio.core.data.OpenedBook
 import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.data.SettingsRepository
@@ -42,7 +43,7 @@ sealed interface ReaderState {
 
     data class NeedsPassword(val wrongPassword: Boolean) : ReaderState
 
-    data class Failed(val missingFile: Boolean) : ReaderState
+    data class Failed(val missingFile: Boolean, val notYetReadable: Boolean = false) : ReaderState
 
     data class Ready(
         val title: String,
@@ -152,6 +153,9 @@ class ReaderViewModel @Inject constructor(
                 return@launch
             } catch (_: FileNotFoundException) {
                 _state.value = ReaderState.Failed(missingFile = true)
+                return@launch
+            } catch (_: NotYetReadableException) {
+                _state.value = ReaderState.Failed(missingFile = false, notYetReadable = true)
                 return@launch
             } catch (_: PdfException) {
                 _state.value = ReaderState.Failed(missingFile = false)

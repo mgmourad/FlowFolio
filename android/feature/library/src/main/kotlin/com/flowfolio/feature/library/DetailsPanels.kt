@@ -35,6 +35,7 @@ import com.flowfolio.core.designsystem.FlowFolioProgressBar
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
+import com.flowfolio.core.model.BookFormat
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.OutlineEntry
 import com.flowfolio.core.model.pageLabel
@@ -47,8 +48,11 @@ internal fun DetailsPills(state: DetailsUiState, book: Book, modifier: Modifier 
     val context = LocalContext.current
     FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
         book.details.edition?.let { FlowFolioPill(it, FlowFolio.subItem) }
-        FlowFolioPill(pluralStringResource(R.plurals.page_count, book.pageCount, book.pageCount), FlowFolio.hint)
-        FlowFolioPill(stringResource(R.string.format_pdf), FlowFolio.item)
+        // An EPUB's pages depend on the text size: shown only when the book lists its printed pages.
+        if (book.pageCount > 0) {
+            FlowFolioPill(pluralStringResource(R.plurals.page_count, book.pageCount, book.pageCount), FlowFolio.hint)
+        }
+        FlowFolioPill(stringResource(book.formatLabel()), FlowFolio.item)
         FlowFolioPill(Formatter.formatShortFileSize(context, book.sizeBytes), FlowFolio.subItem)
         if (state.availability == Availability.MISSING) {
             FlowFolioPill(stringResource(R.string.badge_missing), FlowFolio.subItem)
@@ -121,7 +125,7 @@ internal fun InfoPanel(state: DetailsUiState, book: Book) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Info(R.string.info_author, book.author ?: unknown, Modifier.weight(1f))
-            Info(R.string.info_pages, book.pageCount.toString(), Modifier.weight(1f))
+            Info(R.string.info_pages, book.pageCount.takeIf { it > 0 }?.toString() ?: unknown, Modifier.weight(1f))
         }
         Info(R.string.info_isbn, d.isbn ?: unknown)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -141,13 +145,8 @@ internal fun InfoPanel(state: DetailsUiState, book: Book) {
             R.string.info_last_opened,
             book.lastOpenedAtMillis?.let { dateFormat.format(it) } ?: stringResource(R.string.info_never)
         )
-        val storage = when {
-            state.availability == Availability.MISSING -> R.string.info_storage_missing
-            book.storage is BookStorage.Linked -> R.string.info_storage_link
-            else -> R.string.info_storage_copy
-        }
-        Info(R.string.info_storage, stringResource(storage))
-        Info(R.string.info_cover, stringResource(R.string.info_cover_page1), sub = true)
+        Info(R.string.info_storage, stringResource(storageLabel(state, book)))
+        Info(R.string.info_cover, stringResource(coverLabel(book)), sub = true)
     }
 }
 

@@ -37,7 +37,8 @@
 
     <string name="msg_imported">Added “%1$s”</string>
     <string name="msg_duplicate">“%1$s” is already in your library</string>
-    <string name="msg_not_a_pdf">That file isn\'t a PDF FlowFolio can open</string>
+    <string name="msg_not_a_pdf">That file isn\'t a PDF or EPUB FlowFolio can open</string>
+    <string name="msg_drm">This EPUB is copy-protected (DRM), so FlowFolio can\'t open it</string>
     <string name="msg_unreadable">That file couldn\'t be read</string>
     <string name="msg_no_space">Not enough storage to copy this book (needs %1$s)</string>
     <string name="msg_relinked">Book found again</string>
@@ -93,6 +94,7 @@
     <string name="shelf_delete_body">The books on it stay in your library.</string>
 
     <!-- Book details -->
+    <string name="format_epub">EPUB</string>
     <string name="format_pdf">PDF</string>
     <string name="tab_overview">Overview</string>
     <string name="tab_details">Details</string>
@@ -114,6 +116,7 @@
     <string name="info_storage_link">Read from its own location</string>
     <string name="info_storage_missing">File missing: locate it to read</string>
     <string name="info_cover">Cover</string>
+    <string name="info_cover_epub">Taken from the cover image inside the book</string>
     <string name="info_cover_page1">Rendered from page 1 of the file</string>
     <string name="contents_none">This PDF has no table of contents.</string>
 

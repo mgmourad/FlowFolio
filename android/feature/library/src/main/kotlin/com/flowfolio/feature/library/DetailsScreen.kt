@@ -100,7 +100,7 @@ fun DetailsScreen(
     val relink = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) viewModel.relink(uri.toString())
     }
-    val locate = { relink.launch(arrayOf("application/pdf")) }
+    val locate = { relink.launch(arrayOf("application/pdf", "application/epub+zip")) }
     LaunchedEffect(state.loading, book) { if (!state.loading && book == null) onBack() }
     if (book == null) return
     val hero = remember { CoverSpot().apply { angle = HERO_ANGLE } }

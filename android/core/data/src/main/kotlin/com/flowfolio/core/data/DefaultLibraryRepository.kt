@@ -6,6 +6,7 @@ import com.flowfolio.core.database.BookEntity
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookDetails
+import com.flowfolio.core.model.BookFormat
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.BookType
 import com.flowfolio.core.model.LibrarySort
@@ -24,7 +25,7 @@ import kotlinx.coroutines.withContext
 class DefaultLibraryRepository @Inject constructor(
     private val dao: BookDao,
     private val source: DocumentSource,
-    private val inspector: PdfInspector,
+    private val inspectors: BookInspectors,
     private val files: BookFiles,
     private val clock: Clock,
     @IoDispatcher private val io: CoroutineDispatcher
@@ -69,15 +70,16 @@ class DefaultLibraryRepository @Inject constructor(
             temp.delete()
             return ImportResult.Duplicate(it.toBook())
         }
-        val target = files.book(id)
+        val format = formatOf(ParcelFileDescriptor.open(temp, ParcelFileDescriptor.MODE_READ_ONLY))
+        val target = files.book(id, format)
         if (!temp.renameTo(target)) {
             temp.delete()
             return ImportResult.Unreadable
         }
-        val info = inspectOrNull(ParcelFileDescriptor.open(target, ParcelFileDescriptor.MODE_READ_ONLY), id)
-        if (info == null) {
+        val info = inspect(ParcelFileDescriptor.open(target, ParcelFileDescriptor.MODE_READ_ONLY), id, format)
+        if (info !is Inspected.Ok) {
             target.delete()
-            return ImportResult.NotAPdf
+            return info.failure()
         }
         return save(Stored(id, bytes, StorageMode.COPY, target.absolutePath), info, uri)
     }
@@ -86,41 +88,79 @@ class DefaultLibraryRepository @Inject constructor(
     private suspend fun importLink(uri: String): ImportResult {
         val (id, bytes) = hashOrNull(uri) ?: return ImportResult.Unreadable
         dao.get(id)?.let { return ImportResult.Duplicate(it.toBook()) }
+        val format = source.open(uri)?.let(::formatOf) ?: return ImportResult.Unreadable
         val fd = source.open(uri) ?: return ImportResult.Unreadable
-        val info = inspectOrNull(fd, id) ?: return ImportResult.NotAPdf
+        val info = inspect(fd, id, format)
+        if (info !is Inspected.Ok) return info.failure()
         return save(Stored(id, bytes, StorageMode.LINK, uri), info, uri)
     }
 
     private fun hashOrNull(uri: String): Pair<String, Long>? =
         source.open(uri)?.let { fd -> runCatching { hash(fd, null) }.getOrNull() }
 
-    private suspend fun inspectOrNull(fd: ParcelFileDescriptor, id: String): PdfInfo? = fd.use {
+    /** The outcome of reading an imported file: what the library keeps, or why it was refused. */
+    private sealed interface Inspected {
+        class Ok(val format: BookFormat, val pdf: PdfInfo?, val epub: EpubInfo?) : Inspected
+
+        data object NotABook : Inspected
+
+        data object Drm : Inspected
+
+        fun failure(): ImportResult = if (this == Drm) ImportResult.DrmProtected else ImportResult.NotABook
+    }
+
+    private suspend fun inspect(fd: ParcelFileDescriptor, id: String, format: BookFormat): Inspected = fd.use {
         try {
-            inspector.inspect(it, files.cover(id), COVER_WIDTH_PX)
+            when (format) {
+                BookFormat.PDF -> Inspected.Ok(
+                    format,
+                    inspectors.pdf.inspect(it, files.cover(id), COVER_WIDTH_PX),
+                    null
+                )
+
+                BookFormat.EPUB -> Inspected.Ok(
+                    format,
+                    null,
+                    inspectors.epub.inspect(it, files.cover(id), COVER_WIDTH_PX)
+                )
+            }
         } catch (_: NotAPdfException) {
             files.cover(id).delete()
-            null
+            Inspected.NotABook
+        } catch (_: DrmProtectedException) {
+            files.cover(id).delete()
+            Inspected.Drm
         }
     }
 
     /** Where an imported file ended up. */
     private data class Stored(val id: String, val bytes: Long, val mode: StorageMode, val location: String)
 
-    private suspend fun save(stored: Stored, info: PdfInfo, uri: String): ImportResult {
+    private suspend fun save(stored: Stored, info: Inspected.Ok, uri: String): ImportResult {
         val cover = files.cover(stored.id).takeIf { it.exists() }?.absolutePath
-        val title = info.title ?: source.displayName(uri)?.removeSuffix(".pdf")?.removeSuffix(".PDF") ?: DEFAULT_TITLE
+        val epub = info.epub
+        val fileName = source.displayName(uri)?.replace(EXTENSION, "")
+        val title = (info.pdf?.title ?: epub?.title)?.takeIf { it.isNotBlank() } ?: fileName ?: DEFAULT_TITLE
         val entity = BookEntity(
             id = stored.id,
             title = title,
-            pageCount = info.pageCount,
+            // EPUB pages depend on the text size: until the reader paginates, the printed pages it lists, if any.
+            pageCount = info.pdf?.pageCount ?: epub?.printedPages ?: 0,
             storageMode = stored.mode.name,
             location = stored.location,
             sizeBytes = stored.bytes,
             addedAt = clock.now(),
             lastOpenedAt = null,
             coverPath = cover,
-            passwordProtected = info.passwordProtected,
-            author = info.author
+            passwordProtected = info.pdf?.passwordProtected ?: false,
+            author = info.pdf?.author ?: epub?.author,
+            publisher = epub?.publisher,
+            isbn = epub?.isbn,
+            description = epub?.description,
+            language = epub?.language,
+            released = epub?.released,
+            rightToLeft = epub?.rightToLeft ?: false,
+            format = info.format.name
         )
         dao.insert(entity)
         return ImportResult.Imported(entity.toBook())
@@ -188,6 +228,7 @@ class DefaultLibraryRepository @Inject constructor(
     override suspend fun markOpened(bookId: String) = withContext(io) { dao.markOpened(bookId, clock.now()) }
 
     private companion object {
+        val EXTENSION = Regex("\\.(pdf|epub)$", RegexOption.IGNORE_CASE)
         const val COVER_WIDTH_PX = 360
         const val SPACE_RESERVE_BYTES = 50L * 1024 * 1024
         const val DEFAULT_TITLE = "Untitled"
@@ -219,7 +260,8 @@ internal fun BookEntity.toBook() = Book(
         type = BookType.entries.firstOrNull { it.name == bookType }
     ),
     rightToLeft = rightToLeft,
-    pageLabels = pageLabels
+    pageLabels = pageLabels,
+    format = BookFormat.entries.firstOrNull { it.name == format } ?: BookFormat.PDF
 )
 
 /** Trimmed, and null when blank, so an emptied field reads as unknown. */
@@ -242,3 +284,14 @@ private fun hash(fd: ParcelFileDescriptor, sink: OutputStream?): Pair<String, Lo
 }
 
 private const val HASH_BUFFER_BYTES = 1 shl 16
+
+/** EPUBs are zip files ("PK" 3 4). Everything else goes to the PDF engine, which finds its own header. */
+private fun formatOf(fd: ParcelFileDescriptor): BookFormat = fd.use {
+    val head = ByteArray(ZIP_MAGIC.size)
+    val n = runCatching {
+        ParcelFileDescriptor.AutoCloseInputStream(it.dup()).use { s -> s.read(head) }
+    }.getOrDefault(0)
+    if (n == head.size && head.contentEquals(ZIP_MAGIC)) BookFormat.EPUB else BookFormat.PDF
+}
+
+private val ZIP_MAGIC = byteArrayOf(0x50, 0x4B, 0x03, 0x04)

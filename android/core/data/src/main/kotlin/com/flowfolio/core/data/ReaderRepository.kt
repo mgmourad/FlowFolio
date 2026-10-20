@@ -4,6 +4,7 @@ import android.os.ParcelFileDescriptor
 import com.flowfolio.core.database.BookDao
 import com.flowfolio.core.database.BookReadingDao
 import com.flowfolio.core.model.Book
+import com.flowfolio.core.model.BookFormat
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfEngine
@@ -33,6 +34,9 @@ interface ReaderRepository {
 
 class OpenedBook(val book: Book, val document: PdfDocument)
 
+/** The book is in a format the reader cannot show yet (EPUB until Phase 2 milestone 2). */
+class NotYetReadableException(val format: BookFormat) : Exception("cannot read $format yet")
+
 class DefaultReaderRepository @Inject constructor(
     private val dao: BookDao,
     private val reading: BookReadingDao,
@@ -42,6 +46,7 @@ class DefaultReaderRepository @Inject constructor(
 ) : ReaderRepository {
     override suspend fun open(bookId: String, password: String?): OpenedBook {
         val book = withContext(io) { dao.get(bookId)?.toBook() } ?: throw FileNotFoundException("no book $bookId")
+        if (book.format != BookFormat.PDF) throw NotYetReadableException(book.format)
         val fd = withContext(io) {
             when (val s = book.storage) {
                 is BookStorage.Copied -> File(s.path).takeIf {

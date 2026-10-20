@@ -23,7 +23,8 @@ data class Book(
      * The book's printed page numbers ([PageLabels] runs): from the PDF, or read from its page margins. Null until the
      * reader has looked; "" when the book prints none (pages count from the cover).
      */
-    val pageLabels: String? = null
+    val pageLabels: String? = null,
+    val format: BookFormat = BookFormat.PDF
 ) {
     /** How far through the book the reader is, 0..1 (0 when not started). */
     val progress: Float
@@ -46,6 +47,9 @@ sealed interface BookStorage {
 }
 
 enum class StorageMode { COPY, LINK }
+
+/** What kind of file a book is. EPUBs are reflowable: their page count depends on the text size (Phase 2). */
+enum class BookFormat { PDF, EPUB }
 
 /** Whether a book's file can currently be opened. Only linked books can go missing. */
 enum class Availability { AVAILABLE, MISSING }

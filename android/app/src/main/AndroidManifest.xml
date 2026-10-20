@@ -29,12 +29,14 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="content" />
                 <data android:mimeType="application/pdf" />
+                <data android:mimeType="application/epub+zip" />
             </intent-filter>
             <!-- Share sheet. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/pdf" />
+                <data android:mimeType="application/epub+zip" />
             </intent-filter>
         </activity>
     </application>

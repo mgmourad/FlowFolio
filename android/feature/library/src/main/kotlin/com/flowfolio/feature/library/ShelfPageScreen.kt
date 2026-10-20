@@ -112,7 +112,7 @@ fun ShelfPageScreen(
         onOpen = { item ->
             if (item.availability == Availability.MISSING) {
                 relinkId = item.book.id
-                relink.launch(arrayOf("application/pdf"))
+                relink.launch(arrayOf("application/pdf", "application/epub+zip"))
             } else {
                 onOpenDetails(item.book, SHELF_PAGE_ORIGIN)
             }
@@ -122,7 +122,7 @@ fun ShelfPageScreen(
         onShelves = { prompt = BookPrompt.Shelves(it) },
         onLocate = {
             relinkId = it.id
-            relink.launch(arrayOf("application/pdf"))
+            relink.launch(arrayOf("application/pdf", "application/epub+zip"))
         },
         onBookmarks = onBookmarks
     )
@@ -349,8 +349,10 @@ private fun BookRowCard(item: LibraryItem, actions: BookRowActions) {
                 FlowFolioProgressBar(book.progress, Modifier.padding(top = 8.dp, bottom = 4.dp))
                 val where = if (book.lastPage != null) {
                     stringResource(R.string.page_of, book.pageLabel(book.lastPage!!), book.printedPages())
-                } else {
+                } else if (book.pageCount > 0) {
                     pluralStringResource(R.plurals.page_count, book.pageCount, book.pageCount)
+                } else {
+                    stringResource(book.formatLabel())
                 }
                 val status = when {
                     item.availability == Availability.MISSING -> " · " + stringResource(R.string.badge_missing)

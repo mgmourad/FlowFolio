@@ -101,6 +101,17 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Page numbers follow the book's own numbering: the PDF's page labels, or else the numbers printed in its margins
     (found once and kept as `books.page_labels`), including roman front matter and prefixed appendices; books with no
     numbering count from the cover as page 1. The library, details, bookmarks and the reader all use them.
+- Phase 2 milestone 1, EPUB in the library (ADR-0020, Room schema v9):
+  - `:core:epub`: our own EPUB 2/3 reader: container, package document (metadata, manifest, spine, reading direction,
+    fixed layout), the EPUB 3 nav document or EPUB 2 NCX (contents, page list, landmarks) and the cover. Hostile books
+    are refused or contained: paths stay inside the book, entries are capped by inflated size, DOCTYPE processing is
+    off, and DRM is detected (font obfuscation allowed).
+  - Import recognises EPUBs by content, keeps them as `<id>.epub`, writes their cover and fills author, language,
+    publisher, description, ISBN, date and reading direction from the book. "Open with", the share sheet, the file
+    picker and Locate file accept EPUB.
+  - Library and details show EPUB books (format pill, printed pages from the page list when there is one). Reading
+    them comes in milestone 2; opening one says so.
+  - New import messages: not a PDF or EPUB, and DRM-protected EPUB.
 - Phase 1 close-out (`docs/plans/phase1-signoff.md`):
   - Baseline profile (startup and page turns) shipped with `profileinstaller`; `:benchmark` module with startup and
     page-turn macrobenchmarks and the profile generator. Release build, unfolded Fold: turn frames 2.6-2.9 ms CPU P50,
