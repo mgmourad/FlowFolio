@@ -1,6 +1,6 @@
 # Phase 2, milestone 2: the paginated EPUB reader
 
-- **Status:** Started 2026-10-20. The owner said "proceed with M2 automatically".
+- **Status:** Started 2026-10-20. The owner said "proceed with M2 automatically". Sign-off report: [`phase2-m2-signoff.md`](phase2-m2-signoff.md) (ready for review 2026-10-20).
 - **Parent plan:** [`phase2-plan.md`](phase2-plan.md). **Engine:** ADR-0019 (hybrid native pagination).
 
 ## Goal
