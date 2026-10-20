@@ -32,6 +32,9 @@ Release dates were checked on Maven Central, Google Maven, PyPI, or GitHub Relea
 | androidx.test:runner | 1.7.0 | 2025-07-30 | Apache-2.0 | test | |
 | androidx.test.espresso:espresso-core | 3.7.0 | 2025-07-30 | Apache-2.0 | test | Calls an API removed in API 37 under Robolectric |
 | androidx.test.uiautomator:uiautomator | 2.4.0 | 2026-07-01 | Apache-2.0 | test | Multi-finger gestures (pinch) in on-device tests; approved with the Phase 1 plan |
+| androidx.profileinstaller:profileinstaller | 1.4.1 | 2024-10-02 | Apache-2.0 | app | Installs the baseline profile on first launch (~40 KB). Owner-approved 2026-10-19 |
+| androidx.benchmark:benchmark-macro-junit4 | 1.5.0 | 2026-09-09 | Apache-2.0 | test | `:benchmark` only: startup and page-turn macrobenchmarks, profile recording. Owner-approved 2026-10-19 |
+| androidx.baselineprofile (Gradle plugin) | 1.5.0 | 2026-09-09 | Apache-2.0 | build | Wires the committed profile into release builds; creates the benchmark build types. Owner-approved 2026-10-19 |
 | Fraunces (variable font) | google/fonts main, 2026-10-17 | 2018-2024 (Undercase Type) | SIL OFL 1.1 | app | Display font (ADR-0015). `core/designsystem/res/font`; licence text in `assets/third_party_licenses/fonts/`. 775 KB (roman + italic) |
 | Instrument Sans (variable font) | google/fonts main, 2026-10-17 | 2022-2024 (Instrument) | SIL OFL 1.1 | app | UI font (ADR-0015). Same locations. 396 KB (roman + italic) |
 | dev.chrisbanes.haze:haze | 2.0.1 | 2026-09-29 | Apache-2.0 | app | Backdrop blur for glass surfaces (ADR-0015). Real blur on Android 12+, tint on older. ~250 KB. Owner-approved 2026-10-17 |

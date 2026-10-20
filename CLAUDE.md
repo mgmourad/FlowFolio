@@ -4,7 +4,7 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 1: PDF reader with page curl. Build in progress: milestones 1-4 done, milestone 5 (design) in progress: slices 1-7 done** (started 2026-10-16).
+**Phase 1: PDF reader with page curl. Build complete (milestones 1-5); close-out done 2026-10-20, awaiting the owner's sign-off** (`docs/plans/phase1-signoff.md`; started 2026-10-16).
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
 Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
 Build plan approved 2026-10-16: 5 milestones; check in with the product owner at milestone 3 with memory numbers.
@@ -95,6 +95,10 @@ uv tool install pre-commit; pre-commit install          # hooks: pre-commit + co
 .\gradlew.bat testDebugUnitTest                          # JVM unit + Robolectric Compose tests
 .\gradlew.bat spotlessCheck detekt lintDebug             # static checks (spotlessApply to fix format)
 .\gradlew.bat connectedDebugAndroidTest                  # instrumented tests; needs emulator/device
+# Baseline profile and macrobenchmarks (:benchmark, on the unfolded Fold, textbook pushed; installs a separate
+# `com.flowfolio` app with its own library; uninstall it afterwards). Commit the regenerated profile.
+.\gradlew.bat :app:generateBaselineProfile               # -> app/src/release/generated/baselineProfiles/
+.\gradlew.bat :benchmark:connectedBenchmarkReleaseAndroidTest "-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=Macrobenchmark"
 # Textbook-based device tests skip unless the book is on the device:
 #   adb push samples\corpus\cache\university-physics-volume-1.pdf /data/local/tmp/flowfolio/
 # Regenerate the robustness PDFs (stdlib only):
@@ -191,6 +195,11 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     times look 2-3x worse than users see. Temporarily set `isDebuggable = false` in the debug build type (same
     package and signature, library kept; don't commit it), install, `cmd package compile -m speed-profile -f`, open
     the book from the library (debug intent extras need a debuggable build), then reinstall the normal debug build.
+31. `:benchmark` drives the `benchmarkRelease` / `nonMinifiedRelease` builds (`com.flowfolio`, debug-signed, R8 for
+    the first). They accept the adb hooks through `BuildConfig.MEASUREMENT_HOOKS`, set per variant in
+    `app/build.gradle.kts` (the plugin overwrites DSL settings on those build types); real release builds keep it false.
+    Gradle's connected run uninstalls the test APK and hides crashes: when a run reports 0 tests, install both APKs and
+    run `am instrument -w -r -e class ... -e androidx.benchmark.enabledRules BaselineProfile` by hand.
 25. The reader's panels (Contents, Go to page, ribbon colours, "Aa") are drawn in the reader's window (`ReaderPanels`),
     not as sheets or dialogs, so glass can blur the page; their tags are resource ids. The bars and panels use
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
