@@ -51,3 +51,6 @@ android/tools/results/
 
 # Local Claude Code preview servers
 .claude/launch.json
+
+# Spike raw results (summaries go to docs/spikes/)
+android/spikes/*/results/

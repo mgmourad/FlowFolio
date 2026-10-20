@@ -19,3 +19,15 @@ books: []
 #   - Calculus Volume 1 (math-heavy)
 #   - Principles of Economics (charts, tables, glossary)
 #   - Biology 2e (figures with captions, sidebars, glossary)
+
+# EPUB samples for the Phase 2 pagination spike (owner-approved download, 2026-10-20). Never committed; kept in
+# samples/corpus/cache/epub-idpf/. Source: https://github.com/IDPF/epub3-samples/releases/tag/20230704
+# License: CC-BY-SA-3.0 (IDPF sample table). Fetch: .../releases/download/20230704/<id>.epub
+epub_samples:
+  - { id: linear-algebra, features: [math-mathml, tables], sha256: 87e523d8e16c2d1f4b211b47c0495841687a3573c828d3ef36b1f77f91b2abd4 }
+  - { id: moby-dick, features: [long-novel], sha256: 81bc079841a38e91a02a7776d04786a2fc311cfd300064e9fc533ce7c54cf7b4 }
+  - { id: accessible_epub_3, features: [tables, structure], sha256: 67f75b8e3cd1abe4bb143d91d5424191d5af3115c9d26ff029a38e19f8d16feb }
+  - { id: wasteland, features: [footnotes, poetry], sha256: 1653b9fbe225b89a008f980744d6b89940504a4533b9036821f9d99daf8f6c9c }
+  - { id: georgia-cfi, features: [cfi, page-list], sha256: 85d17e1ee1d39d3e9f59ee959e92a808456c5c371036cba560634c01292c5e06 }
+  - { id: childrens-literature, features: [images, page-list], sha256: 191d14d07bcaefde647e494256f73d789f265c8edc46c404320641b23c86b76a }
+  - { id: page-blanche, features: [fixed-layout, page-list], sha256: d2efb562f17d43cef50578d4d67dd7fd991f8f254b6f5a7c28bde7461ea783eb }
