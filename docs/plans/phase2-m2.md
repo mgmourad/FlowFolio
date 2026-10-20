@@ -39,7 +39,8 @@ and complex tables are rendered by a hidden WebView. The reading position surviv
 - **Islands** (MathML, SVG, complex tables):
   - A hidden WebView in the reader's window measures each chapter's islands when the chapter is paginated, and renders
     them ahead of the page turn.
-  - It has no network and no scripts, and serves only the book's own files.
+  - It has no network and runs no book scripts (only our own measuring and `mfenced` scripts), and serves only the
+    book's own files.
   - Each island is captured on its own page, which avoids the spike's capture bugs.
 - **Body text:** 18 sp in a serif typeface with the paper's colours. The book's own CSS and the text settings come in
   M3.
@@ -55,6 +56,18 @@ and complex tables are rendered by a hidden WebView. The reading position surviv
   - Curl, Slide and Scroll;
   - screenshots, then `measure-reader.ps1` for frames and memory.
 - **A position check:** the reader stays on the same text after folding and unfolding.
+
+## Progress (2026-10-20)
+
+- **Built:** `:core:reflow` and the reader integration (750290d); islands, per-chapter relayout, ink-coloured islands,
+  `mfenced` and matrix brackets, Fraunces headings (ae37704); JVM tests for locators, anchors, islands and chapter
+  relayout; the `startPage` debug extra for EPUBs.
+- **Checked on the Fold (unfolded, spreads):** Moby-Dick (justified, hyphenated text, contents jumps); Linear Algebra
+  (inline and block MathML, matrices with brackets, Paper and Night papers); the position survives a layout change
+  and every chapter relayout. `PaginationOnDeviceTest` passes for the corpus at five sizes.
+- **Still to check on the Fold:** folded (cover screen) and fold/unfold; Slide and Scroll on EPUBs; the RTL sample;
+  Accessible EPUB 3 and the synthetic textbook; frames and memory with `measure-reader.ps1` on a non-debuggable build.
+- **Noted for M3:** justified short lines in lists look gappy; the reader's error and notice pages are plain white.
 
 ## Out of scope for M2
 
