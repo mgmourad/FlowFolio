@@ -40,5 +40,7 @@ data class BookEntity(
     /** Printed page numbers as PageLabels runs; null until the reader has looked. Added in schema v7. */
     @ColumnInfo(name = "page_labels") val pageLabels: String? = null,
     /** A BookFormat name (PDF or EPUB). Added in schema v9; earlier books are PDFs. */
-    @ColumnInfo(defaultValue = "PDF") val format: String = "PDF"
+    @ColumnInfo(defaultValue = "PDF") val format: String = "PDF",
+    /** Where an EPUB was left: a reflow locator (chapter:offset), which survives re-pagination. Added in schema v10. */
+    @ColumnInfo(name = "last_locator") val lastLocator: String? = null
 )

@@ -81,7 +81,7 @@ internal fun BoxScope.ReaderChrome(
         enter = slideInVertically(slide) { -it * 2 },
         exit = slideOutVertically(slide) { -it * 2 }
     ) {
-        TopBar(state.title, mark, actions)
+        TopBar(state.title, mark, actions, reflowable = state.reflowable)
     }
     AnimatedVisibility(
         controlsVisible,
@@ -97,7 +97,7 @@ internal fun BoxScope.ReaderChrome(
 
 /** `.r-top`: Back, the title, and the reading tools, each on glass. */
 @Composable
-private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions) {
+private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, reflowable: Boolean) {
     // Unfolded, the title sits beside Back at the top left (owner, 2026-10-18); folded, it is centred.
     val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
     Row(
@@ -133,9 +133,12 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions) {
         FlowFolioIconButton(onClick = { actions.onPanel(Panel.GO_TO) }, glass = true, modifier = goTo) {
             FlowFolioGlyph(Glyph.GoTo, stringResource(R.string.reader_go_to))
         }
-        val notes = Modifier.testTag(ReaderTestTags.ANNOTATIONS)
-        FlowFolioIconButton(onClick = { actions.onPanel(Panel.ANNOTATIONS) }, glass = true, modifier = notes) {
-            FlowFolioGlyph(Glyph.Highlight, stringResource(R.string.reader_annotations))
+        // Highlights and ribbons are PDF-only until EPUB annotations (Phase 2 milestone 4).
+        if (!reflowable) {
+            val notes = Modifier.testTag(ReaderTestTags.ANNOTATIONS)
+            FlowFolioIconButton(onClick = { actions.onPanel(Panel.ANNOTATIONS) }, glass = true, modifier = notes) {
+                FlowFolioGlyph(Glyph.Highlight, stringResource(R.string.reader_annotations))
+            }
         }
         val settings = Modifier.testTag(ReaderTestTags.SETTINGS)
         FlowFolioIconButton(onClick = { actions.onPanel(Panel.SETTINGS) }, glass = true, modifier = settings) {
@@ -145,7 +148,7 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions) {
                     .merge(FlowFolio.title)
             )
         }
-        BookmarkButton(mark, actions)
+        if (!reflowable) BookmarkButton(mark, actions)
     }
 }
 

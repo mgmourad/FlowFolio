@@ -24,7 +24,9 @@ data class Book(
      * reader has looked; "" when the book prints none (pages count from the cover).
      */
     val pageLabels: String? = null,
-    val format: BookFormat = BookFormat.PDF
+    val format: BookFormat = BookFormat.PDF,
+    /** An EPUB's reading position as a reflow locator; [lastPage] and [pageCount] are at the size it was last read. */
+    val lastLocator: String? = null
 ) {
     /** How far through the book the reader is, 0..1 (0 when not started). */
     val progress: Float

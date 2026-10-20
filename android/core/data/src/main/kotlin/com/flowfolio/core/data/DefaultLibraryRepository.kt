@@ -261,7 +261,8 @@ internal fun BookEntity.toBook() = Book(
     ),
     rightToLeft = rightToLeft,
     pageLabels = pageLabels,
-    format = BookFormat.entries.firstOrNull { it.name == format } ?: BookFormat.PDF
+    format = BookFormat.entries.firstOrNull { it.name == format } ?: BookFormat.PDF,
+    lastLocator = lastLocator
 )
 
 /** Trimmed, and null when blank, so an emptied field reads as unknown. */

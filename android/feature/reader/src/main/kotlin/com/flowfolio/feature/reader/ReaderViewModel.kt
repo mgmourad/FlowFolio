@@ -10,12 +10,15 @@ import com.flowfolio.core.data.NotYetReadableException
 import com.flowfolio.core.data.OpenedBook
 import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.epub.EpubException
 import com.flowfolio.core.model.PageLabels
 import com.flowfolio.core.model.PageTurn
+import com.flowfolio.core.model.PixelSize
 import com.flowfolio.core.model.UserSettings
 import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfException
 import com.flowfolio.core.pdf.PdfLink
+import com.flowfolio.core.reflow.Locator
 import com.flowfolio.feature.reader.cache.PageCache
 import com.flowfolio.feature.reader.cache.PageKey
 import com.flowfolio.feature.reader.cache.PdfPageSource
@@ -60,7 +63,12 @@ sealed interface ReaderState {
         /** How pages turn. */
         val turn: PageTurn = PageTurn.CURL,
         /** Width / height of the page in view, for sizing pages not rendered yet (Scroll). */
-        val pageAspect: Float = ReaderViewModel.LETTER_ASPECT
+        val pageAspect: Float = ReaderViewModel.LETTER_ASPECT,
+        /**
+         * The pages are laid out by FlowFolio (an EPUB): selection, highlights, ribbons and zoom are PDF-only until
+         * Phase 2 milestone 4.
+         */
+        val reflowable: Boolean = false
     ) : ReaderState
 }
 
@@ -73,6 +81,8 @@ data class Viewport(
     val dark: Boolean = false
 )
 
+// One handler per reader event, with a PDF path and an EPUB path for opening, layout and planning.
+@Suppress("TooManyFunctions")
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     private val repository: ReaderRepository,
@@ -98,6 +108,20 @@ class ReaderViewModel @Inject constructor(
     val links: StateFlow<Map<Int, List<PdfLink>>> = _links.asStateFlow()
 
     private var opened: OpenedBook? = null
+
+    /** The open EPUB, when the book is one (ADR-0019). */
+    private var epub: EpubSession? = null
+
+    /** Where an EPUB reader is: kept across layouts (fold, unfold, spreads) and saved with the book. */
+    private var locator: Locator?
+        get() = Locator.decode(saved[KEY_LOCATOR])
+        set(value) {
+            saved[KEY_LOCATOR] = value?.encode()
+        }
+    private var layoutJob: Job? = null
+
+    /** The pane a layout is under way for. */
+    private var pendingPane: PixelSize? = null
 
     /** The open document (for page text when selecting); null until the book is open. */
     internal val document: PdfDocument? get() = opened?.document
@@ -155,7 +179,7 @@ class ReaderViewModel @Inject constructor(
                 _state.value = ReaderState.Failed(missingFile = true)
                 return@launch
             } catch (_: NotYetReadableException) {
-                _state.value = ReaderState.Failed(missingFile = false, notYetReadable = true)
+                openEpub()
                 return@launch
             } catch (_: PdfException) {
                 _state.value = ReaderState.Failed(missingFile = false)
@@ -177,6 +201,73 @@ class ReaderViewModel @Inject constructor(
             publishReady()
             replan()
             loadNavigation(book)
+        }
+    }
+
+    /** An EPUB: parse it, then lay it out once the reader knows its pane ([ensureEpubLayout]). */
+    private suspend fun openEpub() {
+        val session = try {
+            EpubSession.open(repository.openEpub(bookId))
+        } catch (_: FileNotFoundException) {
+            _state.value = ReaderState.Failed(missingFile = true)
+            return
+        } catch (_: EpubException) {
+            _state.value = ReaderState.Failed(missingFile = false)
+            return
+        }
+        epub = session
+        if (locator == null) locator = Locator.decode(session.opened.book.lastLocator)
+        cache = PageCache(session, viewModelScope, budgetBytes = 0, onEvicted = ::releaseLater).also { c ->
+            viewModelScope.launch { c.images.collect { cacheImages.value = it } }
+        }
+        ensureEpubLayout()
+    }
+
+    /**
+     * Lays an EPUB out again when its page pane changed size (first open, fold, unfold, spreads on or off), keeping the
+     * reader on the same text. Returns true while a layout is under way (callers wait for it).
+     */
+    private fun ensureEpubLayout(): Boolean {
+        val session = epub
+        val v = viewport
+        val pane = v?.let {
+            PixelSize(
+                if (layoutFor(it) ==
+                    ReaderLayout.SPREAD
+                ) {
+                    it.widthPx / 2
+                } else {
+                    it.widthPx
+                },
+                it.heightPx
+            )
+        }
+        return when {
+            session == null -> false
+
+            v == null || pane == null -> true
+
+            session.pane == pane -> false
+
+            pendingPane == pane -> true
+
+            else -> {
+                startLayout(session, v, pane)
+                true
+            }
+        }
+    }
+
+    private fun startLayout(session: EpubSession, v: Viewport, pane: PixelSize) {
+        layoutJob?.cancel()
+        pendingPane = pane
+        layoutJob = viewModelScope.launch {
+            val density = v.widthPx / v.widthDp
+            anchorPage = session.layOut(pane, EpubSession.BODY_SP * density, density, locator)
+            pendingPane = null
+            _navigation.value = session.navigation()
+            publishReady()
+            replan()
         }
     }
 
@@ -239,6 +330,14 @@ class ReaderViewModel @Inject constructor(
 
     private fun saveProgress() {
         val page = anchorPage
+        epub?.let { session ->
+            val at = session.locatorOf(page).also { locator = it }
+            progressJob?.cancel()
+            progressJob = viewModelScope.launch {
+                repository.saveEpubProgress(bookId, at.encode(), page, session.pageCount)
+            }
+            return
+        }
         // One small UPDATE per turn; conflated so a fast run of turns writes only the latest page.
         progressJob?.cancel()
         progressJob = viewModelScope.launch { repository.saveProgress(bookId, page) }
@@ -264,15 +363,18 @@ class ReaderViewModel @Inject constructor(
     }
 
     private fun publishReady(unitOverride: Int? = null) {
-        val book = opened ?: return
-        val pageCount = book.document.pageCount
+        val session = epub
+        val book = opened?.book ?: session?.opened?.book
+        val pageCount = opened?.document?.pageCount ?: session?.pageCount
+        val layingOut = session != null && ensureEpubLayout()
+        if (book == null || pageCount == null || layingOut) return
         val layout = layoutFor(viewport)
         val coverAlone = settings.spreadCoverAlone
         val spread = layout == ReaderLayout.SPREAD
         val unit = unitOverride ?: if (spread) Spreads.unitOf(anchorPage, coverAlone) else anchorPage
         _state.update {
             ReaderState.Ready(
-                title = book.book.title,
+                title = book.title,
                 pageCount = pageCount,
                 layout = layout,
                 unit = unit,
@@ -281,7 +383,9 @@ class ReaderViewModel @Inject constructor(
                 coverAlone = coverAlone,
                 tone = settings.paperStyle.tone(appDark = viewport?.dark == true),
                 turn = settings.pageTurn,
-                pageAspect = sizes[anchorPage]?.let { it.widthPt / it.heightPt } ?: LETTER_ASPECT
+                pageAspect = session?.pane?.let { it.width.toFloat() / it.height }
+                    ?: sizes[anchorPage]?.let { it.widthPt / it.heightPt } ?: LETTER_ASPECT,
+                reflowable = session != null
             )
         }
     }
@@ -290,8 +394,16 @@ class ReaderViewModel @Inject constructor(
     private fun replan() {
         val ready = _state.value as? ReaderState.Ready
         val v = viewport
+        val session = epub
         val book = opened
-        if (ready == null || v == null || book == null) return
+        when {
+            ready == null || v == null -> Unit
+            session != null -> if (!ensureEpubLayout()) planEpub(ready, session)
+            book != null -> planPdf(ready, v, book)
+        }
+    }
+
+    private fun planPdf(ready: ReaderState.Ready, v: Viewport, book: OpenedBook) {
         planJob?.cancel()
         planJob = viewModelScope.launch {
             val spread = ready.layout == ReaderLayout.SPREAD
@@ -322,6 +434,20 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    /** EPUB pages are exactly the pane: the visible unit, the ones a turn reveals, and one more ahead. */
+    private fun planEpub(ready: ReaderState.Ready, session: EpubSession) {
+        val pane = session.pane ?: return
+        val spread = ready.layout == ReaderLayout.SPREAD
+        val units =
+            listOf(ready.unit, ready.unit + 1, ready.unit - 1, ready.unit + 2).filter { it in 0 until ready.unitCount }
+        val pages =
+            units.flatMap { u -> if (spread) Spreads.pagesOf(u, ready.pageCount, ready.coverAlone) else listOf(u) }
+        val keys = pages.map { PageKey(it, pane, ready.tone) }
+        wanted = keys
+        currentKeys.value = keys.associateBy { it.page }
+        cache?.request(keys, newBudgetBytes = minOf(keys.sumOf { it.size.argbBytes }, MAX_CACHE_BYTES))
+    }
+
     /** Links are small; once read for a page they are kept for the session. */
     private suspend fun loadLinks(book: OpenedBook, pages: List<Int>) {
         for (page in pages) {
@@ -348,12 +474,14 @@ class ReaderViewModel @Inject constructor(
         tileCache?.clear()
         source?.release()
         opened?.document?.close()
+        epub?.close()
     }
 
     companion object {
         const val ARG_BOOK_ID = "bookId"
         const val ARG_LAYOUT = "layout"
         private const val KEY_ANCHOR = "anchorPage"
+        private const val KEY_LOCATOR = "locator"
 
         /** Long enough for any frame that still referenced an evicted page to finish. */
         private const val RELEASE_DELAY_MS = 1_000L
