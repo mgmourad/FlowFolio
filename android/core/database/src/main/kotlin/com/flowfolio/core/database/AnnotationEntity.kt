@@ -66,4 +66,8 @@ interface BookReadingDao {
     /** The book's printed page numbers (PageLabels runs). Added in schema v7. */
     @Query("UPDATE books SET page_labels = :labels WHERE id = :id")
     suspend fun setPageLabels(id: String, labels: String)
+
+    /** An EPUB's position: the locator, and the page and page count at the size it was read (for progress). */
+    @Query("UPDATE books SET last_locator = :locator, last_page = :page, page_count = :pageCount WHERE id = :id")
+    suspend fun updateEpubProgress(id: String, locator: String, page: Int, pageCount: Int)
 }

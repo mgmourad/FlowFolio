@@ -132,9 +132,9 @@ internal fun BoxScope.ReadyReader(
         Modifier
             .fillMaxSize()
             .hazeSource(haze)
-            .annotate(annotating, enabled = overlay.zoom == null)
+            .annotate(annotating, enabled = overlay.zoom == null && !s.reflowable)
             .interceptTaps(onTap)
-            .pinchGestures(overlay::pinch, overlay::endPinch)
+            .then(if (s.reflowable) Modifier else Modifier.pinchGestures(overlay::pinch, overlay::endPinch))
             .edgeBounce(bounce, atStart = s.unit <= 0, atEnd = s.unit >= s.unitCount - 1, reversed = rtl)
     ) {
         // Recreate the page state when the layout or turn style changes (fold/unfold, Aa); the ViewModel keeps the
