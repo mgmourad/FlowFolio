@@ -5,7 +5,8 @@ Read this first. Keep it current: update at the end of every phase.
 ## Current phase
 
 **Phase 2: EPUB reading and pagination engine. Milestone 1 (EPUB in the library) built; milestone 2 (the paginated EPUB
-reader, `docs/plans/phase2-m2.md`) in progress: engine, reader and islands built, device checks open** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
+reader, `docs/plans/phase2-m2.md`) built and checked; sign-off report `docs/plans/phase2-m2-signoff.md` awaits the owner
+(open: EPUB links and footnotes, EPUB memory over budget)** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
 spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).
 Phase 1 signed off by the owner 2026-10-20 (`docs/plans/phase1-signoff.md`); ADRs 0014, 0016-0018 accepted.
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
