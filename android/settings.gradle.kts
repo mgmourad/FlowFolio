@@ -37,6 +37,7 @@ include(":core:designsystem")
 include(":core:pagecurl")
 include(":feature:library")
 include(":feature:reader")
+include(":feature:reader:riffle")
 
 // Throwaway spikes: built only with -Pspikes, never in CI or the shipped app.
 if (providers.gradleProperty("spikes").isPresent) {

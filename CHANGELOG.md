@@ -101,6 +101,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Page numbers follow the book's own numbering: the PDF's page labels, or else the numbers printed in its margins
     (found once and kept as `books.page_labels`), including roman front matter and prefixed appendices; books with no
     numbering count from the cover as page 1. The library, details, bookmarks and the reader all use them.
+- Phase 2 milestone M2b, the riffle scrubber (ADR-0022, ADR-0023, in progress):
+  - R1: the `:feature:reader:riffle` module's logic, tested on the JVM: positions on the fore edge for single pages,
+    spreads (cover alone or not) and right-to-left books; the gap around the pin; leaf thinning; fine scrubbing (half,
+    quarter and a tenth of the speed, relative so the ribbon never jumps); flag stacking, hit areas and tap
+    cancelling; the auto-hide timer; the riffle state machine; the landing plan; loupe flips; haptic and sound rules;
+    chapter bleed bands; and the mock's sample book for the demo screen.
 - Phase 2 milestone 2, EPUB reading (ADR-0019, Room schema v10, in progress):
   - `:core:reflow`: chapters parsed into text, image and island blocks; pages cut natively with StaticLayout
     (justified, hyphenated, widows, orphans and headings kept with their text); positions saved as chapter and
