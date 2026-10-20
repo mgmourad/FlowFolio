@@ -118,7 +118,7 @@
     <string name="info_cover">Cover</string>
     <string name="info_cover_epub">Taken from the cover image inside the book</string>
     <string name="info_cover_page1">Rendered from page 1 of the file</string>
-    <string name="contents_none">This PDF has no table of contents.</string>
+    <string name="contents_none">This book has no table of contents.</string>
 
     <!-- Shelf page -->
     <string name="view_tiles">Tiles</string>

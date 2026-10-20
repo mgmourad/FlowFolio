@@ -3,6 +3,9 @@ package com.flowfolio.core.data
 import android.os.ParcelFileDescriptor
 import com.flowfolio.core.database.BookDao
 import com.flowfolio.core.database.BookReadingDao
+import com.flowfolio.core.epub.EpubArchive
+import com.flowfolio.core.epub.EpubException
+import com.flowfolio.core.epub.EpubParser
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookFormat
 import com.flowfolio.core.model.BookStorage
@@ -30,6 +33,9 @@ interface ReaderRepository {
 
     /** Remembers the book's printed page numbers ([com.flowfolio.core.model.PageLabels] runs). */
     suspend fun savePageLabels(bookId: String, labels: String)
+
+    /** An EPUB's top-level contents (chapter titles in reading order); empty for PDFs or when it cannot be read. */
+    suspend fun epubContents(bookId: String): List<String> = emptyList()
 }
 
 class OpenedBook(val book: Book, val document: PdfDocument)
@@ -61,6 +67,21 @@ class DefaultReaderRepository @Inject constructor(
     }
 
     override suspend fun saveProgress(bookId: String, page: Int) = withContext(io) { dao.updateLastPage(bookId, page) }
+
+    override suspend fun epubContents(bookId: String): List<String> = withContext(io) {
+        val book = dao.get(bookId)?.toBook()?.takeIf { it.format == BookFormat.EPUB } ?: return@withContext emptyList()
+        val fd = when (val s = book.storage) {
+            is BookStorage.Copied -> File(s.path).takeIf { it.canRead() }
+                ?.let { ParcelFileDescriptor.open(it, ParcelFileDescriptor.MODE_READ_ONLY) }
+
+            is BookStorage.Linked -> source.open(s.uri)
+        } ?: return@withContext emptyList()
+        try {
+            fd.use { EpubArchive.open(it).use { archive -> EpubParser.parse(archive).toc.map { p -> p.label } } }
+        } catch (_: EpubException) {
+            emptyList()
+        }
+    }
 
     override suspend fun savePageLabels(bookId: String, labels: String) =
         withContext(io) { reading.setPageLabels(bookId, labels) }

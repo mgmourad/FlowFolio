@@ -12,6 +12,7 @@ import com.flowfolio.core.data.ShelfRepository
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookDetails
+import com.flowfolio.core.model.BookFormat
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.OutlineEntry
 import com.flowfolio.core.model.Shelf
@@ -92,7 +93,7 @@ class DetailsViewModel @Inject constructor(
 
     /** Remembers [page] as the reading position, then calls [then] (to open the reader there). */
     fun startAt(page: Int, then: () -> Unit) = viewModelScope.launch {
-        reader.saveProgress(bookId, page)
+        if (page >= 0) reader.saveProgress(bookId, page)
         then()
     }
 
@@ -124,9 +125,15 @@ class DetailsViewModel @Inject constructor(
             contents.value = DetailsContents.None
             return
         }
-        contents.value = runCatching {
-            reader.open(bookId).document.use { doc -> doc.outline().filter { it.depth == 0 && it.pageIndex >= 0 } }
-        }.getOrNull()?.takeIf { it.isNotEmpty() }?.let { DetailsContents.Ready(it) } ?: DetailsContents.None
+        val entries = if (book.format == BookFormat.EPUB) {
+            // EPUB pages depend on the text size: chapters are listed without page numbers (pageIndex -1).
+            reader.epubContents(bookId).map { OutlineEntry(depth = 0, pageIndex = -1, title = it) }
+        } else {
+            runCatching {
+                reader.open(bookId).document.use { doc -> doc.outline().filter { it.depth == 0 && it.pageIndex >= 0 } }
+            }.getOrNull().orEmpty()
+        }
+        contents.value = entries.takeIf { it.isNotEmpty() }?.let { DetailsContents.Ready(it) } ?: DetailsContents.None
     }
 
     companion object {
