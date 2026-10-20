@@ -69,6 +69,14 @@ class BookDaoTest {
         assertEquals(41, dao.get("p")?.lastPage)
     }
 
+    @Test
+    fun aPagePositionReplacesAnEpubLocator() = runTest {
+        dao.insert(book("e", "E", added = 1).copy(format = "EPUB", lastLocator = "3:120"))
+        dao.updateLastPage("e", 7)
+        assertEquals(7, dao.get("e")?.lastPage)
+        assertNull(dao.get("e")?.lastLocator)
+    }
+
     @Test(expected = android.database.sqlite.SQLiteConstraintException::class)
     fun duplicateIdIsRejected() = runTest {
         dao.insert(book("dup", "One", added = 1))
