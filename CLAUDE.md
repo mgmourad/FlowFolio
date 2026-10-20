@@ -4,7 +4,8 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 2: EPUB reading and pagination engine. Planning** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`).
+**Phase 2: EPUB reading and pagination engine. Spike done** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
+spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, both proposed).
 Phase 1 signed off by the owner 2026-10-20 (`docs/plans/phase1-signoff.md`); ADRs 0014, 0016-0018 accepted.
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
 Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
@@ -206,8 +207,8 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
 ## Decision log
 
-ADRs 0001–0018 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0020 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
-Translate part of 0017).
+Translate part of 0017), EPUB pagination engine (0019, proposed), EPUB parsing (0020, proposed).
