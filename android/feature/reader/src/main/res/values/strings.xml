@@ -11,6 +11,7 @@
     <string name="reader_password_open">Open</string>
     <string name="reader_cancel">Cancel</string>
     <string name="reader_link_title">Open this link?</string>
+    <string name="reader_footnote">Note</string>
     <string name="reader_settings_button">Aa</string>
     <string name="reader_settings">Reading settings</string>
     <string name="reader_settings_spreads">Two pages side by side</string>

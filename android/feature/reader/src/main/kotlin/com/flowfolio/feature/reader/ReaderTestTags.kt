@@ -17,6 +17,7 @@ object ReaderTestTags {
     const val SETTING_TURN = "reader_setting_turn"
     const val SETTING_DIRECTION = "reader_setting_direction"
     const val SETTING_AUTO_HIDE = "reader_setting_auto_hide"
+    const val FOOTNOTE = "reader_footnote"
     const val SETTING_TURN_SOUND = "reader_setting_turn_sound"
     const val SETTING_TURN_VOLUME = "reader_setting_turn_volume"
     const val SETTING_RIFFLE_SOUND = "reader_setting_riffle_sound"

@@ -2,7 +2,6 @@ package com.flowfolio.feature.reader
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.IntSize
-import com.flowfolio.core.pdf.PdfLink
 import com.flowfolio.feature.reader.layout.ReaderLayout
 import com.flowfolio.feature.reader.layout.Spreads
 
@@ -39,7 +38,7 @@ internal object PageFrames {
     }
 
     /** The link under [tap], if any; links are given per page as fractions of the page. */
-    fun linkAt(tap: Offset, frames: List<Frame>, links: Map<Int, List<PdfLink>>): PdfLink? {
+    fun linkAt(tap: Offset, frames: List<Frame>, links: Map<Int, List<ReaderLink>>): ReaderLink? {
         for (f in frames) {
             val fx = (tap.x - f.x) / f.w
             val fy = (tap.y - f.y) / f.h
@@ -61,23 +60,22 @@ internal object PageFrames {
 
         data class Web(val uri: String) : TapTarget
 
+        /** An EPUB footnote reference, tapped at [at]: its note opens in a popover there. */
+        data class Note(val href: String, val at: Offset) : TapTarget
+
         data object Centre : TapTarget
 
         data object Page : TapTarget
     }
 
     /** Links win over everything; a tap in the centre toggles the controls; anything else turns pages. */
-    fun route(tap: Offset, size: IntSize, frames: List<Frame>, links: Map<Int, List<PdfLink>>): TapTarget {
-        val link = linkAt(tap, frames, links)
-        val page = link?.targetPage
-        val uri = link?.uri
-        return when {
-            page != null -> TapTarget.Jump(page)
-            uri != null && isOpenable(uri) -> TapTarget.Web(uri)
-            isCentre(tap, size) -> TapTarget.Centre
-            else -> TapTarget.Page
+    fun route(tap: Offset, size: IntSize, frames: List<Frame>, links: Map<Int, List<ReaderLink>>): TapTarget =
+        when (val target = linkAt(tap, frames, links)?.target) {
+            is LinkTarget.Page -> TapTarget.Jump(target.page)
+            is LinkTarget.Note -> TapTarget.Note(target.href, tap)
+            is LinkTarget.Web if isOpenable(target.uri) -> TapTarget.Web(target.uri)
+            else -> if (isCentre(tap, size)) TapTarget.Centre else TapTarget.Page
         }
-    }
 
     /** Web links FlowFolio will offer to open; anything else (javascript:, file:, intent:...) is ignored. */
     fun isOpenable(uri: String): Boolean = OPENABLE_SCHEMES.any { uri.startsWith(it, ignoreCase = true) }

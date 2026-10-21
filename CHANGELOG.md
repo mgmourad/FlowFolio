@@ -101,6 +101,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Page numbers follow the book's own numbering: the PDF's page labels, or else the numbers printed in its margins
     (found once and kept as `books.page_labels`), including roman front matter and prefixed appendices; books with no
     numbering count from the cover as page 1. The library, details, bookmarks and the reader all use them.
+- Phase 2, EPUB links and footnote popovers (the M2 follow-up, `docs/plans/phase2-m2-links.md`):
+  - Links in EPUB text are tappable: a link into the book jumps to its page, a web link asks before opening (http,
+    https and mailto only), a link to anything outside the reading order does nothing.
+  - A footnote or endnote reference opens the note in a glass popover next to it (with its bold and italics; long
+    notes scroll); a tap outside, Back or a page turn closes it.
+  - Notes are recognised by `epub:type` or ARIA role: footnotes leave the flow as before; endnotes, rear notes and
+    notes now stay in their notes section and open in the popover too (`rearnote` and `note` were not recognised).
+  - `:core:reflow` finds each link's boxes on a page (`linkAreas`); PDF and EPUB links share one model in the reader.
 - Phase 2 milestone M2b, the riffle scrubber (ADR-0022, ADR-0023, in progress):
   - R1: the `:feature:reader:riffle` module's logic, tested on the JVM: positions on the fore edge for single pages,
     spreads (cover alone or not) and right-to-left books; the gap around the pin; leaf thinning; fine scrubbing (half,

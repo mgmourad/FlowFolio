@@ -35,12 +35,12 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
     private var depth = 0
     private var pre = 0
 
-    /** An open footnote: its id, the element depth it started at, and its first block. */
+    /** An open note: its id, the element depth it started at, its first block, and whether it stays in the flow. */
     private var footnote: Footnote? = null
 
     private class OpenSpan(val tag: String, val span: Any, var at: Int)
 
-    private class Footnote(val id: String?, val depth: Int, val firstBlock: Int)
+    private class Footnote(val id: String?, val depth: Int, val firstBlock: Int, val keep: Boolean)
 
     /** The offset the next character will have. */
     private val here get() = flushed + text.length
@@ -78,11 +78,18 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
         depth++
         p.getAttributeValue(null, "id")?.let { anchors.putIfAbsent(it, here) }
         val type = p.getAttributeValue(null, "epub:type").orEmpty() + " " + p.getAttributeValue(null, "role").orEmpty()
+        val note = noteKind(type)
         when {
-            footnote == null && ("footnote" in type || "endnote" in type) -> startFootnote(p)
+            footnote == null && note == NoteKind.ASIDE -> startFootnote(p, keep = false)
+
             name in ISLANDS -> island(p, name)
+
             name == "img" || name == "image" -> image(p)
-            else -> startInline(p, name)
+
+            else -> {
+                if (footnote == null && note == NoteKind.KEPT) startFootnote(p, keep = true)
+                startInline(p, name)
+            }
         }
     }
 
@@ -160,27 +167,44 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
         style = TextStyle(indentEm = indent)
     }
 
-    /** A footnote's body goes aside (for the popover); the flow continues after it. */
-    private fun startFootnote(p: XmlPullParser) {
+    /**
+     * A note starts. A footnote's body goes aside, for the popover, and the flow continues after it; an endnote or rear
+     * note ([keep]) stays where the book puts it (its notes section) and is copied for the popover too.
+     */
+    private fun startFootnote(p: XmlPullParser, keep: Boolean) {
         flush()
-        footnote = Footnote(p.getAttributeValue(null, "id"), depth, blocks.size)
+        footnote = Footnote(p.getAttributeValue(null, "id"), depth, blocks.size, keep)
     }
 
-    /** The footnote's element closed: its blocks leave the flow and become its popover text. */
+    /** The note's element closed: its text becomes its popover's, and a footnote's blocks leave the flow. */
     private fun endFootnote() {
         flush()
         val note = footnote ?: return
         footnote = null
         val body = SpannableStringBuilder()
-        while (blocks.size > note.firstBlock) {
-            val b = blocks.removeAt(note.firstBlock)
-            if (b is Block.Text) {
-                if (body.isNotEmpty()) body.append('\n')
-                body.append(b.text)
-            }
+        val noteBlocks = blocks.subList(note.firstBlock, blocks.size)
+        for (b in noteBlocks.filterIsInstance<Block.Text>()) {
+            if (body.isNotEmpty()) body.append('\n')
+            body.append(b.text)
         }
+        if (!note.keep) noteBlocks.clear()
         note.id?.let { footnotes[it] = body }
     }
+
+    /**
+     * What a note's `epub:type` or `role` makes it ([type] holds both): an [NoteKind.ASIDE] footnote, or a
+     * [NoteKind.KEPT] endnote, rear note or note; null for anything else, including the sections that hold notes.
+     */
+    private fun noteKind(type: String): NoteKind? {
+        val tokens = type.lowercase().split(' ').map { it.removePrefix("doc-") }
+        return when {
+            "footnote" in tokens -> NoteKind.ASIDE
+            tokens.any { it in KEPT_NOTES } -> NoteKind.KEPT
+            else -> null
+        }
+    }
+
+    private enum class NoteKind { ASIDE, KEPT }
 
     private fun island(p: XmlPullParser, name: String) {
         val xml = outerXml(p)
@@ -274,6 +298,9 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
             "pre"
         )
         val INDENTED = setOf("aside", "ul", "ol", "dl")
+
+        /** Notes that stay in the flow: endnotes and rear notes in a notes section, and plain notes. */
+        val KEPT_NOTES = setOf("endnote", "rearnote", "note")
         val SKIP = setOf("head", "script", "style", "iframe", "object", "video", "audio", "nav", "noscript", "template")
         val ISLANDS = setOf("math", "svg", "table")
         val HEADING_SCALE = mapOf("h1" to 1.6f, "h2" to 1.3f, "h3" to 1.12f, "h4" to 1.05f, "h5" to 1f, "h6" to 1f)
