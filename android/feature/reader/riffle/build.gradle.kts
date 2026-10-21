@@ -10,6 +10,7 @@ android {
 }
 
 dependencies {
+    implementation(projects.core.designsystem)
     implementation(libs.androidx.compose.ui.graphics)
     implementation(libs.kotlinx.coroutines.core)
 

@@ -74,18 +74,33 @@ class StripMapping(private val book: BookGeometry) {
 
 /**
  * The gap the pin opens in the fore edge (spec 5.1): leaves near the pin move away from it, both covers stay put.
- * [engagement] is 0 at rest, 0.55 while travelling after a flag tap and 1 while dragging; [density] is pixels per dp.
+ * Engagement is 0 at rest, 0.55 while travelling after a flag tap and 1 while dragging; [density] is pixels per dp.
+ * [prepare] it once per frame, then ask for each leaf: nothing is allocated per frame.
  */
-class Gap(engagement: Float, density: Float) {
-    private val size = (BASE_DP + SPREAD_DP * engagement) * density
-    private val radius = (RADIUS_DP + RADIUS_SPREAD_DP * engagement) * density
+class Gap(private val density: Float) {
+    private var size = 0f
+    private var radius = 1f
+    private var pin = 0f
+    private var x0 = 0f
+    private var span = 1f
+    private var startEnd = 0f
+    private var endEnd = 0f
 
-    /** How far the leaf at rest position [x] moves with the pin at [pin], between the block's ends [x0] and [x1]. */
-    fun displacement(x: Float, pin: Float, x0: Float, x1: Float): Float {
-        val a = tanh((x0 - pin) / radius)
-        val b = tanh((x1 - pin) / radius)
-        val u = if (x1 > x0) (x - x0) / (x1 - x0) else 0f
-        return size * (tanh((x - pin) / radius) - (a * (1 - u) + b * u))
+    fun prepare(engagement: Float, pin: Float, x0: Float, x1: Float): Gap {
+        size = (BASE_DP + SPREAD_DP * engagement) * density
+        radius = (RADIUS_DP + RADIUS_SPREAD_DP * engagement) * density
+        this.pin = pin
+        this.x0 = x0
+        span = (x1 - x0).coerceAtLeast(1f)
+        startEnd = tanh((x0 - pin) / radius)
+        endEnd = tanh((x1 - pin) / radius)
+        return this
+    }
+
+    /** How far the leaf at rest position [x] moves, with the linear correction that keeps both ends still. */
+    fun displacement(x: Float): Float {
+        val u = (x - x0) / span
+        return size * (tanh((x - pin) / radius) - (startEnd * (1 - u) + endEnd * u))
     }
 
     private companion object {

@@ -107,6 +107,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     quarter and a tenth of the speed, relative so the ribbon never jumps); flag stacking, hit areas and tap
     cancelling; the auto-hide timer; the riffle state machine; the landing plan; loupe flips; haptic and sound rules;
     chapter bleed bands; and the mock's sample book for the demo screen.
+  - R2: the fore-edge strip drawn in one canvas as in the mock (leaves in 18 shades with spring physics and bow,
+    the gap and needle, chapter bleed bands, cloth cover boards in the book's colours, flags and stacks, the satin
+    ribbon and pin), the dock header and countdown line, and a demo screen (`--ez riffleDemo true`). The frame loop
+    runs only while something moves; drawing allocates nothing. On the Fold the strip draws in 0.5–1.3 ms on average
+    (2.9 ms at worst) while riffling, against the 4 ms target.
 - Phase 2 milestone 2, EPUB reading (ADR-0019, Room schema v10, in progress):
   - `:core:reflow`: chapters parsed into text, image and island blocks; pages cut natively with StaticLayout
     (justified, hyphenated, widows, orphans and headings kept with their text); positions saved as chapter and

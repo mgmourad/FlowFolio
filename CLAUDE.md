@@ -6,7 +6,9 @@ Read this first. Keep it current: update at the end of every phase.
 
 **Phase 2: EPUB reading and pagination engine. Milestone 1 (EPUB in the library) built; milestone 2 (the paginated EPUB reader) signed off 2026-10-20
 (`docs/plans/phase2-m2-signoff.md`). Now M2b, the riffle scrubber (spec `docs/design/riffle-scrubber-spec.md`, mock
-`docs/design/FlowFolio_Riffle_Scrubber.html`, ADR-0022/0023): R1 (logic) built; next R2 (drawing and physics). EPUB
+`docs/design/FlowFolio_Riffle_Scrubber.html`, ADR-0022/0023): R1 (logic) and R2 (drawing, physics, demo
+screen: `adb shell am start -n com.flowfolio.dev/com.flowfolio.MainActivity --ez riffleDemo true [--es theme light]`)
+built; next R3 (gestures and loupe). EPUB
 links and footnote popovers follow it** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
 spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).
 Phase 1 signed off by the owner 2026-10-20 (`docs/plans/phase1-signoff.md`); ADRs 0014, 0016-0018 accepted.
