@@ -59,8 +59,20 @@ class ReaderSettingsViewModel @Inject constructor(
         viewModelScope.launch { repository.setControlsAutoHide(value) }
     }
 
-    fun setPaperSound(on: Boolean) {
-        viewModelScope.launch { repository.setPaperSound(on) }
+    fun setTurnSound(on: Boolean) {
+        viewModelScope.launch { repository.setTurnSound(on) }
+    }
+
+    fun setTurnVolume(volume: Float) {
+        viewModelScope.launch { repository.setTurnVolume(volume) }
+    }
+
+    fun setRiffleSound(on: Boolean) {
+        viewModelScope.launch { repository.setRiffleSound(on) }
+    }
+
+    fun setRiffleVolume(volume: Float) {
+        viewModelScope.launch { repository.setRiffleVolume(volume) }
     }
 
     fun setScrubHaptics(on: Boolean) {

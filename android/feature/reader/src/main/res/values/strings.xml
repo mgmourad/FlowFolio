@@ -55,8 +55,12 @@
     <string name="reader_auto_hide_8">8 s</string>
     <string name="reader_auto_hide_15">15 s</string>
     <string name="reader_auto_hide_never">Never</string>
-    <string name="reader_paper_sound">Paper sounds</string>
-    <string name="reader_paper_sound_detail">Soft page sounds while riffling. Silent when the phone is on silent.</string>
+    <string name="reader_turn_sound">Page turn sound</string>
+    <string name="reader_turn_sound_detail">A page flip with every turn. Silent when the phone is on silent.</string>
+    <string name="reader_turn_volume">Page turn volume</string>
+    <string name="reader_riffle_sound">Riffle sound</string>
+    <string name="reader_riffle_sound_detail">Pages riffling while you drag the ribbon.</string>
+    <string name="reader_riffle_volume">Riffle volume</string>
     <string name="reader_scrub_haptics">Riffle haptics</string>
     <string name="reader_scrub_haptics_detail">Ticks for pages, chapters and bookmarks as you riffle.</string>
     <string name="reader_direction_note">For Arabic, Hebrew and other right-to-left books. Applies to this book only.</string>

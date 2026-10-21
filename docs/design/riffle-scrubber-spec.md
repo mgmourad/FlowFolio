@@ -142,7 +142,9 @@ Each change of previewed spread flips a mini sheet over the loupe's spine in the
   flag, a light tick at each fine-scrub threshold (constants per API level in ADR-0023).
 - Sound (ADR-0025, the owner's recordings): while dragging, a riffle loops in the drag's direction, its rate and
   loudness following the speed, fading out when pages stop or the ribbon is let go; each landing plays a page flip in
-  its direction. Respect silent and vibrate modes. "Paper sound" and "Haptics" toggles in settings.
+  its direction. Respect silent and vibrate modes. Every ordinary page turn (Curl, Slide) plays the flip too (ADR-0026).
+  "Page turn sound" and "Riffle sound" each have a switch and a volume slider, and "Riffle haptics" a switch, in "Aa"
+  and in Settings.
 
 ### 5.7 Auto-hide and immersive mode
 - 3 s, 5 s (default), 8 s, 15 s or Never, set in the reader's "Aa" panel and in app settings, kept in DataStore.

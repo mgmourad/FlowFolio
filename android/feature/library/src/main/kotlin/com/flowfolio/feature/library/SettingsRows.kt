@@ -15,6 +15,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioSegmented
+import com.flowfolio.core.designsystem.FlowFolioSlider
 import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
 
@@ -39,9 +40,42 @@ internal fun SwitchRow(
     }
 }
 
-/** `.set-row` with a `.mini-seg` of [options]. */
+/** A sound's switch, with its loudness slider beneath (ADR-0025). */
 @Composable
-internal fun ChoiceRow(title: Int, detail: Int, options: List<Int>, selected: Int, onSelect: (Int) -> Unit) {
+internal fun SoundRow(
+    title: Int,
+    detail: Int,
+    on: Boolean,
+    volume: Float,
+    actions: Pair<(Boolean) -> Unit, (Float) -> Unit>
+) {
+    SwitchRow(title, detail, on, actions.first)
+    FlowFolioSlider(
+        volume,
+        onValueChangeFinished = actions.second,
+        label = stringResource(title),
+        enabled = on,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp)
+    )
+}
+
+/** `.set-row` with a `.mini-seg` of [options]; [stacked] puts the options under the label, for long lists. */
+@Composable
+internal fun ChoiceRow(
+    title: Int,
+    detail: Int,
+    options: List<Int>,
+    selected: Int,
+    stacked: Boolean = false,
+    onSelect: (Int) -> Unit
+) {
+    if (stacked) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp)) {
+            Label(title, detail, Modifier.padding(bottom = 10.dp))
+            FlowFolioSegmented(options.map { stringResource(it) }, selected, onSelect)
+        }
+        return
+    }
     Row(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
         verticalAlignment = Alignment.CenterVertically

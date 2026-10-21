@@ -36,7 +36,8 @@ internal fun Modifier.dragGesture(
             end = state.leftEdge,
             isEnabled = { isEnabledForward.value },
             isDragSucceed = { start, end -> end.x < start.x },
-            onChange = { onChange(+1) }
+            onChange = { onChange(+1) },
+            onCommit = { state.turnStarting(forward = true) }
         )
         val backwardConfig = DragConfig(
             edge = state.backward,
@@ -44,7 +45,8 @@ internal fun Modifier.dragGesture(
             end = state.rightEdge,
             isEnabled = { isEnabledBackward.value },
             isDragSucceed = { start, end -> end.x > start.x },
-            onChange = { onChange(-1) }
+            onChange = { onChange(-1) },
+            onCommit = { state.turnStarting(forward = false) }
         )
 
         detectCurlGestures(

@@ -42,11 +42,18 @@ interface SettingsRepository {
     // The reader's controls (riffle scrubber, ADR-0022 and ADR-0023). Defaults do nothing, for test fakes.
     suspend fun setControlsAutoHide(value: ControlsAutoHide) = Unit
 
-    suspend fun setPaperSound(on: Boolean) = Unit
+    suspend fun setRiffleSound(on: Boolean) = Unit
+
+    suspend fun setRiffleVolume(volume: Float) = Unit
+
+    suspend fun setTurnSound(on: Boolean) = Unit
+
+    suspend fun setTurnVolume(volume: Float) = Unit
 
     suspend fun setScrubHaptics(on: Boolean) = Unit
 }
 
+@Suppress("TooManyFunctions") // one setter per setting
 class DefaultSettingsRepository @Inject constructor(private val source: SettingsDataSource) : SettingsRepository {
     override val settings = source.settings
 
@@ -98,8 +105,20 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
         source.setControlsAutoHide(value)
     }
 
-    override suspend fun setPaperSound(on: Boolean) {
-        source.setPaperSound(on)
+    override suspend fun setRiffleSound(on: Boolean) {
+        source.setRiffleSound(on)
+    }
+
+    override suspend fun setRiffleVolume(volume: Float) {
+        source.setRiffleVolume(volume)
+    }
+
+    override suspend fun setTurnSound(on: Boolean) {
+        source.setTurnSound(on)
+    }
+
+    override suspend fun setTurnVolume(volume: Float) {
+        source.setTurnVolume(volume)
     }
 
     override suspend fun setScrubHaptics(on: Boolean) {

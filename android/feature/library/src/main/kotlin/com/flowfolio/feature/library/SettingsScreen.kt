@@ -59,7 +59,10 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             onAskEachImport = viewModel::setAskEachImport,
             onLookup = viewModel::setLookup,
             onAutoHide = viewModel::setAutoHide,
-            onPaperSound = viewModel::setPaperSound,
+            onTurnSound = viewModel::setTurnSound,
+            onTurnVolume = viewModel::setTurnVolume,
+            onRiffleSound = viewModel::setRiffleSound,
+            onRiffleVolume = viewModel::setRiffleVolume,
             onScrubHaptics = viewModel::setScrubHaptics
         )
     )
@@ -166,14 +169,24 @@ private fun ReadingGroup(settings: UserSettings, actions: SettingsActions) {
                 R.string.settings_auto_hide_15,
                 R.string.settings_auto_hide_never
             ),
-            ControlsAutoHide.entries.indexOf(settings.controlsAutoHide)
+            ControlsAutoHide.entries.indexOf(settings.controlsAutoHide),
+            stacked = true
         ) { actions.onAutoHide(ControlsAutoHide.entries[it]) }
         Divider()
-        SwitchRow(
-            R.string.settings_paper_sound,
-            R.string.settings_paper_sound_detail,
-            settings.paperSound,
-            actions.onPaperSound
+        SoundRow(
+            R.string.settings_turn_sound,
+            R.string.settings_turn_sound_detail,
+            settings.turnSound,
+            settings.turnVolume,
+            actions.onTurnSound to actions.onTurnVolume
+        )
+        Divider()
+        SoundRow(
+            R.string.settings_riffle_sound,
+            R.string.settings_riffle_sound_detail,
+            settings.riffleSound,
+            settings.riffleVolume,
+            actions.onRiffleSound to actions.onRiffleVolume
         )
         Divider()
         SwitchRow(

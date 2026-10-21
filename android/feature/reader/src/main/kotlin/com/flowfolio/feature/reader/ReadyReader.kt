@@ -135,19 +135,19 @@ internal fun BoxScope.ReadyReader(
             .then(if (s.reflowable) Modifier else Modifier.pinchGestures(overlay::pinch, overlay::endPinch))
             .edgeBounce(bounce, atStart = s.unit <= 0, atEnd = s.unit >= s.unitCount - 1, reversed = rtl)
     ) {
-        Book(s, images, viewModel, annotating, pageBounds)
+        CompositionLocalProvider(LocalReaderSounds provides riffling.sounds) {
+            Book(s, images, viewModel, annotating, pageBounds)
+        }
     }
-    riffling.landing.value?.let {
-        LandingLayer(s, riffling.book, it, images, viewModel.thumbnails, onDone = { riffling.landing.value = null })
-    }
+    RiffleLanding(s, riffling, images, viewModel.thumbnails)
     overlay.zoom?.let {
         ZoomView(it, framesFor, images, tiles, viewModel::showTiles, annotating, onExit = { overlay.zoom = null })
     }
     // Selection and highlight menus: over the pages, and over the zoomed view too; under the bars.
     CompositionLocalProvider(LocalGlassState provides haze) { AnnotatingLayer(annotating, s) }
     if (overlay.zoom == null) {
-        val bar: @Composable () -> Unit = { RiffleBar(s, riffling.book, marks, viewModel, chrome, riffling.land) }
-        CompositionLocalProvider(LocalGlassState provides haze) {
+        val bar: @Composable () -> Unit = { RiffleBar(s, riffling, marks, viewModel, chrome) }
+        CompositionLocalProvider(LocalGlassState provides haze, LocalReaderSounds provides riffling.sounds) {
             Controls(s, navigation, overlay, mark, ChromeParts(onBack, jump, bar))
         }
     }

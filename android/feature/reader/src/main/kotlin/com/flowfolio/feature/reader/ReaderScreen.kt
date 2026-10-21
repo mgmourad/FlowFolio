@@ -241,10 +241,16 @@ private fun FollowJumps(curl: PageCurlState, unit: Int) {
     LaunchedEffect(unit) { if (curl.current != unit) curl.snapTo(unit) }
 }
 
+/** Reports each unit the curl settles on, and plays the page flip as each turn begins (ADR-0025). */
 @Composable
 private fun ReportUnit(curl: PageCurlState, onUnitShown: (Int) -> Unit) {
     val callback by rememberUpdatedState(onUnitShown)
     LaunchedEffect(curl) { snapshotFlow { curl.current }.collect { callback(it) } }
+    val sounds = LocalReaderSounds.current
+    DisposableEffect(curl, sounds) {
+        curl.onTurn = sounds?.let { s -> { forward: Boolean -> s.turn(forward) } }
+        onDispose { curl.onTurn = null }
+    }
 }
 
 /**

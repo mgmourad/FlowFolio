@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.flowfolio.core.model.ControlsAutoHide
@@ -46,7 +47,10 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             onlineLookupAsked = p[ONLINE_LOOKUP_ASKED] ?: defaults.onlineLookupAsked,
             translateTo = p[TRANSLATE_TO],
             controlsAutoHide = p[AUTO_HIDE].toEnum(defaults.controlsAutoHide),
-            paperSound = p[PAPER_SOUND] ?: defaults.paperSound,
+            riffleSound = p[RIFFLE_SOUND] ?: defaults.riffleSound,
+            riffleVolume = p[RIFFLE_VOLUME]?.coerceIn(0f, 1f) ?: defaults.riffleVolume,
+            turnSound = p[TURN_SOUND] ?: defaults.turnSound,
+            turnVolume = p[TURN_VOLUME]?.coerceIn(0f, 1f) ?: defaults.turnVolume,
             scrubHaptics = p[SCRUB_HAPTICS] ?: defaults.scrubHaptics
         )
     }
@@ -95,8 +99,20 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         store.edit { it[AUTO_HIDE] = value.name }
     }
 
-    suspend fun setPaperSound(on: Boolean) {
-        store.edit { it[PAPER_SOUND] = on }
+    suspend fun setRiffleSound(on: Boolean) {
+        store.edit { it[RIFFLE_SOUND] = on }
+    }
+
+    suspend fun setRiffleVolume(volume: Float) {
+        store.edit { it[RIFFLE_VOLUME] = volume.coerceIn(0f, 1f) }
+    }
+
+    suspend fun setTurnSound(on: Boolean) {
+        store.edit { it[TURN_SOUND] = on }
+    }
+
+    suspend fun setTurnVolume(volume: Float) {
+        store.edit { it[TURN_VOLUME] = volume.coerceIn(0f, 1f) }
     }
 
     suspend fun setScrubHaptics(on: Boolean) {
@@ -133,7 +149,12 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val ONLINE_LOOKUP_ASKED = booleanPreferencesKey("online_lookup_asked")
         val TRANSLATE_TO = stringPreferencesKey("translate_to")
         val AUTO_HIDE = stringPreferencesKey("reader_auto_hide")
-        val PAPER_SOUND = booleanPreferencesKey("paper_sound")
+
+        // The riffle keeps the old "paper sound" key, so a reader who turned that off keeps it off.
+        val RIFFLE_SOUND = booleanPreferencesKey("paper_sound")
+        val RIFFLE_VOLUME = floatPreferencesKey("riffle_volume")
+        val TURN_SOUND = booleanPreferencesKey("turn_sound")
+        val TURN_VOLUME = floatPreferencesKey("turn_volume")
         val SCRUB_HAPTICS = booleanPreferencesKey("scrub_haptics")
     }
 }

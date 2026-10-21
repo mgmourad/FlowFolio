@@ -26,7 +26,10 @@ data class SettingsActions(
     val onAskEachImport: (Boolean) -> Unit = {},
     val onLookup: (Boolean) -> Unit = {},
     val onAutoHide: (ControlsAutoHide) -> Unit = {},
-    val onPaperSound: (Boolean) -> Unit = {},
+    val onTurnSound: (Boolean) -> Unit = {},
+    val onTurnVolume: (Float) -> Unit = {},
+    val onRiffleSound: (Boolean) -> Unit = {},
+    val onRiffleVolume: (Float) -> Unit = {},
     val onScrubHaptics: (Boolean) -> Unit = {}
 )
 
@@ -59,7 +62,13 @@ class SettingsViewModel @Inject constructor(private val repo: SettingsRepository
 
     fun setAutoHide(value: ControlsAutoHide) = viewModelScope.launch { repo.setControlsAutoHide(value) }
 
-    fun setPaperSound(on: Boolean) = viewModelScope.launch { repo.setPaperSound(on) }
+    fun setTurnSound(on: Boolean) = viewModelScope.launch { repo.setTurnSound(on) }
+
+    fun setTurnVolume(volume: Float) = viewModelScope.launch { repo.setTurnVolume(volume) }
+
+    fun setRiffleSound(on: Boolean) = viewModelScope.launch { repo.setRiffleSound(on) }
+
+    fun setRiffleVolume(volume: Float) = viewModelScope.launch { repo.setRiffleVolume(volume) }
 
     fun setScrubHaptics(on: Boolean) = viewModelScope.launch { repo.setScrubHaptics(on) }
 

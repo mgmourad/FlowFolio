@@ -31,6 +31,10 @@ class RiffleSounds(context: Context) {
     private val flipBackward = pool.load(context, R.raw.flip_backward, 1)
     private val handler = Handler(Looper.getMainLooper())
 
+    /** The riffle's and the flips' loudness, 0 to 1 (the reader's settings), applied on top of the speed. */
+    var riffleVolume = 1f
+    var flipVolume = 1f
+
     /** The looping riffle (0 when none), which way it runs, and its loudness and speed in units a second. */
     private var stream = 0
     private var streamForward = true
@@ -67,7 +71,7 @@ class RiffleSounds(context: Context) {
             streamForward = feedback.forward
             stream = pool.play(if (streamForward) riffleForward else riffleBackward, 0f, 0f, 1, -1, 1f)
         }
-        volume = (MIN_VOLUME + speed / LOUD_SPEED).coerceAtMost(MAX_VOLUME)
+        volume = (MIN_VOLUME + speed / LOUD_SPEED).coerceAtMost(MAX_VOLUME) * riffleVolume
         pool.setVolume(stream, volume, volume)
         pool.setRate(stream, (speed / NATURAL_SPEED).coerceIn(MIN_RATE, MAX_RATE))
         // No step for a moment: the pages have stopped, so the riffle fades.
@@ -84,7 +88,17 @@ class RiffleSounds(context: Context) {
     /** A landing: a page flip toward the end of the book ([forward]) or back toward its start. */
     fun flip(forward: Boolean) {
         if (!audible()) return
-        pool.play(if (forward) flipForward else flipBackward, FLIP_VOLUME, FLIP_VOLUME, 2, 0, 1f)
+        val v = FLIP_VOLUME * flipVolume
+        pool.play(if (forward) flipForward else flipBackward, v, v, 2, 0, 1f)
+    }
+
+    /** A moment of the riffle at its natural pace, so a volume slider can be heard. */
+    fun previewRiffle() {
+        if (!audible()) return
+        stopNow()
+        volume = PREVIEW_VOLUME * riffleVolume
+        stream = pool.play(riffleForward, volume, volume, 1, -1, 1f)
+        handler.postDelayed(fade, PREVIEW_MS)
     }
 
     private fun stopNow() {
@@ -122,5 +136,7 @@ class RiffleSounds(context: Context) {
         const val FADE_FACTOR = 0.55f
         const val SILENT = 0.04f
         const val FLIP_VOLUME = 0.8f
+        const val PREVIEW_VOLUME = 0.6f
+        const val PREVIEW_MS = 700L
     }
 }

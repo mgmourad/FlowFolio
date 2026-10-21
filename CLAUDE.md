@@ -12,7 +12,8 @@ built; R3 (gestures, flag taps and stacks, loupe, haptics) and R4's module part 
 crossfade, Go to page by printed number, nudge arrows, auto-hide in the demo) built and checked on the Fold; R5 (the
 scrubber in the real reader: `ReaderRiffle`, `ReaderLanding`, `ChromeClock`, `ReaderThumbnails`, settings, EPUB
 margins, accessibility) and the owner's tweaks of 2026-10-21 (no floor shadow, a red pin into the pages, a "Page 306 – 307 of 842 — 36%" header, looser physics, recorded
-sounds per ADR-0025 via `tools/sounds/prepare_recorded_sounds.py`) built. Left for M2b: the owner's listen and feel on
+sounds per ADR-0025 via `tools/sounds/prepare_recorded_sounds.py`; flips on every page turn and separate turn and riffle
+sound switches and volumes per ADR-0026) built. Left for M2b: the owner's listen and feel on
 the Fold, memory and frame measurements, the M2b sign-off. EPUB links and footnote popovers follow it** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
 spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).
 Phase 1 signed off by the owner 2026-10-20 (`docs/plans/phase1-signoff.md`); ADRs 0014, 0016-0018 accepted.
@@ -204,7 +205,8 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 29. Vendored pagecurl: never key composables on the moving edge (it rebuilt every page each frame); key on `current`
     and read the edge in `drawWithCache`. Never add fields to `PageCurlState.InternalState` (an inner class): the
     Compose compiler's `$stable` field goes missing at run time (`NoSuchFieldError`); keep extra state on the outer
-    class. Selection state is read in draw/placement lambdas so a drag doesn't recompose the reader.
+    class. Selection state is read in draw/placement lambdas so a drag doesn't recompose the reader. `PageCurlState.onTurn`
+    (ADR-0026) is called as a turn commits; `InternalState.turnStarting` calls it.
 30. Measure smoothness on a non-debuggable build: a debuggable app runs Compose mostly in ART's interpreter, so frame
     times look 2-3x worse than users see. Temporarily set `isDebuggable = false` in the debug build type (same
     package and signature, library kept; don't commit it), install, `cmd package compile -m speed-profile -f`, open
@@ -236,8 +238,8 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
 ## Decision log
 
-ADRs 0001–0025 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0026 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
-Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023).
+Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026).
