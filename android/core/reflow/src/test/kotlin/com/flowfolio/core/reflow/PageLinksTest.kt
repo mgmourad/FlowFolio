@@ -36,7 +36,7 @@ class PageLinksTest {
     fun everyLinkOnThePageHasAnAreaInsideTheColumn() {
         val book = book()
         val paginator = book.paginate(SPEC, DENSITY)
-        val areas = book.linkAreas(book.pages.first(), paginator)
+        val areas = book.linkAreas(book.pages[book.pageOf(Locator(1, 0))], paginator)
         assertEquals(
             setOf("OEBPS/c2.xhtml#s2", "https://example.org/", "OEBPS/c1.xhtml#fn1"),
             areas.map { it.href }.toSet()
@@ -57,20 +57,36 @@ class PageLinksTest {
         assertEquals("note", note.subSequence(note.getSpanStart(italic), note.getSpanEnd(italic)).toString())
         assertNull(book.footnote("OEBPS/c1.xhtml#nowhere"))
         // The note's text is not on the page.
-        assertTrue(book.chapters[0].blocks.none { it is Block.Text && "The note" in it.text })
+        assertTrue(book.chapters[1].blocks.none { it is Block.Text && "The note" in it.text })
+    }
+
+    @Test
+    fun aContentsPageInTheReadingOrderShowsItsLinksButPageListsStayHidden() {
+        val book = book()
+        val paginator = book.paginate(SPEC, DENSITY)
+        val toc = book.pageOf(Locator(0, 0))
+        assertEquals(
+            listOf("OEBPS/c1.xhtml", "OEBPS/c2.xhtml"),
+            book.linkAreas(book.pages[toc], paginator).map {
+                it.href
+            }
+        )
+        // The page list's "99" is not printed in chapter one.
+        assertTrue(book.chapters[1].blocks.none { it is Block.Text && "99" in it.text })
     }
 
     @Test
     fun rearNotesStayInTheirSectionAndOpenInAPopoverToo() {
         val book = book()
         assertEquals("Rear note.", book.footnote("OEBPS/c2.xhtml#rn1").toString().trim())
-        val two = book.chapters[1].blocks.filterIsInstance<Block.Text>().map { it.text.toString().trim() }
+        val two = book.chapters[2].blocks.filterIsInstance<Block.Text>().map { it.text.toString().trim() }
         assertTrue("$two", "Notes" in two && "Rear note." in two)
     }
 
     /** One chapter with a long internal link, a web link and a footnote reference; a second with the link's target. */
     private fun book(): ReflowBook {
         val c1 = """<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><body>
+            <nav epub:type="page-list"><ol><li><a href="c2.xhtml#s2">99</a></li></ol></nav>
             <h1>One</h1><p>See <a href="c2.xhtml#s2">the second chapter of this little book, which goes on</a>, the
             <a href="https://example.org/">web</a>, and a note<a epub:type="noteref" href="#fn1">1</a>.</p>
             <aside epub:type="footnote" id="fn1"><p>The <i>note</i> text.</p></aside><p>After the note.</p>
@@ -81,8 +97,9 @@ class PageLinksTest {
         val opf = """<package xmlns="http://www.idpf.org/2007/opf" version="3.0"><metadata
             xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>Links</dc:title><dc:language>en</dc:language>
             </metadata><manifest><item id="c1" href="c1.xhtml" media-type="application/xhtml+xml"/>
-            <item id="c2" href="c2.xhtml" media-type="application/xhtml+xml"/></manifest>
-            <spine><itemref idref="c1"/><itemref idref="c2"/></spine></package>"""
+            <item id="c2" href="c2.xhtml" media-type="application/xhtml+xml"/>
+            <item id="toc" href="toc.xhtml" media-type="application/xhtml+xml"/>
+            </manifest><spine><itemref idref="toc"/><itemref idref="c1"/><itemref idref="c2"/></spine></package>"""
         val container = """<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0">
             <rootfiles><rootfile full-path="OEBPS/book.opf" media-type="application/oebps-package+xml"/></rootfiles>
             </container>"""
@@ -93,7 +110,8 @@ class PageLinksTest {
                 "META-INF/container.xml" to container,
                 "OEBPS/book.opf" to opf,
                 "OEBPS/c1.xhtml" to c1,
-                "OEBPS/c2.xhtml" to c2
+                "OEBPS/c2.xhtml" to c2,
+                "OEBPS/toc.xhtml" to TOC
             ).forEach { (name, text) ->
                 z.putNextEntry(ZipEntry(name))
                 z.write(text.toByteArray())
@@ -104,6 +122,11 @@ class PageLinksTest {
     }
 
     private companion object {
+        /** A printed contents page in the reading order. */
+        const val TOC = """<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><body>
+            <h1>Contents</h1><nav epub:type="toc"><ol><li><a href="c1.xhtml">One</a></li>
+            <li><a href="c2.xhtml">Two</a></li></ol></nav></body></html>"""
+
         val SPEC = PageSpec(600, 900, 30f, Locale.ENGLISH)
         const val DENSITY = 2f
     }
