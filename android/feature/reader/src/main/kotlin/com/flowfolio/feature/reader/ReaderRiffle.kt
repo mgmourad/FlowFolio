@@ -112,17 +112,17 @@ internal class ReaderBook(
 /**
  * The reader's bottom bar: the riffle scrubber on glass (ADR-0022). It follows the reader's unit, shows the book's
  * bookmarks as flags in their own colours (the default red, the ribbon's colour, is drawn lighter on the strip, owner
- * decision 3), and turns releases, flag taps, nudges and Go to page into landings through [onLand].
+ * decision 3), and turns releases, flag taps, nudges and Go to page into landings ([Riffling.land]).
  */
 @Composable
 internal fun RiffleBar(
     s: ReaderState.Ready,
-    book: ReaderBook,
+    riffling: Riffling,
     marks: List<Bookmark>,
     viewModel: ReaderViewModel,
-    chrome: ChromeClock,
-    onLand: (unit: Int) -> Unit
+    chrome: ChromeClock
 ) {
+    val book = riffling.book
     val settings by viewModel.userSettings.collectAsStateWithLifecycle()
     val state = remember(book) { RiffleScrubberState(book, s.unit) }
     LaunchedEffect(state, s.unit) { state.currentUnit = s.unit }
@@ -138,7 +138,7 @@ internal fun RiffleBar(
     }
     val cover by viewModel.cover.collectAsStateWithLifecycle()
     val boards = boardColors(cover)
-    val events = rememberReaderEvents(state, settings, chrome, onLand)
+    val events = rememberReaderEvents(state, settings.scrubHaptics, chrome, riffling.sounds, riffling.land)
     // The glass is drawn behind the dock rather than on it: glass clips, and the loupe rises above the dock.
     Box(Modifier.navigationBarsPadding().padding(horizontal = 12.dp).padding(bottom = 8.dp).fillMaxWidth()) {
         Box(Modifier.matchParentSize().glass(RoundedCornerShape(22.dp)))
@@ -165,18 +165,16 @@ internal interface ChromeControl {
 @Composable
 private fun rememberReaderEvents(
     state: RiffleScrubberState,
-    settings: UserSettings,
+    haptics: Boolean,
     chrome: ChromeControl,
+    sounds: ReaderSounds,
     onLand: (Int) -> Unit
 ): RiffleEvents {
     val view = LocalView.current
     val scope = rememberCoroutineScope()
     // The reader's state moves on; the events are kept, so they call the latest landing.
     val landing by rememberUpdatedState(onLand)
-    val context = LocalContext.current
-    val sounds = remember { RiffleSounds(context) }
-    DisposableEffect(sounds) { onDispose { sounds.release() } }
-    return remember(state, settings.paperSound, settings.scrubHaptics, chrome) {
+    return remember(state, haptics, chrome, sounds) {
         object : RiffleEvents {
             override fun onRelease(unit: Int) {
                 sounds.stopRiffle()
@@ -188,18 +186,18 @@ private fun rememberReaderEvents(
             override fun onFlag(flag: RiffleFlag) {
                 val unit = state.book.unitOf(flag.page)
                 if (unit == state.currentUnit) return
-                if (settings.paperSound) sounds.flip(forward = unit > state.currentUnit)
+                sounds.turn(forward = unit > state.currentUnit)
                 state.travelTo(unit)
                 landing(unit)
             }
 
             override fun onFeedback(feedback: RiffleFeedback) {
-                if (settings.scrubHaptics) feedback.haptic?.let { RiffleHaptics.play(view, it, scope) }
-                if (settings.paperSound) sounds.play(feedback)
+                if (haptics) feedback.haptic?.let { RiffleHaptics.play(view, it, scope) }
+                sounds.riffle(feedback)
             }
 
             override fun onSpeed(speed: ScrubSpeed) {
-                if (settings.scrubHaptics) RiffleHaptics.play(view, RiffleHaptic.SPEED, scope)
+                if (haptics) RiffleHaptics.play(view, RiffleHaptic.SPEED, scope)
             }
 
             override fun onInteraction() = chrome.interacted()
@@ -208,7 +206,7 @@ private fun rememberReaderEvents(
 
             private fun land(unit: Int) {
                 if (unit == state.currentUnit) return
-                if (settings.paperSound) sounds.flip(forward = unit > state.currentUnit)
+                sounds.turn(forward = unit > state.currentUnit)
                 landing(unit)
             }
         }

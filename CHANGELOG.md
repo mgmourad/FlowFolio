@@ -138,6 +138,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     - Looser riffle physics: fewer, thinner leaves, a wider gap and softer springs.
     - The owner's recorded paper sounds (ADR-0025, `tools/sounds/prepare_recorded_sounds.py`) replace the generated
       ones.
+    - Every Curl and Slide page turn plays the page flip as it begins, not only landings (ADR-0026; a turn callback in
+      the vendored pagecurl).
+    - "Page turn sound" and "Riffle sound" each have a switch and a volume slider, in "Aa" and in Settings.
+    - Settings' "Hide controls after" row puts its five choices under its label.
 - Phase 2 milestone 2, EPUB reading (ADR-0019, Room schema v10, in progress):
   - `:core:reflow`: chapters parsed into text, image and island blocks; pages cut natively with StaticLayout
     (justified, hyphenated, widows, orphans and headings kept with their text); positions saved as chapter and

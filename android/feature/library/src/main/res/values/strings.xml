@@ -168,8 +168,10 @@
     <string name="settings_auto_hide_8">8 s</string>
     <string name="settings_auto_hide_15">15 s</string>
     <string name="settings_auto_hide_never">Never</string>
-    <string name="settings_paper_sound">Paper sounds</string>
-    <string name="settings_paper_sound_detail">Soft page sounds while riffling; silent on silent</string>
+    <string name="settings_turn_sound">Page turn sound</string>
+    <string name="settings_turn_sound_detail">A page flip with every turn; silent on silent</string>
+    <string name="settings_riffle_sound">Riffle sound</string>
+    <string name="settings_riffle_sound_detail">Pages riffling while you drag the ribbon</string>
     <string name="settings_scrub_haptics">Riffle haptics</string>
     <string name="settings_scrub_haptics_detail">Ticks for pages, chapters and bookmarks</string>
     <string name="settings_library">Library</string>

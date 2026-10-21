@@ -37,6 +37,8 @@ internal data class DragConfig(
     val isEnabled: () -> Boolean,
     val isDragSucceed: (Offset, Offset) -> Boolean,
     val onChange: () -> Unit,
+    /** FlowFolio: the release turns the page; called before the turn finishes animating. */
+    val onCommit: () -> Unit = {},
 )
 
 internal suspend fun PointerInputScope.detectCurlGestures(
@@ -82,6 +84,7 @@ internal suspend fun PointerInputScope.detectCurlGestures(
                 )
                 scope.launch {
                     if (complete && isDragSucceed(startOffset, flingEndOffset)) {
+                        onCommit()
                         try {
                             edge.animateTo(end, settle(end))
                         } finally {

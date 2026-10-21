@@ -32,6 +32,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioSegmented
+import com.flowfolio.core.designsystem.FlowFolioSlider
 import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Motion
@@ -107,14 +108,7 @@ private fun ControlsChoice(settings: UserSettings, viewModel: ReaderSettingsView
         { viewModel.setControlsAutoHide(ControlsAutoHide.entries[it]) },
         modifier = Modifier.testTag(ReaderTestTags.SETTING_AUTO_HIDE)
     )
-    SettingRow(
-        title = stringResource(R.string.reader_paper_sound),
-        detail = stringResource(R.string.reader_paper_sound_detail),
-        checked = settings.paperSound,
-        enabled = true,
-        tag = ReaderTestTags.SETTING_PAPER_SOUND,
-        onChange = viewModel::setPaperSound
-    )
+    SoundsChoice(settings, viewModel)
     SettingRow(
         title = stringResource(R.string.reader_scrub_haptics),
         detail = stringResource(R.string.reader_scrub_haptics_detail),
@@ -122,6 +116,53 @@ private fun ControlsChoice(settings: UserSettings, viewModel: ReaderSettingsView
         enabled = true,
         tag = ReaderTestTags.SETTING_HAPTICS,
         onChange = viewModel::setScrubHaptics
+    )
+}
+
+/**
+ * The two paper sounds, each with its switch and loudness (ADR-0025): a flip on every page turn, the riffle while
+ * dragging the scrubber. Letting go of a slider plays the sound at its new loudness.
+ */
+@Composable
+private fun SoundsChoice(settings: UserSettings, viewModel: ReaderSettingsViewModel) {
+    val sounds = LocalReaderSounds.current
+    SettingRow(
+        title = stringResource(R.string.reader_turn_sound),
+        detail = stringResource(R.string.reader_turn_sound_detail),
+        checked = settings.turnSound,
+        enabled = true,
+        tag = ReaderTestTags.SETTING_TURN_SOUND,
+        onChange = viewModel::setTurnSound
+    )
+    FlowFolioSlider(
+        settings.turnVolume,
+        onValueChangeFinished = {
+            viewModel.setTurnVolume(it)
+            sounds?.let { s -> s.settings = s.settings.copy(turnVolume = it) }
+            sounds?.previewTurn()
+        },
+        label = stringResource(R.string.reader_turn_volume),
+        enabled = settings.turnSound,
+        modifier = Modifier.testTag(ReaderTestTags.SETTING_TURN_VOLUME)
+    )
+    SettingRow(
+        title = stringResource(R.string.reader_riffle_sound),
+        detail = stringResource(R.string.reader_riffle_sound_detail),
+        checked = settings.riffleSound,
+        enabled = true,
+        tag = ReaderTestTags.SETTING_RIFFLE_SOUND,
+        onChange = viewModel::setRiffleSound
+    )
+    FlowFolioSlider(
+        settings.riffleVolume,
+        onValueChangeFinished = {
+            viewModel.setRiffleVolume(it)
+            sounds?.let { s -> s.settings = s.settings.copy(riffleVolume = it) }
+            sounds?.previewRiffle()
+        },
+        label = stringResource(R.string.reader_riffle_volume),
+        enabled = settings.riffleSound,
+        modifier = Modifier.testTag(ReaderTestTags.SETTING_RIFFLE_VOLUME)
     )
 }
 

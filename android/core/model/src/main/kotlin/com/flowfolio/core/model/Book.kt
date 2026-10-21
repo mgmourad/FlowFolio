@@ -84,11 +84,20 @@ data class UserSettings(
     val translateTo: String? = null,
     /** How long the reader's controls stay up after the last use (the riffle scrubber, ADR-0022). */
     val controlsAutoHide: ControlsAutoHide = ControlsAutoHide.S5,
-    /** Paper sounds while riffling and landing (ADR-0023); never in silent or vibrate mode. */
-    val paperSound: Boolean = true,
+    /** The riffle sound while dragging the scrubber's ribbon (ADR-0025); never in silent or vibrate mode. */
+    val riffleSound: Boolean = true,
+    /** Its loudness, 0 to 1. */
+    val riffleVolume: Float = DEFAULT_SOUND_VOLUME,
+    /** A page flip sound for every page turn and landing (ADR-0025); never in silent or vibrate mode. */
+    val turnSound: Boolean = true,
+    /** Its loudness, 0 to 1. */
+    val turnVolume: Float = DEFAULT_SOUND_VOLUME,
     /** Haptic ticks while riffling (ADR-0023). */
     val scrubHaptics: Boolean = true
 )
+
+/** The paper sounds' loudness until the reader moves the sliders. */
+const val DEFAULT_SOUND_VOLUME = 0.7f
 
 /** The reader's auto-hide delays (the riffle scrubber's spec 5.7); [NEVER] keeps the controls up. */
 enum class ControlsAutoHide { S3, S5, S8, S15, NEVER }

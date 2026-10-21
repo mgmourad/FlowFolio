@@ -28,18 +28,38 @@ import com.flowfolio.feature.reader.riffle.reducedMotion
 /** A landing under way (spec 5.4): the reader already shows [to]; the turn plays over it from [from]. */
 internal data class ReaderLanding(val from: Int, val to: Int)
 
-/** The scrubber's view of the book, the landing under way, and how the scrubber moves the reader ([land]). */
-internal class Riffling(val book: ReaderBook, val landing: MutableState<ReaderLanding?>, val land: (unit: Int) -> Unit)
+/**
+ * The scrubber's view of the book, the landing under way, how the scrubber moves the reader ([land]), and the paper
+ * sounds of riffles and turns.
+ */
+internal class Riffling(
+    val book: ReaderBook,
+    val landing: MutableState<ReaderLanding?>,
+    val sounds: ReaderSounds,
+    val land: (unit: Int) -> Unit
+)
 
 /** The page lands with the turn in Curl (owner decision 4); Slide and Scroll jump straight there. */
 @Composable
 internal fun rememberRiffling(s: ReaderState.Ready, navigation: BookNavigation, viewModel: ReaderViewModel): Riffling {
     val book = rememberReaderBook(s, navigation)
     val landing = remember { mutableStateOf<ReaderLanding?>(null) }
-    return Riffling(book, landing) { unit ->
+    return Riffling(book, landing, rememberReaderSounds(viewModel)) { unit ->
         if (s.turn == PageTurn.CURL && unit != s.unit) landing.value = ReaderLanding(s.unit, unit)
         viewModel.goToPage(book.anchorOf(unit))
     }
+}
+
+/** The landing under way, if any, over the pages. */
+@Composable
+internal fun RiffleLanding(
+    s: ReaderState.Ready,
+    riffling: Riffling,
+    images: Map<Int, ImageBitmap>,
+    thumbnails: ReaderThumbnails?
+) {
+    val landing = riffling.landing.value ?: return
+    LandingLayer(s, riffling.book, landing, images, thumbnails, onDone = { riffling.landing.value = null })
 }
 
 /**

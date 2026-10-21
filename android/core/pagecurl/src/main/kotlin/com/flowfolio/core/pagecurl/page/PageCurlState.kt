@@ -203,6 +203,13 @@ public class PageCurlState(
         )
     }
 
+    /**
+     * FlowFolio: called as a turn begins for good (a tap, a release that will turn, a left-page drag let go to turn),
+     * before it animates; [current] changes only when it ends. The reader plays its page flip sound here. Kept on
+     * this outer class: fields on [InternalState] break at run time (CLAUDE.md, known issue 29).
+     */
+    public var onTurn: ((forward: Boolean) -> Unit)? = null
+
     /** FlowFolio: a [dragBackwardTo] is in progress. */
     private var externalDrag: Boolean = false
 
@@ -230,6 +237,7 @@ public class PageCurlState(
         externalDrag = false
         val width = s.constraints.maxWidth.toFloat().coerceAtLeast(1f)
         val target = if (turn) s.rightEdge else s.leftEdge
+        if (turn) onTurn?.invoke(false)
         val ms = (EXTERNAL_TURN_MS * kotlin.math.abs(s.backward.value.centerX - target.centerX) / width).toInt()
         try {
             s.backward.animateTo(target, tween(ms.coerceIn(EXTERNAL_MIN_MS, EXTERNAL_TURN_MS), easing = LinearOutSlowInEasing))
@@ -264,6 +272,11 @@ public class PageCurlState(
             backward.snapTo(leftEdge)
         }
 
+        /** FlowFolio: tells the reader a turn has begun ([onTurn]); a function, since fields here break at run time. */
+        fun turnStarting(forward: Boolean) {
+            onTurn?.invoke(forward)
+        }
+
         suspend fun animateTo(
             target: () -> Int,
             animate: suspend InternalState.(Size) -> Unit
@@ -274,6 +287,7 @@ public class PageCurlState(
             if (targetIndex < 0 || targetIndex >= max) {
                 return
             }
+            turnStarting(forward = targetIndex > current)
 
             coroutineScope {
                 animateJob = launch {

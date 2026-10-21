@@ -60,7 +60,11 @@ internal fun SlideReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap>
     val report by rememberUpdatedState(onUnitShown)
     val last = state.unitCount - 1
     LaunchedEffect(state.unit) { stack.jumpTo(state.unit) }
+    val sounds = LocalReaderSounds.current
     val turn = { direction: Int ->
+        // The flip sounds as the page starts to slide, when there is a page to slide to (ADR-0025).
+        val turning = (direction > 0 && stack.unit < last) || (direction < 0 && stack.unit > 0)
+        if (turning) sounds?.turn(forward = direction > 0)
         scope.launch { stack.settle(direction, last)?.let(report) }
         Unit
     }
