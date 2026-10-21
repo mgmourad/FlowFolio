@@ -20,9 +20,9 @@ import kotlin.math.roundToInt
 data class BoardColors(val main: Color, val dark: Color)
 
 /**
- * Draws the fore edge (spec 4.1, the mock's draw order): floor shadow, the book's dark interior, the pin's needle, the
- * leaves in 18 shades, the chapter bleed bands, the block's shading. Made once per size, theme and book; a frame only
- * rewinds and refills its paths, so drawing allocates nothing.
+ * Draws the fore edge (spec 4.1, the mock's draw order without its floor shadow, owner 2026-10-21): the book's
+ * dark interior, the leaves in 18 shades, the chapter bleed bands, the block's shading. Made once per size, theme and
+ * book; a frame only rewinds and refills its paths, so drawing allocates nothing.
  */
 internal class StripPainter(
     private val state: RiffleScrubberState,
@@ -39,7 +39,9 @@ internal class StripPainter(
         val base = if (dark) PAPER_DARK else PAPER_LIGHT
         Color(base[0] * m / 255f, base[1] * m / 255f, base[2] * m / 255f)
     }
-    private val leafWidth = max(1f, (g.x1 - g.x0) / max(1, state.leaves.count) * 0.94f)
+
+    // Leaves narrower than their spacing, so the dark between them shows and each page reads on its own.
+    private val leafWidth = max(1f, (g.x1 - g.x0) / max(1, state.leaves.count) * 0.7f)
     private val leafStroke = Stroke(width = leafWidth, cap = StrokeCap.Butt)
 
     private val bands = BleedBands.of(state.book.sections, state.mapping)
@@ -47,12 +49,6 @@ internal class StripPainter(
     private val bandColors = (if (dark) TABS_DARK else TABS_LIGHT) + (if (dark) GREY_DARK else GREY_LIGHT)
     private val bandHeight = (blockHeight - 6 * d) / BleedBands.BANDS
 
-    private val floor = Brush.radialGradient(
-        0f to Color.Black.copy(alpha = 0.42f),
-        1f to Color.Transparent,
-        center = Offset(g.width / 2, g.bottom + 6 * d),
-        radius = g.width * 0.55f
-    )
     private val interior = Brush.verticalGradient(
         0f to if (dark) Color(0xFF120B26) else Color(0xFF2A1E14),
         0.5f to if (dark) Color(0xFF05020C) else Color(0xFF0D0805),
@@ -76,27 +72,13 @@ internal class StripPainter(
         startX = g.x0,
         endX = g.x1
     )
-    private val needle = if (dark) Color(0xFFFF2D5A) else Color(0xFFD4163B)
 
     fun DrawScope.paintBlock() {
-        drawRect(floor, Offset(0f, g.bottom - 4 * d), Size(g.width, 18 * d))
         drawRect(interior, Offset(g.x0, g.top), Size(g.x1 - g.x0, blockHeight))
-        paintNeedle()
         paintLeaves()
         paintBands()
         drawRect(shadeTopBottom, Offset(g.x0, g.top), Size(g.x1 - g.x0, blockHeight))
         drawRect(shadeEnds, Offset(g.x0, g.top), Size(g.x1 - g.x0, blockHeight))
-    }
-
-    /** The pin's needle, seen through the open gap while riffling. */
-    private fun DrawScope.paintNeedle() {
-        val e = state.engagement
-        if (e <= 0.03f) return
-        val alpha = min(1f, e * 1.5f)
-        val from = Offset(state.pinX, g.bottom)
-        val to = Offset(state.pinX, g.top + 6 * d)
-        if (dark) drawLine(needle.copy(alpha = 0.3f * alpha), from, to, strokeWidth = 4 * d)
-        drawLine(needle.copy(alpha = alpha), from, to, strokeWidth = 1.2f * d)
     }
 
     /** Each leaf a curve whose middle leads in its direction of travel, brighter near the gap and when moving fast. */

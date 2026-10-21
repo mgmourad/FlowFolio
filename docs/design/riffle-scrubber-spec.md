@@ -12,7 +12,8 @@ wins; where the decisions below and the spec disagree, the decisions win. ADR-00
 3. **Flags use each bookmark's own colour** (the five `BookmarkColor`s). The default colour is the ribbon's red, so on
    the strip it is drawn in another colour, and no flag ever matches the ribbon.
 4. **Landing follows the turn style:** the multi-sheet turn for Curl, a slide for Slide, a scroll for Scroll.
-5. **Paper sounds are generated** by our own script (MIT), not recorded samples.
+5. **Paper sounds are generated** by our own script (MIT), not recorded samples. *Changed 2026-10-21:* the owner
+   recorded the sounds instead (ADR-0025).
 
 Also agreed in the plan: the strip maps to the reader's real units (single pages, spreads, cover alone) and is mirrored
 for right-to-left books; thumbnails have their own small cache (the page cache only holds pages near the reader); the
@@ -80,16 +81,18 @@ Colours and fonts come from the FlowFolio design tokens (Fraunces, Instrument Sa
   and a thin gilt line; tiny "FRONT" and "BACK" labels under them. Board colour from the book's cover (dominant
   colour, main and dark shades), else the theme accent.
 - One leaf per sheet (`ceil(pages / 2)`), each a vertical line the full height of the block, warm cream in both themes
-  (dimmer in dark), alternating subtly in brightness. If leaves exceed `stripWidthPx / 1.6`, draw one per N sheets but
-  keep the mapping exact.
+  (dimmer in dark), alternating subtly in brightness. If leaves exceed `stripWidthPx / 3.2`, draw one per N sheets but
+  keep the mapping exact. Each leaf is drawn 70% as wide as its spacing, so pages read one by one (owner, 2026-10-21;
+  was 1.6 px and 94%).
 - The dark book interior behind the leaves shows only where they separate. The block darkens toward its top, bottom
   and both covers.
 - Chapter bleed bands: short coloured segments on each chapter's leaves at a band height stepping down chapter by
   chapter (eight bands, then repeat), about 35% opacity; glossary and index neutral grey; none without chapters.
 
 ### 4.2 The pin and ribbon
-A glossy red pin head at the bottom edge of the block at the current position. While riffling, a thin red needle shows
-through the gap up to near the top of the block. The satin ribbon hangs from the pin with a forked tail, a satin
+A steel pin rises from the top of the ribbon, through the fore edge and into the pages, to a point a fifth of the
+way down the block, at the current position; the open gap shows it while riffling (owner, 2026-10-21: no pin head and
+no floor shadow under the block). The satin ribbon hangs from the pin with a forked tail, a satin
 gradient with a central sheen, and white ‹ › grip chevrons; it sways gently at rest, widens about 2 dp and glows while
 held, with a soft red glow in dark theme.
 
@@ -107,13 +110,14 @@ a slight lag and tilts up to 7° against the direction of motion.
 ### 5.1 Geometry and the gap
 - Strip x ↔ position, clamped to the book (ADR-0022 maps it to the reader's units).
 - Engagement `e` springs toward 1 while dragging, 0.55 while travelling after a flag tap, 0 at rest.
-- Gap displacement around the pin: `G × (tanh((x − fx) / r) − linear end correction)`, `G = 4 + 30e`,
-  `r = 20 + 14e` (dp).
+- Gap displacement around the pin: `G × (tanh((x − fx) / r) − linear end correction)`, `G = 4 + 48e`,
+  `r = 22 + 16e` (dp) (owner, 2026-10-21, a wider, deeper fan; was `4 + 30e` and `20 + 14e`).
 
 ### 5.2 Leaf physics
-- Each leaf's x is a spring toward its target (`k = 700`, `c = 22`), two substeps per frame with the real frame delta,
+- Each leaf's x is a spring toward its target (`k = 280`, `c = 20`: softer and a little underdamped so leaves trail the
+  pin and settle with a small sway, owner 2026-10-21; was `k = 700`, `c = 22`), two substeps per frame with the real frame delta,
   independent of frame rate (the Fold runs at 120 Hz).
-- Bow in the direction of travel: `clamp(velocity × 0.022, ±14)`, a quadratic curve whose middle leads.
+- Bow in the direction of travel: `clamp(velocity × 0.03, ±14)`, a quadratic curve whose middle leads.
 - Leaves near the gap and fast-moving leaves are slightly brighter.
 
 ### 5.3 Gesture rules
@@ -136,8 +140,9 @@ Each change of previewed spread flips a mini sheet over the loupe's spine in the
 ### 5.6 Haptics and sound
 - Haptics only for real drags: a light tick every 4 spreads, a stronger confirm at a chapter start, a double tick at a
   flag, a light tick at each fine-scrub threshold (constants per API level in ADR-0023).
-- Sound: short paper flicks via `SoundPool`, at most one every 18 ms, with random pitch; a lower thump at chapters and
-  a soft whoosh per landing sheet. Respect silent and vibrate modes. "Paper sound" and "Haptics" toggles in settings.
+- Sound (ADR-0025, the owner's recordings): while dragging, a riffle loops in the drag's direction, its rate and
+  loudness following the speed, fading out when pages stop or the ribbon is let go; each landing plays a page flip in
+  its direction. Respect silent and vibrate modes. "Paper sound" and "Haptics" toggles in settings.
 
 ### 5.7 Auto-hide and immersive mode
 - 3 s, 5 s (default), 8 s, 15 s or Never, set in the reader's "Aa" panel and in app settings, kept in DataStore.

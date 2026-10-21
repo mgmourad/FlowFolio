@@ -38,7 +38,8 @@ internal class StripAssets(
 
 /**
  * The parts around the page block (the mock's draw order): the cover boards seen edge-on with their labels, the
- * bookmark flags on top, and the pin with its satin ribbon. Made once per size, theme, book and set of flags.
+ * bookmark flags on top, and the satin ribbon with the steel pin rising from it into the
+ * pages. Made once per size, theme, book and set of flags.
  */
 internal class StripParts(
     private val state: RiffleScrubberState,
@@ -105,18 +106,25 @@ internal class StripParts(
         startX = -7 * d,
         endX = 7 * d
     )
-    private val pinBrush = Brush.radialGradient(
-        0f to Color(0xFFFFD0DA),
-        0.35f to if (dark) Color(0xFFFF2D5A) else Color(0xFFE0173F),
-        1f to Color(0xFF6E0820),
-        center = Offset(-2 * d, -2 * d),
-        radius = 6.5f * d
-    )
-    private val pinGlow = Brush.radialGradient(
-        0f to Color(0x80FF2D5A),
-        1f to Color.Transparent,
-        center = Offset.Zero,
-        radius = 16 * d
+
+    /** The pin at x = 0: a steel shaft from inside the ribbon's top, through the edge into the pages, to a point. */
+    private val shaft = Path().apply {
+        val half = 1.3f * d
+        val tip = g.top + blockHeight * 0.2f
+        moveTo(-half, g.bottom + 8 * d)
+        lineTo(-half, tip + 5 * d)
+        lineTo(0f, tip)
+        lineTo(half, tip + 5 * d)
+        lineTo(half, g.bottom + 8 * d)
+        close()
+    }
+    private val steel = Brush.horizontalGradient(
+        0f to Color(0xFF4A4F57),
+        0.35f to Color(0xFFEEF1F5),
+        0.6f to Color(0xFFA9B0B9),
+        1f to Color(0xFF3F444B),
+        startX = -1.3f * d,
+        endX = 1.3f * d
     )
     private val chevronStroke = Stroke(width = 1.3f * d, cap = StrokeCap.Round)
     private val ghostStroke = Stroke(width = 1.5f * d)
@@ -190,6 +198,7 @@ internal class StripParts(
         ribbon.lineTo(-half + sway, bottom)
         ribbon.quadraticTo(-half + sway * 0.5f, (top + bottom) / 2, -half + d, top)
         ribbon.close()
+        paintPin(x)
         translate(left = x) {
             if (dark) drawPath(ribbon, Color(0xFFFF2D5A), alpha = 0.18f + 0.12f * grab, style = glowStroke)
             drawPath(ribbon, ribbonBrush)
@@ -204,20 +213,13 @@ internal class StripParts(
             chevrons.lineTo(gx + 2 * d, gy + 3.5f * d)
             drawPath(chevrons, Color.White.copy(alpha = 0.75f), style = chevronStroke)
         }
-        paintPin(x, grab)
         paintGhost(x, (top + bottom) / 2 + 2 * d)
     }
 
-    private fun DrawScope.paintPin(x: Float, grab: Float) {
-        translate(x, g.bottom + d) {
-            if (dark ||
-                grab > 0.05f
-            ) {
-                drawCircle(pinGlow, (10 + 8 * grab) * d, Offset.Zero, alpha = if (dark) 1f else grab)
-            }
-            drawCircle(pinBrush, (6.5f + 1.5f * grab) * d, Offset.Zero)
-            drawCircle(Color.White.copy(alpha = 0.85f), 1.6f * d, Offset(-2.2f * d, -2.4f * d))
-        }
+    /** The pin's shaft with a soft shadow beside it; the ribbon, drawn next, covers its foot. */
+    private fun DrawScope.paintPin(x: Float) {
+        translate(x + d, d) { drawPath(shaft, Color.Black, alpha = 0.3f) }
+        translate(x) { drawPath(shaft, steel) }
     }
 
     /** The demo's fingertip on the ribbon. */

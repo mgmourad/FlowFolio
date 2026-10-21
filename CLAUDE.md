@@ -8,11 +8,12 @@ Read this first. Keep it current: update at the end of every phase.
 (`docs/plans/phase2-m2-signoff.md`). Now M2b, the riffle scrubber (spec `docs/design/riffle-scrubber-spec.md`, mock
 `docs/design/FlowFolio_Riffle_Scrubber.html`, ADR-0022/0023): R1 (logic) and R2 (drawing, physics, demo
 screen: `adb shell am start -n com.flowfolio.dev/com.flowfolio.MainActivity --ez riffleDemo true [--es theme light]`)
-built; R3 (gestures, flag taps and stacks, loupe, haptics, generated sounds `tools/sounds/make_paper_sounds.py`)
-and R4's module part (landing turn with a reduced-motion crossfade, Go to page by printed number, nudge arrows,
-auto-hide in the demo) built and checked on the Fold; next R5: the scrubber in the real reader (page-area overlays,
-thumbnails, final curl after the landing sheets, content-size test, settings, accessibility, macrobenchmark). EPUB
-links and footnote popovers follow it** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
+built; R3 (gestures, flag taps and stacks, loupe, haptics) and R4's module part (landing turn with a reduced-motion
+crossfade, Go to page by printed number, nudge arrows, auto-hide in the demo) built and checked on the Fold; R5 (the
+scrubber in the real reader: `ReaderRiffle`, `ReaderLanding`, `ChromeClock`, `ReaderThumbnails`, settings, EPUB
+margins, accessibility) and the owner's tweaks of 2026-10-21 (no floor shadow, a steel pin, looser physics, recorded
+sounds per ADR-0025 via `tools/sounds/prepare_recorded_sounds.py`) built. Left for M2b: the owner's listen and feel on
+the Fold, memory and frame measurements, the M2b sign-off. EPUB links and footnote popovers follow it** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
 spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).
 Phase 1 signed off by the owner 2026-10-20 (`docs/plans/phase1-signoff.md`); ADRs 0014, 0016-0018 accepted.
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
@@ -187,7 +188,8 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 22. Before any adb input or UI dump on the owner's phone, check that FlowFolio is the resumed activity
     (`dumpsys activity activities | topResumedActivity`) and stop if it is not, so no tap or dump reaches another app
     or the home screen. Delete pulled dumps after parsing.
-23. The reader bars hide 10 seconds after the last interaction; a UI dump taken later will not find them.
+23. The reader bars hide 5 seconds (the default "Hide controls after") after the last use of them, and the system bars
+    hide with them; a UI dump or a tap sent later will not find them. Over adb, show them and act in the same command.
 24. Bookmarks are stored per page (one ribbon per page; adding again recolours it). The Bookmarks tab is slice 5.
 28. Network (ADR-0017, ADR-0018): INTERNET is used by the Open Library lookup (`BookLookup`, off until the reader
     agrees) and by ML Kit, which downloads translation models (~30 MB per language) and sends anonymous usage data.
@@ -234,8 +236,8 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
 ## Decision log
 
-ADRs 0001–0024 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0025 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
-Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024).
+Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023).

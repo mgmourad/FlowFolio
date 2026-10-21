@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -22,7 +21,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -61,6 +63,8 @@ fun RiffleDock(
             RiffleHeader(state, events)
             events?.let { GoToPageField(state, it) }
         }
+        // The countdown is read while drawing, so a ticking clock redraws this line and nothing else.
+        val left = palette.item.copy(alpha = 0.45f)
         Box(
             Modifier
                 .padding(horizontal = 6.dp)
@@ -68,16 +72,13 @@ fun RiffleDock(
                 .fillMaxWidth()
                 .height(2.dp)
                 .background(palette.hint.copy(alpha = 0.18f), RoundedCornerShape(1.dp))
-        ) {
-            Box(
-                Modifier
-                    .fillMaxHeight()
-                    .fillMaxWidth(remaining().coerceIn(0f, 1f))
-                    .background(palette.item.copy(alpha = 0.45f), RoundedCornerShape(1.dp))
-            )
-        }
+                .drawBehind {
+                    val w = size.width * remaining().coerceIn(0f, 1f)
+                    drawRoundRect(left, size = Size(w, size.height), cornerRadius = CornerRadius(size.height / 2))
+                }
+        )
         Box {
-            val touch = events?.let { Modifier.riffleGestures(state, it) } ?: Modifier
+            val touch = events?.let { Modifier.riffleGestures(state, it).riffleAccess(state, it) } ?: Modifier
             RiffleStrip(state, boards, Modifier.fillMaxWidth().height(STRIP_HEIGHT.dp).then(touch))
             events?.let {
                 FlagStackPopover(state, it)

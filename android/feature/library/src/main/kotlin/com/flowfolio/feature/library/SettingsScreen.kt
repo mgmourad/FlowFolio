@@ -38,6 +38,7 @@ import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.LocalChromePadding
 import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.reveal
+import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
@@ -56,7 +57,10 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             onCoverAlone = viewModel::setCoverAlone,
             onStorageMode = viewModel::setStorageMode,
             onAskEachImport = viewModel::setAskEachImport,
-            onLookup = viewModel::setLookup
+            onLookup = viewModel::setLookup,
+            onAutoHide = viewModel::setAutoHide,
+            onPaperSound = viewModel::setPaperSound,
+            onScrubHaptics = viewModel::setScrubHaptics
         )
     )
 }
@@ -149,6 +153,34 @@ private fun ReadingGroup(settings: UserSettings, actions: SettingsActions) {
             settings.spreadCoverAlone,
             actions.onCoverAlone,
             enabled = settings.readerSpreads && !scroll
+        )
+        Divider()
+        // The reader's controls and the riffle scrubber (riffle spec 5.6, 5.7); also in the reader's "Aa" panel.
+        ChoiceRow(
+            R.string.settings_auto_hide,
+            R.string.settings_auto_hide_detail,
+            listOf(
+                R.string.settings_auto_hide_3,
+                R.string.settings_auto_hide_5,
+                R.string.settings_auto_hide_8,
+                R.string.settings_auto_hide_15,
+                R.string.settings_auto_hide_never
+            ),
+            ControlsAutoHide.entries.indexOf(settings.controlsAutoHide)
+        ) { actions.onAutoHide(ControlsAutoHide.entries[it]) }
+        Divider()
+        SwitchRow(
+            R.string.settings_paper_sound,
+            R.string.settings_paper_sound_detail,
+            settings.paperSound,
+            actions.onPaperSound
+        )
+        Divider()
+        SwitchRow(
+            R.string.settings_scrub_haptics,
+            R.string.settings_scrub_haptics_detail,
+            settings.scrubHaptics,
+            actions.onScrubHaptics
         )
     }
 }

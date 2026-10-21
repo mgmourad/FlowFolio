@@ -33,17 +33,16 @@ import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.feature.reader.layout.ReaderLayout
 import com.flowfolio.feature.reader.layout.Spreads
+import com.flowfolio.feature.reader.riffle.ChromePause
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
-import kotlinx.coroutines.delay
 
 /**
- * What floats over the book. A centre tap shows the controls for a while (each use of them restarts the clock);
- * another centre tap hides them sooner. They stay up while the contents list or Go to page is open.
+ * What floats over the book. A centre tap shows the controls until the [chrome] clock hides them (each use of them
+ * restarts it); another centre tap hides them sooner. They stay up while a panel is open.
  */
 @Stable
-private class Overlay {
-    var shownAt by mutableStateOf<Long?>(null)
+private class Overlay(val chrome: ChromeClock) {
     var panel by mutableStateOf(Panel.NONE)
     var webLink by mutableStateOf<String?>(null)
 
@@ -61,16 +60,11 @@ private class Overlay {
         if (zoom?.isAtRest == true) zoom = null
     }
 
-    fun toggle() {
-        shownAt = if (shownAt == null) System.nanoTime() else null
-    }
-
-    fun touch() {
-        shownAt = System.nanoTime()
-    }
+    fun toggle() = chrome.toggle()
 
     /** Opens [which], or closes it when it is already open (a second tap on its button). */
     fun open(which: Panel) {
+        chrome.interacted()
         panel = if (panel == which) Panel.NONE else which
     }
 
@@ -87,7 +81,7 @@ private class Overlay {
 
     fun closeAll() {
         panel = Panel.NONE
-        shownAt = null
+        chrome.hide()
     }
 }
 
@@ -108,8 +102,9 @@ internal fun BoxScope.ReadyReader(
     val haze = rememberHazeState()
     val tiles by viewModel.tiles.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
-    val overlay = remember { Overlay() }
-    AutoHide(overlay)
+    val overlay = rememberOverlay(viewModel)
+    val chrome = overlay.chrome
+    val riffling = rememberRiffling(s, navigation, viewModel)
     LaunchedEffect(s.unit, s.layout, s.coverAlone) { overlay.zoom = null } // a jump or fold/unfold leaves zoom
     val jump = { page: Int ->
         viewModel.goToPage(page)
@@ -133,24 +128,17 @@ internal fun BoxScope.ReadyReader(
     Box(
         Modifier
             .fillMaxSize()
+            .toggleOnEnter(overlay::toggle)
             .hazeSource(haze)
             .annotate(annotating, enabled = overlay.zoom == null && !s.reflowable)
             .interceptTaps(onTap)
             .then(if (s.reflowable) Modifier else Modifier.pinchGestures(overlay::pinch, overlay::endPinch))
             .edgeBounce(bounce, atStart = s.unit <= 0, atEnd = s.unit >= s.unitCount - 1, reversed = rtl)
     ) {
-        // Recreate the page state when the layout or turn style changes (fold/unfold, Aa); the ViewModel keeps the
-        // position.
-        key(s.layout, s.coverAlone, s.tone, s.turn, rtl) {
-            CompositionLocalProvider(
-                LocalHighlights provides annotating.byPage(),
-                LocalPageBounds provides pageBounds
-            ) {
-                MirroredBook(rtl && s.turn != PageTurn.SCROLL) {
-                    BookPages(s, images, s.pageAspect, viewModel::onUnitShown)
-                }
-            }
-        }
+        Book(s, images, viewModel, annotating, pageBounds)
+    }
+    riffling.landing.value?.let {
+        LandingLayer(s, riffling.book, it, images, viewModel.thumbnails, onDone = { riffling.landing.value = null })
     }
     overlay.zoom?.let {
         ZoomView(it, framesFor, images, tiles, viewModel::showTiles, annotating, onExit = { overlay.zoom = null })
@@ -158,7 +146,10 @@ internal fun BoxScope.ReadyReader(
     // Selection and highlight menus: over the pages, and over the zoomed view too; under the bars.
     CompositionLocalProvider(LocalGlassState provides haze) { AnnotatingLayer(annotating, s) }
     if (overlay.zoom == null) {
-        CompositionLocalProvider(LocalGlassState provides haze) { Controls(s, navigation, overlay, mark, onBack, jump) }
+        val bar: @Composable () -> Unit = { RiffleBar(s, riffling.book, marks, viewModel, chrome, riffling.land) }
+        CompositionLocalProvider(LocalGlassState provides haze) {
+            Controls(s, navigation, overlay, mark, ChromeParts(onBack, jump, bar))
+        }
     }
     overlay.webLink?.let { uri ->
         WebLinkDialog(uri, onOpen = { runCatching { uriHandler.openUri(uri) } }, onDismiss = { overlay.webLink = null })
@@ -166,15 +157,39 @@ internal fun BoxScope.ReadyReader(
     EdgeGuards()
 }
 
-/** Hides the bars [CONTROLS_VISIBLE_MS] after they were last used, unless a panel is open. */
+/**
+ * The pages, recreated when the layout or turn style changes (fold/unfold, Aa); the ViewModel keeps the position.
+ */
 @Composable
-private fun AutoHide(overlay: Overlay) {
-    LaunchedEffect(overlay.shownAt, overlay.panel) {
-        if (overlay.shownAt != null && overlay.panel == Panel.NONE) {
-            delay(CONTROLS_VISIBLE_MS)
-            overlay.shownAt = null
+private fun Book(
+    s: ReaderState.Ready,
+    images: Map<Int, ImageBitmap>,
+    viewModel: ReaderViewModel,
+    annotating: Annotating,
+    pageBounds: PageBounds
+) {
+    val rtl = LocalRightToLeft.current
+    key(s.layout, s.coverAlone, s.tone, s.turn, rtl) {
+        CompositionLocalProvider(
+            LocalHighlights provides annotating.byPage(),
+            LocalPageBounds provides pageBounds
+        ) {
+            MirroredBook(rtl && s.turn != PageTurn.SCROLL) {
+                BookPages(s, images, s.pageAspect, viewModel::onUnitShown)
+            }
         }
     }
+}
+
+/** The overlay, with the chrome clock following the auto-hide setting; an open panel holds the countdown. */
+@Composable
+private fun rememberOverlay(viewModel: ReaderViewModel): Overlay {
+    val settings by viewModel.userSettings.collectAsStateWithLifecycle()
+    val chrome = rememberChromeClock(settings.controlsAutoHide)
+    val overlay = remember(chrome) { Overlay(chrome) }
+    // Closing the panel starts the countdown again in full.
+    LaunchedEffect(overlay.panel) { chrome.pause(ChromePause.PANEL, overlay.panel != Panel.NONE) }
+    return overlay
 }
 
 /**
@@ -188,6 +203,9 @@ private fun MirroredBook(mirrored: Boolean, content: @Composable () -> Unit) {
     }
 }
 
+/** Back, a jump from a panel, and the bottom bar (the riffle scrubber). */
+private class ChromeParts(val onBack: () -> Unit, val jump: (Int) -> Unit, val bar: @Composable () -> Unit)
+
 /**
  * The bars and their panels. They take the light or dark palette of the page colour, so they read well on it, and a
  * glass that shows on it (owner, 2026-10-18).
@@ -198,39 +216,22 @@ private fun BoxScope.Controls(
     navigation: BookNavigation,
     overlay: Overlay,
     mark: ChromeMark,
-    onBack: () -> Unit,
-    jump: (Int) -> Unit
+    parts: ChromeParts
 ) {
     FlowFolioPalette(dark = s.tone.dark) {
         CompositionLocalProvider(LocalGlassStyle provides glassOver(s.tone)) {
             PanelDismiss(overlay.panel) { overlay.panel = Panel.NONE }
-            Chrome(s, navigation, overlay, mark, onBack, jump)
-            ReaderPanels(overlay.panel, s, navigation, mark, jump, onDismiss = { overlay.panel = Panel.NONE })
+            ReaderChrome(
+                s,
+                navigation,
+                controlsVisible = overlay.chrome.shown,
+                mark = mark,
+                actions = ChromeActions(parts.onBack, onPanel = overlay::open),
+                bottomBar = parts.bar
+            )
+            ReaderPanels(overlay.panel, s, navigation, mark, parts.jump, onDismiss = { overlay.panel = Panel.NONE })
         }
     }
-}
-
-@Composable
-private fun BoxScope.Chrome(
-    s: ReaderState.Ready,
-    navigation: BookNavigation,
-    overlay: Overlay,
-    mark: ChromeMark,
-    onBack: () -> Unit,
-    jump: (Int) -> Unit
-) {
-    ReaderChrome(
-        s,
-        navigation,
-        controlsVisible = overlay.shownAt != null,
-        mark = mark,
-        actions = ChromeActions(
-            onBack = onBack,
-            onPanel = overlay::open,
-            onScrub = jump,
-            onInteract = overlay::touch
-        )
-    )
 }
 
 /** The pages in view: both pages of a spread (curl or slide), otherwise the page being read. */

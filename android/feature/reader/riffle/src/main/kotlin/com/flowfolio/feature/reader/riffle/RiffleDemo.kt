@@ -81,7 +81,7 @@ fun RiffleDemo(dark: Boolean, onDark: (Boolean) -> Unit) {
             val to = unit.coerceIn(0, book.unitCount - 1)
             if (to == state.currentUnit) return
             landing = Landing(state.currentUnit, to)
-            sounds.whoosh()
+            sounds.flip(forward = to > state.currentUnit)
             state.currentUnit = to
         }
         DemoSpread(
@@ -157,7 +157,10 @@ private fun demoEvents(
     onLanding: (Landing) -> Unit,
     feel: DemoFeel
 ) = object : RiffleEvents {
-    override fun onRelease(unit: Int) = goTo(unit)
+    override fun onRelease(unit: Int) {
+        feel.sounds.stopRiffle()
+        goTo(unit)
+    }
 
     override fun onGoTo(unit: Int) = goTo(unit)
 

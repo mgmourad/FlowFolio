@@ -3,7 +3,15 @@ package com.flowfolio.feature.reader.riffle
 enum class ChromeState { VISIBLE, HIDDEN }
 
 /** Why the auto-hide countdown is held (spec 3.4). */
-enum class ChromePause { DRAGGING, POPOVER, GO_TO_PAGE, NUDGE }
+enum class ChromePause {
+    DRAGGING,
+    POPOVER,
+    GO_TO_PAGE,
+    NUDGE,
+
+    /** One of the host's panels (the reader's contents, Go to page, Aa) is open. */
+    PANEL
+}
 
 /** The auto-hide delays offered (spec 5.7); null is Never. */
 @Suppress("MagicNumber") // the spec's delays, named by their values
@@ -65,9 +73,10 @@ class ChromeTimer(autoHide: AutoHide, now: Long) {
         pauses.clear()
     }
 
-    fun setAutoHide(value: AutoHide, now: Long) {
+    /** A new delay, chosen in settings: shows the chrome so the reader sees it take effect, unless not [show]. */
+    fun setAutoHide(value: AutoHide, now: Long, show: Boolean = true) {
         autoHide = value
-        show(now)
+        if (show) show(now) else since = now
     }
 
     /** Advances to [now]; returns true when the chrome hid. */

@@ -48,6 +48,17 @@
     <string name="reader_direction">Reading direction</string>
     <string name="reader_direction_ltr">Left to right</string>
     <string name="reader_direction_rtl">Right to left</string>
+    <string name="reader_controls">Controls</string>
+    <string name="reader_auto_hide">Hide controls after</string>
+    <string name="reader_auto_hide_3">3 s</string>
+    <string name="reader_auto_hide_5">5 s</string>
+    <string name="reader_auto_hide_8">8 s</string>
+    <string name="reader_auto_hide_15">15 s</string>
+    <string name="reader_auto_hide_never">Never</string>
+    <string name="reader_paper_sound">Paper sounds</string>
+    <string name="reader_paper_sound_detail">Soft page sounds while riffling. Silent when the phone is on silent.</string>
+    <string name="reader_scrub_haptics">Riffle haptics</string>
+    <string name="reader_scrub_haptics_detail">Ticks for pages, chapters and bookmarks as you riffle.</string>
     <string name="reader_direction_note">For Arabic, Hebrew and other right-to-left books. Applies to this book only.</string>
     <string name="reader_annotations">Annotations</string>
     <string name="reader_annotations_empty">Press and hold on a word to select it, drag to select more, then pick a highlighter colour or add a note.</string>
