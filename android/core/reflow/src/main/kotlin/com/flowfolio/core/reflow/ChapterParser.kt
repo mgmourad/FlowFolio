@@ -69,9 +69,18 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
         }
     }
 
+    /**
+     * Elements left out of the page. A `nav` is, unless it is the book's table of contents placed in the reading order:
+     * that one is a printed contents page, and its links lead into the book. Page lists and landmarks stay out.
+     */
+    private fun skipped(p: XmlPullParser, name: String): Boolean = when (name) {
+        "nav" -> "toc" !in p.getAttributeValue(null, "epub:type").orEmpty().split(' ')
+        else -> name in SKIP
+    }
+
     private fun start(p: XmlPullParser) {
         val name = p.name.local()
-        if (skipDepth > 0 || name in SKIP || p.getAttributeValue(null, "hidden") != null) {
+        if (skipDepth > 0 || skipped(p, name) || p.getAttributeValue(null, "hidden") != null) {
             skipDepth++
             return
         }
@@ -301,7 +310,7 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
 
         /** Notes that stay in the flow: endnotes and rear notes in a notes section, and plain notes. */
         val KEPT_NOTES = setOf("endnote", "rearnote", "note")
-        val SKIP = setOf("head", "script", "style", "iframe", "object", "video", "audio", "nav", "noscript", "template")
+        val SKIP = setOf("head", "script", "style", "iframe", "object", "video", "audio", "noscript", "template")
         val ISLANDS = setOf("math", "svg", "table")
         val HEADING_SCALE = mapOf("h1" to 1.6f, "h2" to 1.3f, "h3" to 1.12f, "h4" to 1.05f, "h5" to 1f, "h6" to 1f)
 

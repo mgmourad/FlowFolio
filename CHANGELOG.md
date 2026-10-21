@@ -109,6 +109,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Notes are recognised by `epub:type` or ARIA role: footnotes leave the flow as before; endnotes, rear notes and
     notes now stay in their notes section and open in the popover too (`rearnote` and `note` were not recognised).
   - `:core:reflow` finds each link's boxes on a page (`linkAreas`); PDF and EPUB links share one model in the reader.
+  - A printed contents page in the reading order (`nav epub:type="toc"`) now shows, with links into the book; it was
+    dropped with every other `nav`. Page lists and landmarks stay hidden. Checked on the Fold: notes, web links (a link
+    wrapping over two lines) and contents links.
 - Phase 2 milestone M2b, the riffle scrubber (ADR-0022, ADR-0023, in progress):
   - R1: the `:feature:reader:riffle` module's logic, tested on the JVM: positions on the fore edge for single pages,
     spreads (cover alone or not) and right-to-left books; the gap around the pin; leaf thinning; fine scrubbing (half,
