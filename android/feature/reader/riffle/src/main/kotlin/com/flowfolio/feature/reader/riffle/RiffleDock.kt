@@ -3,10 +3,12 @@ package com.flowfolio.feature.reader.riffle
 import android.os.SystemClock
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -25,6 +27,8 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -53,7 +57,10 @@ fun RiffleDock(
 ) {
     val palette = FlowFolio.palette
     Column(modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 10.dp)) {
-        RiffleHeader(state)
+        Box {
+            RiffleHeader(state, events)
+            events?.let { GoToPageField(state, it) }
+        }
         Box(
             Modifier
                 .padding(horizontal = 6.dp)
@@ -72,7 +79,10 @@ fun RiffleDock(
         Box {
             val touch = events?.let { Modifier.riffleGestures(state, it) } ?: Modifier
             RiffleStrip(state, boards, Modifier.fillMaxWidth().height(STRIP_HEIGHT.dp).then(touch))
-            events?.let { FlagStackPopover(state, it) }
+            events?.let {
+                FlagStackPopover(state, it)
+                NudgeArrows(state, it)
+            }
             // Above the strip, taking no room in the layout; it fades in only while riffling or hovering a flag.
             Loupe(
                 state,
@@ -88,7 +98,7 @@ fun RiffleDock(
 }
 
 @Composable
-private fun RiffleHeader(state: RiffleScrubberState) {
+private fun RiffleHeader(state: RiffleScrubberState, events: RiffleEvents?) {
     val palette = FlowFolio.palette
     val unit = state.previewUnit
     val book = state.book
@@ -105,7 +115,22 @@ private fun RiffleHeader(state: RiffleScrubberState) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        Text(RiffleLabels.pages(book, unit), color = if (state.live) palette.title else palette.hint, style = style)
+        // The page numbers open the go-to-page field (spec 3.2); the touch area is at least 48 dp tall.
+        val goTo = stringResource(R.string.riffle_open_go_to)
+        val open = if (events == null) {
+            Modifier
+        } else {
+            Modifier
+                .clickable {
+                    events.onInteraction()
+                    state.goToOpen = true
+                }
+                .semantics { contentDescription = goTo }
+                .defaultMinSize(minHeight = 48.dp)
+        }
+        Box(open, contentAlignment = Alignment.Center) {
+            Text(RiffleLabels.pages(book, unit), color = if (state.live) palette.title else palette.hint, style = style)
+        }
         Text(
             " " + stringResource(
                 R.string.riffle_of,

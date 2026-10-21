@@ -9,7 +9,9 @@ Read this first. Keep it current: update at the end of every phase.
 `docs/design/FlowFolio_Riffle_Scrubber.html`, ADR-0022/0023): R1 (logic) and R2 (drawing, physics, demo
 screen: `adb shell am start -n com.flowfolio.dev/com.flowfolio.MainActivity --ez riffleDemo true [--es theme light]`)
 built; R3 (gestures, flag taps and stacks, loupe, haptics, generated sounds `tools/sounds/make_paper_sounds.py`)
-built, not yet checked on the Fold; next R4 (landing, Go to page, nudge arrows, auto-hide). EPUB
+and R4's module part (landing turn with a reduced-motion crossfade, Go to page by printed number, nudge arrows,
+auto-hide in the demo) built and checked on the Fold; next R5: the scrubber in the real reader (page-area overlays,
+thumbnails, final curl after the landing sheets, content-size test, settings, accessibility, macrobenchmark). EPUB
 links and footnote popovers follow it** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
 spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).
 Phase 1 signed off by the owner 2026-10-20 (`docs/plans/phase1-signoff.md`); ADRs 0014, 0016-0018 accepted.

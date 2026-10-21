@@ -17,6 +17,12 @@ interface RiffleEvents {
     /** Any touch on the strip: restarts the chrome's auto-hide countdown (spec 3.4). */
     fun onInteraction() = Unit
 
-    /** The ribbon was taken or let go: the chrome's countdown waits while it is held. */
-    fun onHeld(held: Boolean) = Unit
+    /**
+     * Something that holds the chrome's countdown started ([held] true) or ended (spec 3.4): the ribbon held, a popover
+     * or the go-to-page field open, the nudge arrows shown.
+     */
+    fun onPause(reason: ChromePause, held: Boolean) = Unit
+
+    /** Go to [unit]: a nudge arrow, or the go-to-page field (land there with the turn, spec 5.4). */
+    fun onGoTo(unit: Int) = Unit
 }
