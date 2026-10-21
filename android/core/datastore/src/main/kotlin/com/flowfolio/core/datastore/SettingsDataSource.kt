@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
+import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 /** User settings persisted with DataStore. Unknown stored values fall back to defaults instead of crashing. */
+@Suppress("TooManyFunctions") // one setter per setting
 @Singleton
 class SettingsDataSource @Inject constructor(private val store: DataStore<Preferences>) {
     val settings: Flow<UserSettings> = store.data.map { p ->
@@ -42,7 +44,10 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             neonGlow = p[NEON_GLOW] ?: defaults.neonGlow,
             onlineLookup = p[ONLINE_LOOKUP] ?: defaults.onlineLookup,
             onlineLookupAsked = p[ONLINE_LOOKUP_ASKED] ?: defaults.onlineLookupAsked,
-            translateTo = p[TRANSLATE_TO]
+            translateTo = p[TRANSLATE_TO],
+            controlsAutoHide = p[AUTO_HIDE].toEnum(defaults.controlsAutoHide),
+            paperSound = p[PAPER_SOUND] ?: defaults.paperSound,
+            scrubHaptics = p[SCRUB_HAPTICS] ?: defaults.scrubHaptics
         )
     }
 
@@ -86,6 +91,18 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         store.edit { it[NEON_GLOW] = on }
     }
 
+    suspend fun setControlsAutoHide(value: ControlsAutoHide) {
+        store.edit { it[AUTO_HIDE] = value.name }
+    }
+
+    suspend fun setPaperSound(on: Boolean) {
+        store.edit { it[PAPER_SOUND] = on }
+    }
+
+    suspend fun setScrubHaptics(on: Boolean) {
+        store.edit { it[SCRUB_HAPTICS] = on }
+    }
+
     suspend fun setTranslateTo(language: String) {
         store.edit { it[TRANSLATE_TO] = language }
     }
@@ -115,6 +132,9 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val ONLINE_LOOKUP = booleanPreferencesKey("online_lookup")
         val ONLINE_LOOKUP_ASKED = booleanPreferencesKey("online_lookup_asked")
         val TRANSLATE_TO = stringPreferencesKey("translate_to")
+        val AUTO_HIDE = stringPreferencesKey("reader_auto_hide")
+        val PAPER_SOUND = booleanPreferencesKey("paper_sound")
+        val SCRUB_HAPTICS = booleanPreferencesKey("scrub_haptics")
     }
 }
 

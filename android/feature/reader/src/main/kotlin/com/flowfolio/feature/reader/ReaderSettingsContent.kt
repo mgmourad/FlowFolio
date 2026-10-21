@@ -35,8 +35,10 @@ import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Motion
+import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
+import com.flowfolio.core.model.UserSettings
 
 /**
  * The mock's reading sheet ("Aa", `#sheet`): the page colour as swatches (Auto, Paper, Sepia, Night, Black; photos keep
@@ -86,8 +88,52 @@ internal fun ReaderSettingsContent(viewModel: ReaderSettingsViewModel = hiltView
             tag = ReaderTestTags.SETTING_COVER,
             onChange = viewModel::setCoverAlone
         )
+        ControlsChoice(settings, viewModel)
     }
 }
+
+/** When the controls hide, and how the scrubber sounds and feels (riffle spec 5.6, 5.7). */
+@Composable
+private fun ControlsChoice(settings: UserSettings, viewModel: ReaderSettingsViewModel) {
+    Heading(R.string.reader_controls, Modifier.padding(top = 22.dp))
+    Text(
+        stringResource(R.string.reader_auto_hide),
+        style = FlowFolioType.rowLabel.merge(FlowFolio.item),
+        modifier = Modifier.padding(bottom = 10.dp)
+    )
+    FlowFolioSegmented(
+        ControlsAutoHide.entries.map { stringResource(it.label) },
+        ControlsAutoHide.entries.indexOf(settings.controlsAutoHide),
+        { viewModel.setControlsAutoHide(ControlsAutoHide.entries[it]) },
+        modifier = Modifier.testTag(ReaderTestTags.SETTING_AUTO_HIDE)
+    )
+    SettingRow(
+        title = stringResource(R.string.reader_paper_sound),
+        detail = stringResource(R.string.reader_paper_sound_detail),
+        checked = settings.paperSound,
+        enabled = true,
+        tag = ReaderTestTags.SETTING_PAPER_SOUND,
+        onChange = viewModel::setPaperSound
+    )
+    SettingRow(
+        title = stringResource(R.string.reader_scrub_haptics),
+        detail = stringResource(R.string.reader_scrub_haptics_detail),
+        checked = settings.scrubHaptics,
+        enabled = true,
+        tag = ReaderTestTags.SETTING_HAPTICS,
+        onChange = viewModel::setScrubHaptics
+    )
+}
+
+/** The auto-hide delay's short name. */
+private val ControlsAutoHide.label: Int
+    get() = when (this) {
+        ControlsAutoHide.S3 -> R.string.reader_auto_hide_3
+        ControlsAutoHide.S5 -> R.string.reader_auto_hide_5
+        ControlsAutoHide.S8 -> R.string.reader_auto_hide_8
+        ControlsAutoHide.S15 -> R.string.reader_auto_hide_15
+        ControlsAutoHide.NEVER -> R.string.reader_auto_hide_never
+    }
 
 /** Which way this book's pages run (a per-book choice): right to left for Arabic, Hebrew and similar books. */
 @Composable

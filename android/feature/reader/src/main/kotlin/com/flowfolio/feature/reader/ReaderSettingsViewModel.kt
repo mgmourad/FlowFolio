@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.AnnotationRepository
 import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.UserSettings
@@ -52,6 +53,18 @@ class ReaderSettingsViewModel @Inject constructor(
 
     fun setPageTurn(turn: PageTurn) {
         viewModelScope.launch { repository.setPageTurn(turn) }
+    }
+
+    fun setControlsAutoHide(value: ControlsAutoHide) {
+        viewModelScope.launch { repository.setControlsAutoHide(value) }
+    }
+
+    fun setPaperSound(on: Boolean) {
+        viewModelScope.launch { repository.setPaperSound(on) }
+    }
+
+    fun setScrubHaptics(on: Boolean) {
+        viewModelScope.launch { repository.setScrubHaptics(on) }
     }
 
     private companion object {

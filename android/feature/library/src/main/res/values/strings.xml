@@ -161,6 +161,17 @@
     <string name="settings_spreads_detail">On wide screens, like the unfolded Fold</string>
     <string name="settings_cover">Cover on its own</string>
     <string name="settings_cover_detail">Pair pages like a printed book</string>
+    <string name="settings_auto_hide">Hide controls after</string>
+    <string name="settings_auto_hide_detail">How long the reader\'s bars stay after you last use them</string>
+    <string name="settings_auto_hide_3">3 s</string>
+    <string name="settings_auto_hide_5">5 s</string>
+    <string name="settings_auto_hide_8">8 s</string>
+    <string name="settings_auto_hide_15">15 s</string>
+    <string name="settings_auto_hide_never">Never</string>
+    <string name="settings_paper_sound">Paper sounds</string>
+    <string name="settings_paper_sound_detail">Soft page sounds while riffling; silent on silent</string>
+    <string name="settings_scrub_haptics">Riffle haptics</string>
+    <string name="settings_scrub_haptics_detail">Ticks for pages, chapters and bookmarks</string>
     <string name="settings_library">Library</string>
     <string name="settings_conversion">Conversion</string>
     <string name="settings_conversion_where">Where books are converted</string>

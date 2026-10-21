@@ -115,6 +115,15 @@ class ReaderViewModel @Inject constructor(
 
     private var opened: OpenedBook? = null
 
+    /** Page thumbnails for the riffle scrubber's loupe (ADR-0022), once the book is open. */
+    internal var thumbnails: ReaderThumbnails? = null
+        private set
+
+    private val _cover = MutableStateFlow<android.graphics.Bitmap?>(null)
+
+    /** The book's cover, small, for the riffle scrubber's board colours; null without one. */
+    internal val cover: StateFlow<android.graphics.Bitmap?> = _cover.asStateFlow()
+
     /** The open EPUB, when the book is one (ADR-0019). */
     private var epub: EpubSession? = null
 
@@ -171,11 +180,17 @@ class ReaderViewModel @Inject constructor(
     /** Reader settings (spreads on/off, pairing); a change re-lays the book out at the same page. */
     private var settings = UserSettings()
 
+    private val _userSettings = MutableStateFlow(UserSettings())
+
+    /** The reader's settings as the chrome needs them: auto-hide, paper sounds, scrub haptics (spec 5.7). */
+    internal val userSettings: StateFlow<UserSettings> = _userSettings.asStateFlow()
+
     init {
         open(password = null)
         viewModelScope.launch {
             settingsRepository.settings.collect {
                 settings = it
+                _userSettings.value = it
                 publishReady()
                 replan()
             }
@@ -204,6 +219,10 @@ class ReaderViewModel @Inject constructor(
             }
             opened = book
             val pageSource = PdfPageSource(book.document)
+            thumbnails = ReaderThumbnails(viewModelScope) { page, size, tone ->
+                pageSource.render(PageKey(page, size, tone))
+            }
+            loadCover(book.book.coverPath)
             source = pageSource
             cache = PageCache(pageSource, viewModelScope, budgetBytes = 0, onEvicted = ::releaseLater).also { c ->
                 viewModelScope.launch { c.images.collect { cacheImages.value = it } }
@@ -235,6 +254,8 @@ class ReaderViewModel @Inject constructor(
             return
         }
         epub = session
+        thumbnails = ReaderThumbnails(viewModelScope) { page, size, tone -> session.thumbnail(page, size, tone) }
+        loadCover(session.opened.book.coverPath)
         if (locator == null) locator = Locator.decode(session.opened.book.lastLocator)
         // No locator but a saved page (set by the measurement scripts): open there once laid out.
         if (locator == null) startPage = session.opened.book.lastPage
@@ -555,7 +576,17 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    /** The cover, decoded small (its colours are all that is needed), off the main thread. */
+    private fun loadCover(path: String?) {
+        path ?: return
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val options = android.graphics.BitmapFactory.Options().apply { inSampleSize = COVER_SAMPLE }
+            _cover.value = runCatching { android.graphics.BitmapFactory.decodeFile(path, options) }.getOrNull()
+        }
+    }
+
     override fun onCleared() {
+        thumbnails?.clear()
         cache?.clear()
         tileCache?.clear()
         source?.release()
@@ -585,5 +616,8 @@ class ReaderViewModel @Inject constructor(
         const val LETTER_ASPECT = 8.5f / 11f
 
         private const val UNBOUNDED_HEIGHT = 1 shl 20
+
+        /** Covers are decoded at a quarter of their size: only their colours are needed. */
+        private const val COVER_SAMPLE = 4
     }
 }

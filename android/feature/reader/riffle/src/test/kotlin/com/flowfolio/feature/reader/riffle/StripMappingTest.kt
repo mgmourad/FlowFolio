@@ -71,12 +71,12 @@ class StripMappingTest {
     @Test
     fun leavesThinOutOnlyWhenTooDense() {
         val m = StripMapping(SampleBook())
-        // 421 sheets in 2,100 px: 1.6 px apart fits 1,312 leaves, so one per sheet.
+        // 421 sheets in 2,100 px: 3.2 px apart fits 656 leaves, so one per sheet.
         assertEquals(1, m.sheetsPerLeaf(2100f))
         assertEquals(421, m.leafCount(2100f))
-        // A 500 px cover-screen strip fits 312 leaves: two sheets per leaf.
-        assertEquals(2, m.sheetsPerLeaf(500f))
-        assertEquals(211, m.leafCount(500f))
+        // A 500 px cover-screen strip fits 156 leaves: three sheets per leaf.
+        assertEquals(3, m.sheetsPerLeaf(500f))
+        assertEquals(141, m.leafCount(500f))
         // The mapping is the same whatever the drawing.
         assertEquals(m.unitAtX(250f, 0f, 500f), m.unitAt(0.5f))
     }
@@ -86,7 +86,7 @@ class StripMappingTest {
         val gap = Gap(density = 1f).prepare(engagement = 1f, pin = 400f, x0 = 0f, x1 = 1000f)
         assertEquals(0f, gap.displacement(0f), 1e-4f)
         assertEquals(0f, gap.displacement(1000f), 1e-4f)
-        // Leaves just right of the pin move right, just left move left, by up to G = 34 dp in all.
+        // Leaves just right of the pin move right, just left move left, by up to G = 52 dp in all.
         assertTrue(gap.displacement(410f) > 0f)
         assertTrue(gap.displacement(390f) < 0f)
         val opened = gap.displacement(430f) - gap.displacement(370f)

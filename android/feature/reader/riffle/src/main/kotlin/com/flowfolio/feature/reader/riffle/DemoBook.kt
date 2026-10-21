@@ -89,7 +89,7 @@ internal fun DemoPage(page: Int?, modifier: Modifier) {
 
 /** The system's "remove animations" (animator duration scale 0): land with a crossfade, keep the loupe still. */
 @Composable
-internal fun reducedMotion(): Boolean {
+fun reducedMotion(): Boolean {
     val resolver = LocalContext.current.contentResolver
     return Settings.Global.getFloat(resolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
 }

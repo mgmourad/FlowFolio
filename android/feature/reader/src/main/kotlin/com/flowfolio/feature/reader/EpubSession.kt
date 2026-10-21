@@ -144,6 +144,34 @@ internal class EpubSession private constructor(
         }
     }
 
+    /**
+     * [page] drawn small, [size] in pixels, for the riffle scrubber's loupe (ADR-0022): the full page scaled down, its
+     * equations and images as far as they are ready. Null before the first layout.
+     */
+    suspend fun thumbnail(page: Int, size: PixelSize, tone: PageTone): ImageBitmap? = lock.withLock {
+        val p = paginator
+        val pane = pane
+        val laidOut = book.pages.getOrNull(page)
+        if (minOf(size.width, size.height) <= 0) return@withLock null
+        if (p == null || pane == null || laidOut == null) return@withLock null
+        withContext(Dispatchers.Default) {
+            val bmp = Bitmap.createBitmap(size.width, size.height, Bitmap.Config.ARGB_8888)
+            val colors = colorsOf(tone)
+            bmp.eraseColor(colors.paper)
+            val canvas = Canvas(bmp)
+            canvas.scale(size.width.toFloat() / pane.width, size.height.toFloat() / pane.height)
+            drawer.draw(PageDrawer.Target(canvas, margins.left.toFloat(), margins.top.toFloat(), p), laidOut, colors)
+            val small = bmp.copy(Bitmap.Config.RGB_565, false) ?: bmp
+            if (small !== bmp) bmp.recycle()
+            val image = small.copy(Bitmap.Config.HARDWARE, false) ?: small
+            if (image !== small) small.recycle()
+            image.asImageBitmap()
+        }
+    }
+
+    /** The shape of a page (width / height), for sizing thumbnails. */
+    val pageAspect: Float get() = pane?.let { it.width.toFloat() / it.height } ?: DEFAULT_ASPECT
+
     /** A book image decoded close to its drawn size [w] x [h], from the cache when possible. */
     private fun image(block: Block.Image, w: Int, h: Int): Bitmap? {
         val key = "${block.path}@$w"
@@ -170,7 +198,10 @@ internal class EpubSession private constructor(
         opened.archive.close()
     }
 
-    /** White space around the text: wider at the outer edges, clear of the status bar at the top. */
+    /**
+     * White space around the text: wider at the outer edges, and tall enough at the top and bottom for the reader's
+     * bars and the riffle scrubber to sit over margin rather than text (riffle spec, owner decision 1).
+     */
     private data class Margins(val left: Int, val top: Int, val right: Int, val bottom: Int) {
         companion object {
             fun forPane(size: PixelSize, density: Float): Margins {
@@ -199,9 +230,10 @@ internal class EpubSession private constructor(
         const val BODY_SP = 18f
         private const val SIDE_DP = 28f
         private const val SIDE_FRACTION = 0.06f
-        private const val TOP_DP = 56f
-        private const val BOTTOM_DP = 64f
+        private const val TOP_DP = 92f
+        private const val BOTTOM_DP = 150f
         private const val IMAGE_BYTES = 24 * 1024 * 1024
+        private const val DEFAULT_ASPECT = 0.7f
 
         /** Pages past the reader's place that may be cached (the planned neighbours, with room to spare). */
         private const val NEAR_PAGES = 16

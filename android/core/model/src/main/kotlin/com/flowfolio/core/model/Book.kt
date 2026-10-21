@@ -81,8 +81,17 @@ data class UserSettings(
     /** Whether the first import has asked about the online lookup yet. */
     val onlineLookupAsked: Boolean = false,
     /** The language passages are translated into last (BCP-47); null means the phone's language. */
-    val translateTo: String? = null
+    val translateTo: String? = null,
+    /** How long the reader's controls stay up after the last use (the riffle scrubber, ADR-0022). */
+    val controlsAutoHide: ControlsAutoHide = ControlsAutoHide.S5,
+    /** Paper sounds while riffling and landing (ADR-0023); never in silent or vibrate mode. */
+    val paperSound: Boolean = true,
+    /** Haptic ticks while riffling (ADR-0023). */
+    val scrubHaptics: Boolean = true
 )
+
+/** The reader's auto-hide delays (the riffle scrubber's spec 5.7); [NEVER] keeps the controls up. */
+enum class ControlsAutoHide { S3, S5, S8, S15, NEVER }
 
 /**
  * The reader's paper (the mock's swatches). [AUTO] follows the app: pages as printed in light mode, Night in dark

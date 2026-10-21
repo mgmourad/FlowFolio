@@ -152,13 +152,15 @@ class RiffleLogicTest {
         val rules = FeedbackRules(chapterStarts = listOf(19, 40), flagUnits = listOf(25))
         assertEquals(RiffleHaptic.CHAPTER, rules.between(18, 19).haptic)
         assertEquals(RiffleHaptic.CHAPTER, rules.between(19, 18).haptic) // backward across the start too
-        assertTrue(rules.between(18, 19).thump)
+        assertTrue(rules.between(18, 19).chapter)
         assertEquals(RiffleHaptic.FLAG, rules.between(24, 26).haptic)
         assertEquals(RiffleHaptic.CHAPTER, rules.between(10, 50).haptic)
         assertEquals(RiffleHaptic.TICK, rules.between(11, 12).haptic) // 11 -> 12 crosses a multiple of 4
         assertNull(rules.between(12, 13).haptic)
-        assertEquals(FeedbackRules.MAX_FLICKS, rules.between(0, 100).flicks)
-        assertEquals(0, rules.between(7, 7).flicks)
+        assertEquals(FeedbackRules.MAX_UNITS, rules.between(0, 100).units)
+        assertEquals(0, rules.between(7, 7).units)
+        assertTrue(rules.between(7, 9).forward)
+        assertFalse(rules.between(9, 7).forward)
     }
 
     @Test

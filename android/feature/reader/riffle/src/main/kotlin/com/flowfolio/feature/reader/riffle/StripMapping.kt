@@ -67,8 +67,8 @@ class StripMapping(private val book: BookGeometry) {
         /** Pages per sheet, times two: positions are averaged over a unit's first and last page. */
         private const val UNITS_PER_SHEET = 4f
 
-        /** Closest two drawn leaves may be, in pixels (spec 4.1). */
-        const val MIN_LEAF_PX = 1.6f
+        /** Closest two drawn leaves may be, in pixels: far enough apart to be seen as pages (owner 2026-10-21). */
+        const val MIN_LEAF_PX = 3.2f
     }
 }
 
@@ -105,8 +105,8 @@ class Gap(private val density: Float) {
 
     private companion object {
         const val BASE_DP = 4f
-        const val SPREAD_DP = 30f
-        const val RADIUS_DP = 20f
-        const val RADIUS_SPREAD_DP = 14f
+        const val SPREAD_DP = 48f
+        const val RADIUS_DP = 22f
+        const val RADIUS_SPREAD_DP = 16f
     }
 }

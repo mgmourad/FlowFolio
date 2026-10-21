@@ -3,6 +3,7 @@ package com.flowfolio.feature.library
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
@@ -23,7 +24,10 @@ data class SettingsActions(
     val onCoverAlone: (Boolean) -> Unit = {},
     val onStorageMode: (StorageMode) -> Unit = {},
     val onAskEachImport: (Boolean) -> Unit = {},
-    val onLookup: (Boolean) -> Unit = {}
+    val onLookup: (Boolean) -> Unit = {},
+    val onAutoHide: (ControlsAutoHide) -> Unit = {},
+    val onPaperSound: (Boolean) -> Unit = {},
+    val onScrubHaptics: (Boolean) -> Unit = {}
 )
 
 @HiltViewModel
@@ -52,6 +56,12 @@ class SettingsViewModel @Inject constructor(private val repo: SettingsRepository
     fun setSpreads(on: Boolean) = viewModelScope.launch { repo.setReaderSpreads(on) }
 
     fun setCoverAlone(on: Boolean) = viewModelScope.launch { repo.setSpreadCoverAlone(on) }
+
+    fun setAutoHide(value: ControlsAutoHide) = viewModelScope.launch { repo.setControlsAutoHide(value) }
+
+    fun setPaperSound(on: Boolean) = viewModelScope.launch { repo.setPaperSound(on) }
+
+    fun setScrubHaptics(on: Boolean) = viewModelScope.launch { repo.setScrubHaptics(on) }
 
     private companion object {
         const val STOP_MS = 5_000L

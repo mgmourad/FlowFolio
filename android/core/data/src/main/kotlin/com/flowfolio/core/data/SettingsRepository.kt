@@ -1,6 +1,7 @@
 package com.flowfolio.core.data
 
 import com.flowfolio.core.datastore.SettingsDataSource
+import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
@@ -37,6 +38,13 @@ interface SettingsRepository {
     suspend fun setOnlineLookup(on: Boolean)
 
     suspend fun setTranslateTo(language: String)
+
+    // The reader's controls (riffle scrubber, ADR-0022 and ADR-0023). Defaults do nothing, for test fakes.
+    suspend fun setControlsAutoHide(value: ControlsAutoHide) = Unit
+
+    suspend fun setPaperSound(on: Boolean) = Unit
+
+    suspend fun setScrubHaptics(on: Boolean) = Unit
 }
 
 class DefaultSettingsRepository @Inject constructor(private val source: SettingsDataSource) : SettingsRepository {
@@ -84,6 +92,18 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setOnlineLookup(on: Boolean) {
         source.setOnlineLookup(on)
+    }
+
+    override suspend fun setControlsAutoHide(value: ControlsAutoHide) {
+        source.setControlsAutoHide(value)
+    }
+
+    override suspend fun setPaperSound(on: Boolean) {
+        source.setPaperSound(on)
+    }
+
+    override suspend fun setScrubHaptics(on: Boolean) {
+        source.setScrubHaptics(on)
     }
 
     override suspend fun setTranslateTo(language: String) {

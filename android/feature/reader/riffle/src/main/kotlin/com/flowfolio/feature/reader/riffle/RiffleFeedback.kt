@@ -5,8 +5,11 @@ import kotlin.math.abs
 /** The haptic for a step of a riffle (ADR-0023 maps each to a system constant per API level). */
 enum class RiffleHaptic { TICK, CHAPTER, FLAG, SPEED }
 
-/** What one step of a drag sounds and feels like: the haptic (or none), paper flicks, and a thump at a chapter. */
-data class RiffleFeedback(val haptic: RiffleHaptic?, val flicks: Int, val thump: Boolean)
+/**
+ * What one step of a drag sounds and feels like: the haptic (or none), the [units] passed (capped), whether a chapter
+ * start was crossed, and whether the step went toward the end of the book.
+ */
+data class RiffleFeedback(val haptic: RiffleHaptic?, val units: Int, val chapter: Boolean, val forward: Boolean = true)
 
 /**
  * Feedback for the previewed unit moving from one unit to another during a drag (spec 5.6): a chapter start crossed
@@ -29,14 +32,14 @@ class FeedbackRules(chapterStarts: Collection<Int>, flagUnits: Collection<Int>) 
             Math.floorDiv(from, TICK_EVERY) != Math.floorDiv(to, TICK_EVERY) -> RiffleHaptic.TICK
             else -> null
         }
-        return RiffleFeedback(haptic, minOf(MAX_FLICKS, abs(to - from)), chapter)
+        return RiffleFeedback(haptic, minOf(MAX_UNITS, abs(to - from)), chapter, to > from)
     }
 
     companion object {
         const val TICK_EVERY = 4
 
-        /** Paper flicks per step at most; fast riffles skip many units in one frame. */
-        const val MAX_FLICKS = 6
+        /** Units counted per step at most; fast riffles skip many units in one frame. */
+        const val MAX_UNITS = 6
     }
 }
 

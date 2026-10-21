@@ -53,12 +53,14 @@ class LeafPhysics(capacity: Int) {
     }
 
     companion object {
-        const val STIFFNESS = 700f
-        const val DAMPING = 22f
+        // Soft and a little underdamped (owner 2026-10-21): leaves trail the pin and settle with a small sway, so the
+        // pages can be seen riffling rather than snapping into place.
+        const val STIFFNESS = 280f
+        const val DAMPING = 20f
         const val SUBSTEPS = 2
 
-        /** Bow per unit of velocity (pixels per pixel/second): the mock's 0.022, density-independent. */
-        const val BOW_PER_VELOCITY = 0.022f
+        /** Bow per unit of velocity (pixels per pixel/second; the mock's was 0.022), density-independent. */
+        const val BOW_PER_VELOCITY = 0.03f
 
         /** Below these a leaf is at rest (pixels per second, pixels). */
         private const val REST_VELOCITY = 0.5f
