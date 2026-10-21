@@ -21,6 +21,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -28,6 +29,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.flowfolio.core.designsystem.FlowFolio
@@ -46,6 +48,7 @@ fun RiffleDock(
     boards: BoardColors,
     modifier: Modifier = Modifier,
     events: RiffleEvents? = null,
+    thumbnails: PageThumbnailProvider? = null,
     remaining: () -> Float = { 1f }
 ) {
     val palette = FlowFolio.palette
@@ -70,6 +73,16 @@ fun RiffleDock(
             val touch = events?.let { Modifier.riffleGestures(state, it) } ?: Modifier
             RiffleStrip(state, boards, Modifier.fillMaxWidth().height(STRIP_HEIGHT.dp).then(touch))
             events?.let { FlagStackPopover(state, it) }
+            // Above the strip, taking no room in the layout; it fades in only while riffling or hovering a flag.
+            Loupe(
+                state,
+                thumbnails,
+                stripLeft = 0f,
+                modifier = Modifier.layout { measurable, _ ->
+                    val placeable = measurable.measure(Constraints())
+                    layout(0, 0) { placeable.place(0, 0) }
+                }
+            )
         }
     }
 }

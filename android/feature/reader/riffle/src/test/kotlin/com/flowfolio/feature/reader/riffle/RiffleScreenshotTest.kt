@@ -3,10 +3,13 @@ package com.flowfolio.feature.reader.riffle
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioTheme
@@ -25,16 +28,18 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(AndroidJUnit4::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = "w840dp-h320dp-420dpi")
+@Config(qualifiers = "w840dp-h500dp-420dpi")
 class RiffleScreenshotTest {
     @get:Rule
     val compose = createComposeRule()
 
-    private fun show(dark: Boolean, state: RiffleScrubberState) {
+    /** [tall]: room above the dock for the loupe, as in the reader where the dock sits at the bottom. */
+    private fun show(dark: Boolean, state: RiffleScrubberState, tall: Boolean = false) {
         compose.mainClock.autoAdvance = false
         compose.setContent {
             FlowFolioTheme(if (dark) ThemePreference.DARK else ThemePreference.LIGHT) {
-                Box(Modifier.background(FlowFolio.palette.background)) {
+                val space = if (tall) Modifier.height(LOUPE_ROOM.dp) else Modifier
+                Box(space.background(FlowFolio.palette.background), contentAlignment = Alignment.BottomCenter) {
                     RiffleDock(state, BOARDS, Modifier.fillMaxWidth())
                 }
             }
@@ -72,7 +77,7 @@ class RiffleScreenshotTest {
     @Test
     fun midRiffleDark() {
         val state = sample()
-        show(dark = true, state)
+        show(dark = true, state, tall = true)
         riffleTo(state, 0.7f)
         capture("riffle_mid_dark")
     }
@@ -80,7 +85,7 @@ class RiffleScreenshotTest {
     @Test
     fun midRiffleLight() {
         val state = sample()
-        show(dark = false, state)
+        show(dark = false, state, tall = true)
         riffleTo(state, 0.7f)
         capture("riffle_mid_light")
     }
@@ -103,6 +108,7 @@ class RiffleScreenshotTest {
         const val PAGE_216 = 215
         const val FRAMES_MS = 500L
         const val RIFFLE_MS = 600L
+        const val LOUPE_ROOM = 440
         val FLAGS = listOf(87, 232, 432, 589, 701)
         val FLAG_COLORS = listOf(0xFF00F0FF, 0xFFFF8A00, 0xFFC02F9A, 0xFF2ECC8A, 0xFFFFD166).map { it.toInt() }
         val BOARDS = BoardColors(main = Color(0xFF0F766E), dark = Color(0xFF064E3B))

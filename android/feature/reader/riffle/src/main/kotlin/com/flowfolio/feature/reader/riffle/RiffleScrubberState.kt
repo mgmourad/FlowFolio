@@ -8,6 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import kotlin.math.abs
 import kotlin.math.exp
+import kotlin.math.min
 
 /** A stack of flags and the leaf it stands on. */
 internal class PlacedStack(val stack: FlagStack, val leaf: Int)
@@ -133,6 +134,14 @@ class RiffleScrubberState(val book: BookGeometry, current: Int = 0) {
     internal var ghostAlpha = 0f
         private set
 
+    /** The loupe (spec 4.4): where its pointer aims (lagging the finger), its tilt, and how far it has faded in. */
+    internal var loupeX = 0f
+        private set
+    internal var loupeTilt = 0f
+        private set
+    internal var loupeShown = 0f
+        private set
+
     /** How much the ribbon sways at rest: 1 for a while after any movement, then fading to 0 so the strip stops. */
     internal var swayAmount = 1f
         private set
@@ -221,14 +230,13 @@ class RiffleScrubberState(val book: BookGeometry, current: Int = 0) {
         val target = held?.coerceIn(g.x0, g.x1) ?: mapping.xOf(current, g.x0, g.x1)
         movePin(held != null, travelling, target, dt)
         updatePreview(held != null || travelling, g)
+        moveLoupe(dt, g)
 
         gap.prepare(engagement, pinX, g.x0, g.x1)
         for (j in 0 until leaves.count) targets[j] = rest[j] + gap.displacement(rest[j])
         val leavesMoving = leaves.step(dt, targets, MAX_BOW_DP * g.density)
 
-        val wiggling = timeSeconds - wiggleAt < WIGGLE_S
-        val moving = held != null || travelling || wiggling || leavesMoving || engagement > SETTLED ||
-            abs(target - pinX) > SETTLED
+        val moving = held != null || travelling || animating || leavesMoving || abs(target - pinX) > SETTLED
         if (moving) lastMotionNanos = nanos
         val idle = (nanos - lastMotionNanos) / NANOS
         swayAmount = (1f - (idle - SWAY_HOLD_S) / SWAY_FADE_S).coerceIn(0f, 1f)
@@ -249,6 +257,10 @@ class RiffleScrubberState(val book: BookGeometry, current: Int = 0) {
         takePending(nanos)
         return dt
     }
+
+    /** The gap closing, the ribbon wiggling or the loupe fading still need frames. */
+    private val animating: Boolean get() = engagement > SETTLED || timeSeconds - wiggleAt < WIGGLE_S ||
+        loupeShown > SETTLED
 
     private fun takePending(nanos: Long) {
         if (travelPending) {
@@ -293,7 +305,23 @@ class RiffleScrubberState(val book: BookGeometry, current: Int = 0) {
 
     private fun updatePreview(following: Boolean, g: StripGeometry) {
         live = following
-        previewUnit = if (following) mapping.unitAtX(pinX, g.x0, g.x1) else current
+        val hover = stacks.getOrNull(hovered)?.stack?.flags?.first()
+        previewUnit = when {
+            following -> mapping.unitAtX(pinX, g.x0, g.x1)
+            hover != null -> book.unitOf(hover.page)
+            else -> current
+        }
+    }
+
+    /** The loupe follows the ribbon (or a hovered flag) with a slight lag and tilts against the motion. */
+    private fun moveLoupe(dt: Float, g: StripGeometry) {
+        val hover = stacks.getOrNull(hovered)
+        val show = (live && engagement > LOUPE_ENGAGED) || hover != null
+        val aim = hover?.let { leaves.x[it.leaf] + FLAG_MIDDLE_DP * g.density } ?: pinX
+        loupeX += (aim - loupeX) * min(1f, dt * LOUPE_RATE)
+        val tilt = (-pinVelocity / g.density * LOUPE_TILT_PER_VELOCITY).coerceIn(-MAX_TILT, MAX_TILT)
+        loupeTilt += (tilt - loupeTilt) * min(1f, dt * TILT_RATE)
+        loupeShown += ((if (show) 1f else 0f) - loupeShown) * min(1f, dt * FADE_RATE)
     }
 
     /** Engagement springs up quickly and settles more slowly (the mock's rates). */
@@ -323,6 +351,14 @@ class RiffleScrubberState(val book: BookGeometry, current: Int = 0) {
         const val TRAVEL_NANOS = 900_000_000L
         const val TRAVEL_ENGAGEMENT = 0.55f
         const val TRAVEL_RATE = 5f
+
+        const val LOUPE_ENGAGED = 0.12f
+        const val LOUPE_RATE = 18f
+        const val TILT_RATE = 10f
+        const val FADE_RATE = 12f
+        const val MAX_TILT = 7f
+        const val LOUPE_TILT_PER_VELOCITY = 0.0035f
+        const val FLAG_MIDDLE_DP = 4f
 
         /** A tap on the block wiggles the ribbon this long (spec 5.3). */
         const val WIGGLE_S = 0.6f
