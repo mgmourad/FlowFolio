@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -26,6 +27,7 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -70,9 +72,13 @@ fun RiffleDemo(dark: Boolean, onDark: (Boolean) -> Unit) {
         }
         val view = LocalView.current
         val scope = rememberCoroutineScope()
+        val context = LocalContext.current
+        val sounds = remember { RiffleSounds(context) }
+        DisposableEffect(sounds) { onDispose { sounds.release() } }
         val events = remember(state) {
             object : RiffleEvents {
                 override fun onRelease(unit: Int) {
+                    if (unit != state.currentUnit) sounds.whoosh()
                     state.currentUnit = unit
                 }
 
@@ -80,6 +86,7 @@ fun RiffleDemo(dark: Boolean, onDark: (Boolean) -> Unit) {
 
                 override fun onFeedback(feedback: RiffleFeedback) {
                     feedback.haptic?.let { RiffleHaptics.play(view, it, scope) }
+                    sounds.play(feedback)
                 }
 
                 override fun onSpeed(speed: ScrubSpeed) = RiffleHaptics.play(view, RiffleHaptic.SPEED, scope)
