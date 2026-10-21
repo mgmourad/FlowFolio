@@ -20,6 +20,10 @@ object RiffleLabels {
         }
     }
 
+    /** "p. 433": one page by its printed number. */
+    @Composable
+    fun pageLabel(book: BookGeometry, page: Int): String = stringResource(R.string.riffle_page, book.label(page))
+
     /** "pp. 216–217" for a spread, "p. 1" for one page, with the book's printed numbers. */
     @Composable
     fun pages(book: BookGeometry, unit: Int): String {

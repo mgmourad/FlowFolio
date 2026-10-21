@@ -9,6 +9,9 @@ import androidx.compose.runtime.setValue
 import kotlin.math.abs
 import kotlin.math.exp
 
+/** A stack of flags and the leaf it stands on. */
+internal class PlacedStack(val stack: FlagStack, val leaf: Int)
+
 /** The strip's layout in pixels: the page block between [x0] and [x1], from [top] to [bottom] (spec 4.1, the mock). */
 class StripGeometry(val width: Float, val height: Float, val density: Float) {
     val x0 = SIDE_DP * density
@@ -49,7 +52,36 @@ class RiffleScrubberState(val book: BookGeometry, current: Int = 0) {
             wakeUp()
         }
 
-    var flags: List<RiffleFlag> by mutableStateOf(emptyList())
+    private var flagList by mutableStateOf<List<RiffleFlag>>(emptyList())
+
+    /** The book's bookmarks, shown as flags (and stacks of close flags) on top of the block. */
+    var flags: List<RiffleFlag>
+        get() = flagList
+        set(value) {
+            flagList = value
+            placeStacks()
+            wakeUp()
+        }
+
+    /** The flags as drawn and touched: stacks of close flags, each with the leaf it stands on. */
+    internal var stacks: List<PlacedStack> = emptyList()
+        private set
+
+    /** How fast the held ribbon follows the finger (shown in the loupe while below full speed). */
+    var scrubSpeed by mutableStateOf(ScrubSpeed.NORMAL)
+        internal set
+
+    /** The stack whose popover is open (spec 3.3), or null. */
+    var openStack: FlagStack? by mutableStateOf(null)
+
+    /** The stack a mouse or trackpad hovers (lifted, previewed in the loupe), or -1. */
+    internal var hovered: Int = -1
+        set(value) {
+            if (field != value) {
+                field = value
+                wakeUp()
+            }
+        }
 
     /** The unit under the ribbon while riffling or travelling, else [currentUnit]: what the header and loupe show. */
     var previewUnit by mutableIntStateOf(this.current)
@@ -107,6 +139,12 @@ class RiffleScrubberState(val book: BookGeometry, current: Int = 0) {
     internal var timeSeconds = 0f
         private set
 
+    private var travelUntil = 0L
+    private var travelPending = false
+    internal var wiggleAt = Float.NEGATIVE_INFINITY
+        private set
+    private var wigglePending = false
+
     private var lastNanos = 0L
     private var lastMotionNanos = 0L
     private var resumed = true
@@ -127,7 +165,40 @@ class RiffleScrubberState(val book: BookGeometry, current: Int = 0) {
         gap.prepare(0f, pinX, g.x0, g.x1)
         for (j in 0 until count) targets[j] = rest[j] + gap.displacement(rest[j])
         leaves.reset(count, targets)
+        placeStacks()
         wakeUp()
+    }
+
+    /**
+     * A flag was tapped (spec 5.3): the reader goes to [unit] while the ribbon glides there over about 900 ms, half
+     * engaged, so the leaves riffle visibly on the way.
+     */
+    fun travelTo(unit: Int) {
+        current = unit.coerceIn(0, (book.unitCount - 1).coerceAtLeast(0))
+        travelPending = true
+        wakeUp()
+    }
+
+    /** The page block was tapped: the ribbon wiggles for a moment as a hint that it is the handle. */
+    fun wiggle() {
+        wigglePending = true
+        wakeUp()
+    }
+
+    /** Feedback for a drag: chapter starts and bookmarks as units. */
+    internal fun feedbackRules() = FeedbackRules(
+        book.sections.filter { it.kind == SectionKind.CHAPTER }.map { book.unitOf(it.firstPage) },
+        flagList.map { book.unitOf(it.page) }
+    )
+
+    private fun placeStacks() {
+        if (geometry == null || leaves.count == 0) {
+            stacks = emptyList()
+            return
+        }
+        val merge = FlagStacking.MERGE_DP * (geometry?.density ?: 1f)
+        stacks = FlagStacking.stack(flagList.map { it to restX(leafOfPage(it.page)) }, merge)
+            .map { PlacedStack(it, leafOfPage(it.flags.first().page)) }
     }
 
     /** The resting x of leaf [j] (before the gap moves it). */
@@ -144,6 +215,29 @@ class RiffleScrubberState(val book: BookGeometry, current: Int = 0) {
     /** One frame at [nanos]; returns true while the strip needs more frames. */
     internal fun advance(nanos: Long): Boolean {
         val g = geometry ?: return false
+        val dt = tick(nanos)
+        val held = riffleX
+        val travelling = held == null && nanos < travelUntil
+        val target = held?.coerceIn(g.x0, g.x1) ?: mapping.xOf(current, g.x0, g.x1)
+        movePin(held != null, travelling, target, dt)
+        updatePreview(held != null || travelling, g)
+
+        gap.prepare(engagement, pinX, g.x0, g.x1)
+        for (j in 0 until leaves.count) targets[j] = rest[j] + gap.displacement(rest[j])
+        val leavesMoving = leaves.step(dt, targets, MAX_BOW_DP * g.density)
+
+        val wiggling = timeSeconds - wiggleAt < WIGGLE_S
+        val moving = held != null || travelling || wiggling || leavesMoving || engagement > SETTLED ||
+            abs(target - pinX) > SETTLED
+        if (moving) lastMotionNanos = nanos
+        val idle = (nanos - lastMotionNanos) / NANOS
+        swayAmount = (1f - (idle - SWAY_HOLD_S) / SWAY_FADE_S).coerceIn(0f, 1f)
+        frame++
+        return moving || swayAmount > 0f || ghostAlpha > SETTLED
+    }
+
+    /** Starts the frame at [nanos]: takes pending events; returns the time since the last frame. */
+    private fun tick(nanos: Long): Float {
         if (resumed) {
             lastNanos = nanos - FRAME_NANOS
             lastMotionNanos = nanos
@@ -152,30 +246,48 @@ class RiffleScrubberState(val book: BookGeometry, current: Int = 0) {
         val dt = ((nanos - lastNanos) / NANOS).coerceIn(0f, MAX_DT)
         lastNanos = nanos
         timeSeconds = nanos / NANOS
-        val held = riffleX
-        val target = held?.coerceIn(g.x0, g.x1) ?: mapping.xOf(current, g.x0, g.x1)
-        movePin(held != null, target, dt)
-        updatePreview(held != null || abs(target - pinX) > PIN_REST_PX * g.density, g)
-
-        gap.prepare(engagement, pinX, g.x0, g.x1)
-        for (j in 0 until leaves.count) targets[j] = rest[j] + gap.displacement(rest[j])
-        val leavesMoving = leaves.step(dt, targets, MAX_BOW_DP * g.density)
-
-        val moving = held != null || leavesMoving || engagement > SETTLED || abs(target - pinX) > SETTLED
-        if (moving) lastMotionNanos = nanos
-        val idle = (nanos - lastMotionNanos) / NANOS
-        swayAmount = (1f - (idle - SWAY_HOLD_S) / SWAY_FADE_S).coerceIn(0f, 1f)
-        frame++
-        return moving || swayAmount > 0f || ghostAlpha > SETTLED
+        takePending(nanos)
+        return dt
     }
 
-    /** The pin follows the held ribbon closely, or glides home; engagement, grab and the ghost ease with it. */
-    private fun movePin(held: Boolean, target: Float, dt: Float) {
-        engagement = approach(engagement, if (held) 1f else 0f, dt)
+    private fun takePending(nanos: Long) {
+        if (travelPending) {
+            travelUntil = nanos + TRAVEL_NANOS
+            travelPending = false
+        }
+        if (wigglePending) {
+            wiggleAt = timeSeconds
+            wigglePending = false
+        }
+    }
+
+    /**
+     * The pin follows the held ribbon closely, glides slowly while travelling to a flag, or settles home; engagement,
+     * grab and the ghost ease with it.
+     */
+    private fun movePin(held: Boolean, travelling: Boolean, target: Float, dt: Float) {
+        engagement = approach(
+            engagement,
+            if (held) {
+                1f
+            } else if (travelling) {
+                TRAVEL_ENGAGEMENT
+            } else {
+                0f
+            },
+            dt
+        )
         grab = approach(grab, if (held) 1f else 0f, dt * GRAB_RATE)
         ghostAlpha += ((if (ghost) 1f else 0f) - ghostAlpha) * (1 - exp(-dt * GHOST_RATE))
         val previous = pinX
-        pinX += (target - pinX) * (1 - exp(-dt * if (held) HELD_RATE else REST_RATE))
+        val rate = if (held) {
+            HELD_RATE
+        } else if (travelling) {
+            TRAVEL_RATE
+        } else {
+            REST_RATE
+        }
+        pinX += (target - pinX) * (1 - exp(-dt * rate))
         pinVelocity += ((pinX - previous) / dt.coerceAtLeast(MIN_DT) - pinVelocity) * VELOCITY_SMOOTHING
     }
 
@@ -208,5 +320,11 @@ class RiffleScrubberState(val book: BookGeometry, current: Int = 0) {
         /** The ribbon keeps swaying this long after the last movement, then fades over [SWAY_FADE_S]. */
         const val SWAY_HOLD_S = 3f
         const val SWAY_FADE_S = 1f
+        const val TRAVEL_NANOS = 900_000_000L
+        const val TRAVEL_ENGAGEMENT = 0.55f
+        const val TRAVEL_RATE = 5f
+
+        /** A tap on the block wiggles the ribbon this long (spec 5.3). */
+        const val WIGGLE_S = 0.6f
     }
 }

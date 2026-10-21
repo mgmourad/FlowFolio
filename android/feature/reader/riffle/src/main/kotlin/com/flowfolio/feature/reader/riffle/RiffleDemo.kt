@@ -19,12 +19,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.flowfolio.core.designsystem.FlowFolio
@@ -66,7 +68,24 @@ fun RiffleDemo(dark: Boolean, onDark: (Boolean) -> Unit) {
             Text(RiffleLabels.pages(book, state.currentUnit), style = FlowFolio.title)
             Text(RiffleLabels.section(book, state.currentUnit), color = palette.hint)
         }
-        RiffleDock(state, SAMPLE_BOARDS, Modifier.align(Alignment.BottomCenter).navigationBarsPadding())
+        val view = LocalView.current
+        val scope = rememberCoroutineScope()
+        val events = remember(state) {
+            object : RiffleEvents {
+                override fun onRelease(unit: Int) {
+                    state.currentUnit = unit
+                }
+
+                override fun onFlag(flag: RiffleFlag) = state.travelTo(book.unitOf(flag.page))
+
+                override fun onFeedback(feedback: RiffleFeedback) {
+                    feedback.haptic?.let { RiffleHaptics.play(view, it, scope) }
+                }
+
+                override fun onSpeed(speed: ScrubSpeed) = RiffleHaptics.play(view, RiffleHaptic.SPEED, scope)
+            }
+        }
+        RiffleDock(state, SAMPLE_BOARDS, Modifier.align(Alignment.BottomCenter).navigationBarsPadding(), events)
     }
 }
 

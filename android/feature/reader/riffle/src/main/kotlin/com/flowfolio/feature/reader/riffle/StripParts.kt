@@ -68,12 +68,18 @@ internal class StripParts(
     private val frontLabel = measurer.measure(if (state.book.rightToLeft) labels.second else labels.first, labelStyle)
     private val backLabel = measurer.measure(if (state.book.rightToLeft) labels.first else labels.second, labelStyle)
 
-    private val stacks = FlagStacking.stack(
-        state.flags.map { it to state.restX(state.leafOfPage(it.page)) },
-        FlagStacking.MERGE_DP * d
-    ).map { it to state.leafOfPage(it.flags.first().page) }
+    private val stacks = state.stacks
     private val badgeStyle = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight.Bold, fontSize = 7.sp)
-    private val badges = stacks.map { (s, _) -> if (s.count > 1) measurer.measure("${s.count}", badgeStyle) else null }
+    private val badges = stacks.map {
+        if (it.stack.count >
+            1
+        ) {
+            measurer.measure("${it.stack.count}", badgeStyle)
+        } else {
+            null
+        }
+    }
+    private val outline = Stroke(width = 1.2f * d)
 
     /** A flag at x = 0: a tab with rounded top corners, standing 18 dp above the block and 4 dp into it. */
     private val flag = Path().apply {
@@ -140,11 +146,16 @@ internal class StripParts(
     fun DrawScope.paintFlags() {
         val shadow = Color.Black.copy(alpha = 0.25f)
         for (i in stacks.indices) {
-            val (stack, leaf) = stacks[i]
-            val x = state.leaves.x[leaf]
-            val top = g.top - 18 * d
-            translate(x, d) { drawPath(flag, shadow) }
-            translate(x, 0f) { drawPath(flag, Color(stack.color), alpha = 0.92f) }
+            val stack = stacks[i].stack
+            val x = state.leaves.x[stacks[i].leaf]
+            // A hovered flag lifts 4 dp and gets an outline (spec 4.3).
+            val lift = if (state.hovered == i) 4 * d else 0f
+            val top = g.top - 18 * d - lift
+            translate(x, d - lift) { drawPath(flag, shadow) }
+            translate(x, -lift) { drawPath(flag, Color(stack.color), alpha = 0.92f) }
+            if (lift > 0f) {
+                translate(x, -lift) { drawPath(flag, if (dark) Color.White else Color(0xFF2E2219), style = outline) }
+            }
             drawRect(Color.White.copy(alpha = 0.4f), Offset(x - d, top + 1.5f * d), Size(10 * d, 1.4f * d))
             badges[i]?.let { badge ->
                 val center = Offset(x + 4 * d, top - 5 * d)
@@ -166,7 +177,10 @@ internal class StripParts(
         val width = (12 + grab * 2) * d
         val top = g.bottom + 3 * d
         val bottom = g.ribbonBottom
-        val x = state.pinX
+        // A tap on the block wiggles the ribbon for 0.6 s (spec 5.3).
+        val sinceWiggle = state.timeSeconds - state.wiggleAt
+        val wiggle = if (sinceWiggle in 0f..0.6f) (1 - sinceWiggle / 0.6f) * sin(sinceWiggle / 0.04f) * 3 * d else 0f
+        val x = state.pinX + wiggle
         val half = width / 2
         ribbon.rewind()
         ribbon.moveTo(-half + d, top)
