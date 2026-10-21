@@ -46,6 +46,9 @@ private class Overlay(val chrome: ChromeClock) {
     var panel by mutableStateOf(Panel.NONE)
     var webLink by mutableStateOf<String?>(null)
 
+    /** The EPUB footnote shown in a popover, if any. */
+    var note by mutableStateOf<ShownNote?>(null)
+
     /** Non-null while zoomed in; page turns and the chrome are paused meanwhile. */
     var zoom by mutableStateOf<ZoomState?>(null)
 
@@ -73,10 +76,17 @@ private class Overlay(val chrome: ChromeClock) {
         when (target) {
             is PageFrames.TapTarget.Jump -> jump(target.page)
             is PageFrames.TapTarget.Web -> webLink = target.uri
+            is PageFrames.TapTarget.Note -> note = ShownNote(target.href, target.at)
             PageFrames.TapTarget.Centre -> toggle()
             PageFrames.TapTarget.Page -> Unit
         }
         return target != PageFrames.TapTarget.Page
+    }
+
+    /** A turn, a jump or fold/unfold: zoom ends and an open footnote closes. */
+    fun leavePage() {
+        zoom = null
+        note = null
     }
 
     fun closeAll() {
@@ -105,7 +115,7 @@ internal fun BoxScope.ReadyReader(
     val overlay = rememberOverlay(viewModel)
     val chrome = overlay.chrome
     val riffling = rememberRiffling(s, navigation, viewModel)
-    LaunchedEffect(s.unit, s.layout, s.coverAlone) { overlay.zoom = null } // a jump or fold/unfold leaves zoom
+    LaunchedEffect(s.unit, s.layout, s.coverAlone) { overlay.leavePage() }
     val jump = { page: Int ->
         viewModel.goToPage(page)
         overlay.closeAll()
@@ -148,7 +158,7 @@ internal fun BoxScope.ReadyReader(
     if (overlay.zoom == null) {
         val bar: @Composable () -> Unit = { RiffleBar(s, riffling, marks, viewModel, chrome) }
         CompositionLocalProvider(LocalGlassState provides haze, LocalReaderSounds provides riffling.sounds) {
-            Controls(s, navigation, overlay, mark, ChromeParts(onBack, jump, bar))
+            Controls(s, navigation, overlay, mark, ChromeParts(onBack, jump, bar, viewModel::footnote))
         }
     }
     overlay.webLink?.let { uri ->
@@ -204,7 +214,13 @@ private fun MirroredBook(mirrored: Boolean, content: @Composable () -> Unit) {
 }
 
 /** Back, a jump from a panel, and the bottom bar (the riffle scrubber). */
-private class ChromeParts(val onBack: () -> Unit, val jump: (Int) -> Unit, val bar: @Composable () -> Unit)
+private class ChromeParts(
+    val onBack: () -> Unit,
+    val jump: (Int) -> Unit,
+    val bar: @Composable () -> Unit,
+    /** An EPUB footnote's text by its href, for the popover. */
+    val footnote: (String) -> CharSequence?
+)
 
 /**
  * The bars and their panels. They take the light or dark palette of the page colour, so they read well on it, and a
@@ -230,6 +246,7 @@ private fun BoxScope.Controls(
                 bottomBar = parts.bar
             )
             ReaderPanels(overlay.panel, s, navigation, mark, parts.jump, onDismiss = { overlay.panel = Panel.NONE })
+            FootnotePopover(overlay.note, parts.footnote, onDismiss = { overlay.note = null })
         }
     }
 }

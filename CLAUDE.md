@@ -14,7 +14,9 @@ scrubber in the real reader: `ReaderRiffle`, `ReaderLanding`, `ChromeClock`, `Re
 margins, accessibility) and the owner's tweaks of 2026-10-21 (no floor shadow, a red pin into the pages, a "Page 306 – 307 of 842 — 36%" header, looser physics, recorded
 sounds per ADR-0025 via `tools/sounds/prepare_recorded_sounds.py`; flips on every page turn and separate turn and riffle
 sound switches and volumes per ADR-0026) built. Left for M2b: the owner's listen and feel on
-the Fold, memory and frame measurements, the M2b sign-off. EPUB links and footnote popovers follow it** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
+the Fold, memory and frame measurements, the M2b sign-off (the owner moved on without them, 2026-10-21). EPUB links and
+footnote popovers (`docs/plans/phase2-m2-links.md`) built; next M3, typography, starting with the owner's approval of
+the reading fonts' licences, sizes and sources** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
 spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).
 Phase 1 signed off by the owner 2026-10-20 (`docs/plans/phase1-signoff.md`); ADRs 0014, 0016-0018 accepted.
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).

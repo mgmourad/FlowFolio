@@ -19,7 +19,6 @@ import com.flowfolio.core.model.PixelSize
 import com.flowfolio.core.model.UserSettings
 import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfException
-import com.flowfolio.core.pdf.PdfLink
 import com.flowfolio.core.reflow.Locator
 import com.flowfolio.feature.reader.cache.PageCache
 import com.flowfolio.feature.reader.cache.PageKey
@@ -108,10 +107,13 @@ class ReaderViewModel @Inject constructor(
     /** Outline and printed page labels, loaded in the background after the book opens. */
     val navigation: StateFlow<BookNavigation> = _navigation.asStateFlow()
 
-    private val _links = MutableStateFlow<Map<Int, List<PdfLink>>>(emptyMap())
+    private val _links = MutableStateFlow<Map<Int, List<ReaderLink>>>(emptyMap())
+
+    /** The EPUB layout the links in [_links] were found in; a new layout moves them. */
+    private var linksRevision = -1
 
     /** Links of the pages read so far (and the ones about to be shown), by page. */
-    val links: StateFlow<Map<Int, List<PdfLink>>> = _links.asStateFlow()
+    internal val links: StateFlow<Map<Int, List<ReaderLink>>> = _links.asStateFlow()
 
     private var opened: OpenedBook? = null
 
@@ -497,7 +499,25 @@ class ReaderViewModel @Inject constructor(
         currentKeys.value = keys.associateBy { it.page }
         cache?.request(keys, newBudgetBytes = minOf(keys.sumOf { it.size.argbBytes }, MAX_CACHE_BYTES))
         if (pendingPane == null) nextIslandWork()
+        viewModelScope.launch { loadEpubLinks(session, pages) }
     }
+
+    /** An EPUB's links for [pages], found in the current layout; a new layout drops the old ones. */
+    private suspend fun loadEpubLinks(session: EpubSession, pages: List<Int>) {
+        val revision = session.revision
+        if (revision != linksRevision) {
+            linksRevision = revision
+            _links.value = emptyMap()
+        }
+        for (page in pages) {
+            if (page in _links.value) continue
+            val found = session.links(page)
+            if (session.revision == linksRevision) _links.update { it + (page to found) }
+        }
+    }
+
+    /** The text of the EPUB footnote or endnote [href] points at, or null. */
+    internal fun footnote(href: String): CharSequence? = epub?.footnote(href)
 
     /**
      * What the island WebView does next: lay out the chapter being read (its pages depend on it), draw the islands on
@@ -560,7 +580,7 @@ class ReaderViewModel @Inject constructor(
         for (page in pages) {
             if (page in _links.value) continue
             val found = runCatching { book.document.links(page) }.getOrDefault(emptyList())
-            _links.update { it + (page to found) }
+            _links.update { it + (page to found.mapNotNull { link -> link.toReaderLink() }) }
         }
     }
 

@@ -17,6 +17,7 @@ import com.flowfolio.core.reflow.PageDrawer
 import com.flowfolio.core.reflow.PageSpec
 import com.flowfolio.core.reflow.Paginator
 import com.flowfolio.core.reflow.ReflowBook
+import com.flowfolio.core.reflow.linkAreas
 import com.flowfolio.feature.reader.cache.PageKey
 import com.flowfolio.feature.reader.cache.PageSource
 import kotlinx.coroutines.Dispatchers
@@ -168,6 +169,31 @@ internal class EpubSession private constructor(
             image.asImageBitmap()
         }
     }
+
+    /**
+     * [page]'s links as the reader taps them: boxes on the page image (0 to 1), each leading to a web address, a
+     * footnote's popover, or a page in the reading order; links to anything else are left out. Empty before layout.
+     */
+    suspend fun links(page: Int): List<ReaderLink> = lock.withLock {
+        val p = paginator
+        val pane = pane
+        val laidOut = book.pages.getOrNull(page)
+        if (p == null || pane == null || laidOut == null) return@withLock emptyList()
+        book.linkAreas(laidOut, p).mapNotNull { area ->
+            linkTarget(book, area.href)?.let { target ->
+                ReaderLink(
+                    (margins.left + area.left) / pane.width,
+                    (margins.top + area.top) / pane.height,
+                    (margins.left + area.right) / pane.width,
+                    (margins.top + area.bottom) / pane.height,
+                    target
+                )
+            }
+        }
+    }
+
+    /** The text of the footnote or endnote [href] points at, or null. */
+    fun footnote(href: String): CharSequence? = book.footnote(href)
 
     /** The shape of a page (width / height), for sizing thumbnails. */
     val pageAspect: Float get() = pane?.let { it.width.toFloat() / it.height } ?: DEFAULT_ASPECT
