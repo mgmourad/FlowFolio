@@ -24,6 +24,17 @@ object RiffleLabels {
     @Composable
     fun pageLabel(book: BookGeometry, page: Int): String = stringResource(R.string.riffle_page, book.label(page))
 
+    /** The dock header's numbers: "Page 216 – 217" for a spread, "Page 1" for one page (owner, 2026-10-21). */
+    @Composable
+    fun header(book: BookGeometry, unit: Int): String {
+        val pages = book.pagesOf(unit)
+        return if (pages.first == pages.last) {
+            stringResource(R.string.riffle_header_page, book.label(pages.first))
+        } else {
+            stringResource(R.string.riffle_header_pages, book.label(pages.first), book.label(pages.last))
+        }
+    }
+
     /** "pp. 216–217" for a spread, "p. 1" for one page, with the book's printed numbers. */
     @Composable
     fun pages(book: BookGeometry, unit: Int): String {

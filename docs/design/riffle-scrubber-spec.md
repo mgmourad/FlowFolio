@@ -90,7 +90,7 @@ Colours and fonts come from the FlowFolio design tokens (Fraunces, Instrument Sa
   chapter (eight bands, then repeat), about 35% opacity; glossary and index neutral grey; none without chapters.
 
 ### 4.2 The pin and ribbon
-A steel pin rises from the top of the ribbon, through the fore edge and into the pages, to a point a fifth of the
+A pin in the ribbon's satin reds rises from the top of the ribbon, through the fore edge and into the pages, to a point a fifth of the
 way down the block, at the current position; the open gap shows it while riffling (owner, 2026-10-21: no pin head and
 no floor shadow under the block). The satin ribbon hangs from the pin with a forked tail, a satin
 gradient with a central sheen, and white ‹ › grip chevrons; it sways gently at rest, widens about 2 dp and glows while

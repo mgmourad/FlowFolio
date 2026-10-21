@@ -38,7 +38,7 @@ internal class StripAssets(
 
 /**
  * The parts around the page block (the mock's draw order): the cover boards seen edge-on with their labels, the
- * bookmark flags on top, and the satin ribbon with the steel pin rising from it into the
+ * bookmark flags on top, and the satin ribbon with its red pin rising from it into the
  * pages. Made once per size, theme, book and set of flags.
  */
 internal class StripParts(
@@ -107,7 +107,7 @@ internal class StripParts(
         endX = 7 * d
     )
 
-    /** The pin at x = 0: a steel shaft from inside the ribbon's top, through the edge into the pages, to a point. */
+    /** The pin at x = 0: a red shaft from inside the ribbon's top, through the edge into the pages, to a point. */
     private val shaft = Path().apply {
         val half = 1.3f * d
         val tip = g.top + blockHeight * 0.2f
@@ -118,11 +118,13 @@ internal class StripParts(
         lineTo(half, g.bottom + 8 * d)
         close()
     }
-    private val steel = Brush.horizontalGradient(
-        0f to Color(0xFF4A4F57),
-        0.35f to Color(0xFFEEF1F5),
-        0.6f to Color(0xFFA9B0B9),
-        1f to Color(0xFF3F444B),
+
+    // The ribbon's satin reds, so the pin reads as part of it (owner, 2026-10-21).
+    private val pinBrush = Brush.horizontalGradient(
+        0f to Color(0xFF6E0820),
+        0.35f to if (dark) Color(0xFFFF6D8A) else Color(0xFFEE4D6C),
+        0.6f to if (dark) Color(0xFFE81F4C) else Color(0xFFC8102E),
+        1f to Color(0xFF7A0A24),
         startX = -1.3f * d,
         endX = 1.3f * d
     )
@@ -219,7 +221,7 @@ internal class StripParts(
     /** The pin's shaft with a soft shadow beside it; the ribbon, drawn next, covers its foot. */
     private fun DrawScope.paintPin(x: Float) {
         translate(x + d, d) { drawPath(shaft, Color.Black, alpha = 0.3f) }
-        translate(x) { drawPath(shaft, steel) }
+        translate(x) { drawPath(shaft, pinBrush) }
     }
 
     /** The demo's fingertip on the ribbon. */
