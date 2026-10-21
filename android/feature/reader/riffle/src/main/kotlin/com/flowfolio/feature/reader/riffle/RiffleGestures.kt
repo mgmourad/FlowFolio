@@ -86,7 +86,7 @@ private suspend fun AwaitPointerEventScope.riffle(
     var unit = state.mapping.unitAtX(drag.ribbonX, g.x0, g.x1)
     state.riffleX = drag.ribbonX
     state.scrubSpeed = ScrubSpeed.NORMAL
-    events.onHeld(true)
+    events.onPause(ChromePause.DRAGGING, true)
     trackUntilUp(down) { change ->
         if (drag.move(change.position.x, change.position.y)) {
             state.scrubSpeed = drag.speed
@@ -101,8 +101,9 @@ private suspend fun AwaitPointerEventScope.riffle(
     }
     state.riffleX = null
     state.scrubSpeed = ScrubSpeed.NORMAL
-    events.onHeld(false)
+    events.onPause(ChromePause.DRAGGING, false)
     events.onRelease(unit)
+    state.nudges++
 }
 
 /** Follows [down]'s pointer, calling [onMove] for each move, until it lifts (true) or is cancelled (false). */

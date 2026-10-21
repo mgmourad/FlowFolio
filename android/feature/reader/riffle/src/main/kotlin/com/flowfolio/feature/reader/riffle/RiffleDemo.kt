@@ -1,11 +1,18 @@
 package com.flowfolio.feature.reader.riffle
 
+import android.os.SystemClock
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -18,6 +25,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -36,7 +44,8 @@ import kotlinx.coroutines.delay
 
 /**
  * The riffle scrubber on the mock's sample book (spec 9), for checking it on a device before it joins the reader:
- * debug builds open it with `--ez riffleDemo true`. A fingertip replays the mock's riffle; gestures come in R3.
+ * debug builds open it with `--ez riffleDemo true`. A fingertip replays the mock's riffle; the page lands with the
+ * turn, and the chrome hides after five seconds (a tap in the middle of the page brings it back).
  */
 @Composable
 fun RiffleDemo(dark: Boolean, onDark: (Boolean) -> Unit) {
@@ -52,47 +61,123 @@ fun RiffleDemo(dark: Boolean, onDark: (Boolean) -> Unit) {
     }
     val palette = FlowFolio.palette
     Box(Modifier.fillMaxSize().background(palette.background)) {
-        Column(
-            Modifier.fillMaxWidth().statusBarsPadding().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+        Row(Modifier.statusBarsPadding().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            DemoButton(stringResource(if (dark) R.string.riffle_demo_light else R.string.riffle_demo_dark)) {
+                onDark(!dark)
+            }
+            DemoButton(stringResource(if (single) R.string.riffle_demo_spreads else R.string.riffle_demo_single)) {
+                single = !single
+            }
+            DemoButton(stringResource(R.string.riffle_demo_replay)) { replay++ }
+        }
+        val feel = rememberDemoFeel()
+        val sounds = feel.sounds
+        var landing by remember(state) { mutableStateOf<Landing?>(null) }
+        val clock = rememberDemoChrome(state)
+        val chrome = clock.timer
+
+        // Every move of the reader goes through here: the page lands with the turn (spec 5.4).
+        fun goTo(unit: Int) {
+            val to = unit.coerceIn(0, book.unitCount - 1)
+            if (to == state.currentUnit) return
+            landing = Landing(state.currentUnit, to)
+            sounds.whoosh()
+            state.currentUnit = to
+        }
+        DemoSpread(
+            book,
+            state.currentUnit,
+            spread = !single,
+            landing = landing,
+            onLanded = { landing = null },
+            onMiddle = {
+                chrome.toggle(SystemClock.uptimeMillis())
+            },
+            onTurn = { goTo(state.currentUnit + it) },
+            modifier = Modifier.align(
+                Alignment.Center
+            ).fillMaxWidth(if (single) SINGLE_WIDTH else 1f).fillMaxHeight(PAGE_HEIGHT)
+        )
+        val events = remember(state, chrome) {
+            demoEvents(state, chrome, ::goTo, onLanding = { landing = it }, feel)
+        }
+        AnimatedVisibility(
+            clock.shown,
+            Modifier.align(Alignment.BottomCenter),
+            enter = fadeIn() + slideInVertically { it / 5 },
+            exit = fadeOut() + slideOutVertically { it / 5 }
         ) {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                DemoButton(stringResource(if (dark) R.string.riffle_demo_light else R.string.riffle_demo_dark)) {
-                    onDark(!dark)
-                }
-                DemoButton(stringResource(if (single) R.string.riffle_demo_spreads else R.string.riffle_demo_single)) {
-                    single = !single
-                }
-                DemoButton(stringResource(R.string.riffle_demo_replay)) { replay++ }
-            }
+            RiffleDock(state, SAMPLE_BOARDS, Modifier.navigationBarsPadding(), events, remaining = {
+                chrome.remaining(clock.now)
+            })
         }
-        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(RiffleLabels.pages(book, state.currentUnit), style = FlowFolio.title)
-            Text(RiffleLabels.section(book, state.currentUnit), color = palette.hint)
+    }
+}
+
+/** Haptics and sounds for the demo's drags. */
+private class DemoFeel(val haptic: (RiffleHaptic) -> Unit, val sounds: RiffleSounds)
+
+@Composable
+private fun rememberDemoFeel(): DemoFeel {
+    val view = LocalView.current
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val feel = remember { DemoFeel({ RiffleHaptics.play(view, it, scope) }, RiffleSounds(context)) }
+    DisposableEffect(feel) { onDispose { feel.sounds.release() } }
+    return feel
+}
+
+/** The demo's auto-hide clock, ticked every frame: whether the chrome shows, and the time it was last ticked. */
+private class DemoChrome(val timer: ChromeTimer) {
+    var shown by mutableStateOf(true)
+    var now by mutableLongStateOf(SystemClock.uptimeMillis())
+}
+
+@Composable
+private fun rememberDemoChrome(state: RiffleScrubberState): DemoChrome {
+    val clock = remember(state) { DemoChrome(ChromeTimer(AutoHide.DEFAULT, SystemClock.uptimeMillis())) }
+    LaunchedEffect(clock) {
+        while (true) {
+            withFrameNanos { }
+            clock.now = SystemClock.uptimeMillis()
+            // The demo's fingertip counts as using the strip, as in the mock.
+            if (state.ghost) clock.timer.interacted(clock.now)
+            clock.timer.tick(clock.now)
+            clock.shown = clock.timer.state == ChromeState.VISIBLE
         }
-        val view = LocalView.current
-        val scope = rememberCoroutineScope()
-        val context = LocalContext.current
-        val sounds = remember { RiffleSounds(context) }
-        DisposableEffect(sounds) { onDispose { sounds.release() } }
-        val events = remember(state) {
-            object : RiffleEvents {
-                override fun onRelease(unit: Int) {
-                    if (unit != state.currentUnit) sounds.whoosh()
-                    state.currentUnit = unit
-                }
+    }
+    return clock
+}
 
-                override fun onFlag(flag: RiffleFlag) = state.travelTo(book.unitOf(flag.page))
+/** The demo's answers to the scrubber: moves land with the turn, flags travel, the chrome's timer follows the strip. */
+private fun demoEvents(
+    state: RiffleScrubberState,
+    chrome: ChromeTimer,
+    goTo: (Int) -> Unit,
+    onLanding: (Landing) -> Unit,
+    feel: DemoFeel
+) = object : RiffleEvents {
+    override fun onRelease(unit: Int) = goTo(unit)
 
-                override fun onFeedback(feedback: RiffleFeedback) {
-                    feedback.haptic?.let { RiffleHaptics.play(view, it, scope) }
-                    sounds.play(feedback)
-                }
+    override fun onGoTo(unit: Int) = goTo(unit)
 
-                override fun onSpeed(speed: ScrubSpeed) = RiffleHaptics.play(view, RiffleHaptic.SPEED, scope)
-            }
-        }
-        RiffleDock(state, SAMPLE_BOARDS, Modifier.align(Alignment.BottomCenter).navigationBarsPadding(), events)
+    override fun onFlag(flag: RiffleFlag) {
+        val to = state.book.unitOf(flag.page)
+        if (to != state.currentUnit) onLanding(Landing(state.currentUnit, to))
+        state.travelTo(to)
+    }
+
+    override fun onFeedback(feedback: RiffleFeedback) {
+        feedback.haptic?.let(feel.haptic)
+        feel.sounds.play(feedback)
+    }
+
+    override fun onSpeed(speed: ScrubSpeed) = feel.haptic(RiffleHaptic.SPEED)
+
+    override fun onInteraction() = chrome.interacted(SystemClock.uptimeMillis())
+
+    override fun onPause(reason: ChromePause, held: Boolean) {
+        if (held) chrome.hold(reason) else chrome.release(reason, SystemClock.uptimeMillis())
     }
 }
 
@@ -142,6 +227,8 @@ private suspend fun playDemo(state: RiffleScrubberState) {
 private fun ease(t: Float): Float = if (t < HALF) 4 * t * t * t else 1 - ((-2 * t + 2).let { it * it * it }) / 2
 
 private const val PAGE_216 = 215
+private const val PAGE_HEIGHT = 0.62f
+private const val SINGLE_WIDTH = 0.6f
 private const val DEMO_DELAY_MS = 1_200L
 private const val FAR_FRACTION = 0.72f
 private const val NEAR_FRACTION = 0.38f

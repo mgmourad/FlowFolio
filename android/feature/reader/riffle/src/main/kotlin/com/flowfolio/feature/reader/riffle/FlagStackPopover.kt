@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,6 +42,10 @@ import com.flowfolio.core.designsystem.FlowFolio
 internal fun FlagStackPopover(state: RiffleScrubberState, events: RiffleEvents) {
     val stack = state.openStack ?: return
     val g = state.geometry ?: return
+    DisposableEffect(stack) {
+        events.onPause(ChromePause.POPOVER, true)
+        onDispose { events.onPause(ChromePause.POPOVER, false) }
+    }
     val x = state.leaves.x[state.leafOfPage(stack.flags.first().page)]
     val gap = (POPOVER_GAP_DP * g.density).toInt()
     val position = object : PopupPositionProvider {
