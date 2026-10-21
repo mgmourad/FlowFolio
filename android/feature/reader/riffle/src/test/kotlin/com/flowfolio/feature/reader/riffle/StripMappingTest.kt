@@ -83,16 +83,16 @@ class StripMappingTest {
 
     @Test
     fun theGapKeepsBothCoversStillAndOpensAroundThePin() {
-        val gap = Gap(engagement = 1f, density = 1f)
-        assertEquals(0f, gap.displacement(0f, 400f, 0f, 1000f), 1e-4f)
-        assertEquals(0f, gap.displacement(1000f, 400f, 0f, 1000f), 1e-4f)
+        val gap = Gap(density = 1f).prepare(engagement = 1f, pin = 400f, x0 = 0f, x1 = 1000f)
+        assertEquals(0f, gap.displacement(0f), 1e-4f)
+        assertEquals(0f, gap.displacement(1000f), 1e-4f)
         // Leaves just right of the pin move right, just left move left, by up to G = 34 dp in all.
-        assertTrue(gap.displacement(410f, 400f, 0f, 1000f) > 0f)
-        assertTrue(gap.displacement(390f, 400f, 0f, 1000f) < 0f)
-        val opened = gap.displacement(430f, 400f, 0f, 1000f) - gap.displacement(370f, 400f, 0f, 1000f)
+        assertTrue(gap.displacement(410f) > 0f)
+        assertTrue(gap.displacement(390f) < 0f)
+        val opened = gap.displacement(430f) - gap.displacement(370f)
         assertTrue("gap $opened", opened in 40f..68f)
         // At rest the gap is small (G = 4).
-        val rest = Gap(0f, 1f)
-        assertTrue(rest.displacement(430f, 400f, 0f, 1000f) - rest.displacement(370f, 400f, 0f, 1000f) < 8f)
+        val rest = Gap(1f).prepare(0f, 400f, 0f, 1000f)
+        assertTrue(rest.displacement(430f) - rest.displacement(370f) < 8f)
     }
 }

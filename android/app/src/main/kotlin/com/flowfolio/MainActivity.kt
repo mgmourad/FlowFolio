@@ -28,6 +28,7 @@ import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
 import com.flowfolio.feature.reader.layout.ReaderLayout
 import com.flowfolio.feature.reader.layout.chooseLayout
+import com.flowfolio.feature.reader.riffle.RiffleDemo
 import com.flowfolio.feature.reader.tone
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -37,8 +38,9 @@ private const val EXTRA_START_PAGE = "startPage"
 private const val EXTRA_IMPORT_PATH = "importPath"
 private const val EXTRA_GC_NOW = "gcNow"
 private const val EXTRA_CATALOG = "catalog"
+private const val EXTRA_RIFFLE_DEMO = "riffleDemo"
 private const val EXTRA_THEME = "theme"
-private val DEBUG_EXTRAS = listOf(EXTRA_OPEN_BOOK, EXTRA_IMPORT_PATH, EXTRA_GC_NOW, EXTRA_CATALOG)
+private val DEBUG_EXTRAS = listOf(EXTRA_OPEN_BOOK, EXTRA_IMPORT_PATH, EXTRA_GC_NOW, EXTRA_CATALOG, EXTRA_RIFFLE_DEMO)
 
 /** The app's only Activity. Screens are Compose destinations (see [FlowFolioApp]). */
 @AndroidEntryPoint
@@ -51,14 +53,16 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) handleIncoming(intent)
         // Debug builds: `--ez catalog true` shows the design catalog instead of the app (milestone 5 checks).
         val catalog = isDebuggable() && intent.getBooleanExtra(EXTRA_CATALOG, false)
+        // `--ez riffleDemo true`: the riffle scrubber on the mock's sample book (ADR-0022), before it joins the reader.
+        val riffleDemo = isDebuggable() && intent.getBooleanExtra(EXTRA_RIFFLE_DEMO, false)
         // The animated splash plays on a cold start only; adb-driven debug launches go straight to work.
         val splashOnStart = savedInstanceState == null && DEBUG_EXTRAS.none(intent::hasExtra)
         setContent {
             val theme by appViewModel.theme.collectAsStateWithLifecycle()
-            if (catalog) {
+            if (catalog || riffleDemo) {
                 var dark by rememberSaveable { mutableStateOf(intent.getStringExtra(EXTRA_THEME) != "light") }
                 FlowFolioTheme(if (dark) ThemePreference.DARK else ThemePreference.LIGHT) {
-                    DesignCatalog(dark) { dark = it }
+                    if (riffleDemo) RiffleDemo(dark) { dark = it } else DesignCatalog(dark) { dark = it }
                 }
             } else {
                 var splash by rememberSaveable { mutableStateOf(splashOnStart) }

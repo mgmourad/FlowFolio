@@ -1,0 +1,159 @@
+@file:Suppress("MagicNumber") // the mock's drawing: sizes in dp, colours and shading stops, carried over as designed
+
+package com.flowfolio.feature.reader.riffle
+
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import kotlin.math.abs
+import kotlin.math.exp
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.roundToInt
+
+/** The book's cover colours for the boards: [main] and a [dark] shade (spec 4.1). */
+data class BoardColors(val main: Color, val dark: Color)
+
+/**
+ * Draws the fore edge (spec 4.1, the mock's draw order): floor shadow, the book's dark interior, the pin's needle, the
+ * leaves in 18 shades, the chapter bleed bands, the block's shading. Made once per size, theme and book; a frame only
+ * rewinds and refills its paths, so drawing allocates nothing.
+ */
+internal class StripPainter(
+    private val state: RiffleScrubberState,
+    private val g: StripGeometry,
+    private val dark: Boolean
+) {
+    private val d = g.density
+    private val blockHeight = g.bottom - g.top
+    private val mid = (g.top + g.bottom) / 2
+
+    private val shades = Array(SHADES) { Path() }
+    private val shadeColors = Array(SHADES) { i ->
+        val m = MIN_SHADE + i / (SHADES - 1f) * SHADE_RANGE
+        val base = if (dark) PAPER_DARK else PAPER_LIGHT
+        Color(base[0] * m / 255f, base[1] * m / 255f, base[2] * m / 255f)
+    }
+    private val leafWidth = max(1f, (g.x1 - g.x0) / max(1, state.leaves.count) * 0.94f)
+    private val leafStroke = Stroke(width = leafWidth, cap = StrokeCap.Butt)
+
+    private val bands = BleedBands.of(state.book.sections, state.mapping)
+    private val bandPaths = Array(BAND_COLORS) { Path() }
+    private val bandColors = (if (dark) TABS_DARK else TABS_LIGHT) + (if (dark) GREY_DARK else GREY_LIGHT)
+    private val bandHeight = (blockHeight - 6 * d) / BleedBands.BANDS
+
+    private val floor = Brush.radialGradient(
+        0f to Color.Black.copy(alpha = 0.42f),
+        1f to Color.Transparent,
+        center = Offset(g.width / 2, g.bottom + 6 * d),
+        radius = g.width * 0.55f
+    )
+    private val interior = Brush.verticalGradient(
+        0f to if (dark) Color(0xFF120B26) else Color(0xFF2A1E14),
+        0.5f to if (dark) Color(0xFF05020C) else Color(0xFF0D0805),
+        1f to if (dark) Color(0xFF120B26) else Color(0xFF2A1E14),
+        startY = g.top,
+        endY = g.bottom
+    )
+    private val shadeTopBottom = Brush.verticalGradient(
+        0f to Color.Black.copy(alpha = 0.28f),
+        0.18f to Color.Transparent,
+        0.82f to Color.Transparent,
+        1f to Color.Black.copy(alpha = 0.32f),
+        startY = g.top,
+        endY = g.bottom
+    )
+    private val shadeEnds = Brush.horizontalGradient(
+        0f to Color.Black.copy(alpha = 0.3f),
+        0.05f to Color.Transparent,
+        0.95f to Color.Transparent,
+        1f to Color.Black.copy(alpha = 0.3f),
+        startX = g.x0,
+        endX = g.x1
+    )
+    private val needle = if (dark) Color(0xFFFF2D5A) else Color(0xFFD4163B)
+
+    fun DrawScope.paintBlock() {
+        drawRect(floor, Offset(0f, g.bottom - 4 * d), Size(g.width, 18 * d))
+        drawRect(interior, Offset(g.x0, g.top), Size(g.x1 - g.x0, blockHeight))
+        paintNeedle()
+        paintLeaves()
+        paintBands()
+        drawRect(shadeTopBottom, Offset(g.x0, g.top), Size(g.x1 - g.x0, blockHeight))
+        drawRect(shadeEnds, Offset(g.x0, g.top), Size(g.x1 - g.x0, blockHeight))
+    }
+
+    /** The pin's needle, seen through the open gap while riffling. */
+    private fun DrawScope.paintNeedle() {
+        val e = state.engagement
+        if (e <= 0.03f) return
+        val alpha = min(1f, e * 1.5f)
+        val from = Offset(state.pinX, g.bottom)
+        val to = Offset(state.pinX, g.top + 6 * d)
+        if (dark) drawLine(needle.copy(alpha = 0.3f * alpha), from, to, strokeWidth = 4 * d)
+        drawLine(needle.copy(alpha = alpha), from, to, strokeWidth = 1.2f * d)
+    }
+
+    /** Each leaf a curve whose middle leads in its direction of travel, brighter near the gap and when moving fast. */
+    private fun DrawScope.paintLeaves() {
+        val leaves = state.leaves
+        shades.forEach { it.rewind() }
+        val e = state.engagement
+        for (j in 0 until leaves.count) {
+            val x = leaves.x[j]
+            val speedDp = abs(leaves.velocity[j]) / d
+            val near = abs(state.restX(j) - state.pinX) / d
+            var m = 0.9f - (j * 7 % 5) * 0.014f + min(0.12f, speedDp * 0.0007f) + 0.14f * e * exp(-near / 9f)
+            if (j * 13 % 3 == 0) m -= 0.05f
+            m = m.coerceIn(MIN_SHADE, MIN_SHADE + SHADE_RANGE)
+            val path = shades[((m - MIN_SHADE) / SHADE_RANGE * (SHADES - 1)).roundToInt()]
+            path.moveTo(x, g.top)
+            path.quadraticTo(x + leaves.bow[j] * 2, mid, x, g.bottom)
+        }
+        for (i in 0 until SHADES) drawPath(shades[i], shadeColors[i], style = leafStroke)
+    }
+
+    /** Chapter bleed tabs printed on the page edges: a short segment on each leaf, following its bow. */
+    private fun DrawScope.paintBands() {
+        if (bands.isEmpty()) return
+        bandPaths.forEach { it.rewind() }
+        val leaves = state.leaves
+        val per = state.sheetsPerLeaf
+        for (band in bands) {
+            val y0 = g.top + 3 * d + band.band * bandHeight
+            val y1 = y0 + bandHeight * 0.8f
+            val u0 = (y0 - g.top) / blockHeight
+            val u1 = (y1 - g.top) / blockHeight
+            val path = bandPaths[colorOf(band.section)]
+            val last = min(leaves.count, (band.endSheet + per - 1) / per)
+            for (j in band.firstSheet / per until last) {
+                path.moveTo(leaves.x[j] + 4 * u0 * (1 - u0) * leaves.bow[j], y0)
+                path.lineTo(leaves.x[j] + 4 * u1 * (1 - u1) * leaves.bow[j], y1)
+            }
+        }
+        val alpha = if (dark) 0.38f else 0.32f
+        for (i in 0 until BAND_COLORS) drawPath(bandPaths[i], bandColors[i], alpha = alpha, style = leafStroke)
+    }
+
+    private fun colorOf(section: Section): Int =
+        if (section.kind == SectionKind.CHAPTER) (section.number ?: 0) % TAB_COLORS else TAB_COLORS
+
+    private companion object {
+        const val SHADES = 18
+        const val MIN_SHADE = 0.55f
+        const val SHADE_RANGE = 0.49f
+        const val TAB_COLORS = 4
+        const val BAND_COLORS = TAB_COLORS + 1
+        val PAPER_DARK = intArrayOf(214, 203, 184)
+        val PAPER_LIGHT = intArrayOf(243, 235, 219)
+        val TABS_DARK = listOf(Color(0xFF14B8A6), Color(0xFFFF8A00), Color(0xFFC02F9A), Color(0xFF00B8D9))
+        val TABS_LIGHT = listOf(Color(0xFF0F766E), Color(0xFFB45309), Color(0xFF7E22CE), Color(0xFF0E7490))
+        val GREY_DARK = Color(0xFF9B9AA6)
+        val GREY_LIGHT = Color(0xFF6B625A)
+    }
+}

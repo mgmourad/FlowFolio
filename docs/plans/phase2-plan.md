@@ -124,6 +124,9 @@ how EPUBs are parsed (our own code or Readium).
 3. **M3, typography.**
    - The "Aa" panel's text settings and pinch for font size.
    - Re-pagination that keeps the position; the book's own fonts versus ours; hyphenation.
+   - **Reading fonts chosen by the owner (2026-10-20):** Charter, Literata, Atkinson Hyperlegible Next, EB Garamond,
+     Source Sans 3, Lexend, Andika. Their licences, sizes and download sources go to the owner for approval when M3
+     starts (they ship in the app, so ADR-0003's licence rules apply).
 4. **M4, Phase 1 features on EPUB.**
    - Bookmarks, highlights and notes with locators; the Annotations tab; Share, Copy and Translate.
    - Right to left; the image viewer; fixed-layout EPUBs, one spine item per page, if the spike shows it is cheap.
