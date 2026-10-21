@@ -102,6 +102,8 @@ uv tool install pre-commit; pre-commit install          # hooks: pre-commit + co
 .\gradlew.bat testDebugUnitTest                          # JVM unit + Robolectric Compose tests
 .\gradlew.bat spotlessCheck detekt lintDebug             # static checks (spotlessApply to fix format)
 .\gradlew.bat connectedDebugAndroidTest                  # instrumented tests; needs emulator/device
+.\gradlew.bat :feature:reader:riffle:verifyRoborazziDebug # screenshot tests vs src/test/screenshots (ADR-0024;
+                                                          # recordRoborazziDebug after an intended drawing change)
 # Baseline profile and macrobenchmarks (:benchmark, on the unfolded Fold, textbook pushed; installs a separate
 # `com.flowfolio` app with its own library; uninstall it afterwards). Commit the regenerated profile.
 .\gradlew.bat :app:generateBaselineProfile               # -> app/src/release/generated/baselineProfiles/
@@ -229,8 +231,8 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
 ## Decision log
 
-ADRs 0001–0023 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0024 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
-Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023).
+Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024).

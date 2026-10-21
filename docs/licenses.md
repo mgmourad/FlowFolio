@@ -28,6 +28,7 @@ Release dates were checked on Maven Central, Google Maven, PyPI, or GitHub Relea
 | androidx.core:core-ktx | 1.19.1 | 2026-09-23 | Apache-2.0 | app | |
 | JUnit 4 | 4.13.2 | 2021-02-13 | EPL-1.0 | test | Not distributed; stable, low activity |
 | Robolectric | 4.17 | 2026-09-10 | MIT | test | Pinned to simulate API 36 (see Known issues in CLAUDE.md) |
+| Roborazzi (core, compose, junit-rule, Gradle plugin) | 1.76.0 | 2026-09-29 | Apache-2.0 | test | Screenshot tests, ADR-0024; owner-approved 2026-10-20 |
 | androidx.test.ext:junit | 1.3.0 | 2025-07-30 | Apache-2.0 | test | |
 | androidx.test:runner | 1.7.0 | 2025-07-30 | Apache-2.0 | test | |
 | androidx.test.espresso:espresso-core | 3.7.0 | 2025-07-30 | Apache-2.0 | test | Calls an API removed in API 37 under Robolectric |
