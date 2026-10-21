@@ -130,7 +130,11 @@ private fun RiffleHeader(state: RiffleScrubberState, events: RiffleEvents?) {
                 .defaultMinSize(minHeight = 48.dp)
         }
         Box(open, contentAlignment = Alignment.Center) {
-            Text(RiffleLabels.pages(book, unit), color = if (state.live) palette.title else palette.hint, style = style)
+            Text(
+                RiffleLabels.header(book, unit),
+                color = if (state.live) palette.title else palette.hint,
+                style = style
+            )
         }
         Text(
             " " + stringResource(

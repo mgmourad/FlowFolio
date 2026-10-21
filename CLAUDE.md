@@ -11,7 +11,7 @@ screen: `adb shell am start -n com.flowfolio.dev/com.flowfolio.MainActivity --ez
 built; R3 (gestures, flag taps and stacks, loupe, haptics) and R4's module part (landing turn with a reduced-motion
 crossfade, Go to page by printed number, nudge arrows, auto-hide in the demo) built and checked on the Fold; R5 (the
 scrubber in the real reader: `ReaderRiffle`, `ReaderLanding`, `ChromeClock`, `ReaderThumbnails`, settings, EPUB
-margins, accessibility) and the owner's tweaks of 2026-10-21 (no floor shadow, a steel pin, looser physics, recorded
+margins, accessibility) and the owner's tweaks of 2026-10-21 (no floor shadow, a red pin into the pages, a "Page 306 – 307 of 842 — 36%" header, looser physics, recorded
 sounds per ADR-0025 via `tools/sounds/prepare_recorded_sounds.py`) built. Left for M2b: the owner's listen and feel on
 the Fold, memory and frame measurements, the M2b sign-off. EPUB links and footnote popovers follow it** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
 spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).

@@ -133,7 +133,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
       and each bookmark. Arrow keys and Page Up and Down move along it; Enter shows or hides the chrome.
   - Owner's tweaks (2026-10-21):
     - No floor shadow under the strip.
-    - A steel pin rises from the ribbon into the pages, in place of the red pin head.
+    - A red pin rises from the ribbon into the pages, in place of the pin head.
+    - The dock header reads "Page 306 – 307 of 842 — 36%".
     - Looser riffle physics: fewer, thinner leaves, a wider gap and softer springs.
     - The owner's recorded paper sounds (ADR-0025, `tools/sounds/prepare_recorded_sounds.py`) replace the generated
       ones.
