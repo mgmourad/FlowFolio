@@ -45,6 +45,7 @@ fun RiffleDock(
     state: RiffleScrubberState,
     boards: BoardColors,
     modifier: Modifier = Modifier,
+    events: RiffleEvents? = null,
     remaining: () -> Float = { 1f }
 ) {
     val palette = FlowFolio.palette
@@ -65,7 +66,11 @@ fun RiffleDock(
                     .background(palette.item.copy(alpha = 0.45f), RoundedCornerShape(1.dp))
             )
         }
-        RiffleStrip(state, boards, Modifier.fillMaxWidth().height(STRIP_HEIGHT.dp))
+        Box {
+            val touch = events?.let { Modifier.riffleGestures(state, it) } ?: Modifier
+            RiffleStrip(state, boards, Modifier.fillMaxWidth().height(STRIP_HEIGHT.dp).then(touch))
+            events?.let { FlagStackPopover(state, it) }
+        }
     }
 }
 
@@ -125,6 +130,7 @@ fun RiffleStrip(state: RiffleScrubberState, boards: BoardColors, modifier: Modif
             .onSizeChanged { state.layout(it.width.toFloat(), it.height.toFloat(), density) }
             .drawWithCache {
                 val g = state.geometry
+                state.flags // new flags make new stacks: build the parts again
                 val painter = g?.let { StripPainter(state, it, dark) }
                 val parts = g?.let { StripParts(state, it, dark, StripAssets(boards, measurer, labels, cloth)) }
                 onDrawBehind {
