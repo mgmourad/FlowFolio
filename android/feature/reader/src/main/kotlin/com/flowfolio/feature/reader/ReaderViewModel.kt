@@ -17,6 +17,7 @@ import com.flowfolio.core.epub.EpubException
 import com.flowfolio.core.model.PageLabels
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PixelSize
+import com.flowfolio.core.model.ReaderText
 import com.flowfolio.core.model.ReadingFont
 import com.flowfolio.core.model.UserSettings
 import com.flowfolio.core.pdf.PdfDocument
@@ -92,7 +93,7 @@ data class Viewport(
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     private val repository: ReaderRepository,
-    settingsRepository: SettingsRepository,
+    private val settingsRepository: SettingsRepository,
     private val saved: SavedStateHandle,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
@@ -318,7 +319,12 @@ class ReaderViewModel @Inject constructor(
         layoutJob?.cancel()
         pendingLayout = layout
         layoutJob = viewModelScope.launch {
+            val started = android.os.SystemClock.elapsedRealtime()
             anchorPage = session.layOut(layout, v.widthPx / v.widthDp, locator)
+            android.util.Log.i(
+                LAYOUT_TAG,
+                "laid out ${session.pageCount} pages in ${android.os.SystemClock.elapsedRealtime() - started} ms"
+            )
             startPage?.let { page ->
                 anchorPage = page.coerceIn(0, (session.pageCount - 1).coerceAtLeast(0))
                 locator = session.locatorOf(anchorPage)
@@ -607,6 +613,12 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    /** The EPUB text size, from a pinch on the page (M3); the book is laid out again at the reader's place. */
+    fun setTextSize(sizeSp: Int) {
+        val text = settings.text.copy(sizeSp = sizeSp.coerceIn(ReaderText.MIN_SIZE_SP, ReaderText.MAX_SIZE_SP))
+        viewModelScope.launch { settingsRepository.setReaderText(text) }
+    }
+
     /** [font] as a typeface with its bold and italic, loaded once; null (the system serif) if it can't be read. */
     private fun readingFont(font: ReadingFont): android.graphics.Typeface? = fonts[font]
         ?: runCatching { context.resources.getFont(font.fontRes) }.getOrNull()?.also { fonts[font] = it }
@@ -630,6 +642,8 @@ class ReaderViewModel @Inject constructor(
     }
 
     companion object {
+        /** Logcat tag for EPUB layout times (M3's 300 ms target for a text change). */
+        private const val LAYOUT_TAG = "FlowFolioLayout"
         const val ARG_BOOK_ID = "bookId"
         const val ARG_LAYOUT = "layout"
         private const val KEY_ANCHOR = "anchorPage"

@@ -42,7 +42,7 @@ import dev.chrisbanes.haze.rememberHazeState
  * restarts it); another centre tap hides them sooner. They stay up while a panel is open.
  */
 @Stable
-private class Overlay(val chrome: ChromeClock) {
+private class Overlay(val chrome: ChromeClock, val textPinch: TextPinch) {
     var panel by mutableStateOf(Panel.NONE)
     var webLink by mutableStateOf<String?>(null)
 
@@ -142,7 +142,7 @@ internal fun BoxScope.ReadyReader(
             .hazeSource(haze)
             .annotate(annotating, enabled = overlay.zoom == null && !s.reflowable)
             .interceptTaps(onTap)
-            .then(if (s.reflowable) Modifier else Modifier.pinchGestures(overlay::pinch, overlay::endPinch))
+            .bookPinch(s, overlay, viewModel)
             .edgeBounce(bounce, atStart = s.unit <= 0, atEnd = s.unit >= s.unitCount - 1, reversed = rtl)
     ) {
         CompositionLocalProvider(LocalReaderSounds provides riffling.sounds) {
@@ -150,6 +150,7 @@ internal fun BoxScope.ReadyReader(
         }
     }
     RiffleLanding(s, riffling, images, viewModel.thumbnails)
+    TextPinchBadge(overlay.textPinch)
     overlay.zoom?.let {
         ZoomView(it, framesFor, images, tiles, viewModel::showTiles, annotating, onExit = { overlay.zoom = null })
     }
@@ -191,12 +192,27 @@ private fun Book(
     }
 }
 
+/** Pinching zooms a PDF page and changes an EPUB's text size. */
+private fun Modifier.bookPinch(s: ReaderState.Ready, overlay: Overlay, viewModel: ReaderViewModel) = if (s.reflowable) {
+    val text = overlay.textPinch
+    pinchGestures(
+        onTransform = { _, _, zoom, _ ->
+            text.begin(viewModel.userSettings.value.text.sizeSp)
+            text.pinch(zoom)
+        },
+        onEnd = text::end
+    )
+} else {
+    pinchGestures(overlay::pinch, overlay::endPinch)
+}
+
 /** The overlay, with the chrome clock following the auto-hide setting; an open panel holds the countdown. */
 @Composable
 private fun rememberOverlay(viewModel: ReaderViewModel): Overlay {
     val settings by viewModel.userSettings.collectAsStateWithLifecycle()
     val chrome = rememberChromeClock(settings.controlsAutoHide)
-    val overlay = remember(chrome) { Overlay(chrome) }
+    val textPinch = rememberTextPinch(viewModel)
+    val overlay = remember(chrome, textPinch) { Overlay(chrome, textPinch) }
     // Closing the panel starts the countdown again in full.
     LaunchedEffect(overlay.panel) { chrome.pause(ChromePause.PANEL, overlay.panel != Panel.NONE) }
     return overlay
