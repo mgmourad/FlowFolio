@@ -135,6 +135,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - Settings > Text (M3): the EPUB text settings outside the reader too: the seven fonts as the same cards as the "Aa"
   sheet (`FlowFolioFontPicker`, now in `:core:designsystem`), a sample paragraph set in the chosen font, size,
   spacing, margins and alignment, a size stepper, line spacing, margins, justify and hyphenation.
+- The book's own fonts (M3, ADR-0030): "Book's font", first among the font cards, sets the body text in the family
+  the book's CSS gives its body (`@font-face`), with its bold and italic faces; Literata when the book ships none (the
+  reader's card then says "Book's (none)"). Fonts are read from the book only, de-obfuscated (IDPF, Adobe), WOFF 1 is
+  unwrapped, and only real TrueType/OpenType files up to 16 MB are loaded; WOFF 2 is not read. Checked on the Fold
+  with the IDPF *Moby-Dick* (STIX, four faces).
 - The riffle scrubber's one-page arrows sit at the two ends of the strip and are always there with the dock; they no
   longer appear beside the ribbon after a release, where they got in the way of dragging it on (owner, 2026-10-22).
 - Book details redesigned to look less like a page of buttons: the pills became one quiet line (format, pages,

@@ -16,6 +16,8 @@ internal class PackageReader(val path: String) {
     private val spineIds = ArrayList<Pair<String, Boolean>>()
     private val creators = ArrayList<String>()
     private val identifiers = ArrayList<String>()
+    private var uniqueId: String? = null
+    private var uniqueIdentifier: String? = null
     private val first = HashMap<String, String>()
     private var inMetadata = false
 
@@ -39,11 +41,14 @@ internal class PackageReader(val path: String) {
         identifiers = identifiers,
         publisher = first["publisher"],
         description = first["description"]?.let(::plain),
-        date = first["date"]
+        date = first["date"],
+        uniqueIdentifier = uniqueIdentifier ?: identifiers.firstOrNull()
     )
 
     private fun start(p: XmlPullParser) {
         when (p.name) {
+            "package" -> uniqueId = p.getAttributeValue(null, "unique-identifier")
+
             "metadata" -> inMetadata = true
 
             "item" -> item(p)
@@ -83,7 +88,9 @@ internal class PackageReader(val path: String) {
 
     private fun dublinCore(p: XmlPullParser) {
         val key = p.name
+        val id = p.getAttributeValue(null, "id")
         val text = p.nextText().collapsed()
+        if (key == "identifier" && id != null && id == uniqueId) uniqueIdentifier = text
         when {
             text.isEmpty() -> Unit
             key == "creator" -> creators += text

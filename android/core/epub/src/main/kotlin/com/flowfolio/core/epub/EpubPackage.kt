@@ -28,7 +28,9 @@ data class EpubMetadata(
     val publisher: String?,
     /** Plain text: markup in the description is removed. */
     val description: String?,
-    val date: String?
+    val date: String?,
+    /** The identifier the package names as its `unique-identifier` (the font obfuscation key's source). */
+    val uniqueIdentifier: String? = null
 ) {
     /** The first identifier that is an ISBN: 13 digits starting 978 or 979, or 10 characters labelled as an ISBN. */
     val isbn: String?

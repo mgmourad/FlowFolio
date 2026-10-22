@@ -18,12 +18,15 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,17 +35,25 @@ import com.flowfolio.core.model.ReadingFont
 /**
  * The seven reading fonts (ADR-0027) as cards of one size in a row that scrolls: "Ag" in the font itself at one size
  * (so its real shape, x-height and weight show), its name below in the app's own face. The chosen one is filled and
- * ringed. Shared by the reader's "Aa" sheet and Settings.
+ * ringed. Shared by the reader's "Aa" sheet and Settings. The first card is the book's own font ([bookLabel]), drawn in
+ * [bookFont] when the open book has one.
  */
 @Composable
 fun FlowFolioFontPicker(
     selected: ReadingFont,
     onSelect: (ReadingFont) -> Unit,
+    bookLabel: String,
     modifier: Modifier = Modifier,
+    bookFont: FontFamily? = null,
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
     val p = FlowFolio.palette
     val list = rememberLazyListState(initialFirstVisibleItemIndex = ReadingFont.entries.indexOf(selected))
+    // A saved scroll position can hide the chosen card: bring it into view whenever the choice changes.
+    LaunchedEffect(selected) {
+        val index = ReadingFont.entries.indexOf(selected)
+        if (list.layoutInfo.visibleItemsInfo.none { it.index == index }) list.animateScrollToItem(index)
+    }
     LazyRow(
         modifier.fillMaxWidth().selectableGroup(),
         state = list,
@@ -66,13 +77,23 @@ fun FlowFolioFontPicker(
                 Box(Modifier.fillMaxWidth().height(SAMPLE_HEIGHT), contentAlignment = Alignment.Center) {
                     Text(
                         "Ag",
-                        style = TextStyle(fontFamily = font.fontFamily, fontSize = 28.sp),
+                        style = TextStyle(
+                            fontFamily = if (font ==
+                                ReadingFont.BOOK
+                            ) {
+                                bookFont ?: FontFamily.Serif
+                            } else {
+                                font.fontFamily
+                            },
+                            fontSize = 28.sp,
+                            fontStyle = if (font == ReadingFont.BOOK && bookFont == null) FontStyle.Italic else null
+                        ),
                         color = if (on) p.title else p.item,
                         maxLines = 1
                     )
                 }
                 Text(
-                    font.displayName,
+                    if (font == ReadingFont.BOOK) bookLabel else font.displayName,
                     style = FlowFolioType.pill.merge(if (on) FlowFolio.title else FlowFolio.hint),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

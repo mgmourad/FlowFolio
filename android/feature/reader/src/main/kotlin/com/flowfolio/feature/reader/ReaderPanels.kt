@@ -81,7 +81,7 @@ internal fun BoxScope.ReaderPanels(
         }
         RibbonList(mark.all, navigation, jump)
     }
-    SheetPanel(panel == Panel.SETTINGS) { ReaderSettingsContent(s.reflowable) }
+    SheetPanel(panel == Panel.SETTINGS) { ReaderSettingsContent(s.reflowable, s.bookFont) }
 }
 
 /**

@@ -2,8 +2,11 @@
 
 package com.flowfolio.core.model
 
-/** The reading fonts for EPUBs (owner's choice, ADR-0027); bundled in `:core:designsystem`. */
-enum class ReadingFont { LITERATA, CHARTER, ATKINSON_HYPERLEGIBLE, EB_GARAMOND, SOURCE_SANS, LEXEND, ANDIKA }
+/**
+ * The reading fonts for EPUBs (owner's choice, ADR-0027; bundled in `:core:designsystem`), and [BOOK]: the fonts the
+ * book itself ships (ADR-0030), or Literata when it ships none.
+ */
+enum class ReadingFont { BOOK, LITERATA, CHARTER, ATKINSON_HYPERLEGIBLE, EB_GARAMOND, SOURCE_SANS, LEXEND, ANDIKA }
 
 /** The distance from one line's baseline to the next, as a multiple of the text size: the same in every font. */
 enum class LineSpacing(val factor: Float) {

@@ -6,11 +6,14 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import com.flowfolio.core.model.ReadingFont
 
-/** The font family resource for this reading font (ADR-0027): regular and bold, upright and italic. */
+/**
+ * The font family resource for this reading font (ADR-0027): regular and bold, upright and italic. The book's own font
+ * falls back to Literata.
+ */
 @get:FontRes
 val ReadingFont.fontRes: Int
     get() = when (this) {
-        ReadingFont.LITERATA -> R.font.font_literata
+        ReadingFont.BOOK, ReadingFont.LITERATA -> R.font.font_literata
         ReadingFont.CHARTER -> R.font.font_charter
         ReadingFont.ATKINSON_HYPERLEGIBLE -> R.font.font_atkinson
         ReadingFont.EB_GARAMOND -> R.font.font_ebgaramond
@@ -19,9 +22,10 @@ val ReadingFont.fontRes: Int
         ReadingFont.ANDIKA -> R.font.font_andika
     }
 
-/** The font's own name, shown in its own face in the font picker. */
+/** The font's own name, shown in the font picker; the book's own font is labelled by the picker's caller. */
 val ReadingFont.displayName: String
     get() = when (this) {
+        ReadingFont.BOOK -> ""
         ReadingFont.LITERATA -> "Literata"
         ReadingFont.CHARTER -> "Charter"
         ReadingFont.ATKINSON_HYPERLEGIBLE -> "Atkinson Hyperlegible"
