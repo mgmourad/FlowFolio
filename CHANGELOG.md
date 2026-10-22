@@ -139,7 +139,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     - The chrome follows the riffle's timer: 3, 5 (default), 8 or 15 s, or Never, set in "Aa" and in Settings.
       An open panel holds it, and the system bars hide with it.
     - "Paper sounds" and "Riffle haptics" settings.
-    - Taller EPUB top and bottom margins; the bar may still cover a line while it shows, as on PDFs (owner).
+    - EPUB margins as before R5: R5 made them taller, which left wasted space on the screen, so they were put back
+      (owner, 2026-10-21). The bars may cover a line while they show, as on PDFs.
     - The strip is a slider for screen readers, with actions for next and previous spread and chapter, Go to page
       and each bookmark. Arrow keys and Page Up and Down move along it; Enter shows or hides the chrome.
   - Owner's tweaks (2026-10-21):
