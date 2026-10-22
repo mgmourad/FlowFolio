@@ -108,6 +108,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     and hyphenation. A change lays the book out again at the reader's place.
   - Line spacing is an exact line height, the same in every font (it was a multiple of each font's own line height).
   - Descenders on a paragraph's last line are no longer cut.
+  - The "Aa" sheet is reorganised into tabs (Text for EPUBs, Page, Controls) with glyphs, at a fixed 46% of the screen
+    so the page stays in view (owner, 2026-10-21): compact rows, line spacing and margins as small pictures, on/off
+    settings as chips, each sound's switch and volume on one line.
+  - Font cards are all one size, each showing "Ag" in the font itself with its name in the app's face.
+  - Maths inside EPUB tables and figures is drawn in the paper's ink: on Night and Black it was black on black, inside a
+    light frame (the rule that keeps stand-alone equations black for tinting also caught nested maths). Island cache
+    version 2, so stored tables are drawn again.
   - Pinching an EPUB page changes the text size (the size shows while pinching; letting go sets it). PDFs still zoom.
   - Layout times are logged (`FlowFolioLayout`): on the Fold, 210 ms for a 270-page book, 445 ms for Linear Algebra
     (1,435 pages), over the 300 ms target; laying out the reader's chapter first comes next.

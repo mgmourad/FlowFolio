@@ -13,6 +13,16 @@
     <string name="reader_link_title">Open this link?</string>
     <string name="reader_footnote">Note</string>
     <string name="reader_text">Text</string>
+    <string name="reader_tab_text">Text</string>
+    <string name="reader_tab_page">Page</string>
+    <string name="reader_tab_controls">Controls</string>
+    <string name="reader_chip_spreads">Two pages side by side</string>
+    <string name="reader_chip_cover">Cover on its own</string>
+    <string name="reader_chip_turn_sound">Page turns</string>
+    <string name="reader_chip_riffle_sound">Riffle</string>
+    <string name="reader_chip_haptics">Riffle haptics</string>
+    <string name="reader_direction_ltr_short">Left → right</string>
+    <string name="reader_direction_rtl_short">Right → left</string>
     <string name="reader_text_size">Size</string>
     <string name="reader_text_smaller">Smaller text</string>
     <string name="reader_text_larger">Larger text</string>

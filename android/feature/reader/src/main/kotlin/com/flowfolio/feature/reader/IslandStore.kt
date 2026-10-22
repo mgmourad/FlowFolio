@@ -67,8 +67,11 @@ internal class IslandStore(root: File, bookId: String, bodyPx: Float, widthPx: I
     }
 
     companion object {
-        /** Raised whenever stored islands could no longer match the book (island ids come from parse order). */
-        private const val VERSION = 1
+        /**
+         * Raised whenever stored islands could no longer match the book (island ids come from parse order) or are drawn
+         * differently (2: maths inside tables in the paper's ink).
+         */
+        private const val VERSION = 2
         private const val SIZES = "sizes-"
         private const val SIZE_FIELDS = 4
 

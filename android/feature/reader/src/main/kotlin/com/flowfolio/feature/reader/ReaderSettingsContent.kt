@@ -6,16 +6,22 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,8 +39,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioSlider
-import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
+import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.PageTurn
@@ -42,27 +48,48 @@ import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.UserSettings
 
 /**
- * The mock's reading sheet ("Aa", `#sheet`): the page colour as swatches (Auto, Paper, Sepia, Night, Black; photos keep
- * their colours), how pages turn (Curl, Slide, Scroll), and the spread layout options. Shown on glass by
+ * The reading sheet ("Aa"), in tabs so it stays under half the screen (owner, 2026-10-21): Text (EPUBs: font, size,
+ * spacing, margins, justification and hyphenation), Page (paper, how pages turn, direction, spreads) and Controls
+ * (when the bars hide, sounds, haptics). The tab row stays put; each tab scrolls if it must. Shown on glass by
  * [ReaderPanels].
  */
 @Composable
-internal fun ReaderSettingsContent(reflowable: Boolean, viewModel: ReaderSettingsViewModel = hiltViewModel()) {
+internal fun ColumnScope.ReaderSettingsContent(
+    reflowable: Boolean,
+    viewModel: ReaderSettingsViewModel = hiltViewModel()
+) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
-    Column(Modifier.padding(horizontal = 8.dp).padding(bottom = 8.dp).testTag(ReaderTestTags.SETTINGS_SHEET)) {
-        Heading(R.string.reader_paper)
-        val reveal = LocalPaperReveal.current
-        PaperSwatches(settings.paperStyle) { style ->
-            if (reveal != null) reveal.change(style, viewModel::setPaperStyle) else viewModel.setPaperStyle(style)
+    val tabs = buildList {
+        if (reflowable) add(SheetTab(stringResource(R.string.reader_tab_text), Glyph.TextSize, ReaderTestTags.TAB_TEXT))
+        add(SheetTab(stringResource(R.string.reader_tab_page), Glyph.Page, ReaderTestTags.TAB_PAGE))
+        add(SheetTab(stringResource(R.string.reader_tab_controls), Glyph.Sliders, ReaderTestTags.TAB_CONTROLS))
+    }
+    var selected by rememberSaveable(reflowable) { mutableIntStateOf(0) }
+    Column(Modifier.testTag(ReaderTestTags.SETTINGS_SHEET)) {
+        SheetTabs(tabs, selected.coerceIn(0, tabs.lastIndex)) { selected = it }
+    }
+    Column(
+        Modifier
+            .weight(1f, fill = false)
+            .verticalScroll(rememberScrollState())
+            .padding(top = 12.dp, start = 4.dp, end = 4.dp)
+    ) {
+        when (tabs[selected.coerceIn(0, tabs.lastIndex)].tag) {
+            ReaderTestTags.TAB_TEXT -> TextChoice(settings.text, viewModel::setText)
+            ReaderTestTags.TAB_PAGE -> PageChoice(settings, viewModel)
+            else -> ControlsChoice(settings, viewModel)
         }
-        Text(
-            stringResource(R.string.reader_paper_note),
-            style = FlowFolioType.rowDetail.merge(FlowFolio.hint),
-            modifier = Modifier.padding(top = 10.dp)
-        )
-        // Text settings first for EPUBs: they are what readers change most (M3).
-        if (reflowable) TextChoice(settings.text, viewModel::setText)
-        Heading(R.string.reader_turn, Modifier.padding(top = 22.dp))
+    }
+}
+
+/** The paper, how pages turn, which way they run, and the spread layout. */
+@Composable
+private fun PageChoice(settings: UserSettings, viewModel: ReaderSettingsViewModel) {
+    val reveal = LocalPaperReveal.current
+    PaperSwatches(settings.paperStyle) { style ->
+        if (reveal != null) reveal.change(style, viewModel::setPaperStyle) else viewModel.setPaperStyle(style)
+    }
+    LabeledRow(stringResource(R.string.reader_turn)) {
         FlowFolioSegmented(
             listOf(
                 stringResource(R.string.reader_turn_curl),
@@ -73,99 +100,114 @@ internal fun ReaderSettingsContent(reflowable: Boolean, viewModel: ReaderSetting
             { viewModel.setPageTurn(PageTurn.entries[it]) },
             modifier = Modifier.testTag(ReaderTestTags.SETTING_TURN)
         )
-        DirectionChoice(viewModel)
-        Heading(R.string.reader_layout, Modifier.padding(top = 22.dp))
-        SettingRow(
-            title = stringResource(R.string.reader_settings_spreads),
-            detail = stringResource(R.string.reader_settings_spreads_detail),
-            checked = settings.readerSpreads,
-            enabled = settings.pageTurn != PageTurn.SCROLL,
-            tag = ReaderTestTags.SETTING_SPREADS,
+    }
+    DirectionChoice(viewModel)
+    val scroll = settings.pageTurn == PageTurn.SCROLL
+    Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        ToggleChip(
+            stringResource(R.string.reader_chip_spreads),
+            settings.readerSpreads,
+            ReaderTestTags.SETTING_SPREADS,
+            enabled = !scroll,
             onChange = viewModel::setSpreads
         )
-        SettingRow(
-            title = stringResource(R.string.reader_settings_cover),
-            detail = stringResource(R.string.reader_settings_cover_detail),
-            checked = settings.spreadCoverAlone,
-            enabled = settings.readerSpreads && settings.pageTurn != PageTurn.SCROLL,
-            tag = ReaderTestTags.SETTING_COVER,
+        ToggleChip(
+            stringResource(R.string.reader_chip_cover),
+            settings.spreadCoverAlone,
+            ReaderTestTags.SETTING_COVER,
+            enabled = settings.readerSpreads && !scroll,
             onChange = viewModel::setCoverAlone
         )
-        ControlsChoice(settings, viewModel)
     }
 }
 
-/** When the controls hide, and how the scrubber sounds and feels (riffle spec 5.6, 5.7). */
+/** Which way this book's pages run (a per-book choice): right to left for Arabic, Hebrew and similar books. */
+@Composable
+private fun DirectionChoice(viewModel: ReaderSettingsViewModel) {
+    val rightToLeft by viewModel.rightToLeft.collectAsStateWithLifecycle()
+    LabeledRow(stringResource(R.string.reader_direction)) {
+        FlowFolioSegmented(
+            listOf(
+                stringResource(R.string.reader_direction_ltr_short),
+                stringResource(R.string.reader_direction_rtl_short)
+            ),
+            if (rightToLeft) 1 else 0,
+            { viewModel.setRightToLeft(it == 1) },
+            modifier = Modifier.testTag(ReaderTestTags.SETTING_DIRECTION)
+        )
+    }
+}
+
+/** When the controls hide, the two paper sounds with their loudness, and riffle haptics. */
 @Composable
 private fun ControlsChoice(settings: UserSettings, viewModel: ReaderSettingsViewModel) {
-    Heading(R.string.reader_controls, Modifier.padding(top = 22.dp))
-    Text(
-        stringResource(R.string.reader_auto_hide),
-        style = FlowFolioType.rowLabel.merge(FlowFolio.item),
-        modifier = Modifier.padding(bottom = 10.dp)
-    )
-    FlowFolioSegmented(
-        ControlsAutoHide.entries.map { stringResource(it.label) },
-        ControlsAutoHide.entries.indexOf(settings.controlsAutoHide),
-        { viewModel.setControlsAutoHide(ControlsAutoHide.entries[it]) },
-        modifier = Modifier.testTag(ReaderTestTags.SETTING_AUTO_HIDE)
-    )
-    SoundsChoice(settings, viewModel)
-    SettingRow(
-        title = stringResource(R.string.reader_scrub_haptics),
-        detail = stringResource(R.string.reader_scrub_haptics_detail),
-        checked = settings.scrubHaptics,
-        enabled = true,
-        tag = ReaderTestTags.SETTING_HAPTICS,
-        onChange = viewModel::setScrubHaptics
-    )
+    LabeledRow(stringResource(R.string.reader_auto_hide)) {
+        FlowFolioSegmented(
+            ControlsAutoHide.entries.map { stringResource(it.label) },
+            ControlsAutoHide.entries.indexOf(settings.controlsAutoHide),
+            { viewModel.setControlsAutoHide(ControlsAutoHide.entries[it]) },
+            modifier = Modifier.testTag(ReaderTestTags.SETTING_AUTO_HIDE)
+        )
+    }
+    val sounds = LocalReaderSounds.current
+    SoundRow(
+        stringResource(R.string.reader_chip_turn_sound),
+        settings.turnSound,
+        settings.turnVolume,
+        ReaderTestTags.SETTING_TURN_SOUND to ReaderTestTags.SETTING_TURN_VOLUME,
+        stringResource(R.string.reader_turn_volume),
+        onToggle = viewModel::setTurnSound
+    ) {
+        viewModel.setTurnVolume(it)
+        sounds?.let { s -> s.settings = s.settings.copy(turnVolume = it) }
+        sounds?.previewTurn()
+    }
+    SoundRow(
+        stringResource(R.string.reader_chip_riffle_sound),
+        settings.riffleSound,
+        settings.riffleVolume,
+        ReaderTestTags.SETTING_RIFFLE_SOUND to ReaderTestTags.SETTING_RIFFLE_VOLUME,
+        stringResource(R.string.reader_riffle_volume),
+        onToggle = viewModel::setRiffleSound
+    ) {
+        viewModel.setRiffleVolume(it)
+        sounds?.let { s -> s.settings = s.settings.copy(riffleVolume = it) }
+        sounds?.previewRiffle()
+    }
+    Row(Modifier.padding(top = 8.dp)) {
+        ToggleChip(
+            stringResource(R.string.reader_chip_haptics),
+            settings.scrubHaptics,
+            ReaderTestTags.SETTING_HAPTICS,
+            onChange = viewModel::setScrubHaptics
+        )
+    }
 }
 
 /**
- * The two paper sounds, each with its switch and loudness (ADR-0025): a flip on every page turn, the riffle while
- * dragging the scrubber. Letting go of a slider plays the sound at its new loudness.
+ * A sound on one line: its switch as a chip, then its loudness. Letting go of the slider plays the sound at the new
+ * loudness (ADR-0026).
  */
 @Composable
-private fun SoundsChoice(settings: UserSettings, viewModel: ReaderSettingsViewModel) {
-    val sounds = LocalReaderSounds.current
-    SettingRow(
-        title = stringResource(R.string.reader_turn_sound),
-        detail = stringResource(R.string.reader_turn_sound_detail),
-        checked = settings.turnSound,
-        enabled = true,
-        tag = ReaderTestTags.SETTING_TURN_SOUND,
-        onChange = viewModel::setTurnSound
-    )
-    FlowFolioSlider(
-        settings.turnVolume,
-        onValueChangeFinished = {
-            viewModel.setTurnVolume(it)
-            sounds?.let { s -> s.settings = s.settings.copy(turnVolume = it) }
-            sounds?.previewTurn()
-        },
-        label = stringResource(R.string.reader_turn_volume),
-        enabled = settings.turnSound,
-        modifier = Modifier.testTag(ReaderTestTags.SETTING_TURN_VOLUME)
-    )
-    SettingRow(
-        title = stringResource(R.string.reader_riffle_sound),
-        detail = stringResource(R.string.reader_riffle_sound_detail),
-        checked = settings.riffleSound,
-        enabled = true,
-        tag = ReaderTestTags.SETTING_RIFFLE_SOUND,
-        onChange = viewModel::setRiffleSound
-    )
-    FlowFolioSlider(
-        settings.riffleVolume,
-        onValueChangeFinished = {
-            viewModel.setRiffleVolume(it)
-            sounds?.let { s -> s.settings = s.settings.copy(riffleVolume = it) }
-            sounds?.previewRiffle()
-        },
-        label = stringResource(R.string.reader_riffle_volume),
-        enabled = settings.riffleSound,
-        modifier = Modifier.testTag(ReaderTestTags.SETTING_RIFFLE_VOLUME)
-    )
+private fun SoundRow(
+    label: String,
+    on: Boolean,
+    volume: Float,
+    tags: Pair<String, String>,
+    volumeLabel: String,
+    onToggle: (Boolean) -> Unit,
+    onVolume: (Float) -> Unit
+) {
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        ToggleChip(label, on, tags.first, Modifier.width(SOUND_CHIP), onChange = onToggle)
+        FlowFolioSlider(
+            volume,
+            onValueChangeFinished = onVolume,
+            label = volumeLabel,
+            enabled = on,
+            modifier = Modifier.weight(1f).padding(start = 12.dp).testTag(tags.second)
+        )
+    }
 }
 
 /** The auto-hide delay's short name. */
@@ -178,40 +220,13 @@ private val ControlsAutoHide.label: Int
         ControlsAutoHide.NEVER -> R.string.reader_auto_hide_never
     }
 
-/** Which way this book's pages run (a per-book choice): right to left for Arabic, Hebrew and similar books. */
-@Composable
-private fun DirectionChoice(viewModel: ReaderSettingsViewModel) {
-    val rightToLeft by viewModel.rightToLeft.collectAsStateWithLifecycle()
-    Heading(R.string.reader_direction, Modifier.padding(top = 22.dp))
-    FlowFolioSegmented(
-        listOf(stringResource(R.string.reader_direction_ltr), stringResource(R.string.reader_direction_rtl)),
-        if (rightToLeft) 1 else 0,
-        { viewModel.setRightToLeft(it == 1) },
-        modifier = Modifier.testTag(ReaderTestTags.SETTING_DIRECTION)
-    )
-    Text(
-        stringResource(R.string.reader_direction_note),
-        style = FlowFolioType.rowDetail.merge(FlowFolio.hint),
-        modifier = Modifier.padding(top = 10.dp)
-    )
-}
-
-@Composable
-private fun Heading(text: Int, modifier: Modifier = Modifier) {
-    Text(
-        stringResource(text).uppercase(),
-        style = FlowFolioType.eyebrow.merge(FlowFolio.subItem),
-        modifier = modifier.padding(top = 6.dp, bottom = 12.dp)
-    )
-}
-
 /** `.paper-sw`: a round swatch per paper showing "Aa" in its ink; the chosen one grows and gets a ring. */
 @Composable
 private fun PaperSwatches(selected: PaperStyle, onSelect: (PaperStyle) -> Unit) {
     val p = FlowFolio.palette
     Row(
-        Modifier.fillMaxWidth().testTag(ReaderTestTags.PAPER_SWATCHES),
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
+        Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag(ReaderTestTags.PAPER_SWATCHES),
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         PaperStyle.entries.forEach { style ->
             val (paper, ink, label) = when (style) {
@@ -249,12 +264,12 @@ private fun Swatch(style: PaperStyle, label: String, paper: Color, ink: Color, o
             contentAlignment = Alignment.Center
         ) {
             val face = FlowFolioType.heroTitle.fontFamily
-            Text(label, style = TextStyle(color = ink, fontSize = 16.sp, fontFamily = face))
+            Text(label, style = TextStyle(color = ink, fontSize = 15.sp, fontFamily = face))
         }
         Text(
             stringResource(style.label),
             style = FlowFolioType.pill.merge(if (on) FlowFolio.title else FlowFolio.hint),
-            modifier = Modifier.padding(top = 8.dp)
+            modifier = Modifier.padding(top = 6.dp)
         )
     }
 }
@@ -268,30 +283,6 @@ private val PaperStyle.label: Int
         PaperStyle.BLACK -> R.string.reader_paper_black
     }
 
-@Composable
-internal fun SettingRow(
-    title: String,
-    detail: String,
-    checked: Boolean,
-    enabled: Boolean,
-    tag: String,
-    onChange: (Boolean) -> Unit
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onChange)
-            .padding(vertical = 10.dp)
-            .testTag(tag),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(Modifier.weight(1f).padding(end = 16.dp)) {
-            Text(title, style = FlowFolioType.rowLabel.merge(FlowFolio.item))
-            Text(detail, style = FlowFolioType.rowDetail.merge(FlowFolio.hint))
-        }
-        FlowFolioToggle(checked = checked, onCheckedChange = null, enabled = enabled)
-    }
-}
-
-private val SWATCH = 46.dp
-private const val SELECTED_SCALE = 1.12f
+private val SWATCH = 42.dp
+private val SOUND_CHIP = 132.dp
+private const val SELECTED_SCALE = 1.1f
