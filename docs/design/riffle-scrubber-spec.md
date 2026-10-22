@@ -6,7 +6,7 @@ wins; where the decisions below and the spec disagree, the decisions win. ADR-00
 
 ## Owner decisions (2026-10-20)
 
-1. **PDF pages stay full size.** The overlays cover them while visible; only EPUBs get the extra top and bottom margins
+1. *(Changed 2026-10-21: EPUBs keep their normal margins too; see section 3.1.)* **PDF pages stay full size.** The overlays cover them while visible; only EPUBs get the extra top and bottom margins
    (Section 3.1's rule that the page size never changes holds for both).
 2. **M2 is signed off.** The riffle scrubber is milestone M2b; EPUB links and footnote popovers follow it.
 3. **Flags use each bookmark's own colour** (the five `BookmarkColor`s). The default colour is the ribbon's red, so on
@@ -45,7 +45,7 @@ user-chosen delay, leaving a clean full-screen book.
 - The page is laid out at full-screen size at all times. All chrome (top bar, strip, loupe, settings popover) is drawn
   on top as frosted-glass overlays. Hiding the chrome only fades and slides the overlays away.
 - Edge to edge: system bar insets are applied only to the overlays, never to the reader content.
-- A bottom page margin about the strip's height and a top margin covering the top bar (EPUBs only, decision 1).
+- A bottom page margin about the strip's height and a top margin covering the top bar (EPUBs only, decision 1). *Withdrawn 2026-10-21:* the owner found the space wasted; EPUB margins are back to their earlier size and the bars may cover text while they show.
 - An automated test proves the reader content's measured size is identical with chrome visible and hidden.
 
 ### 3.2 Precision: fine scrubbing, go-to-page and nudge arrows

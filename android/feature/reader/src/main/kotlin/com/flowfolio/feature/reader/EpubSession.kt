@@ -225,8 +225,8 @@ internal class EpubSession private constructor(
     }
 
     /**
-     * White space around the text: wider at the outer edges, and tall enough at the top and bottom for the reader's
-     * bars and the riffle scrubber to sit over margin rather than text (riffle spec, owner decision 1).
+     * White space around the text: wider at the outer edges, clear of the status bar at the top. Kept tight so the page
+     * fills the screen; the reader's bars may cover a line while they show (owner, 2026-10-21).
      */
     private data class Margins(val left: Int, val top: Int, val right: Int, val bottom: Int) {
         companion object {
@@ -256,8 +256,8 @@ internal class EpubSession private constructor(
         const val BODY_SP = 18f
         private const val SIDE_DP = 28f
         private const val SIDE_FRACTION = 0.06f
-        private const val TOP_DP = 92f
-        private const val BOTTOM_DP = 150f
+        private const val TOP_DP = 56f
+        private const val BOTTOM_DP = 64f
         private const val IMAGE_BYTES = 24 * 1024 * 1024
         private const val DEFAULT_ASPECT = 0.7f
 
