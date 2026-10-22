@@ -29,7 +29,9 @@ import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import com.flowfolio.core.designsystem.LocalAppStyle
 import com.flowfolio.core.designsystem.Motion
+import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.PaperStyle
 import kotlin.math.hypot
 import kotlin.math.max
@@ -48,6 +50,8 @@ internal class PaperReveal(
     private val layer: GraphicsLayer,
     private val scope: CoroutineScope,
     private val appDark: () -> Boolean,
+    /** The Rustic theme is on: Auto paper is Rustic or Sepia then. */
+    private val rustic: () -> Boolean,
     private val currentTone: () -> PageTone?,
     private val pagesReady: () -> Boolean
 ) {
@@ -62,7 +66,7 @@ internal class PaperReveal(
 
     /** Changes the page colour to [style] through [apply], with the reveal when the tone actually changes. */
     fun change(style: PaperStyle, apply: (PaperStyle) -> Unit) {
-        val target = style.tone(appDark())
+        val target = style.tone(appDark(), rustic())
         if (target == currentTone() || old != null) {
             apply(style)
             return
@@ -100,11 +104,13 @@ internal fun PaperRevealHost(
     val latestState by rememberUpdatedState(state)
     val latestImages by rememberUpdatedState(images)
     val dark by rememberUpdatedState(appDark)
+    val rustic by rememberUpdatedState(LocalAppStyle.current == AppStyle.RUSTIC)
     val reveal = remember(layer) {
         PaperReveal(
             layer,
             scope,
             appDark = { dark },
+            rustic = { rustic },
             currentTone = { (latestState as? ReaderState.Ready)?.tone },
             pagesReady = {
                 val s = latestState as? ReaderState.Ready

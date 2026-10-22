@@ -11,6 +11,8 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -21,10 +23,12 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -40,6 +44,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
@@ -63,8 +68,8 @@ import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
-import com.flowfolio.core.designsystem.FlowFolioTabs
 import com.flowfolio.core.designsystem.FlowFolioType
+import com.flowfolio.core.designsystem.FlowFolioUnderlineTabs
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalBookOpener
 import com.flowfolio.core.designsystem.LocalCoverFlights
@@ -229,11 +234,14 @@ private fun DetailsHero(book: Book, hero: CoverSpot, backdrop: Boolean = true) {
  */
 @Composable
 private fun Backdrop(backdrop: androidx.compose.ui.graphics.ImageBitmap?, modifier: Modifier = Modifier.fillMaxSize()) {
+    val veil = FlowFolio.palette.background.copy(alpha = BACKDROP_VEIL)
     Box(
         modifier
             .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
             .drawWithContent {
                 drawContent()
+                // A veil of the theme's background, so a pale cover still leaves the tabs and text over it legible.
+                drawRect(veil)
                 drawRect(
                     Brush.verticalGradient(
                         0f to Color.Black.copy(alpha = FADE_TOP),
@@ -278,7 +286,7 @@ private fun DetailsHeading(state: DetailsUiState, book: Book, actions: DetailsAc
                 modifier = Modifier.padding(top = 10.dp)
             )
         }
-        DetailsPills(state, book, Modifier.padding(top = 12.dp))
+        DetailsMeta(state, book, Modifier.padding(top = 10.dp))
         Row(
             Modifier.padding(top = 18.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -293,19 +301,31 @@ private fun DetailsHeading(state: DetailsUiState, book: Book, actions: DetailsAc
                 text = stringResource(read),
                 onClick = actions.onRead,
                 modifier = Modifier.testTag(LibraryTestTags.READ),
-                icon = { FlowFolioGlyph(Glyph.Play, contentDescription = null, size = 14.dp, glow = false) }
+                icon = { PlayGlyph() }
             )
-            FlowFolioIconButton(
-                onClick = actions.onShelves,
-                modifier = Modifier.testTag(LibraryTestTags.ADD_TO_SHELF)
-            ) {
-                FlowFolioGlyph(
-                    Glyph.Bookmark,
-                    contentDescription = stringResource(R.string.action_add_to_shelf),
-                    color = FlowFolio.palette.subItem
-                )
-            }
+            ShelfButton(actions.onShelves)
         }
+    }
+}
+
+/** "Add to shelf" beside Read: an outlined, quieter second action. */
+@Composable
+private fun ShelfButton(onClick: () -> Unit) {
+    val p = FlowFolio.palette
+    val shape = RoundedCornerShape(50)
+    Row(
+        Modifier
+            .clip(shape)
+            .border(1.dp, p.edge, shape)
+            .clickable(onClick = onClick)
+            .heightIn(min = 48.dp)
+            .padding(horizontal = 18.dp)
+            .testTag(LibraryTestTags.ADD_TO_SHELF),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        FlowFolioGlyph(Glyph.Bookmark, contentDescription = null, size = 16.dp, color = p.glyph, glow = false)
+        Text(stringResource(R.string.action_add_to_shelf), style = FlowFolioType.rowLabel.merge(FlowFolio.item))
     }
 }
 
@@ -369,8 +389,8 @@ private fun DetailsTabs(state: DetailsUiState, book: Book, tab: Int, onTab: (Int
         stringResource(R.string.tab_author),
         stringResource(R.string.tab_contents)
     )
-    FlowFolioTabs(tabs, tab, onTab, Modifier.padding(top = 22.dp))
-    Box(Modifier.padding(top = 20.dp, bottom = 10.dp)) {
+    FlowFolioUnderlineTabs(tabs, tab, onTab, Modifier.padding(top = 26.dp))
+    Box(Modifier.padding(top = 22.dp, bottom = 10.dp)) {
         when (tab) {
             0 -> OverviewPanel(state, book)
             1 -> InfoPanel(state, book)
@@ -378,6 +398,18 @@ private fun DetailsTabs(state: DetailsUiState, book: Book, tab: Int, onTab: (Int
             else -> ContentsPanel(state.contents, book, actions.onChapter)
         }
     }
+}
+
+/** The play mark on Read and Resume, in the theme's colour for an icon on a primary button. */
+@Composable
+internal fun PlayGlyph() {
+    FlowFolioGlyph(
+        Glyph.Play,
+        contentDescription = null,
+        color = FlowFolio.palette.buttonGlyph,
+        size = 14.dp,
+        glow = false
+    )
 }
 
 private val TWO_PANE_WIDTH = 600.dp
@@ -398,6 +430,7 @@ private const val FADE_MID = 0.8f
 private const val FADE_MID_STOP = 0.45f
 private const val FADE_END_STOP = 0.96f
 private const val BACKDROP_SHARE = 0.5f
+private const val BACKDROP_VEIL = 0.45f
 private val PANE_TOP = 72.dp
 
 /** The sway's middle angle: where the opening flight starts from. */

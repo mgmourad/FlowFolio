@@ -18,7 +18,9 @@ the Fold, memory and frame measurements, the M2b sign-off (the owner moved on wi
 footnote popovers (`docs/plans/phase2-m2-links.md`) built. M3, typography (`docs/plans/phase2-m3.md`, ADR-0027),
 under way: seven bundled reading fonts, the tabbed "Aa" sheet with text settings (`ReaderText`, `EpubLayout`), pinch to
 size, and fast re-layout (up to the reader's chapter first, `ReflowBook.layOutRest`; hourglass `Hourglass.kt`) built;
-next Settings' text group, the book's own fonts, islands per layout, EPUB memory** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
+next Settings' text group, the book's own fonts, islands per layout, EPUB memory. Between M2 and M3 (owner,
+2026-10-22): app themes FlowFolio / Rustic / Material You (ADR-0028, `RusticPalette.kt`, `MaterialPalette.kt`,
+`ThemePicker.kt`), a Rustic paper, and a redesigned details page; M3 waits for the owner's approval of these** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
 spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).
 Phase 1 signed off by the owner 2026-10-20 (`docs/plans/phase1-signoff.md`); ADRs 0014, 0016-0018 accepted.
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
@@ -67,7 +69,8 @@ Conventional Commits; keep `CHANGELOG.md`; no secrets in the repo; propose a spi
 **`docs/design/FlowFolio_Mock.html` is the design reference for every milestone and phase.** Keep our 3D page curl;
 on the unfolded Fold use a side rail and wider layouts. M5 plan: `docs/plans/phase1-m5-design.md`.
 
-`:core:designsystem` holds everything visual. Use it instead of raw Material colours:
+`:core:designsystem` holds everything visual. Use it instead of raw Material colours. Since ADR-0028 a theme is a
+`PaletteFamily` (light and dark `Palette`, plus a `SurfaceTexture`); every new token needs a value in all three themes:
 - the mock's tokens (`Palette`, `FlowFolioType`, `Motion`);
 - the fonts: Fraunces and Instrument Sans;
 - effects (`card`, `softShadow`, `innerShadow`, `glass`, `appBackground`);
@@ -242,8 +245,8 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
 ## Decision log
 
-ADRs 0001–0027 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0028 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
-Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026), reading fonts (0027).
+Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026), reading fonts (0027), app themes (0028).

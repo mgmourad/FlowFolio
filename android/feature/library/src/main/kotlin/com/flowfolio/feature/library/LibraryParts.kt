@@ -221,7 +221,7 @@ internal fun ContinueReadingCard(item: LibraryItem, actions: LibraryActions, mod
                     text = stringResource(R.string.action_resume),
                     onClick = { actions.onResume(item) },
                     modifier = Modifier.padding(top = 12.dp).testTag(LibraryTestTags.RESUME),
-                    icon = { FlowFolioGlyph(Glyph.Play, contentDescription = null, size = 14.dp, glow = false) }
+                    icon = { PlayGlyph() }
                 )
             }
         }

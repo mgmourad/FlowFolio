@@ -122,6 +122,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     53%) on the Fold, non-debuggable build: 206-250 ms to the reader's page, from 352-372 ms (1.4 s with the trim).
   - An hourglass (sand runs down, the glass turns over) shows over the pages while a layout runs and until the new
     pages are drawn, instead of half-drawn pages; it waits 120 ms before showing and stays at least 500 ms.
+- App themes (ADR-0028, owner 2026-10-22): Settings > Appearance > Theme offers FlowFolio (the mock), Rustic and
+  Material You, as three small previews drawn in each theme; Light or dark applies to all three, and the change runs
+  through the circular reveal.
+  - Rustic: dark is the shelf wood itself (#48120c, deeper walnut), cream text (#f6e4ca), honey-brass accents and
+    candle-light glows; light is parchment with walnut ink. Both lay a wood grain behind the content.
+  - Material You: a Material 3 scheme mapped onto the palette (flat tonal cards, no glows or grain), from the
+    wallpaper (Android 12 and later) or one of six seeds (blue, teal, green, amber, rose, violet) generated in the app.
+  - The reader's bars and panels follow the theme. New Rustic paper (#48120c, cream ink); with the Rustic theme,
+    Auto paper is Rustic in dark mode and Sepia in light mode.
+- Book details redesigned to look less like a page of buttons: the pills became one quiet line (format, pages,
+  size); "Add to shelf" is an outlined second button with its label; tabs are words on a hairline with a sliding
+  underline (`FlowFolioUnderlineTabs`); Overview shows the percentage over a slim bar and three figures split by
+  hairlines instead of three cards; Details groups the eleven boxes into two lists (Book, File) of label and value in
+  one card each. The blurred cover behind the hero is veiled in the theme's background so text over it stays legible.
 - Phase 2, EPUB links and footnote popovers (the M2 follow-up, `docs/plans/phase2-m2-links.md`):
   - Links in EPUB text are tappable: a link into the book jumps to its page, a web link asks before opening (http,
     https and mailto only), a link to anything outside the reading order does nothing.

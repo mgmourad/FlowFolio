@@ -5,6 +5,7 @@ import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.flowfolio.core.designsystem.FlowFolioTheme
@@ -77,7 +78,7 @@ class BookmarksUiTest {
         compose.setContent {
             FlowFolioTheme { SettingsContent(UserSettings(), SettingsActions(onGlow = { glow = it })) }
         }
-        compose.onNodeWithText(res.getString(R.string.settings_glow)).performClick()
+        compose.onNodeWithText(res.getString(R.string.settings_glow)).performScrollTo().performClick()
         assertEquals(false, glow)
     }
 }

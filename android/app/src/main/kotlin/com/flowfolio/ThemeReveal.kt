@@ -24,17 +24,17 @@ import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import com.flowfolio.core.designsystem.Motion
-import com.flowfolio.core.model.ThemePreference
 import kotlin.math.hypot
 import kotlin.math.max
 
 /**
- * The mock's theme switch (`::view-transition` circle): when [theme] changes, the new theme is revealed in a circle
+ * The mock's theme switch (`::view-transition` circle): when [theme] changes (light or dark, the app theme or Material
+ * You's colours), the new look is revealed in a circle
  * that grows from the last touch over 700 ms (ease-in-out) while the old one stays outside it. The old frame is a
  * one-off snapshot of what was on screen, dropped as soon as the reveal ends.
  */
 @Composable
-fun ThemeRevealHost(theme: ThemePreference, content: @Composable (ThemePreference) -> Unit) {
+fun <T> ThemeRevealHost(theme: T, content: @Composable (T) -> Unit) {
     var shown by remember { mutableStateOf(theme) }
     var old by remember { mutableStateOf<ImageBitmap?>(null) }
     var touch by remember { mutableStateOf(Offset.Unspecified) }

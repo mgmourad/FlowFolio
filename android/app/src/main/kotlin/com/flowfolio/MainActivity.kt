@@ -23,6 +23,7 @@ import com.flowfolio.core.designsystem.DesignCatalog
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioSplash
 import com.flowfolio.core.designsystem.FlowFolioTheme
+import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
@@ -68,11 +69,14 @@ class MainActivity : ComponentActivity() {
                 var splash by rememberSaveable { mutableStateOf(splashOnStart) }
                 ThemeRevealHost(theme) { shown ->
                     val look by appViewModel.readerSettings.collectAsStateWithLifecycle()
-                    FlowFolioTheme(shown, glow = look.neonGlow) {
+                    FlowFolioTheme(shown.mode, glow = look.neonGlow, style = shown.style, seed = shown.seed) {
                         SystemBarsFollowTheme(FlowFolio.palette.dark)
                         val reading by appViewModel.readerSettings.collectAsStateWithLifecycle()
                         BookOpeningHost(
-                            paper = reading.paperStyle.tone(FlowFolio.palette.dark).paper,
+                            paper = reading.paperStyle.tone(
+                                FlowFolio.palette.dark,
+                                rustic = shown.style == AppStyle.RUSTIC
+                            ).paper,
                             spread = { w, h -> reading.opensAsSpread(w, h) }
                         ) { CoverFlightHost { FlowFolioApp(appViewModel) } }
                         if (splash) FlowFolioSplash(stringResource(R.string.splash_tagline)) { splash = false }
