@@ -41,7 +41,9 @@ internal class EpubSession private constructor(
     /** The reading fonts, loaded once each when first used (null: the system serif). */
     private val fonts: (ReadingFont) -> android.graphics.Typeface?,
     /** Where islands are kept on disk ([IslandStore]), all books. */
-    private val islandRoot: java.io.File
+    private val islandRoot: java.io.File,
+    /** The book's own body font (ADR-0030), or null when it ships none: "Book's font" is then Literata. */
+    val bookFont: android.graphics.Typeface?
 ) : PageSource {
     private val lock = Mutex()
     private var paginator: Paginator? = null
@@ -102,7 +104,13 @@ internal class EpubSession private constructor(
                     bodyPx = bodyPx,
                     locale = book.locale,
                     heading = heading,
-                    body = fonts(text.font),
+                    body = if (text.font ==
+                        ReadingFont.BOOK
+                    ) {
+                        bookFont ?: fonts(ReadingFont.LITERATA)
+                    } else {
+                        fonts(text.font)
+                    },
                     lineSpacing = text.lineSpacing.factor,
                     justify = text.justify,
                     hyphenate = text.hyphenate
@@ -303,7 +311,8 @@ internal class EpubSession private constructor(
             fonts: (ReadingFont) -> android.graphics.Typeface?,
             islandRoot: java.io.File
         ): EpubSession = withContext(Dispatchers.Default) {
-            EpubSession(opened, ReflowBook(opened.archive, opened.pkg), heading, fonts, islandRoot)
+            val book = ReflowBook(opened.archive, opened.pkg)
+            EpubSession(opened, book, heading, fonts, islandRoot, runCatching { BookTypeface.load(opened) }.getOrNull())
         }
 
         fun colorsOf(tone: PageTone): PageColors {

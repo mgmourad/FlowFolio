@@ -19,6 +19,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,6 +34,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.Typeface
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,11 +56,13 @@ import com.flowfolio.core.model.ReadingFont
  * place.
  */
 @Composable
-internal fun TextChoice(text: ReaderText, onChange: (ReaderText) -> Unit) {
+internal fun TextChoice(text: ReaderText, bookFont: android.graphics.Typeface?, onChange: (ReaderText) -> Unit) {
     FlowFolioFontPicker(
         text.font,
         { onChange(text.copy(font = it)) },
-        Modifier.padding(bottom = 6.dp).testTag(ReaderTestTags.SETTING_FONT)
+        stringResource(if (bookFont == null) R.string.reader_font_book_none else R.string.reader_font_book),
+        Modifier.padding(bottom = 6.dp).testTag(ReaderTestTags.SETTING_FONT),
+        bookFont = remember(bookFont) { bookFont?.let { FontFamily(Typeface(it)) } }
     )
     LabeledRow(stringResource(R.string.reader_text_size)) {
         SizeStepper(text.sizeSp) { onChange(text.copy(sizeSp = it)) }

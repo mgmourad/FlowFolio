@@ -78,7 +78,9 @@ sealed interface ReaderState {
          * The pages are laid out by FlowFolio (an EPUB): selection, highlights, ribbons and zoom are PDF-only until
          * Phase 2 milestone 4.
          */
-        val reflowable: Boolean = false
+        val reflowable: Boolean = false,
+        /** The open EPUB's own body font (ADR-0030), shown on the "Book's font" card; null when it ships none. */
+        val bookFont: android.graphics.Typeface? = null
     ) : ReaderState
 }
 
@@ -495,7 +497,8 @@ class ReaderViewModel @Inject constructor(
                 turn = settings.pageTurn,
                 pageAspect = session?.pane?.let { it.width.toFloat() / it.height }
                     ?: sizes[anchorPage]?.let { it.widthPt / it.heightPt } ?: LETTER_ASPECT,
-                reflowable = session != null
+                reflowable = session != null,
+                bookFont = session?.bookFont
             )
         }
     }

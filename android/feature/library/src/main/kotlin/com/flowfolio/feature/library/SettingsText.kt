@@ -45,6 +45,7 @@ internal fun TextGroup(text: ReaderText, order: Int, onChange: (ReaderText) -> U
         FlowFolioFontPicker(
             text.font,
             { onChange(text.copy(font = it)) },
+            stringResource(R.string.settings_text_book_font),
             Modifier.testTag(LibraryTestTags.TEXT_FONT),
             contentPadding = PaddingValues(horizontal = 16.dp)
         )

@@ -56,6 +56,7 @@ import com.flowfolio.core.model.UserSettings
 @Composable
 internal fun ColumnScope.ReaderSettingsContent(
     reflowable: Boolean,
+    bookFont: android.graphics.Typeface? = null,
     viewModel: ReaderSettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -75,7 +76,7 @@ internal fun ColumnScope.ReaderSettingsContent(
             .padding(top = 12.dp, start = 4.dp, end = 4.dp)
     ) {
         when (tabs[selected.coerceIn(0, tabs.lastIndex)].tag) {
-            ReaderTestTags.TAB_TEXT -> TextChoice(settings.text, viewModel::setText)
+            ReaderTestTags.TAB_TEXT -> TextChoice(settings.text, bookFont, viewModel::setText)
             ReaderTestTags.TAB_PAGE -> PageChoice(settings, viewModel)
             else -> ControlsChoice(settings, viewModel)
         }

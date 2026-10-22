@@ -118,4 +118,6 @@
     <string name="reader_translate_history">Recent</string>
     <string name="reader_translate_clear">Clear</string>
     <string name="reader_translate_choose">This passage is already in that language. Choose the language to translate into above.</string>
+    <string name="reader_font_book">Book’s font</string>
+    <string name="reader_font_book_none">Book’s (none)</string>
 </resources>
