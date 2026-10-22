@@ -7,12 +7,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
@@ -24,13 +27,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioCard
-import com.flowfolio.core.designsystem.FlowFolioPill
 import com.flowfolio.core.designsystem.FlowFolioProgressBar
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.model.Availability
@@ -41,51 +44,74 @@ import com.flowfolio.core.model.OutlineEntry
 import com.flowfolio.core.model.pageLabel
 import kotlin.math.roundToInt
 
-/** `.meta-row`: page count, format and size, plus a warning when the file is missing. */
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * One quiet line under the author: edition, format, printed pages and file size, separated by middle dots, with a
+ * warning when the file is missing. Facts, not buttons, so no pills.
+ */
 @Composable
-internal fun DetailsPills(state: DetailsUiState, book: Book, modifier: Modifier = Modifier) {
+internal fun DetailsMeta(state: DetailsUiState, book: Book, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    FlowRow(modifier, horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
-        book.details.edition?.let { FlowFolioPill(it, FlowFolio.subItem) }
-        // An EPUB's pages depend on the text size: shown only when the book lists its printed pages.
-        if (book.pageCount > 0) {
-            FlowFolioPill(pluralStringResource(R.plurals.page_count, book.pageCount, book.pageCount), FlowFolio.hint)
-        }
-        FlowFolioPill(stringResource(book.formatLabel()), FlowFolio.item)
-        FlowFolioPill(Formatter.formatShortFileSize(context, book.sizeBytes), FlowFolio.subItem)
+    val format = stringResource(book.formatLabel())
+    // An EPUB's pages depend on the text size: shown only when the book lists its printed pages.
+    val pages = if (book.pageCount > 0) {
+        pluralStringResource(R.plurals.page_count, book.pageCount, book.pageCount)
+    } else {
+        null
+    }
+    val parts =
+        listOfNotNull(book.details.edition, format, pages, Formatter.formatShortFileSize(context, book.sizeBytes))
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            parts.joinToString(SEPARATOR),
+            style = FlowFolioType.sub.merge(FlowFolio.hint),
+            textAlign = TextAlign.Center
+        )
         if (state.availability == Availability.MISSING) {
-            FlowFolioPill(stringResource(R.string.badge_missing), FlowFolio.subItem)
+            Text(
+                stringResource(R.string.badge_missing),
+                style = FlowFolioType.rowDetail.merge(FlowFolio.subItem),
+                modifier = Modifier.padding(top = 4.dp)
+            )
         }
     }
 }
 
-/** Overview: what the book is about, how far along, and three stats (`.stats`): time read, ribbons, shelves. */
+/**
+ * Overview: what the book is about, how far along (the percentage over a slim bar), and three figures side by side,
+ * split by hairlines: time read, ribbons, shelves.
+ */
 @Composable
 internal fun OverviewPanel(state: DetailsUiState, book: Book) {
     Column(Modifier.fillMaxWidth()) {
         book.details.description?.let {
             Text(
                 it,
-                style = FlowFolioType.sub.copy(fontSize = 15.sp, lineHeight = 23.sp).merge(FlowFolio.hint),
-                modifier = Modifier.padding(bottom = 18.dp)
+                style = FlowFolioType.sub.copy(fontSize = 15.sp, lineHeight = 23.sp).merge(FlowFolio.item),
+                modifier = Modifier.padding(bottom = 22.dp)
             )
         }
-        FlowFolioProgressBar(book.progress, Modifier.padding(bottom = 6.dp))
         Text(
             stringResource(R.string.percent_complete, (book.progress * PERCENT).roundToInt()),
-            style = FlowFolioType.rowDetail.merge(FlowFolio.hint)
+            style = FlowFolioType.rowLabel.merge(FlowFolio.title),
+            modifier = Modifier.padding(bottom = 8.dp)
         )
-        Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Stat(readTime(state.readMillis), R.string.stat_read, FlowFolio.item, Modifier.weight(1f))
-            Stat(state.ribbons.toString(), R.string.stat_ribbons, FlowFolio.title, Modifier.weight(1f))
-            Stat(state.bookShelves.size.toString(), R.string.stat_shelves, FlowFolio.subItem, Modifier.weight(1f))
+        FlowFolioProgressBar(book.progress)
+        Row(
+            Modifier.fillMaxWidth().padding(top = 26.dp).height(IntrinsicSize.Min),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Stat(readTime(state.readMillis), R.string.stat_read, Modifier.weight(1f))
+            StatRule()
+            Stat(state.ribbons.toString(), R.string.stat_ribbons, Modifier.weight(1f))
+            StatRule()
+            Stat(state.bookShelves.size.toString(), R.string.stat_shelves, Modifier.weight(1f))
         }
         if (state.bookShelves.isNotEmpty()) {
             Text(
-                state.bookShelves.joinToString(" · ") { it.name },
+                state.bookShelves.joinToString(SEPARATOR) { it.name },
                 style = FlowFolioType.sub.merge(FlowFolio.hint),
-                modifier = Modifier.padding(top = 14.dp)
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(top = 18.dp)
             )
         }
     }
@@ -106,64 +132,20 @@ internal fun readTime(millis: Long): String {
 }
 
 @Composable
-private fun Stat(value: String, label: Int, role: TextStyle, modifier: Modifier) {
-    FlowFolioCard(modifier, radius = 18.dp, padding = androidx.compose.foundation.layout.PaddingValues(14.dp)) {
-        Column {
-            Text(value, style = FlowFolioType.stat.merge(role))
-            Text(stringResource(label).uppercase(), style = FlowFolioType.eyebrow.merge(FlowFolio.hint))
-        }
-    }
-}
-
-/** Details (`.info-grid`): what is known about the book and its file. Unknown fields say so. */
-@Composable
-internal fun InfoPanel(state: DetailsUiState, book: Book) {
-    val context = LocalContext.current
-    val dateFormat = DateFormat.getMediumDateFormat(context)
-    val unknown = stringResource(R.string.info_unknown)
-    val d = book.details
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Info(R.string.info_author, book.author ?: unknown, Modifier.weight(1f))
-            Info(R.string.info_pages, book.pageCount.takeIf { it > 0 }?.toString() ?: unknown, Modifier.weight(1f))
-        }
-        Info(R.string.info_isbn, d.isbn ?: unknown)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Info(R.string.info_released, d.released ?: unknown, Modifier.weight(1f))
-            Info(R.string.info_edition, d.edition ?: unknown, Modifier.weight(1f))
-        }
-        Info(R.string.info_publisher, d.publisher ?: unknown)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Info(R.string.info_language, d.language ?: unknown, Modifier.weight(1f))
-            Info(R.string.info_type, d.type?.let { stringResource(it.label) } ?: unknown, Modifier.weight(1f))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Info(R.string.info_added, dateFormat.format(book.addedAtMillis), Modifier.weight(1f))
-            Info(R.string.info_size, Formatter.formatShortFileSize(context, book.sizeBytes), Modifier.weight(1f))
-        }
-        Info(
-            R.string.info_last_opened,
-            book.lastOpenedAtMillis?.let { dateFormat.format(it) } ?: stringResource(R.string.info_never)
+private fun Stat(value: String, label: Int, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, style = FlowFolioType.stat.merge(FlowFolio.item))
+        Text(
+            stringResource(label).uppercase(),
+            style = FlowFolioType.eyebrow.merge(FlowFolio.hint),
+            modifier = Modifier.padding(top = 2.dp)
         )
-        Info(R.string.info_storage, stringResource(storageLabel(state, book)))
-        Info(R.string.info_cover, stringResource(coverLabel(book)), sub = true)
     }
 }
 
 @Composable
-private fun Info(label: Int, value: String, modifier: Modifier = Modifier.fillMaxWidth(), sub: Boolean = false) {
-    FlowFolioCard(modifier, radius = 18.dp, padding = androidx.compose.foundation.layout.PaddingValues(14.dp)) {
-        Column {
-            Text(stringResource(label).uppercase(), style = FlowFolioType.eyebrow.merge(FlowFolio.hint))
-            Text(
-                value,
-                style = FlowFolioType.rowLabel.merge(if (sub) FlowFolio.subItem else FlowFolio.item),
-                modifier = Modifier.padding(top = 6.dp),
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
+private fun StatRule() {
+    Box(Modifier.width(1.dp).fillMaxHeight().padding(vertical = 4.dp).background(FlowFolio.palette.edge))
 }
 
 /**
@@ -235,3 +217,4 @@ private const val MINUTES_PER_HOUR = 60L
 /** From ten hours on, minutes are noise. */
 private const val WHOLE_HOURS_FROM = 10L
 private const val DOT_IDLE_ALPHA = 0.4f
+private const val SEPARATOR = " \u00B7 "

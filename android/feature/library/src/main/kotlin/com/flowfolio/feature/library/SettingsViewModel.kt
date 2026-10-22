@@ -3,7 +3,9 @@ package com.flowfolio.feature.library
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.ControlsAutoHide
+import com.flowfolio.core.model.MaterialSeed
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
@@ -18,6 +20,8 @@ import kotlinx.coroutines.launch
 /** What the settings screen can change. */
 data class SettingsActions(
     val onTheme: (ThemePreference) -> Unit = {},
+    val onAppStyle: (AppStyle) -> Unit = {},
+    val onMaterialSeed: (MaterialSeed) -> Unit = {},
     val onGlow: (Boolean) -> Unit = {},
     val onPageTurn: (PageTurn) -> Unit = {},
     val onSpreads: (Boolean) -> Unit = {},
@@ -33,6 +37,8 @@ data class SettingsActions(
     val onScrubHaptics: (Boolean) -> Unit = {}
 )
 
+// One setter per setting, each a line: splitting the class would only scatter them.
+@Suppress("TooManyFunctions")
 @HiltViewModel
 class SettingsViewModel @Inject constructor(private val repo: SettingsRepository) : ViewModel() {
     val settings: StateFlow<UserSettings> = repo.settings.stateIn(
@@ -49,6 +55,10 @@ class SettingsViewModel @Inject constructor(private val repo: SettingsRepository
     fun setAskEachImport(ask: Boolean) = viewModelScope.launch { repo.setAskStorageEachImport(ask) }
 
     fun setTheme(theme: ThemePreference) = viewModelScope.launch { repo.setTheme(theme) }
+
+    fun setAppStyle(style: AppStyle) = viewModelScope.launch { repo.setAppStyle(style) }
+
+    fun setMaterialSeed(seed: MaterialSeed) = viewModelScope.launch { repo.setMaterialSeed(seed) }
 
     fun setGlow(on: Boolean) = viewModelScope.launch { repo.setNeonGlow(on) }
 

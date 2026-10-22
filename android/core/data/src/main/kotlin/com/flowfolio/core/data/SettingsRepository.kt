@@ -1,8 +1,10 @@
 package com.flowfolio.core.data
 
 import com.flowfolio.core.datastore.SettingsDataSource
+import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.LibrarySort
+import com.flowfolio.core.model.MaterialSeed
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.ReaderText
@@ -55,6 +57,11 @@ interface SettingsRepository {
 
     /** The EPUB text settings (M3). */
     suspend fun setReaderText(text: ReaderText) = Unit
+
+    /** The app's theme and Material You's colours (ADR-0028). */
+    suspend fun setAppStyle(style: AppStyle) = Unit
+
+    suspend fun setMaterialSeed(seed: MaterialSeed) = Unit
 }
 
 @Suppress("TooManyFunctions") // one setter per setting
@@ -123,6 +130,14 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setTurnVolume(volume: Float) {
         source.setTurnVolume(volume)
+    }
+
+    override suspend fun setAppStyle(style: AppStyle) {
+        source.setAppStyle(style)
+    }
+
+    override suspend fun setMaterialSeed(seed: MaterialSeed) {
+        source.setMaterialSeed(seed)
     }
 
     override suspend fun setReaderText(text: ReaderText) {

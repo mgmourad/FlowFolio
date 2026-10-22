@@ -10,8 +10,10 @@ import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
+import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.LibrarySort
+import com.flowfolio.core.model.MaterialSeed
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.ReaderText
@@ -54,7 +56,9 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             turnSound = p[TURN_SOUND] ?: defaults.turnSound,
             turnVolume = p[TURN_VOLUME]?.coerceIn(0f, 1f) ?: defaults.turnVolume,
             scrubHaptics = p[SCRUB_HAPTICS] ?: defaults.scrubHaptics,
-            text = readerText(p)
+            text = readerText(p),
+            appStyle = p[APP_STYLE].toEnum(defaults.appStyle),
+            materialSeed = p[MATERIAL_SEED].toEnum(defaults.materialSeed)
         )
     }
 
@@ -69,6 +73,14 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             justify = p[TEXT_JUSTIFY] ?: d.justify,
             hyphenate = p[TEXT_HYPHENATE] ?: d.hyphenate
         )
+    }
+
+    suspend fun setAppStyle(style: AppStyle) {
+        store.edit { it[APP_STYLE] = style.name }
+    }
+
+    suspend fun setMaterialSeed(seed: MaterialSeed) {
+        store.edit { it[MATERIAL_SEED] = seed.name }
     }
 
     suspend fun setReaderText(text: ReaderText) {
@@ -183,6 +195,8 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val TURN_SOUND = booleanPreferencesKey("turn_sound")
         val TURN_VOLUME = floatPreferencesKey("turn_volume")
         val SCRUB_HAPTICS = booleanPreferencesKey("scrub_haptics")
+        val APP_STYLE = stringPreferencesKey("app_style")
+        val MATERIAL_SEED = stringPreferencesKey("material_seed")
         val TEXT_FONT = stringPreferencesKey("text_font")
         val TEXT_SIZE = intPreferencesKey("text_size_sp")
         val TEXT_SPACING = stringPreferencesKey("text_line_spacing")

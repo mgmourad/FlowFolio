@@ -145,8 +145,20 @@
 
     <!-- Settings, grouped as in the mock (slice 5) -->
     <string name="settings_sub">Make it yours</string>
+    <string name="settings_app_theme">Theme</string>
+    <string name="settings_app_theme_detail">The look of every screen, menu and button</string>
+    <string name="style_flowfolio">FlowFolio</string>
+    <string name="style_rustic">Rustic</string>
+    <string name="style_material">Material You</string>
+    <string name="seed_wallpaper">Wallpaper colours</string>
+    <string name="seed_blue">Blue</string>
+    <string name="seed_teal">Teal</string>
+    <string name="seed_green">Green</string>
+    <string name="seed_amber">Amber</string>
+    <string name="seed_rose">Rose</string>
+    <string name="seed_violet">Violet</string>
     <string name="settings_appearance">Appearance</string>
-    <string name="settings_theme">Theme</string>
+    <string name="settings_theme">Light or dark</string>
     <string name="settings_theme_detail">Changes with a circular reveal</string>
     <string name="theme_system_short">System</string>
     <string name="settings_glow">Neon glow</string>
@@ -190,6 +202,9 @@
     <string name="info_publisher">Publisher</string>
     <string name="info_language">Language</string>
     <string name="info_type">Type</string>
+    <string name="info_group_book">Book</string>
+    <string name="info_group_file">File</string>
+    <string name="info_format">Format</string>
     <string name="type_textbook">Textbook</string>
     <string name="type_novel">Novel</string>
     <string name="type_nonfiction">Non-fiction</string>

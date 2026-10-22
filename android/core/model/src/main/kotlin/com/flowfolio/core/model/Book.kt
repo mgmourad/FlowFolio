@@ -76,6 +76,10 @@ data class UserSettings(
     val pageTurn: PageTurn = PageTurn.CURL,
     /** The mock's "Neon glow": the soft light on text and icons in dark mode (and soft shadows in light mode). */
     val neonGlow: Boolean = true,
+    /** The app's theme (ADR-0028); light or dark still follows [theme]. */
+    val appStyle: AppStyle = AppStyle.FLOWFOLIO,
+    /** Material You's colours, when [appStyle] is Material. */
+    val materialSeed: MaterialSeed = MaterialSeed.WALLPAPER,
     /** Look book details up online (Open Library, ADR-0017). Off until the reader agrees. */
     val onlineLookup: Boolean = false,
     /** Whether the first import has asked about the online lookup yet. */
@@ -108,7 +112,22 @@ enum class ControlsAutoHide { S3, S5, S8, S15, NEVER }
  * The reader's paper (the mock's swatches). [AUTO] follows the app: pages as printed in light mode, Night in dark
  * mode. The others tint text and line art; photos are never changed.
  */
-enum class PaperStyle { AUTO, PAPER, SEPIA, NIGHT, BLACK }
+enum class PaperStyle { AUTO, PAPER, SEPIA, NIGHT, BLACK, RUSTIC }
+
+/** The app's look (ADR-0028): the mock's neon FlowFolio design, classic wood, or Material You. */
+enum class AppStyle { FLOWFOLIO, RUSTIC, MATERIAL }
+
+/** Material You's colours: from the wallpaper (Android 12 and later), or one of these seeds' hues (CIE LCh degrees). */
+@Suppress("MagicNumber") // Each seed is its hue; naming the numbers would only repeat the entries' names.
+enum class MaterialSeed(val hue: Float) {
+    WALLPAPER(-1f),
+    BLUE(282f),
+    TEAL(200f),
+    GREEN(140f),
+    AMBER(72f),
+    ROSE(12f),
+    VIOLET(312f)
+}
 
 /** Page turns: the 3D curl (default), sliding sideways, or one continuous vertical scroll. */
 enum class PageTurn { CURL, SLIDE, SCROLL }

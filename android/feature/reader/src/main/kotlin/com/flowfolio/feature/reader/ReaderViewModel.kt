@@ -14,6 +14,7 @@ import com.flowfolio.core.data.SettingsRepository
 import com.flowfolio.core.designsystem.R as DesignR
 import com.flowfolio.core.designsystem.fontRes
 import com.flowfolio.core.epub.EpubException
+import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.PageLabels
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PixelSize
@@ -487,7 +488,10 @@ class ReaderViewModel @Inject constructor(
                 unitCount = if (spread) Spreads.unitCount(pageCount, coverAlone) else pageCount,
                 anchorPage = anchorPage,
                 coverAlone = coverAlone,
-                tone = settings.paperStyle.tone(appDark = viewport?.dark == true),
+                tone = settings.paperStyle.tone(
+                    appDark = viewport?.dark == true,
+                    rustic = settings.appStyle == AppStyle.RUSTIC
+                ),
                 turn = settings.pageTurn,
                 pageAspect = session?.pane?.let { it.width.toFloat() / it.height }
                     ?: sizes[anchorPage]?.let { it.widthPt / it.heightPt } ?: LETTER_ASPECT,

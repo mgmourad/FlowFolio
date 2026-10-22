@@ -38,6 +38,7 @@ import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.LocalChromePadding
 import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.reveal
+import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.StorageMode
@@ -51,6 +52,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
         settings,
         SettingsActions(
             onTheme = viewModel::setTheme,
+            onAppStyle = viewModel::setAppStyle,
+            onMaterialSeed = viewModel::setMaterialSeed,
             onGlow = viewModel::setGlow,
             onPageTurn = viewModel::setPageTurn,
             onSpreads = viewModel::setSpreads,
@@ -119,6 +122,15 @@ fun SettingsContent(settings: UserSettings, actions: SettingsActions) {
 @Composable
 private fun AppearanceGroup(settings: UserSettings, actions: SettingsActions) {
     Group(R.string.settings_appearance, 1) {
+        // The theme (ADR-0028) as previews, then light or dark, then Material You's colours when it is chosen.
+        Label(
+            R.string.settings_app_theme,
+            R.string.settings_app_theme_detail,
+            Modifier.padding(start = 16.dp, end = 16.dp, top = 15.dp)
+        )
+        ThemeCards(settings.appStyle, settings.materialSeed, actions.onAppStyle)
+        if (settings.appStyle == AppStyle.MATERIAL) SeedSwatches(settings.materialSeed, actions.onMaterialSeed)
+        Divider()
         val themes = listOf(ThemePreference.SYSTEM, ThemePreference.DARK, ThemePreference.LIGHT)
         ChoiceRow(
             R.string.settings_theme,
@@ -126,8 +138,11 @@ private fun AppearanceGroup(settings: UserSettings, actions: SettingsActions) {
             listOf(R.string.theme_system_short, R.string.theme_dark, R.string.theme_light),
             themes.indexOf(settings.theme)
         ) { actions.onTheme(themes[it]) }
-        Divider()
-        SwitchRow(R.string.settings_glow, R.string.settings_glow_detail, settings.neonGlow, actions.onGlow)
+        // Material You has no lights to turn off.
+        if (settings.appStyle != AppStyle.MATERIAL) {
+            Divider()
+            SwitchRow(R.string.settings_glow, R.string.settings_glow_detail, settings.neonGlow, actions.onGlow)
+        }
         Divider()
         ChoiceRow(
             R.string.settings_turn,

@@ -235,6 +235,7 @@ private fun PaperSwatches(selected: PaperStyle, onSelect: (PaperStyle) -> Unit) 
                 PaperStyle.SEPIA -> Triple(PageTone.SEPIA.paper, PageTone.SEPIA.ink!!, "Aa")
                 PaperStyle.NIGHT -> Triple(PageTone.NIGHT.paper, PageTone.NIGHT.ink!!, "Aa")
                 PaperStyle.BLACK -> Triple(PageTone.BLACK.paper, PageTone.BLACK.ink!!, "Aa")
+                PaperStyle.RUSTIC -> Triple(PageTone.RUSTIC.paper, PageTone.RUSTIC.ink!!, "Aa")
             }
             Swatch(style, label, paper, ink, style == selected) { onSelect(style) }
         }
@@ -281,6 +282,7 @@ private val PaperStyle.label: Int
         PaperStyle.SEPIA -> R.string.reader_paper_sepia
         PaperStyle.NIGHT -> R.string.reader_paper_night
         PaperStyle.BLACK -> R.string.reader_paper_black
+        PaperStyle.RUSTIC -> R.string.reader_paper_rustic
     }
 
 private val SWATCH = 42.dp

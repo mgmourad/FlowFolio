@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.model.AppStyle
+import com.flowfolio.core.model.MaterialSeed
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,12 +19,21 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+/** What the app looks like (the theme reveal plays when any of it changes). */
+data class AppLook(
+    val mode: ThemePreference = ThemePreference.SYSTEM,
+    val style: AppStyle = AppStyle.FLOWFOLIO,
+    val seed: MaterialSeed = MaterialSeed.WALLPAPER
+)
+
 /** Activity-scoped state: app theme, and files shared into the app waiting for the library to import them. */
 @HiltViewModel
 class AppViewModel @Inject constructor(settings: SettingsRepository, private val reader: ReaderRepository) :
     ViewModel() {
-    val theme: StateFlow<ThemePreference> =
-        settings.settings.map { it.theme }.stateIn(viewModelScope, SharingStarted.Eagerly, ThemePreference.SYSTEM)
+    /** The app's look: light or dark, the theme (ADR-0028) and Material You's colours. */
+    val theme: StateFlow<AppLook> =
+        settings.settings.map { AppLook(it.theme, it.appStyle, it.materialSeed) }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, AppLook())
 
     /** The reader's settings, so the book-opening animation opens onto the page the reader will show. */
     val readerSettings: StateFlow<UserSettings> =

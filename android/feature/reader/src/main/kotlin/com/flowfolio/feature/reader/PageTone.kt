@@ -33,19 +33,34 @@ enum class PageTone(val paper: Color, val ink: Color?, val dark: Boolean) {
     NIGHT(Color(0xFF18084A), Color(0xFFE9E4F5), true),
 
     /** Near black (#050307 -> #080408) with grey-lavender ink. */
-    BLACK(Color(0xFF080408), Color(0xFFC9C4D6), true);
+    BLACK(Color(0xFF080408), Color(0xFFC9C4D6), true),
+
+    /** Rustic (owner, 2026-10-22, ADR-0028): classic wood #48120C -> #4A1008, with cream ink #F6E4CA. */
+    RUSTIC(Color(0xFF4A1008), Color(0xFFF6E4CA), true);
 
     /** The recolouring for the renderer, or null for pages as printed. */
     val tint: PageTint? get() = ink?.let { PageTint(paper.toArgb(), it.toArgb(), invert = dark) }
 }
 
-/** The tone a paper style gives: Auto follows the app (as printed in light mode, Night in dark mode). */
-fun PaperStyle.tone(appDark: Boolean): PageTone = when (this) {
-    PaperStyle.AUTO -> if (appDark) PageTone.NIGHT else PageTone.PRINTED
+/**
+ * The tone a paper style gives: Auto follows the app (as printed in light mode, Night in dark mode; with the Rustic
+ * theme, [rustic], Sepia in light mode and Rustic in dark mode).
+ */
+fun PaperStyle.tone(appDark: Boolean, rustic: Boolean = false): PageTone = when (this) {
+    PaperStyle.AUTO -> when {
+        rustic -> if (appDark) PageTone.RUSTIC else PageTone.SEPIA
+        else -> if (appDark) PageTone.NIGHT else PageTone.PRINTED
+    }
+
     PaperStyle.PAPER -> PageTone.PAPER
+
     PaperStyle.SEPIA -> PageTone.SEPIA
+
     PaperStyle.NIGHT -> PageTone.NIGHT
+
     PaperStyle.BLACK -> PageTone.BLACK
+
+    PaperStyle.RUSTIC -> PageTone.RUSTIC
 }
 
 /** The open book's pages run right to left. */
