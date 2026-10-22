@@ -7,6 +7,7 @@ import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.MaterialSeed
 import com.flowfolio.core.model.PageTurn
+import com.flowfolio.core.model.ReaderText
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
@@ -34,7 +35,8 @@ data class SettingsActions(
     val onTurnVolume: (Float) -> Unit = {},
     val onRiffleSound: (Boolean) -> Unit = {},
     val onRiffleVolume: (Float) -> Unit = {},
-    val onScrubHaptics: (Boolean) -> Unit = {}
+    val onScrubHaptics: (Boolean) -> Unit = {},
+    val onReaderText: (ReaderText) -> Unit = {}
 )
 
 // One setter per setting, each a line: splitting the class would only scatter them.
@@ -81,6 +83,8 @@ class SettingsViewModel @Inject constructor(private val repo: SettingsRepository
     fun setRiffleVolume(volume: Float) = viewModelScope.launch { repo.setRiffleVolume(volume) }
 
     fun setScrubHaptics(on: Boolean) = viewModelScope.launch { repo.setScrubHaptics(on) }
+
+    fun setReaderText(text: ReaderText) = viewModelScope.launch { repo.setReaderText(text) }
 
     private companion object {
         const val STOP_MS = 5_000L

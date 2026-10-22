@@ -18,7 +18,7 @@ the Fold, memory and frame measurements, the M2b sign-off (the owner moved on wi
 footnote popovers (`docs/plans/phase2-m2-links.md`) built. M3, typography (`docs/plans/phase2-m3.md`, ADR-0027),
 under way: seven bundled reading fonts, the tabbed "Aa" sheet with text settings (`ReaderText`, `EpubLayout`), pinch to
 size, and fast re-layout (up to the reader's chapter first, `ReflowBook.layOutRest`; hourglass `Hourglass.kt`) built;
-next Settings' text group, the book's own fonts, islands per layout, EPUB memory. Between M2 and M3 (owner,
+Settings' text group (`SettingsText.kt`) built; next the book's own fonts, islands per layout, EPUB memory. Between M2 and M3 (owner,
 2026-10-22): app themes FlowFolio / Rustic / Material You (ADR-0028, `RusticPalette.kt`, `MaterialPalette.kt`,
 `ThemePicker.kt`), a Rustic paper, and a redesigned details page (approved; Rustic without texture, ADR-0029); riffle arrows at the strip's ends** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
 spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).
