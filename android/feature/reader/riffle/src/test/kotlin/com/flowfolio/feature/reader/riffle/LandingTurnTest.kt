@@ -22,7 +22,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.annotation.Config
 
-/** The landing turn's timing (spec 5.4, 6) and the nudge arrows (spec 3.2), on a hand-driven clock. */
+/** The landing turn's timing (spec 5.4, 6) on a hand-driven clock, and the arrows at the strip's ends (spec 3.2). */
 @RunWith(AndroidJUnit4::class)
 @Config(qualifiers = "w840dp-h500dp-420dpi")
 class LandingTurnTest {
@@ -69,18 +69,12 @@ class LandingTurnTest {
     }
 
     @Test
-    fun theNudgeArrowsStepOneUnitAndHoldTheChrome() {
-        val book = SampleBook()
-        val state = RiffleScrubberState(book, 100)
-        val pauses = ArrayList<Pair<ChromePause, Boolean>>()
+    fun theArrowsAtTheStripEndsStepOneUnit() {
+        val state = RiffleScrubberState(SampleBook(), 100)
         var went: Int? = null
         val events = object : RiffleEvents {
             override fun onGoTo(unit: Int) {
                 went = unit
-            }
-
-            override fun onPause(reason: ChromePause, held: Boolean) {
-                pauses += reason to held
             }
         }
         compose.setContent {
@@ -88,37 +82,10 @@ class LandingTurnTest {
                 RiffleDock(state, BoardColors(Color.DarkGray, Color.Black), Modifier.fillMaxWidth(), events)
             }
         }
-        compose.waitForIdle()
-        // The arrows wait three seconds: drive the clock by hand so waiting for idle does not skip them.
-        compose.mainClock.autoAdvance = false
-        // A riffle that lets go shows the arrows.
-        val g = requireNotNull(state.geometry)
-        compose.onRoot().performTouchInput {
-            val origin = androidx.compose.ui.geometry.Offset(24.dp.toPx(), (26 + 2 + 4).dp.toPx())
-            down(origin + androidx.compose.ui.geometry.Offset(state.pinX, g.bottom + 30 * g.density))
-            up()
-        }
-        step()
-        assertEquals("the riffle let go", 1, state.nudges)
-        assertTrue("$pauses", ChromePause.NUDGE to true in pauses)
+        // Always there, with no riffle first.
         compose.onNodeWithContentDescription("Next page").performClick()
-        step()
         assertEquals(101, went)
-        assertTrue(ChromePause.NUDGE to true in pauses)
-        // Three seconds after the last tap they go, and the chrome's countdown may run again.
-        compose.mainClock.advanceTimeBy(3_100)
-        step()
-        assertTrue("$pauses", ChromePause.NUDGE to false in pauses)
-    }
-
-    /** A frame, then the state changes it caused settled into composition (the clock does not move on its own). */
-    private fun step() {
-        compose.mainClock.advanceTimeBy(FRAME_MS)
-        compose.waitForIdle()
-        compose.mainClock.advanceTimeBy(FRAME_MS)
-    }
-
-    private companion object {
-        const val FRAME_MS = 100L
+        compose.onNodeWithContentDescription("Previous page").performClick()
+        assertEquals(99, went)
     }
 }

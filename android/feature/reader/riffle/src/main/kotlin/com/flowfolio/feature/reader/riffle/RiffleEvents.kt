@@ -19,10 +19,10 @@ interface RiffleEvents {
 
     /**
      * Something that holds the chrome's countdown started ([held] true) or ended (spec 3.4): the ribbon held, a popover
-     * or the go-to-page field open, the nudge arrows shown.
+     * or the go-to-page field open.
      */
     fun onPause(reason: ChromePause, held: Boolean) = Unit
 
-    /** Go to [unit]: a nudge arrow, or the go-to-page field (land there with the turn, spec 5.4). */
+    /** Go to [unit]: an arrow at an end of the strip, or the go-to-page field (land there with the turn, spec 5.4). */
     fun onGoTo(unit: Int) = Unit
 }

@@ -103,7 +103,6 @@ private suspend fun AwaitPointerEventScope.riffle(
     state.scrubSpeed = ScrubSpeed.NORMAL
     events.onPause(ChromePause.DRAGGING, false)
     events.onRelease(unit)
-    state.nudges++
 }
 
 /** Follows [down]'s pointer, calling [onMove] for each move, until it lifts (true) or is cancelled (false). */

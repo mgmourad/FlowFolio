@@ -1,16 +1,11 @@
 package com.flowfolio.feature.reader.riffle
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,7 +27,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -52,57 +46,20 @@ import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.UiFamily
-import kotlinx.coroutines.delay
 
 /**
- * The nudge arrows (spec 3.2): for a few seconds after the ribbon is let go, ‹ and › beside it step one unit back or
- * forward; each tap starts the few seconds again. The chrome's countdown waits while they show.
+ * A one-page arrow at an end of the strip (spec 3.2, moved by the owner 2026-10-22): ‹ at the left end, › at the
+ * right, always there while the dock shows, so they never sit in the ribbon's way. On a right-to-left book the strip
+ * is mirrored, and so are the steps: the left arrow goes forward.
  */
 @Composable
-internal fun NudgeArrows(state: RiffleScrubberState, events: RiffleEvents) {
-    var token by remember { mutableStateOf(0) }
-    var shown by remember { mutableStateOf(false) }
-    LaunchedEffect(state.nudges, token) {
-        if (state.nudges == 0) return@LaunchedEffect
-        shown = true
-        delay(NUDGE_MS)
-        shown = false
-    }
-    DisposableEffect(shown) {
-        events.onPause(ChromePause.NUDGE, shown)
-        onDispose { if (shown) events.onPause(ChromePause.NUDGE, false) }
-    }
-    AnimatedVisibility(shown, enter = fadeIn(), exit = fadeOut()) {
-        // Placed (not just drawn) beside the ribbon, inside the strip's bounds, so the arrows receive their taps.
-        Row(
-            Modifier.offset {
-                val g = state.geometry
-                if (g == null) {
-                    IntOffset.Zero
-                } else {
-                    val half = (ARROWS_WIDTH.dp.toPx() / 2)
-                    IntOffset(
-                        (state.pinX - half).toInt(),
-                        ((g.bottom + g.ribbonBottom) / 2 - ARROW.dp.toPx() / 2).toInt()
-                    )
-                }
-            },
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val back = if (state.book.rightToLeft) 1 else -1
-            Arrow("‹", stringResource(R.string.riffle_previous)) {
-                token++
-                events.onInteraction()
-                events.onGoTo((state.currentUnit + back).coerceIn(0, state.book.unitCount - 1))
-            }
-            // Room for the ribbon between the arrows.
-            Spacer(Modifier.width(RIBBON_GAP.dp))
-            Arrow("›", stringResource(R.string.riffle_next)) {
-                token++
-                events.onInteraction()
-                events.onGoTo((state.currentUnit - back).coerceIn(0, state.book.unitCount - 1))
-            }
-        }
+internal fun NudgeArrow(state: RiffleScrubberState, events: RiffleEvents, left: Boolean) {
+    val back = if (state.book.rightToLeft) 1 else -1
+    val step = if (left) back else -back
+    val label = if (step < 0) R.string.riffle_previous else R.string.riffle_next
+    Arrow(if (left) "‹" else "›", stringResource(label)) {
+        events.onInteraction()
+        events.onGoTo((state.currentUnit + step).coerceIn(0, state.book.unitCount - 1))
     }
 }
 
@@ -235,10 +192,6 @@ private object AboveAnchor : PopupPositionProvider {
 private fun numbersOnly(book: BookGeometry): Boolean =
     (0 until minOf(book.pageCount, FRONT_MATTER_PAGES)).all { book.label(it).all(Char::isDigit) }
 
-private const val NUDGE_MS = 3_000L
-private const val ARROW = 48
-private const val RIBBON_GAP = 20
-private const val ARROWS_WIDTH = ARROW * 2 + RIBBON_GAP
 private const val MAX_LABEL = 12
 private const val FIELD_HEIGHT_FRACTION = 0.22f
 private const val FRONT_MATTER_PAGES = 40
