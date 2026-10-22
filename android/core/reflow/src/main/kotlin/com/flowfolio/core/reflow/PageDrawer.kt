@@ -43,10 +43,17 @@ class PageDrawer(
         with(target.canvas) {
             save()
             translate(target.left + target.paginator.indentPx(block), target.top + s.y - lineTop)
-            clipRect(0f, lineTop, l.width.toFloat(), l.getLineBottom(s.last - 1).toFloat())
+            // A paragraph's last line has no line below it: let descenders some fonts draw below their own descent
+            // (Charter's p and g) show in full rather than be cut.
+            val slack = if (s.last == l.lineCount) l.paint.textSize * DESCENT_SLACK else 0f
+            clipRect(0f, lineTop, l.width.toFloat(), l.getLineBottom(s.last - 1) + slack)
             l.draw(this)
             restore()
         }
+    }
+
+    private companion object {
+        const val DESCENT_SLACK = 0.3f
     }
 
     private fun drawBox(target: Target, s: Slice.Box, block: Block) {

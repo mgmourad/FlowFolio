@@ -9,7 +9,10 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import com.flowfolio.core.data.OpenedEpub
 import com.flowfolio.core.model.OutlineEntry
+import com.flowfolio.core.model.PageMargins
 import com.flowfolio.core.model.PixelSize
+import com.flowfolio.core.model.ReaderText
+import com.flowfolio.core.model.ReadingFont
 import com.flowfolio.core.reflow.Block
 import com.flowfolio.core.reflow.Locator
 import com.flowfolio.core.reflow.PageColors
@@ -26,14 +29,16 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
- * An open EPUB in the reader (ADR-0019): the book laid out for the current page pane, and its pages drawn as images
- * for the page cache. A pane of another size (fold, unfold, spreads on or off) lays the book out again; positions are
- * kept as [Locator]s so the reader stays on the same text.
+ * An open EPUB in the reader (ADR-0019): the book laid out for the current page pane and text settings, and its pages
+ * drawn as images for the page cache. Another pane (fold, unfold, spreads on or off) or other text settings (M3) lay
+ * the book out again; positions are kept as [Locator]s so the reader stays on the same text.
  */
 internal class EpubSession private constructor(
     val opened: OpenedEpub,
     private val book: ReflowBook,
     private val heading: android.graphics.Typeface?,
+    /** The reading fonts, loaded once each when first used (null: the system serif). */
+    private val fonts: (ReadingFont) -> android.graphics.Typeface?,
     /** Where islands are kept on disk ([IslandStore]), all books. */
     private val islandRoot: java.io.File
 ) : PageSource {
@@ -52,6 +57,10 @@ internal class EpubSession private constructor(
     var pane: PixelSize? = null
         private set
 
+    /** The pane and text settings of the current layout; null before the first. */
+    var laidOut: EpubLayout? = null
+        private set
+
     private var margins = Margins(0, 0, 0, 0)
 
     val pageCount: Int get() = book.pages.size
@@ -67,22 +76,30 @@ internal class EpubSession private constructor(
     /** Changes whenever a page's image would: a new layout, or islands drawn. Part of every [PageKey]. */
     val revision: Int get() = layouts + islands.revision
 
-    /** Lays the book out for a pane of [size] with text at [bodyPx]; returns the page now showing [keep]. */
-    suspend fun layOut(size: PixelSize, bodyPx: Float, density: Float, keep: Locator?): Int = lock.withLock {
+    /** Lays the book out for [layout] ([density] pixels per dp); returns the page now showing [keep]. */
+    suspend fun layOut(layout: EpubLayout, density: Float, keep: Locator?): Int = lock.withLock {
         withContext(Dispatchers.Default) {
-            margins = Margins.forPane(size, density)
+            val size = layout.pane
+            val text = layout.text
+            val bodyPx = text.sizeSp * density
+            margins = Margins.forPane(size, density, text.margins)
             val spec = PageSpec(
                 width = (size.width - margins.left - margins.right).coerceAtLeast(1),
                 height = (size.height - margins.top - margins.bottom).coerceAtLeast(1),
                 bodyPx = bodyPx,
                 locale = book.locale,
-                heading = heading
+                heading = heading,
+                body = fonts(text.font),
+                lineSpacing = text.lineSpacing.factor,
+                justify = text.justify,
+                hyphenate = text.hyphenate
             )
             val store = IslandStore(islandRoot, opened.book.id, bodyPx, spec.width)
             IslandStore.trim(islandRoot, keep = store.dir)
             islands.prepare(bodyPx, spec.width, store)
             paginator = book.paginate(spec, density, islands::size)
             pane = size
+            laidOut = layout
             column = bodyPx to spec.width
             drawer = PageDrawer(book, ::image, islands::image)
             layouts++
@@ -230,8 +247,8 @@ internal class EpubSession private constructor(
      */
     private data class Margins(val left: Int, val top: Int, val right: Int, val bottom: Int) {
         companion object {
-            fun forPane(size: PixelSize, density: Float): Margins {
-                val side = maxOf((SIDE_DP * density).toInt(), (size.width * SIDE_FRACTION).toInt())
+            fun forPane(size: PixelSize, density: Float, sides: PageMargins): Margins {
+                val side = maxOf((sides.minDp * density).toInt(), (size.width * sides.fraction).toInt())
                 return Margins(side, (TOP_DP * density).toInt(), side, (BOTTOM_DP * density).toInt())
             }
         }
@@ -242,9 +259,10 @@ internal class EpubSession private constructor(
         suspend fun open(
             opened: OpenedEpub,
             heading: android.graphics.Typeface?,
+            fonts: (ReadingFont) -> android.graphics.Typeface?,
             islandRoot: java.io.File
         ): EpubSession = withContext(Dispatchers.Default) {
-            EpubSession(opened, ReflowBook(opened.archive, opened.pkg), heading, islandRoot)
+            EpubSession(opened, ReflowBook(opened.archive, opened.pkg), heading, fonts, islandRoot)
         }
 
         fun colorsOf(tone: PageTone): PageColors {
@@ -252,10 +270,6 @@ internal class EpubSession private constructor(
             return PageColors(paper = tone.paper.toArgb(), ink = ink, faint = (ink and RGB) or FAINT_ALPHA)
         }
 
-        /** Body text: 18 sp, before the text settings of milestone 3. */
-        const val BODY_SP = 18f
-        private const val SIDE_DP = 28f
-        private const val SIDE_FRACTION = 0.06f
         private const val TOP_DP = 56f
         private const val BOTTOM_DP = 64f
         private const val IMAGE_BYTES = 24 * 1024 * 1024
@@ -267,3 +281,6 @@ internal class EpubSession private constructor(
         private const val FAINT_ALPHA = 0x22000000
     }
 }
+
+/** What an EPUB is laid out for: the page pane in pixels and the reader's text settings. */
+internal data class EpubLayout(val pane: PixelSize, val text: ReaderText)

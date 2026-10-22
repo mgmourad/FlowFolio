@@ -5,19 +5,36 @@ import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.text.LineBreaker
 import android.text.Layout
+import android.text.SpannableString
+import android.text.Spanned
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.text.style.LineHeightSpan
 import java.util.Locale
 
-/** The page box text is laid out in (pixels, margins already removed), and the body text size. */
+/**
+ * The page box text is laid out in (pixels, margins already removed), the body text size, and how text is set: the
+ * reader's font (M3), line spacing as a multiple of the size, justification and hyphenation.
+ */
 data class PageSpec(
     val width: Int,
     val height: Int,
     val bodyPx: Float,
     val locale: Locale = Locale.getDefault(),
-    /** The typeface for headings (the app's display face); null for the system serif. */
-    val heading: Typeface? = null
-)
+    /** The typeface for headings (the app's display face); null for the body's. */
+    val heading: Typeface? = null,
+    /** The typeface for body text, a family with bold and italic; null for the system serif. */
+    val body: Typeface? = null,
+    val lineSpacing: Float = DEFAULT_LINE_SPACING,
+    /** Paragraphs the book sets flush on both sides are justified; off sets every line ragged. */
+    val justify: Boolean = true,
+    val hyphenate: Boolean = true
+) {
+    companion object {
+        /** Line height in ems: the distance from one line's baseline to the next, as a multiple of the text size. */
+        const val DEFAULT_LINE_SPACING = 1.5f
+    }
+}
 
 /** A laid-out piece of one block on one page. [y] is from the top of the page box. */
 sealed interface Slice {
@@ -46,12 +63,12 @@ class Page(val chapter: Int, val slices: List<Slice>, val start: Int, val end: I
  */
 class Paginator(private val spec: PageSpec, private val boxSize: (Block) -> Pair<Int, Int>?) {
     private val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-        typeface = Typeface.SERIF
+        typeface = spec.body ?: Typeface.SERIF
         color = Color.BLACK
         textLocale = spec.locale
     }
     private val bold = Typeface.create(
-        spec.heading ?: Typeface.SERIF,
+        spec.heading ?: spec.body ?: Typeface.SERIF,
         if (spec.heading !=
             null
         ) {
@@ -68,21 +85,31 @@ class Paginator(private val spec: PageSpec, private val boxSize: (Block) -> Pair
             if (block.style.bold) typeface = bold
         }
         val width = (spec.width - indentPx(block)).coerceAtLeast(1)
-        return StaticLayout.Builder.obtain(block.text, 0, block.text.length, p, width)
+        // Every line exactly [PageSpec.lineSpacing] times the text size apart, whatever the font: fonts' built-in line
+        // heights differ widely (Literata's is tall, Charter's short), so a multiplier would set far fewer lines a page
+        // in some fonts than in others. The span goes on a copy: the book's text is shared between layouts.
+        val text = SpannableString(block.text).apply {
+            setSpan(LineHeightSpan.Standard(lineHeightPx(p.textSize)), 0, length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
+        }
+        return StaticLayout.Builder.obtain(text, 0, text.length, p, width)
             .setBreakStrategy(LineBreaker.BREAK_STRATEGY_HIGH_QUALITY)
-            .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NORMAL)
+            .setHyphenationFrequency(
+                if (spec.hyphenate) Layout.HYPHENATION_FREQUENCY_NORMAL else Layout.HYPHENATION_FREQUENCY_NONE
+            )
             .setJustificationMode(
-                if (block.style.justify) {
+                if (block.style.justify && spec.justify) {
                     LineBreaker.JUSTIFICATION_MODE_INTER_WORD
                 } else {
                     LineBreaker.JUSTIFICATION_MODE_NONE
                 }
             )
             .setAlignment(if (block.style.centered) Layout.Alignment.ALIGN_CENTER else Layout.Alignment.ALIGN_NORMAL)
-            .setLineSpacing(0f, LINE_SPACING)
+            .setLineSpacing(0f, 1f)
             .setIncludePad(false)
             .build()
     }
+
+    private fun lineHeightPx(textSize: Float): Int = (textSize * spec.lineSpacing).toInt().coerceAtLeast(1)
 
     fun indentPx(block: Block.Text) = (spec.bodyPx * block.style.indentEm).toInt()
 
@@ -134,7 +161,7 @@ class Paginator(private val spec: PageSpec, private val boxSize: (Block) -> Pair
 
         /** A heading needs its own lines plus two lines of what follows. */
         private fun headingNeeds(layout: StaticLayout, block: Block.Text) =
-            layout.height + spec.bodyPx * block.style.spaceAfterEm + 2 * spec.bodyPx * LINE_SPACING
+            layout.height + spec.bodyPx * block.style.spaceAfterEm + 2 * lineHeightPx(spec.bodyPx)
 
         /** How many lines from [from] go on this page; 0 means start a new page first. */
         private fun linesThatFit(layout: StaticLayout, from: Int): Int {
@@ -169,7 +196,6 @@ class Paginator(private val spec: PageSpec, private val boxSize: (Block) -> Pair
     }
 
     companion object {
-        const val LINE_SPACING = 1.4f
         private const val BOLD_WEIGHT = 700
         private const val HEADING_WEIGHT = 600
         const val MIN_LINES = 2
