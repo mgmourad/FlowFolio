@@ -30,12 +30,12 @@ class ChromeTimerTest {
     fun holdsPauseItAndItRestartsInFullAfterTheLastOne() {
         val t = ChromeTimer(AutoHide.S3, now = 0)
         t.hold(ChromePause.DRAGGING)
-        t.hold(ChromePause.NUDGE)
+        t.hold(ChromePause.GO_TO_PAGE)
         assertFalse(t.tick(60_000))
         assertEquals(1f, t.remaining(60_000), 0f)
         t.release(ChromePause.DRAGGING, 60_000)
-        assertFalse(t.tick(90_000)) // the nudge arrows still hold it
-        t.release(ChromePause.NUDGE, 90_000)
+        assertFalse(t.tick(90_000)) // the go-to-page field still holds it
+        t.release(ChromePause.GO_TO_PAGE, 90_000)
         assertFalse(t.tick(92_999))
         assertTrue(t.tick(93_000))
     }

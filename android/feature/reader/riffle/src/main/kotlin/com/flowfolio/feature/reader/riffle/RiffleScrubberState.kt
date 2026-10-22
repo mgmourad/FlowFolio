@@ -72,10 +72,6 @@ class RiffleScrubberState(val book: BookGeometry, current: Int = 0) {
     var scrubSpeed by mutableStateOf(ScrubSpeed.NORMAL)
         internal set
 
-    /** Raised each time the ribbon is let go: the nudge arrows show for a few seconds after (spec 3.2). */
-    var nudges by mutableIntStateOf(0)
-        internal set
-
     /** The go-to-page field is open (spec 3.2). */
     var goToOpen by mutableStateOf(false)
 

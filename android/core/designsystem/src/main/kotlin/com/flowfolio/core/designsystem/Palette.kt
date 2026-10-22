@@ -7,7 +7,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /** The fine texture over the app background (ADR-0028). */
-enum class SurfaceTexture { GRAIN, WOOD, NONE }
+enum class SurfaceTexture { GRAIN, NONE }
 
 /**
  * A light effect: a glow in dark mode (no offset, the element's own colour), a soft drop shadow in light mode.
@@ -73,7 +73,7 @@ data class Palette(
     val highlight: Color,
     /** A green in the palette's own tone (bookmark colours; not in the mock's swatches). */
     val green: Color,
-    /** What the app background is laid with (ADR-0028): the mock's grain, wood grain (Rustic), or none (Material). */
+    /** What the app background is laid with (ADR-0028): the mock's grain, or none (Rustic, Material). */
     val texture: SurfaceTexture = SurfaceTexture.GRAIN,
     /** The icon on a primary button: the mock's pink play on orange; the button's ink where the accent would vanish. */
     val buttonGlyph: Color = glyph

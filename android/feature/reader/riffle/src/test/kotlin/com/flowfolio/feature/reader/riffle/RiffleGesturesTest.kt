@@ -83,7 +83,8 @@ class RiffleGesturesTest {
     }
 
     /** Where the strip starts inside the dock (header, countdown line and paddings above it). */
-    private fun stripOrigin(): Offset = with(compose.density) { Offset(24.dp.toPx(), (26 + 2 + 4).dp.toPx()) }
+    // The dock's 24 dp side padding and the 48 dp arrow at the strip's left end; the header, countdown line and gap.
+    private fun stripOrigin(): Offset = with(compose.density) { Offset((24 + 48).dp.toPx(), (26 + 2 + 4).dp.toPx()) }
 
     @Test
     fun aDragThatStartsOnAFlagNeverMovesThePosition() {

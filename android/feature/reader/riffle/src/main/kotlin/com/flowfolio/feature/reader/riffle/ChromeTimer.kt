@@ -7,7 +7,6 @@ enum class ChromePause {
     DRAGGING,
     POPOVER,
     GO_TO_PAGE,
-    NUDGE,
 
     /** One of the host's panels (the reader's contents, Go to page, Aa) is open. */
     PANEL
@@ -30,7 +29,7 @@ enum class AutoHide(val millis: Long?) {
 /**
  * When the reader's chrome hides (spec 3.4), on a clock the caller passes in (uptime milliseconds, or a virtual clock
  * in tests). Interaction with the chrome restarts the countdown; page turns do not; while anything holds it (a drag, a
- * popover, the go-to-page field, the nudge arrows) it waits, and starts again in full once nothing does.
+ * popover, the go-to-page field) it waits, and starts again in full once nothing does.
  */
 class ChromeTimer(autoHide: AutoHide, now: Long) {
     var state: ChromeState = ChromeState.VISIBLE

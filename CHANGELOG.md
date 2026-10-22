@@ -131,6 +131,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     wallpaper (Android 12 and later) or one of six seeds (blue, teal, green, amber, rose, violet) generated in the app.
   - The reader's bars and panels follow the theme. New Rustic paper (#48120c, cream ink); with the Rustic theme,
     Auto paper is Rustic in dark mode and Sepia in light mode.
+  - Rustic is plain colours: the wood grain behind its screens is gone (owner, ADR-0029).
+- The riffle scrubber's one-page arrows sit at the two ends of the strip and are always there with the dock; they no
+  longer appear beside the ribbon after a release, where they got in the way of dragging it on (owner, 2026-10-22).
 - Book details redesigned to look less like a page of buttons: the pills became one quiet line (format, pages,
   size); "Add to shelf" is an outlined second button with its label; tabs are words on a hairline with a sliding
   underline (`FlowFolioUnderlineTabs`); Overview shows the percentage over a slim bar and three figures split by

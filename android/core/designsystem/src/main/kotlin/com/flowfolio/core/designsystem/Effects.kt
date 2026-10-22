@@ -172,7 +172,7 @@ fun Modifier.grain(): Modifier = drawWithCache {
 
 /**
  * The mock's page background: `radial-gradient(1200x700 at 50% 0, surface, bg-deep 70%)`, laid with the theme's
- * texture (ADR-0028): grain, wood grain, or nothing.
+ * texture (ADR-0028, ADR-0029): the mock's grain, or nothing.
  */
 fun Modifier.appBackground(palette: Palette): Modifier = drawWithCache {
     val radius = max(size.width, size.height) * BACKGROUND_REACH
@@ -186,7 +186,6 @@ fun Modifier.appBackground(palette: Palette): Modifier = drawWithCache {
 }.then(
     when (palette.texture) {
         SurfaceTexture.GRAIN -> Modifier.grain()
-        SurfaceTexture.WOOD -> Modifier.woodGrain(palette.dark)
         SurfaceTexture.NONE -> Modifier
     }
 )

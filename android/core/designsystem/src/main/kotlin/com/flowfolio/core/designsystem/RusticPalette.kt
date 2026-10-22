@@ -8,7 +8,8 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Rustic, dark: the classic wood of a bookshelf (#48120C, owner 2026-10-22) and deeper walnut, cream text (#F6E4CA),
- * honey-brass accents, terracotta for warnings, and warm candle-light glows. The background is laid with wood grain.
+ * honey-brass accents, terracotta for warnings, and warm candle-light glows. Plain colours, no texture (owner,
+ * 2026-10-22, ADR-0029).
  */
 val RusticDarkPalette = Palette(
     dark = true,
@@ -48,13 +49,13 @@ val RusticDarkPalette = Palette(
     pressShadow = Color(0x99120302),
     highlight = Color(0x1FFFE2BC),
     green = Color(0xFFA9C46C),
-    texture = SurfaceTexture.WOOD,
+    texture = SurfaceTexture.NONE,
     buttonGlyph = Color(0xFF7A2A18)
 )
 
 /**
  * Rustic, light: parchment with walnut ink and the same brass accents; lights are soft warm shadows, as in daylight.
- * The background is laid with faint wood grain.
+ * Plain colours, no texture.
  */
 val RusticLightPalette = Palette(
     dark = false,
@@ -94,6 +95,6 @@ val RusticLightPalette = Palette(
     pressShadow = Color(0x4D502810),
     highlight = Color(0xBFFFFFFF),
     green = Color(0xFF4E7A2C),
-    texture = SurfaceTexture.WOOD,
+    texture = SurfaceTexture.NONE,
     buttonGlyph = Color(0xFFF2B866)
 )

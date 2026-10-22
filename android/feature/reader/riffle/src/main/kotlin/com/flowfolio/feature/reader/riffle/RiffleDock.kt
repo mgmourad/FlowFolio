@@ -77,24 +77,37 @@ fun RiffleDock(
                     drawRoundRect(left, size = Size(w, size.height), cornerRadius = CornerRadius(size.height / 2))
                 }
         )
-        Box {
-            val touch = events?.let { Modifier.riffleGestures(state, it).riffleAccess(state, it) } ?: Modifier
-            RiffleStrip(state, boards, Modifier.fillMaxWidth().height(STRIP_HEIGHT.dp).then(touch))
-            events?.let {
-                FlagStackPopover(state, it)
-                NudgeArrows(state, it)
-            }
-            // Above the strip, taking no room in the layout; it fades in only while riffling or hovering a flag.
-            Loupe(
-                state,
-                thumbnails,
-                stripLeft = 0f,
-                modifier = Modifier.layout { measurable, _ ->
-                    val placeable = measurable.measure(Constraints())
-                    layout(0, 0) { placeable.place(0, 0) }
-                }
-            )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            events?.let { NudgeArrow(state, it, left = true) }
+            RiffleStripBox(state, boards, events, thumbnails, Modifier.weight(1f))
+            events?.let { NudgeArrow(state, it, left = false) }
         }
+    }
+}
+
+/** The strip with what hangs over it: the flag stack popover and the loupe. */
+@Composable
+private fun RiffleStripBox(
+    state: RiffleScrubberState,
+    boards: BoardColors,
+    events: RiffleEvents?,
+    thumbnails: PageThumbnailProvider?,
+    modifier: Modifier
+) {
+    Box(modifier) {
+        val touch = events?.let { Modifier.riffleGestures(state, it).riffleAccess(state, it) } ?: Modifier
+        RiffleStrip(state, boards, Modifier.fillMaxWidth().height(STRIP_HEIGHT.dp).then(touch))
+        events?.let { FlagStackPopover(state, it) }
+        // Above the strip, taking no room in the layout; it fades in only while riffling or hovering a flag.
+        Loupe(
+            state,
+            thumbnails,
+            stripLeft = 0f,
+            modifier = Modifier.layout { measurable, _ ->
+                val placeable = measurable.measure(Constraints())
+                layout(0, 0) { placeable.place(0, 0) }
+            }
+        )
     }
 }
 

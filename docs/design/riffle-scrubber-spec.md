@@ -55,7 +55,8 @@ user-chosen delay, leaving a clean full-screen book.
    threshold crossed; the speed label shows in the loupe.
 2. **Go to page:** tapping the page number in the loupe or strip header opens a numeric field that accepts printed page
    numbers, including roman front matter when the book has a page list. Jumps use the landing animation.
-3. **Nudge arrows:** for 3 s after a release, ‹ › buttons beside the ribbon step one spread; each tap restarts the 3 s.
+3. **Nudge arrows:** ‹ › buttons at the two ends of the strip step one spread; always shown with the dock (owner,
+   2026-10-22: beside the ribbon they got in the way of dragging it on).
 
 ### 3.3 Bookmark flag stacking
 - Flags within 14 dp of each other merge into a stack: a flag with a count badge, in the colour of the first flag.
@@ -65,7 +66,7 @@ user-chosen delay, leaving a clean full-screen book.
 ### 3.4 Auto-hide timer rules
 - Resets on any interaction with the chrome (strip, ribbon, flags, top bar, popovers).
 - Does not reset on page turns.
-- Paused while dragging the ribbon, while a popover or the go-to-page field is open, and while the nudge arrows show.
+- Paused while dragging the ribbon, while a popover or the go-to-page field is open.
 - Tapping the middle of the page toggles the chrome; tapping the left or right edge turns a page without showing it.
 
 ### 3.5 Real loupe thumbnails
