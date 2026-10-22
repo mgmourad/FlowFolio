@@ -150,7 +150,7 @@ internal fun BoxScope.ReadyReader(
         }
     }
     RiffleLanding(s, riffling, images, viewModel.thumbnails)
-    TextPinchBadge(overlay.textPinch)
+    PageOverlays(s, overlay.textPinch, viewModel)
     overlay.zoom?.let {
         ZoomView(it, framesFor, images, tiles, viewModel::showTiles, annotating, onExit = { overlay.zoom = null })
     }

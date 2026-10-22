@@ -43,10 +43,12 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
 sealed interface ReaderState {
     data object Loading : ReaderState
@@ -142,6 +144,14 @@ class ReaderViewModel @Inject constructor(
 
     /** An EPUB's saved page when it has no locator yet, used by its first layout. */
     private var startPage: Int? = null
+
+    private val _relayingOut = MutableStateFlow(false)
+
+    /**
+     * An EPUB is being laid out again (new text settings, fold or unfold), from the start of the layout until the pages
+     * in view are drawn: the reader shows the hourglass meanwhile instead of half-drawn pages.
+     */
+    internal val relayingOut: StateFlow<Boolean> = _relayingOut.asStateFlow()
 
     /** The pane and text settings a layout is under way for. */
     private var pendingLayout: EpubLayout? = null
@@ -318,9 +328,13 @@ class ReaderViewModel @Inject constructor(
     private fun startLayout(session: EpubSession, v: Viewport, layout: EpubLayout) {
         layoutJob?.cancel()
         pendingLayout = layout
+        if (session.laidOut != null) _relayingOut.value = true
         layoutJob = viewModelScope.launch {
             val started = android.os.SystemClock.elapsedRealtime()
-            anchorPage = session.layOut(layout, v.widthPx / v.widthDp, locator)
+            // Up to the reader's chapter first when re-laying out an open book; the first layout (and a start page) is
+            // whole.
+            val chapterFirst = session.laidOut != null && startPage == null
+            anchorPage = session.layOut(layout, v.widthPx / v.widthDp, locator, chapterFirst)
             android.util.Log.i(
                 LAYOUT_TAG,
                 "laid out ${session.pageCount} pages in ${android.os.SystemClock.elapsedRealtime() - started} ms"
@@ -335,7 +349,30 @@ class ReaderViewModel @Inject constructor(
             publishReady()
             replan()
             nextIslandWork()
+            // The pages in view drawn (or a moment passed): the hourglass may go.
+            withTimeoutOrNull(DRAWN_WAIT_MS) {
+                pageImages.first { images -> currentKeys.value.keys.all { it in images } }
+            }
+            _relayingOut.value = false
+            finishLayout(session)
+            session.trimIslands()
         }
+    }
+
+    /**
+     * The rest of a chapter-first layout: page numbers settle, images already drawn move to their new numbers, and
+     * the contents, scrubber and links follow.
+     */
+    private suspend fun finishLayout(session: EpubSession) {
+        val moves = session.finishLayout() ?: return
+        cache?.rekey { key -> moves(key.page)?.let { key.copy(page = it) } }
+        anchorPage = session.pageOf(locator ?: session.locatorOf(anchorPage))
+        _links.value = emptyMap()
+        linksRevision = -1
+        thumbnails?.clear()
+        _navigation.value = session.navigation()
+        publishReady()
+        replan()
     }
 
     /** Outline first (the contents list), then labels; both go through the PDFium thread between page renders. */
@@ -642,6 +679,9 @@ class ReaderViewModel @Inject constructor(
     }
 
     companion object {
+        /** How long the hourglass waits for the new pages to be drawn after a layout, at most. */
+        private const val DRAWN_WAIT_MS = 2_000L
+
         /** Logcat tag for EPUB layout times (M3's 300 ms target for a text change). */
         private const val LAYOUT_TAG = "FlowFolioLayout"
         const val ARG_BOOK_ID = "bookId"

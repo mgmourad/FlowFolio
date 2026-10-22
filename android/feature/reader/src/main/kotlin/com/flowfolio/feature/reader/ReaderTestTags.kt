@@ -29,6 +29,7 @@ object ReaderTestTags {
     const val TEXT_SMALLER = "reader_text_smaller"
     const val TEXT_LARGER = "reader_text_larger"
     const val TEXT_PINCH = "reader_text_pinch"
+    const val RELAYOUT = "reader_relayout"
     const val SETTING_TURN_SOUND = "reader_setting_turn_sound"
     const val SETTING_TURN_VOLUME = "reader_setting_turn_volume"
     const val SETTING_RIFFLE_SOUND = "reader_setting_riffle_sound"

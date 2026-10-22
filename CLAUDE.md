@@ -16,8 +16,9 @@ sounds per ADR-0025 via `tools/sounds/prepare_recorded_sounds.py`; flips on ever
 sound switches and volumes per ADR-0026) built. Left for M2b: the owner's listen and feel on
 the Fold, memory and frame measurements, the M2b sign-off (the owner moved on without them, 2026-10-21). EPUB links and
 footnote popovers (`docs/plans/phase2-m2-links.md`) built. M3, typography (`docs/plans/phase2-m3.md`, ADR-0027),
-under way: seven bundled reading fonts and the "Aa" text settings (`ReaderText`, `EpubLayout`) built; next pinch to
-size, Settings, the book's own fonts, islands per layout, EPUB memory** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
+under way: seven bundled reading fonts, the tabbed "Aa" sheet with text settings (`ReaderText`, `EpubLayout`), pinch to
+size, and fast re-layout (up to the reader's chapter first, `ReflowBook.layOutRest`; hourglass `Hourglass.kt`) built;
+next Settings' text group, the book's own fonts, islands per layout, EPUB memory** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
 spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).
 Phase 1 signed off by the owner 2026-10-20 (`docs/plans/phase1-signoff.md`); ADRs 0014, 0016-0018 accepted.
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).

@@ -41,14 +41,37 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
 
     /** First page of each chapter. */
     private var chapterStart = IntArray(0)
-    private val imageSizes = HashMap<String, Pair<Int, Int>?>()
+
+    /** Image sizes by path, read once; [NO_SIZE] for images that can't be read. Chapters are laid out in parallel. */
+    private val imageSizes = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, Int>>()
+
+    /** Which chapters are laid out exactly; the others hold estimated pages until [applyRest]. */
+    private var exact = BooleanArray(0)
+
+    /** Raised by every [paginate]; work for an older layout is dropped. */
+    var generation = 0
+        private set
+
+    /** Every chapter is laid out exactly (no estimates left). */
+    val complete: Boolean get() = exact.all { it }
 
     /**
      * Lays the book out for [spec]. [density] turns CSS pixels (images) into screen pixels; [islandSize] gives
-     * measured islands (null: placeholder size).
+     * measured islands (null: placeholder size). With a [first] chapter, the chapters up to and including it are laid
+     * out now (so every page number up to the reader's is exact, and spreads pair as they will stay); the chapters
+     * after it get pages estimated from its text per page, until [layOutRest] and [applyRest] replace them.
      */
-    fun paginate(spec: PageSpec, density: Float, islandSize: (Int) -> Pair<Int, Int>? = { null }): Paginator {
+    fun paginate(
+        spec: PageSpec,
+        density: Float,
+        first: Int = -1,
+        islandSize: (Int) -> Pair<Int, Int>? = { null }
+    ): Paginator {
         this.spec = spec
+        generation++
+        // The old layout's text layouts go now, not after the new ones are built: holding both made the collector work
+        // through the layout (270 ms on a fresh open, 450 ms or more on a re-layout).
+        pages = emptyList()
         val paginator = Paginator(spec) { block ->
             when (block) {
                 is Block.Image -> imageSize(block.path)?.let { (w, h) ->
@@ -60,15 +83,56 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
                 is Block.Text -> null
             }
         }
+        val last = if (first in chapters.indices) first else chapters.lastIndex
+        exact = BooleanArray(chapters.size) { it <= last }
         val all = ArrayList<Page>()
         val starts = IntArray(chapters.size)
+        var charsPerPage = 1f
         chapters.forEachIndexed { i, c ->
             starts[i] = all.size
-            all += paginator.paginate(i, c)
+            if (i <= last) {
+                val laidOut = paginator.paginate(i, c)
+                if (laidOut.isNotEmpty() && c.length > 0) charsPerPage = c.length.toFloat() / laidOut.size
+                all += laidOut
+            } else {
+                all += estimate(i, c, charsPerPage)
+            }
         }
         pages = all
         chapterStart = starts
         return paginator
+    }
+
+    /** Pages standing in for [chapter] until it is laid out: empty, evenly over its text, so locators still map. */
+    private fun estimate(chapter: Int, c: Chapter, charsPerPage: Float): List<Page> {
+        val count = (c.length / charsPerPage.coerceAtLeast(1f)).toInt().coerceAtLeast(1)
+        return List(count) { k -> Page(chapter, emptyList(), c.length * k / count, c.length * (k + 1) / count) }
+    }
+
+    /**
+     * The chapters still estimated, laid out with [paginator]. Reads only the parsed chapters, so it can run while
+     * pages are drawn; the result goes to [applyRest].
+     */
+    fun layOutRest(paginator: Paginator): Map<Int, List<Page>> {
+        val todo = exact.indices.filter { !exact[it] }
+        return todo.associateWith { paginator.paginate(it, chapters[it]) }
+    }
+
+    /**
+     * Puts [rest] in place of the estimates. Chapters laid out exactly in the meantime ([repaginate]) keep their pages;
+     * pages already laid out keep their objects, so whoever holds one can find its new number.
+     */
+    fun applyRest(rest: Map<Int, List<Page>>) {
+        val all = ArrayList<Page>()
+        val starts = IntArray(chapters.size)
+        for (i in chapters.indices) {
+            starts[i] = all.size
+            val end = if (i + 1 < chapters.size) chapterStart[i + 1] else pages.size
+            all += if (exact[i]) pages.subList(chapterStart[i], end) else rest[i] ?: pages.subList(chapterStart[i], end)
+            if (i in rest) exact[i] = true
+        }
+        pages = all
+        chapterStart = starts
     }
 
     /**
@@ -82,6 +146,7 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
         pages = pages.subList(0, first) + fresh + pages.subList(end, pages.size)
         val shift = fresh.size - (end - first)
         for (i in chapter + 1 until chapters.size) chapterStart[i] += shift
+        exact[chapter] = true
     }
 
     fun imageSize(path: String): Pair<Int, Int>? = imageSizes.getOrPut(path) {
@@ -89,8 +154,8 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
             val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size, o)
             if (o.outWidth > 0) o.outWidth to o.outHeight else null
-        }
-    }
+        } ?: NO_SIZE
+    }.takeIf { it !== NO_SIZE }
 
     /** Where [page] starts. */
     fun locatorOf(page: Int): Locator = pages.getOrNull(page)?.let { Locator(it.chapter, it.start) } ?: Locator(0, 0)
@@ -156,3 +221,6 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
         }
     }
 }
+
+/** Marks an image whose size couldn't be read (a concurrent map holds no nulls). */
+private val NO_SIZE = -1 to -1
