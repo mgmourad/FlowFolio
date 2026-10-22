@@ -37,6 +37,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioFontPicker
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.displayName
@@ -53,7 +54,11 @@ import com.flowfolio.core.model.ReadingFont
  */
 @Composable
 internal fun TextChoice(text: ReaderText, onChange: (ReaderText) -> Unit) {
-    FontPicker(text.font) { onChange(text.copy(font = it)) }
+    FlowFolioFontPicker(
+        text.font,
+        { onChange(text.copy(font = it)) },
+        Modifier.padding(bottom = 6.dp).testTag(ReaderTestTags.SETTING_FONT)
+    )
     LabeledRow(stringResource(R.string.reader_text_size)) {
         SizeStepper(text.sizeSp) { onChange(text.copy(sizeSp = it)) }
     }
@@ -88,52 +93,6 @@ internal fun TextChoice(text: ReaderText, onChange: (ReaderText) -> Unit) {
         }
         ToggleChip(stringResource(R.string.reader_hyphenate), text.hyphenate, ReaderTestTags.SETTING_HYPHENATE) {
             onChange(text.copy(hyphenate = it))
-        }
-    }
-}
-
-/**
- * The seven reading fonts as cards of one size in a row that scrolls: "Ag" in the font itself at one size (so its
- * real shape, x-height and weight show), its name below in the app's own face. The chosen one is filled and ringed.
- */
-@Composable
-private fun FontPicker(selected: ReadingFont, onSelect: (ReadingFont) -> Unit) {
-    val p = FlowFolio.palette
-    val list = rememberLazyListState(initialFirstVisibleItemIndex = ReadingFont.entries.indexOf(selected))
-    LazyRow(
-        Modifier.fillMaxWidth().padding(bottom = 6.dp).selectableGroup().testTag(ReaderTestTags.SETTING_FONT),
-        state = list,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        items(ReadingFont.entries) { font ->
-            val on = font == selected
-            val shape = RoundedCornerShape(16.dp)
-            Column(
-                Modifier
-                    .size(FONT_CARD_WIDTH, FONT_CARD_HEIGHT)
-                    .clip(shape)
-                    .background(if (on) p.selected else Color.Transparent)
-                    .border(if (on) 2.dp else 1.dp, if (on) p.title else p.hint.copy(alpha = OUTLINE_ALPHA), shape)
-                    .selectable(on, role = Role.RadioButton) { onSelect(font) }
-                    .padding(horizontal = 6.dp, vertical = 8.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.SpaceBetween
-            ) {
-                Box(Modifier.fillMaxWidth().height(SAMPLE_HEIGHT), contentAlignment = Alignment.Center) {
-                    Text(
-                        "Ag",
-                        style = TextStyle(fontFamily = font.fontFamily, fontSize = 28.sp),
-                        color = if (on) p.title else p.item,
-                        maxLines = 1
-                    )
-                }
-                Text(
-                    font.displayName,
-                    style = FlowFolioType.pill.merge(if (on) FlowFolio.title else FlowFolio.hint),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
         }
     }
 }
@@ -194,10 +153,6 @@ private fun DrawScope.marginsIcon(index: Int, color: Color) {
     }
 }
 
-private val FONT_CARD_WIDTH = 92.dp
-private val FONT_CARD_HEIGHT = 76.dp
-private val SAMPLE_HEIGHT = 38.dp
-private const val OUTLINE_ALPHA = 0.35f
 private const val LINE_STROKE = 1.8f
 private const val PAGE_STROKE = 0.8f
 private const val SPACING_GAP_BASE = 0.18f

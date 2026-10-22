@@ -66,15 +66,16 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             onTurnVolume = viewModel::setTurnVolume,
             onRiffleSound = viewModel::setRiffleSound,
             onRiffleVolume = viewModel::setRiffleVolume,
-            onScrubHaptics = viewModel::setScrubHaptics
+            onScrubHaptics = viewModel::setScrubHaptics,
+            onReaderText = viewModel::setReaderText
         )
     )
 }
 
 /**
- * The mock's Settings (`#s-settings`): headed groups on cards. Appearance (theme, Neon glow, page turn), Reading (the
- * spread layout), Library (how imports are stored) and Conversion (where it happens). Unfolded, the groups sit in two
- * columns. The mock's reflow and notification settings stay hidden until those features exist.
+ * The mock's Settings (`#s-settings`): headed groups on cards. Appearance (theme, Neon glow, page turn), Text (how
+ * EPUBs are set, M3), Reading (the spread layout), Library (how imports are stored) and Conversion (where it
+ * happens). Unfolded, the groups sit in two columns. The mock's notification settings stay hidden until they exist.
  */
 @Composable
 fun SettingsContent(settings: UserSettings, actions: SettingsActions) {
@@ -104,12 +105,14 @@ fun SettingsContent(settings: UserSettings, actions: SettingsActions) {
                         ReadingGroup(settings, actions)
                     }
                     Column(Modifier.weight(1f)) {
+                        TextGroup(settings.text, 2, actions.onReaderText)
                         LibraryGroup(settings, actions)
                         ConversionGroup()
                     }
                 }
             } else {
                 AppearanceGroup(settings, actions)
+                TextGroup(settings.text, 2, actions.onReaderText)
                 ReadingGroup(settings, actions)
                 LibraryGroup(settings, actions)
                 ConversionGroup()
@@ -248,7 +251,7 @@ private fun ConversionGroup() {
 
 /** `.set-h` + `.set-group`: a heading in the sub-item colour over a card of rows. */
 @Composable
-private fun Group(title: Int, order: Int, content: @Composable ColumnScope.() -> Unit) {
+internal fun Group(title: Int, order: Int, content: @Composable ColumnScope.() -> Unit) {
     Column(Modifier.reveal(order)) {
         Text(
             stringResource(title).uppercase(),

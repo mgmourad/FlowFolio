@@ -25,6 +25,8 @@ object LibraryTestTags {
     const val ANNOTATIONS = "annotations"
     const val BOOK_ANNOTATIONS = "book_annotations"
     const val THEME_PREFIX = "settings_theme_"
+    const val TEXT_FONT = "settings_text_font"
+    const val TEXT_SAMPLE = "settings_text_sample"
     const val SEED_PREFIX = "settings_seed_"
     const val SETTINGS = "settings"
     const val EDIT_MENU = "details_edit"
