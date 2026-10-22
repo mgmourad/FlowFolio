@@ -38,6 +38,13 @@ Release dates were checked on Maven Central, Google Maven, PyPI, or GitHub Relea
 | androidx.baselineprofile (Gradle plugin) | 1.5.0 | 2026-09-09 | Apache-2.0 | build | Wires the committed profile into release builds; creates the benchmark build types. Owner-approved 2026-10-19 |
 | Fraunces (variable font) | google/fonts main, 2026-10-17 | 2018-2024 (Undercase Type) | SIL OFL 1.1 | app | Display font (ADR-0015). `core/designsystem/res/font`; licence text in `assets/third_party_licenses/fonts/`. 775 KB (roman + italic) |
 | Instrument Sans (variable font) | google/fonts main, 2026-10-17 | 2022-2024 (Instrument) | SIL OFL 1.1 | app | UI font (ADR-0015). Same locations. 396 KB (roman + italic) |
+| Literata (variable) | google/fonts main, 2026-10-21 (upstream 3.103, 2023-05-19) | TypeTogether for Google | SIL OFL 1.1 | app | Reading font, the default (ADR-0027). `core/designsystem/res/font/reading_*`; licence texts in `assets/third_party_licenses/fonts/`. 1.8 MB |
+| Charter | Butterick "Charter 210112" (Bitstream originals 1989-1992) | Bitstream Inc. | Bitstream Charter licence (permissive, SPDX `Bitstream-Charter`) | app | Reading font (ADR-0027). Notice kept; trademark acknowledged. 145 KB |
+| Atkinson Hyperlegible Next (variable) | google/fonts main, 2026-10-21 | Braille Institute, 2020-2024 | SIL OFL 1.1 (reserved names Atkinson, Hyperlegible) | app | Reading font (ADR-0027). 0.2 MB |
+| EB Garamond (variable) | google/fonts main, 2026-10-21 | Georg Duffner, Octavio Pardo | SIL OFL 1.1 | app | Reading font (ADR-0027). 1.6 MB |
+| Source Sans 3 (variable) | google/fonts main, 2026-10-21 (upstream 3.052R, 2023-04-04) | Adobe | SIL OFL 1.1 | app | Reading font (ADR-0027). 1.0 MB |
+| Lexend (variable) | google/fonts main, 2026-10-21 | Lexend project | SIL OFL 1.1 | app | Reading font (ADR-0027). No italic exists. 0.2 MB |
+| Andika | google/fonts main, 2026-10-21 | SIL International | SIL OFL 1.1 | app | Reading font (ADR-0027). Four static files, 2.7 MB |
 | dev.chrisbanes.haze:haze | 2.0.1 | 2026-09-29 | Apache-2.0 | app | Backdrop blur for glass surfaces (ADR-0015). Real blur on Android 12+, tint on older. ~250 KB. Owner-approved 2026-10-17 |
 | dev.chrisbanes.haze:haze-blur | 2.0.1 | 2026-09-29 | Apache-2.0 | app | Same project as Haze; in 2.0 the blur effect is its own module, so it comes with the approved Haze. ~160 KB |
 | com.google.mlkit:translate | 17.0.3 | latest on Google Maven, 2026-10-18 | Google APIs ToS + ML Kit terms (proprietary, not GPL) | app | On-device translation (ADR-0018). 16.4 MB native library on arm64; downloads ~30 MB models per language from Google; sends anonymous usage data to Google. Owner-approved 2026-10-18 |

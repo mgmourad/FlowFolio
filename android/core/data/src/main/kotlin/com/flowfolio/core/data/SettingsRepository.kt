@@ -5,6 +5,7 @@ import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
+import com.flowfolio.core.model.ReaderText
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
@@ -51,6 +52,9 @@ interface SettingsRepository {
     suspend fun setTurnVolume(volume: Float) = Unit
 
     suspend fun setScrubHaptics(on: Boolean) = Unit
+
+    /** The EPUB text settings (M3). */
+    suspend fun setReaderText(text: ReaderText) = Unit
 }
 
 @Suppress("TooManyFunctions") // one setter per setting
@@ -119,6 +123,10 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setTurnVolume(volume: Float) {
         source.setTurnVolume(volume)
+    }
+
+    override suspend fun setReaderText(text: ReaderText) {
+        source.setReaderText(text)
     }
 
     override suspend fun setScrubHaptics(on: Boolean) {

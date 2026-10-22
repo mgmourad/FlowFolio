@@ -47,7 +47,7 @@ import com.flowfolio.core.model.UserSettings
  * [ReaderPanels].
  */
 @Composable
-internal fun ReaderSettingsContent(viewModel: ReaderSettingsViewModel = hiltViewModel()) {
+internal fun ReaderSettingsContent(reflowable: Boolean, viewModel: ReaderSettingsViewModel = hiltViewModel()) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     Column(Modifier.padding(horizontal = 8.dp).padding(bottom = 8.dp).testTag(ReaderTestTags.SETTINGS_SHEET)) {
         Heading(R.string.reader_paper)
@@ -60,6 +60,8 @@ internal fun ReaderSettingsContent(viewModel: ReaderSettingsViewModel = hiltView
             style = FlowFolioType.rowDetail.merge(FlowFolio.hint),
             modifier = Modifier.padding(top = 10.dp)
         )
+        // Text settings first for EPUBs: they are what readers change most (M3).
+        if (reflowable) TextChoice(settings.text, viewModel::setText)
         Heading(R.string.reader_turn, Modifier.padding(top = 22.dp))
         FlowFolioSegmented(
             listOf(
@@ -267,7 +269,7 @@ private val PaperStyle.label: Int
     }
 
 @Composable
-private fun SettingRow(
+internal fun SettingRow(
     title: String,
     detail: String,
     checked: Boolean,

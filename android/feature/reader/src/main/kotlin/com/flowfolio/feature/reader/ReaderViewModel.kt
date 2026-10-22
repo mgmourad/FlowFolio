@@ -12,10 +12,12 @@ import com.flowfolio.core.data.OpenedBook
 import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.data.SettingsRepository
 import com.flowfolio.core.designsystem.R as DesignR
+import com.flowfolio.core.designsystem.fontRes
 import com.flowfolio.core.epub.EpubException
 import com.flowfolio.core.model.PageLabels
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PixelSize
+import com.flowfolio.core.model.ReadingFont
 import com.flowfolio.core.model.UserSettings
 import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfException
@@ -140,8 +142,11 @@ class ReaderViewModel @Inject constructor(
     /** An EPUB's saved page when it has no locator yet, used by its first layout. */
     private var startPage: Int? = null
 
-    /** The pane a layout is under way for. */
-    private var pendingPane: PixelSize? = null
+    /** The pane and text settings a layout is under way for. */
+    private var pendingLayout: EpubLayout? = null
+
+    /** The reading fonts loaded so far: each is read from the APK once, when first used. */
+    private val fonts = java.util.concurrent.ConcurrentHashMap<ReadingFont, android.graphics.Typeface>()
 
     private val _islandWork = MutableStateFlow<IslandWork?>(null)
 
@@ -247,7 +252,12 @@ class ReaderViewModel @Inject constructor(
         val session = try {
             // Headings in the app's display face (Fraunces), as on the library's covers.
             val heading = runCatching { context.resources.getFont(DesignR.font.fraunces) }.getOrNull()
-            EpubSession.open(repository.openEpub(bookId), heading, java.io.File(context.cacheDir, ISLAND_DIR))
+            EpubSession.open(
+                repository.openEpub(bookId),
+                heading,
+                ::readingFont,
+                java.io.File(context.cacheDir, ISLAND_DIR)
+            )
         } catch (_: FileNotFoundException) {
             _state.value = ReaderState.Failed(missingFile = true)
             return
@@ -268,8 +278,9 @@ class ReaderViewModel @Inject constructor(
     }
 
     /**
-     * Lays an EPUB out again when its page pane changed size (first open, fold, unfold, spreads on or off), keeping the
-     * reader on the same text. Returns true while a layout is under way (callers wait for it).
+     * Lays an EPUB out again when its page pane changed size (first open, fold, unfold, spreads on or off) or its text
+     * settings changed (M3), keeping the reader on the same text. Returns true while a layout is under way (callers
+     * wait for it).
      */
     private fun ensureEpubLayout(): Boolean {
         val session = epub
@@ -286,34 +297,34 @@ class ReaderViewModel @Inject constructor(
                 it.heightPx
             )
         }
+        val wanted = pane?.let { EpubLayout(it, settings.text) }
         return when {
             session == null -> false
 
-            v == null || pane == null -> true
+            v == null || wanted == null -> true
 
-            session.pane == pane -> false
+            session.laidOut == wanted -> false
 
-            pendingPane == pane -> true
+            pendingLayout == wanted -> true
 
             else -> {
-                startLayout(session, v, pane)
+                startLayout(session, v, wanted)
                 true
             }
         }
     }
 
-    private fun startLayout(session: EpubSession, v: Viewport, pane: PixelSize) {
+    private fun startLayout(session: EpubSession, v: Viewport, layout: EpubLayout) {
         layoutJob?.cancel()
-        pendingPane = pane
+        pendingLayout = layout
         layoutJob = viewModelScope.launch {
-            val density = v.widthPx / v.widthDp
-            anchorPage = session.layOut(pane, EpubSession.BODY_SP * density, density, locator)
+            anchorPage = session.layOut(layout, v.widthPx / v.widthDp, locator)
             startPage?.let { page ->
                 anchorPage = page.coerceIn(0, (session.pageCount - 1).coerceAtLeast(0))
                 locator = session.locatorOf(anchorPage)
                 startPage = null
             }
-            pendingPane = null
+            pendingLayout = null
             _navigation.value = session.navigation()
             publishReady()
             replan()
@@ -498,7 +509,7 @@ class ReaderViewModel @Inject constructor(
         wanted = keys
         currentKeys.value = keys.associateBy { it.page }
         cache?.request(keys, newBudgetBytes = minOf(keys.sumOf { it.size.argbBytes }, MAX_CACHE_BYTES))
-        if (pendingPane == null) nextIslandWork()
+        if (pendingLayout == null) nextIslandWork()
         viewModelScope.launch { loadEpubLinks(session, pages) }
     }
 
@@ -595,6 +606,10 @@ class ReaderViewModel @Inject constructor(
             if (image !in pageImages.value.values) image.asAndroidBitmap().recycle()
         }
     }
+
+    /** [font] as a typeface with its bold and italic, loaded once; null (the system serif) if it can't be read. */
+    private fun readingFont(font: ReadingFont): android.graphics.Typeface? = fonts[font]
+        ?: runCatching { context.resources.getFont(font.fontRes) }.getOrNull()?.also { fonts[font] = it }
 
     /** The cover, decoded small (its colours are all that is needed), off the main thread. */
     private fun loadCover(path: String?) {

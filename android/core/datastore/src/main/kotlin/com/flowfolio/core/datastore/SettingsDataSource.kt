@@ -7,12 +7,14 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
+import com.flowfolio.core.model.ReaderText
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
@@ -51,8 +53,33 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             riffleVolume = p[RIFFLE_VOLUME]?.coerceIn(0f, 1f) ?: defaults.riffleVolume,
             turnSound = p[TURN_SOUND] ?: defaults.turnSound,
             turnVolume = p[TURN_VOLUME]?.coerceIn(0f, 1f) ?: defaults.turnVolume,
-            scrubHaptics = p[SCRUB_HAPTICS] ?: defaults.scrubHaptics
+            scrubHaptics = p[SCRUB_HAPTICS] ?: defaults.scrubHaptics,
+            text = readerText(p)
         )
+    }
+
+    /** The EPUB text settings; unknown or out-of-range values fall back to the defaults. */
+    private fun readerText(p: Preferences): ReaderText {
+        val d = ReaderText()
+        return ReaderText(
+            font = p[TEXT_FONT].toEnum(d.font),
+            sizeSp = p[TEXT_SIZE]?.coerceIn(ReaderText.MIN_SIZE_SP, ReaderText.MAX_SIZE_SP) ?: d.sizeSp,
+            lineSpacing = p[TEXT_SPACING].toEnum(d.lineSpacing),
+            margins = p[TEXT_MARGINS].toEnum(d.margins),
+            justify = p[TEXT_JUSTIFY] ?: d.justify,
+            hyphenate = p[TEXT_HYPHENATE] ?: d.hyphenate
+        )
+    }
+
+    suspend fun setReaderText(text: ReaderText) {
+        store.edit {
+            it[TEXT_FONT] = text.font.name
+            it[TEXT_SIZE] = text.sizeSp.coerceIn(ReaderText.MIN_SIZE_SP, ReaderText.MAX_SIZE_SP)
+            it[TEXT_SPACING] = text.lineSpacing.name
+            it[TEXT_MARGINS] = text.margins.name
+            it[TEXT_JUSTIFY] = text.justify
+            it[TEXT_HYPHENATE] = text.hyphenate
+        }
     }
 
     suspend fun setStorageMode(mode: StorageMode) {
@@ -156,6 +183,12 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val TURN_SOUND = booleanPreferencesKey("turn_sound")
         val TURN_VOLUME = floatPreferencesKey("turn_volume")
         val SCRUB_HAPTICS = booleanPreferencesKey("scrub_haptics")
+        val TEXT_FONT = stringPreferencesKey("text_font")
+        val TEXT_SIZE = intPreferencesKey("text_size_sp")
+        val TEXT_SPACING = stringPreferencesKey("text_line_spacing")
+        val TEXT_MARGINS = stringPreferencesKey("text_margins")
+        val TEXT_JUSTIFY = booleanPreferencesKey("text_justify")
+        val TEXT_HYPHENATE = booleanPreferencesKey("text_hyphenate")
     }
 }
 

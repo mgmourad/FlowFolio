@@ -9,6 +9,7 @@ import com.flowfolio.core.data.SettingsRepository
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
+import com.flowfolio.core.model.ReaderText
 import com.flowfolio.core.model.UserSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -53,6 +54,11 @@ class ReaderSettingsViewModel @Inject constructor(
 
     fun setPageTurn(turn: PageTurn) {
         viewModelScope.launch { repository.setPageTurn(turn) }
+    }
+
+    /** The EPUB text settings (M3); the reader lays the book out again at the reader's place. */
+    fun setText(text: ReaderText) {
+        viewModelScope.launch { repository.setReaderText(text) }
     }
 
     fun setControlsAutoHide(value: ControlsAutoHide) {

@@ -93,7 +93,9 @@ data class UserSettings(
     /** Its loudness, 0 to 1. */
     val turnVolume: Float = DEFAULT_SOUND_VOLUME,
     /** Haptic ticks while riffling (ADR-0023). */
-    val scrubHaptics: Boolean = true
+    val scrubHaptics: Boolean = true,
+    /** How EPUB text is set: font, size, spacing, margins (M3). */
+    val text: ReaderText = ReaderText()
 )
 
 /** The paper sounds' loudness until the reader moves the sliders. */

@@ -101,6 +101,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Page numbers follow the book's own numbering: the PDF's page labels, or else the numbers printed in its margins
     (found once and kept as `books.page_labels`), including roman front matter and prefixed appendices; books with no
     numbering count from the cover as page 1. The library, details, bookmarks and the reader all use them.
+- Phase 2 milestone 3, typography (in progress; `docs/plans/phase2-m3.md`, ADR-0027):
+  - Seven reading fonts bundled for EPUBs (Literata, the default; Charter; Atkinson Hyperlegible Next; EB Garamond;
+    Source Sans 3; Lexend; Andika), with real bold and italic faces; about 7.7 MB.
+  - "Aa" gains a Text section for EPUBs: font (each shown in its own face), size, line spacing, margins, justification
+    and hyphenation. A change lays the book out again at the reader's place.
+  - Line spacing is an exact line height, the same in every font (it was a multiple of each font's own line height).
+  - Descenders on a paragraph's last line are no longer cut.
 - Phase 2, EPUB links and footnote popovers (the M2 follow-up, `docs/plans/phase2-m2-links.md`):
   - Links in EPUB text are tappable: a link into the book jumps to its page, a web link asks before opening (http,
     https and mailto only), a link to anything outside the reading order does nothing.
