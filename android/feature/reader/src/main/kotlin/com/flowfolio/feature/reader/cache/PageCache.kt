@@ -68,6 +68,23 @@ class PageCache(
         }
     }
 
+    /**
+     * Page numbers moved (an EPUB's estimated chapters were laid out): each held image goes to the key [move] gives it,
+     * or is released when it gives none, so pages already drawn are not drawn again.
+     */
+    fun rekey(move: (PageKey) -> PageKey?) {
+        job?.cancel()
+        synchronized(lru) {
+            val held = lru.entries.map { it.key to it.value }
+            lru.clear()
+            for ((key, image) in held) {
+                val moved = move(key)
+                if (moved == null) onEvicted(image) else lru[moved] = image
+            }
+        }
+        publish()
+    }
+
     /** System memory pressure: keep only the first [keep] wanted pages (the visible ones). */
     fun trimToVisible(wanted: List<PageKey>, keep: Int) {
         val visible = wanted.take(keep).toSet()

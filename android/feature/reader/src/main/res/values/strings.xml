@@ -13,6 +13,7 @@
     <string name="reader_link_title">Open this link?</string>
     <string name="reader_footnote">Note</string>
     <string name="reader_text">Text</string>
+    <string name="reader_relayout">Setting the pages</string>
     <string name="reader_tab_text">Text</string>
     <string name="reader_tab_page">Page</string>
     <string name="reader_tab_controls">Controls</string>

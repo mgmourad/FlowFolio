@@ -33,6 +33,7 @@ import kotlinx.coroutines.withContext
  * drawn as images for the page cache. Another pane (fold, unfold, spreads on or off) or other text settings (M3) lay
  * the book out again; positions are kept as [Locator]s so the reader stays on the same text.
  */
+@Suppress("TooManyFunctions") // the open book's one place for layout, drawing, links and islands
 internal class EpubSession private constructor(
     val opened: OpenedEpub,
     private val book: ReflowBook,
@@ -76,34 +77,74 @@ internal class EpubSession private constructor(
     /** Changes whenever a page's image would: a new layout, or islands drawn. Part of every [PageKey]. */
     val revision: Int get() = layouts + islands.revision
 
+    /** The island folder of the last layout, for [trimIslands] to keep. */
+    @Volatile private var trimLater: java.io.File? = null
+
+    /**
+     * Keeps the island cache under its cap, sparing the current layout's folder. It walks every stored image (about
+     * 0.8 s for a big textbook), so it runs in the background after a layout, never in its way.
+     */
+    suspend fun trimIslands() = withContext(Dispatchers.IO) {
+        trimLater?.let { IslandStore.trim(islandRoot, keep = it) }
+    }
+
     /** Lays the book out for [layout] ([density] pixels per dp); returns the page now showing [keep]. */
-    suspend fun layOut(layout: EpubLayout, density: Float, keep: Locator?): Int = lock.withLock {
-        withContext(Dispatchers.Default) {
-            val size = layout.pane
-            val text = layout.text
-            val bodyPx = text.sizeSp * density
-            margins = Margins.forPane(size, density, text.margins)
-            val spec = PageSpec(
-                width = (size.width - margins.left - margins.right).coerceAtLeast(1),
-                height = (size.height - margins.top - margins.bottom).coerceAtLeast(1),
-                bodyPx = bodyPx,
-                locale = book.locale,
-                heading = heading,
-                body = fonts(text.font),
-                lineSpacing = text.lineSpacing.factor,
-                justify = text.justify,
-                hyphenate = text.hyphenate
-            )
-            val store = IslandStore(islandRoot, opened.book.id, bodyPx, spec.width)
-            IslandStore.trim(islandRoot, keep = store.dir)
-            islands.prepare(bodyPx, spec.width, store)
-            paginator = book.paginate(spec, density, islands::size)
-            pane = size
-            laidOut = layout
-            column = bodyPx to spec.width
-            drawer = PageDrawer(book, ::image, islands::image)
-            layouts++
-            keep?.let(book::pageOf) ?: 0
+    suspend fun layOut(layout: EpubLayout, density: Float, keep: Locator?, chapterFirst: Boolean = false): Int =
+        lock.withLock {
+            withContext(Dispatchers.Default) {
+                val size = layout.pane
+                val text = layout.text
+                val bodyPx = text.sizeSp * density
+                margins = Margins.forPane(size, density, text.margins)
+                val spec = PageSpec(
+                    width = (size.width - margins.left - margins.right).coerceAtLeast(1),
+                    height = (size.height - margins.top - margins.bottom).coerceAtLeast(1),
+                    bodyPx = bodyPx,
+                    locale = book.locale,
+                    heading = heading,
+                    body = fonts(text.font),
+                    lineSpacing = text.lineSpacing.factor,
+                    justify = text.justify,
+                    hyphenate = text.hyphenate
+                )
+                val store = IslandStore(islandRoot, opened.book.id, bodyPx, spec.width)
+                val t1 = android.os.SystemClock.elapsedRealtime()
+                islands.prepare(bodyPx, spec.width, store)
+                val t2 = android.os.SystemClock.elapsedRealtime()
+                // Up to the reader's chapter now, the chapters after it in [finishLayout] (M3's 300 ms target).
+                val first = if (chapterFirst) keep?.chapter ?: 0 else -1
+                paginator = book.paginate(spec, density, first, islands::size)
+                android.util.Log.i(
+                    "FlowFolioLayout",
+                    "islands ${t2 - t1} ms, paginate ${android.os.SystemClock.elapsedRealtime() - t2} ms"
+                )
+                trimLater = store.dir
+                pane = size
+                laidOut = layout
+                column = bodyPx to spec.width
+                drawer = PageDrawer(book, ::image, islands::image)
+                layouts++
+                keep?.let(book::pageOf) ?: 0
+            }
+        }
+
+    /**
+     * Lays out the chapters a chapter-first [layOut] only estimated, without holding up pages being drawn meanwhile.
+     * Returns where each old page number went (null for estimated pages, whose images must go), or null when there was
+     * nothing to do or another layout started meanwhile.
+     */
+    suspend fun finishLayout(): ((Int) -> Int?)? {
+        val (p, generation, done) = lock.withLock { Triple(paginator, book.generation, book.complete) }
+        if (p == null || done) return null
+        val rest = withContext(Dispatchers.Default) { book.layOutRest(p) }
+        return lock.withLock {
+            if (book.generation != generation) return@withLock null
+            val before = book.pages
+            book.applyRest(rest)
+            val now = java.util.IdentityHashMap<com.flowfolio.core.reflow.Page, Int>()
+            book.pages.forEachIndexed { i, page -> now[page] = i }
+            val moves: (Int) -> Int? = { old -> before.getOrNull(old)?.let { now[it] } }
+            moves
         }
     }
 

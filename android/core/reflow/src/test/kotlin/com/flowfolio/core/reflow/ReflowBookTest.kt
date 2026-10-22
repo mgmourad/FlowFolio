@@ -97,6 +97,22 @@ class ReflowBookTest {
         assertEquals(firstOfTwo + grown, book.contents().last().third)
     }
 
+    @Test
+    fun upToTheReadersChapterFirstThenTheRestKeepsEveryPageItHad() {
+        val whole = book().also { it.paginate(SPEC, DENSITY) }.pages.map { it.chapter to it.start }
+        val book = book()
+        val paginator = book.paginate(SPEC, DENSITY, first = 0)
+        assertTrue("chapter two waits", !book.complete)
+        val shown = book.pages.filter { it.chapter == 0 }
+        // Up to the reader's chapter, the pages are the real ones, with their real numbers.
+        assertEquals(whole.filter { it.first == 0 }, shown.map { it.chapter to it.start })
+        book.applyRest(book.layOutRest(paginator))
+        assertTrue(book.complete)
+        assertEquals(whole, book.pages.map { it.chapter to it.start })
+        // Pages laid out first are the same objects afterwards: their images can move with them.
+        shown.forEachIndexed { i, page -> assertSame(page, book.pages[i]) }
+    }
+
     /** Two chapters: a heading with an anchor, a block and an inline equation, and plain text. */
     private fun book(): ReflowBook {
         val words = (1..120).joinToString(" ") { "word$it" }

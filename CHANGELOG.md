@@ -116,8 +116,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     light frame (the rule that keeps stand-alone equations black for tinting also caught nested maths). Island cache
     version 2, so stored tables are drawn again.
   - Pinching an EPUB page changes the text size (the size shows while pinching; letting go sets it). PDFs still zoom.
-  - Layout times are logged (`FlowFolioLayout`): on the Fold, 210 ms for a 270-page book, 445 ms for Linear Algebra
-    (1,435 pages), over the 300 ms target; laying out the reader's chapter first comes next.
+  - Re-layout is fast on big books: the chapters up to the reader's are laid out first (every page number up to the
+    reader's is exact, so spreads keep their pairing), the rest in the background with page images kept as their numbers
+    settle. The island cache trim (0.8 s on a big textbook) moved after the layout. Linear Algebra (1,132 pages, at
+    53%) on the Fold, non-debuggable build: 206-250 ms to the reader's page, from 352-372 ms (1.4 s with the trim).
+  - An hourglass (sand runs down, the glass turns over) shows over the pages while a layout runs and until the new
+    pages are drawn, instead of half-drawn pages; it waits 120 ms before showing and stays at least 500 ms.
 - Phase 2, EPUB links and footnote popovers (the M2 follow-up, `docs/plans/phase2-m2-links.md`):
   - Links in EPUB text are tappable: a link into the book jumps to its page, a web link asks before opening (http,
     https and mailto only), a link to anything outside the reading order does nothing.
