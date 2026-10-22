@@ -53,7 +53,16 @@ enum class Glyph(internal val pathData: String, internal val stroke: Float = 2f,
     Trash("M4 7h16 M10 11v6 M14 11v6 M6 7l1 13h10l1-13 M9 7V4h6v3"),
 
     /** A highlighter over a line of text (annotations). */
-    Highlight("M14.5 4.5l5 5L11 18H6v-5z M12.5 6.5l5 5 M4 21h16")
+    Highlight("M14.5 4.5l5 5L11 18H6v-5z M12.5 6.5l5 5 M4 21h16"),
+
+    /** A large and a small letter A: text settings. */
+    TextSize("M3 19L8 5l5 14 M4.8 14.5h6.4 M14 19l3.5-9 3.5 9 M15.2 16h4.6"),
+
+    /** A sheet of paper with a folded corner: page settings. */
+    Page("M6 3h8.5L19 7.5V21H6z M14.5 3v4.5H19 M9 12h7 M9 15.5h7"),
+
+    /** Three sliders: controls and sound. */
+    Sliders("M4 6h9 M17 6h3 M4 12h3 M11 12h9 M4 18h11 M19 18h1 M15 4v4 M9 10v4 M17 16v4")
 }
 
 /**

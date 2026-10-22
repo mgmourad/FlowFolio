@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -31,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.flowfolio.core.designsystem.FlowFolio
@@ -129,13 +131,17 @@ private fun BoxScope.SheetPanel(visible: Boolean, content: @Composable ColumnSco
         enter = slideInVertically(tween(SHEET_MS, easing = Motion.EaseOut)) { it * 2 },
         exit = slideOutVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { it * 2 }
     ) {
+        // [SHEET_MAX_HEIGHT] of the window, so the page stays in view above it (owner, 2026-10-21); the content
+        // scrolls inside if it must.
+        val maxHeight = LocalWindowInfo.current.containerDpSize.height * SHEET_MAX_HEIGHT
         Column(
             Modifier
                 .widthIn(max = SHEET_WIDTH)
                 .fillMaxWidth()
+                // One height for every tab, so switching tabs doesn't move the sheet under the finger.
+                .height(maxHeight)
                 .glass(RoundedCornerShape(28.dp), tint = panelTint())
-                .verticalScroll(rememberScrollState())
-                .padding(start = 18.dp, end = 18.dp, top = 10.dp, bottom = 18.dp)
+                .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 16.dp)
         ) {
             // `.grab`
             Box(
@@ -176,6 +182,7 @@ private val CONTENTS_WIDTH = 520.dp
 private val GO_TO_WIDTH = 420.dp
 private val RIBBONS_WIDTH = 380.dp
 private val SHEET_WIDTH = 600.dp
+private const val SHEET_MAX_HEIGHT = 0.46f
 private val SHEET_INSET = 10.dp
 private const val SHEET_MS = 600
 private const val DROP_FRACTION = 8

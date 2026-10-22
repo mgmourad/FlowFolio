@@ -143,8 +143,10 @@ internal class IslandRenderer(private val web: WebView, private val archive: Epu
         append("<style>")
         append("html,body{margin:0;padding:0;background:transparent;}")
         append("body{font-family:serif;font-size:${bodyCss}px;width:${widthCss}px;color:$color;}")
-        // Equations in black, tinted to the paper's ink when shown, so one stored image serves every paper (ADR-0021).
-        append("math{color:#000;}")
+        // Equations that are islands themselves are drawn in black and tinted to the paper's ink when shown, so one
+        // stored image serves every paper (ADR-0021). Maths inside a table or figure is drawn in the ink with it: that
+        // island is stored per ink and never tinted, so black maths there would vanish on Night and Black.
+        append(".i>math{color:#000;}")
         // Each island alone on its own band, a little apart from the next: captures are its exact rectangle.
         append(".b{display:block;margin:0 0 ${GAP_CSS}px 0;}.i{display:inline-block;max-width:${widthCss}px;}")
         append("table{border-collapse:collapse;}th,td{border:1px solid $color;padding:0.2em 0.5em;}")
