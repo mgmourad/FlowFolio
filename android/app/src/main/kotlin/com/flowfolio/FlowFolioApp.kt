@@ -22,7 +22,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavGraphBuilder
@@ -59,29 +58,6 @@ import com.flowfolio.feature.library.ShelfPageViewModel
 import com.flowfolio.feature.library.ShelvesScreen
 import com.flowfolio.feature.reader.ReaderScreen
 
-private object Routes {
-    const val READER = "reader/{bookId}?layout={layout}"
-    const val DETAILS = "book/{${DetailsViewModel.ARG_BOOK_ID}}?from={from}"
-    const val EDIT = "book/{${DetailsViewModel.ARG_BOOK_ID}}/edit"
-
-    fun reader(bookId: String, layout: String? = null) = "reader/$bookId" + (layout?.let { "?layout=$it" } ?: "")
-
-    fun details(bookId: String, origin: String) = "book/$bookId?from=$origin"
-
-    fun edit(bookId: String) = "book/$bookId/edit"
-
-    const val BOOK_BOOKMARKS = "book/{${BookmarksViewModel.ARG_BOOK_ID}}/bookmarks"
-    const val BOOK_ANNOTATIONS = "book/{${AnnotationsViewModel.ARG_BOOK_ID}}/annotations"
-
-    fun bookAnnotations(bookId: String) = "book/$bookId/annotations"
-
-    fun bookBookmarks(bookId: String) = "book/$bookId/bookmarks"
-
-    const val SHELF = "shelf/{${ShelfPageViewModel.ARG_SHELF_ID}}"
-
-    fun shelf(id: Long) = "shelf/$id"
-}
-
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun FlowFolioApp(appViewModel: AppViewModel) {
@@ -90,8 +66,7 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
     val entry by nav.currentBackStackEntryAsState()
     // A shelf tapped on the Shelves tab: the library scrolls to its row.
     var shelfToShow by rememberSaveable { mutableStateOf<Long?>(null) }
-    val route = entry?.destination?.route
-    AppShell(TopLevel.of(route), nav::switchTo, reading = route?.startsWith("reader/") == true) {
+    AppShell(entry?.destination?.route, onSelect = nav::switchTo) {
         SharedTransitionLayout {
             CompositionLocalProvider(LocalSharedTransition provides this) {
                 NavHost(

@@ -31,4 +31,11 @@ interface ReadingSessionDao {
     /** Total time read in [bookId], in milliseconds (0 when never read). */
     @Query("SELECT COALESCE(SUM(ended_at - started_at), 0) FROM reading_sessions WHERE book_id = :bookId")
     fun observeTotal(bookId: String): Flow<Long>
+
+    /** Total time read in the books still in the library, in milliseconds. */
+    @Query(
+        "SELECT COALESCE(SUM(s.ended_at - s.started_at), 0) FROM reading_sessions s " +
+            "JOIN books b ON b.id = s.book_id"
+    )
+    fun observeLibraryTotal(): Flow<Long>
 }

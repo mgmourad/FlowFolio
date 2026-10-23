@@ -1,15 +1,14 @@
 package com.flowfolio.feature.library
 
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -32,60 +31,66 @@ import com.flowfolio.core.designsystem.SelectButton
 import com.flowfolio.core.designsystem.Selection
 import com.flowfolio.core.designsystem.SelectionBar
 import com.flowfolio.core.designsystem.SelectionCheck
+import com.flowfolio.core.designsystem.SelectionLabels
 
 /**
- * A tab header's controls for select mode (owner, 2026-10-22): the Select button, or while selecting, the count,
- * Select all, Delete and Done. [normal] are the header's other buttons, hidden while selecting.
+ * A header's buttons with select mode (owner, 2026-10-22): [normal] (the header's other buttons) and Select. While
+ * selecting they step aside; the [SelectionRow] under the title takes over.
  */
 @Composable
-internal fun SelectControls(
-    selection: Selection,
-    allKeys: List<String>,
-    onDelete: () -> Unit,
-    normal: @Composable () -> Unit = {}
-) {
-    // Items removed elsewhere leave the choice.
-    LaunchedEffect(allKeys) { selection.keepOnly(allKeys) }
-    // The buttons and the selection bar cross-fade with a short rise (ADR-0033).
-    AnimatedContent(
-        selection.active,
-        transitionSpec = {
-            (fadeIn(tween(Motion.FAST_MS, delayMillis = SWAP_DELAY_MS)) + slideInVertically { it / SWAP_RISE })
-                .togetherWith(fadeOut(tween(SWAP_DELAY_MS)))
-                .using(SizeTransform(clip = false))
-        },
-        label = "selectControls"
-    ) { active ->
+internal fun SelectControls(selection: Selection, allKeys: List<String>, normal: @Composable () -> Unit = {}) {
+    AnimatedVisibility(
+        !selection.active,
+        enter = fadeIn(tween(Motion.FAST_MS, delayMillis = SWAP_DELAY_MS)),
+        exit = fadeOut(tween(SWAP_DELAY_MS))
+    ) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (active) SelectionControlsBar(selection, allKeys, onDelete) else IdleControls(selection, allKeys, normal)
+            normal()
+            if (allKeys.isNotEmpty()) {
+                SelectButton(
+                    stringResource(R.string.action_select),
+                    selection::start,
+                    Modifier.testTag(LibraryTestTags.SELECT)
+                )
+            }
         }
     }
 }
 
+/**
+ * Select mode's bar on a row of its own under the header's title (owner, 2026-10-23: beside the title it squeezed
+ * the title letter by letter on the cover screen). It opens below the title with a short rise (ADR-0033).
+ */
 @Composable
-private fun SelectionControlsBar(selection: Selection, allKeys: List<String>, onDelete: () -> Unit) {
-    run {
+internal fun SelectionRow(
+    selection: Selection,
+    allKeys: List<String>,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Items removed elsewhere leave the choice.
+    LaunchedEffect(allKeys) { selection.keepOnly(allKeys) }
+    AnimatedVisibility(
+        selection.active,
+        modifier,
+        enter = expandVertically(tween(Motion.FAST_MS)) + fadeIn(tween(Motion.FAST_MS, delayMillis = SWAP_DELAY_MS)) +
+            slideInVertically { it / SWAP_RISE },
+        exit = shrinkVertically(tween(Motion.FAST_MS)) + fadeOut(tween(SWAP_DELAY_MS))
+    ) {
+        val count = selection.chosen.size
         SelectionBar(
             selection,
-            countLabel = pluralStringResource(R.plurals.selected_count, selection.chosen.size, selection.chosen.size),
-            selectAllLabel = stringResource(R.string.action_select_all),
-            doneLabel = stringResource(R.string.action_done),
-            deleteLabel = stringResource(R.string.action_delete),
+            SelectionLabels(
+                count = pluralStringResource(R.plurals.selected_count, count, count),
+                selectAll = stringResource(R.string.action_select_all),
+                unselectAll = stringResource(R.string.action_unselect_all),
+                delete = stringResource(R.string.action_delete),
+                done = stringResource(R.string.action_done)
+            ),
+            allChosen = allKeys.isNotEmpty() && allKeys.all(selection::isChosen),
             onSelectAll = { selection.setAll(allKeys) },
             onDelete = onDelete,
-            modifier = Modifier.testTag(LibraryTestTags.SELECTION_BAR)
-        )
-    }
-}
-
-@Composable
-private fun IdleControls(selection: Selection, allKeys: List<String>, normal: @Composable () -> Unit) {
-    normal()
-    if (allKeys.isNotEmpty()) {
-        SelectButton(
-            stringResource(R.string.action_select),
-            selection::start,
-            Modifier.testTag(LibraryTestTags.SELECT)
+            modifier = Modifier.padding(top = 8.dp).testTag(LibraryTestTags.SELECTION_BAR)
         )
     }
 }

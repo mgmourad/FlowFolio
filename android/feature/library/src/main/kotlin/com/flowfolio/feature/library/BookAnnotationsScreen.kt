@@ -133,12 +133,7 @@ fun BookAnnotationsContent(
                         style = FlowFolioType.screenTitle.merge(FlowFolio.title),
                         modifier = Modifier.weight(1f)
                     )
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        SelectControls(selection, state.annotations.map { it.id.toString() }, onDeleteChosen)
-                    }
+                    SelectControls(selection, state.annotations.map { it.id.toString() })
                 }
                 state.book?.let {
                     Text(
@@ -147,6 +142,7 @@ fun BookAnnotationsContent(
                         modifier = Modifier.padding(top = 6.dp)
                     )
                 }
+                SelectionRow(selection, state.annotations.map { it.id.toString() }, onDeleteChosen)
             }
         }
         itemsIndexed(state.annotations, key = { _, entry -> entry.id }) { i, a ->

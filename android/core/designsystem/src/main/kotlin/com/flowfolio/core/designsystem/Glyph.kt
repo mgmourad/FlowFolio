@@ -68,7 +68,16 @@ enum class Glyph(internal val pathData: String, internal val stroke: Float = 2f,
     Select("M12 3a9 9 0 1 1 0 18a9 9 0 1 1 0-18z M8 12.4l2.8 2.8L16.2 9.6"),
 
     /** A tick: chosen. */
-    Check("M5 12.5l4.5 4.5L19 7.5", stroke = 2.6f)
+    Check("M5 12.5l4.5 4.5L19 7.5", stroke = 2.6f),
+
+    /** An hourglass: books in progress. */
+    Hourglass(
+        "M6 3h12 M6 21h12 M7.5 3v2.5c0 3 4.5 4.5 4.5 6.5s-4.5 3.5-4.5 6.5V21 " +
+            "M16.5 3v2.5c0 3-4.5 4.5-4.5 6.5s4.5 3.5 4.5 6.5V21"
+    ),
+
+    /** A stopwatch: time spent reading. */
+    Stopwatch("M19 14a7 7 0 1 1-14 0a7 7 0 1 1 14 0z M12 14v-4 M10 2.5h4 M12 2.5V7 M17.5 7.5l1.5-1.5")
 }
 
 /**

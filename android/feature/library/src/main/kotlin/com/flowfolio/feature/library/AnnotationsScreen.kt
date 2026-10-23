@@ -106,13 +106,9 @@ fun AnnotationsContent(
                             style = FlowFolioType.screenTitle.merge(FlowFolio.title),
                             modifier = Modifier.weight(1f)
                         )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            SelectControls(selection, state.books.map { it.book.id }, onDeleteChosen)
-                        }
+                        SelectControls(selection, state.books.map { it.book.id })
                     }
+                    SelectionRow(selection, state.books.map { it.book.id }, onDeleteChosen)
                     if (state.total > 0) {
                         Text(
                             stringResource(

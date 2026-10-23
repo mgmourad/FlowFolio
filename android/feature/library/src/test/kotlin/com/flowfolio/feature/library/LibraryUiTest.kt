@@ -2,6 +2,7 @@ package com.flowfolio.feature.library
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.longClick
@@ -96,6 +97,8 @@ class LibraryUiTest {
         val item = LibraryItem(book("a", "Optics").copy(lastPage = 4, lastOpenedAtMillis = 5))
         content(loaded(item, hero = item), LibraryActions(onResume = { resumed = it }))
         compose.onNodeWithTag(LibraryTestTags.HERO).assertIsDisplayed()
+        // The header's totals push the card down on a narrow screen.
+        compose.onNodeWithTag(LibraryTestTags.GRID).performScrollToNode(hasTestTag(LibraryTestTags.RESUME))
         compose.onNodeWithTag(LibraryTestTags.RESUME).performClick()
         assertEquals(item, resumed)
     }

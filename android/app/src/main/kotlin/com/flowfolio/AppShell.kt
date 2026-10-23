@@ -82,16 +82,13 @@ object ShellTestTags {
 /**
  * The app shell from the mock: screens on the app background, with the floating glass tab bar (`.tabbar`) over them
  * when folded, or a glass rail on the left when the window is at least [RAIL_MIN_WIDTH] wide (unfolded, tablets).
- * The chrome shows only on top-level screens ([current] is one of [TopLevel]) and slides away elsewhere (the reader).
+ * The chrome shows only on top-level screens ([route] is one of [TopLevel]) and slides away elsewhere (the reader).
  * Screens learn the space it takes from [LocalChromePadding]; the glass blurs them through [LocalGlassState].
  */
 @Composable
-fun AppShell(
-    current: TopLevel?,
-    onSelect: (TopLevel) -> Unit,
-    reading: Boolean = false,
-    content: @Composable () -> Unit
-) {
+fun AppShell(route: String?, onSelect: (TopLevel) -> Unit, content: @Composable () -> Unit) {
+    val current = TopLevel.of(route)
+    val reading = Routes.isReader(route)
     val p = FlowFolio.palette
     // Exposes Compose test tags as resource ids so UiAutomator (on-device gesture tests, benchmarks) can find them.
     BoxWithConstraints(Modifier.fillMaxSize().appBackground(p).semantics { testTagsAsResourceId = true }) {
@@ -125,7 +122,7 @@ fun AppShell(
             // The themed, blurred fades under the status bar and over the navigation bar (owner, 2026-10-23); the
             // reader's pages fill the screen instead.
             val fades by animateFloatAsState(if (reading) 0f else 1f, tween(Motion.FAST_MS), label = "edgeFades")
-            if (fades > 0f) EdgeFades(fades)
+            if (fades > 0f) EdgeFades(fades, Routes.topFadeOf(route))
             val selected = current ?: TopLevel.Library
             if (wide) {
                 AnimatedVisibility(

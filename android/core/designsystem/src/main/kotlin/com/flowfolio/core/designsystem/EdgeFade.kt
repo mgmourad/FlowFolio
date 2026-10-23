@@ -1,7 +1,9 @@
 package com.flowfolio.core.designsystem
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -18,6 +20,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeInput
+import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.hazeBlur
 
@@ -29,14 +32,21 @@ import dev.chrisbanes.haze.blur.hazeBlur
  * it the tint alone shows.
  */
 @Composable
-fun BoxScope.EdgeFades(alpha: Float = 1f) {
+fun BoxScope.EdgeFades(alpha: Float = 1f, topStrength: Float = 1f) {
     val density = LocalDensity.current
     val status = with(density) { WindowInsets.statusBars.getTop(this).toDp() }
     val navigation = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
     val p = FlowFolio.palette
     val top = status + TOP_REACH
     val bottom = navigation + BOTTOM_REACH
-    EdgeFade(Modifier.align(Alignment.TopCenter).alpha(alpha), top, p.surface, fromTop = true, hold = status / top)
+    EdgeFade(
+        Modifier.align(Alignment.TopCenter).alpha(alpha),
+        top,
+        p.surface,
+        fromTop = true,
+        hold = status / top,
+        strength = topStrength
+    )
     EdgeFade(
         Modifier.align(Alignment.BottomCenter).alpha(alpha),
         bottom,
@@ -52,10 +62,10 @@ fun BoxScope.EdgeFades(alpha: Float = 1f) {
  * bar (owner, 2026-10-23); the rest fades away.
  */
 @Composable
-fun EdgeFade(modifier: Modifier, height: Dp, color: Color, fromTop: Boolean, hold: Float = 0f) {
+fun EdgeFade(modifier: Modifier, height: Dp, color: Color, fromTop: Boolean, hold: Float = 0f, strength: Float = 1f) {
     val state = LocalGlassState.current
-    val edge = color.copy(alpha = EDGE_ALPHA)
-    val mid = color.copy(alpha = MID_ALPHA)
+    val edge = color.copy(alpha = EDGE_ALPHA * strength)
+    val mid = color.copy(alpha = MID_ALPHA * strength)
     // Full strength for the held share, half strength a little further on, then nothing.
     val midStop = hold + (1f - hold) * MID_STOP
     val brush = if (fromTop) {
@@ -63,31 +73,41 @@ fun EdgeFade(modifier: Modifier, height: Dp, color: Color, fromTop: Boolean, hol
     } else {
         Brush.verticalGradient(0f to Color.Transparent, 1f - midStop to mid, 1f - hold to edge, 1f to edge)
     }
-    // The blur covers the held share only (behind the system bar or the reader's buttons); past it the tint alone
-    // fades out, so no blurred edge ever cuts across a line of text.
+    // Full blur over the held share (behind the system bar or the reader's buttons), then bands of ever lighter blur
+    // over the rest, so the blur eases out instead of ending in a line (owner, 2026-10-23); the tint fades on top.
     Box(modifier.fillMaxWidth().height(height)) {
         if (state != null && hold > 0f) {
-            Box(
-                Modifier
-                    .align(if (fromTop) Alignment.TopCenter else Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .height(height * hold)
-                    .hazeBlur(
-                        HazeInput.Sources(state),
-                        HazeBlurStyle {
-                            blurRadius(EDGE_BLUR)
-                            backgroundColor(color)
-                        }
-                    )
-            )
+            val band = height * (1f - hold) / BANDS
+            val radii = (0 until BANDS).map { EDGE_BLUR * ((BANDS - it - HALF) / BANDS) }
+            Column(
+                Modifier.matchParentSize(),
+                verticalArrangement = if (fromTop) Arrangement.Top else Arrangement.Bottom
+            ) {
+                val blurs = listOf(height * hold to EDGE_BLUR) + radii.map { band to it }
+                (if (fromTop) blurs else blurs.reversed()).forEach { (h, radius) ->
+                    Box(Modifier.fillMaxWidth().height(h).edgeBlur(state, color, radius))
+                }
+            }
         }
         Box(Modifier.matchParentSize().drawBehind { drawRect(brush) })
     }
 }
 
+/** Blurs what is behind by [radius], over the page or theme [color]. */
+private fun Modifier.edgeBlur(state: HazeState, color: Color, radius: Dp): Modifier = hazeBlur(
+    HazeInput.Sources(state),
+    HazeBlurStyle {
+        blurRadius(radius)
+        backgroundColor(color)
+    }
+)
+
+/** Clear of the screens' titles (owner, 2026-10-23). */
 private val TOP_REACH = 10.dp
 private val BOTTOM_REACH = 24.dp
-private val EDGE_BLUR = 12.dp
+private val EDGE_BLUR = 18.dp
+private const val BANDS = 4
+private const val HALF = 0.5f
 private const val EDGE_ALPHA = 0.92f
 private const val MID_STOP = 0.45f
 private const val MID_ALPHA = 0.55f

@@ -45,10 +45,6 @@
     <string name="msg_relink_different">That\'s a different file. Choose the same book you imported.</string>
     <string name="msg_relink_failed">That file couldn\'t be used</string>
     <string name="msg_deleted">Removed “%1$s”</string>
-    <plurals name="msg_deleted_many">
-        <item quantity="one">Removed %d book</item>
-        <item quantity="other">Removed %d books</item>
-    </plurals>
 
     <string name="settings_title">Settings</string>
     <string name="settings_import_section">When importing books</string>
@@ -64,8 +60,16 @@
         <item quantity="one">%d page</item>
         <item quantity="other">%d pages</item>
     </plurals>
-    <string name="library_sub">%1$s · %2$d in progress</string>
     <string name="library_in_progress">%1$d in progress</string>
+    <string name="library_read_time">%1$s reading time</string>
+    <plurals name="ribbon_total">
+        <item quantity="one">%1$d bookmark</item>
+        <item quantity="other">%1$d bookmarks</item>
+    </plurals>
+    <plurals name="annotation_total">
+        <item quantity="one">%1$d annotation</item>
+        <item quantity="other">%1$d annotations</item>
+    </plurals>
     <string name="library_no_match">No books match.</string>
     <string name="action_search">Search</string>
     <string name="search_hint">Search titles and authors</string>
@@ -291,6 +295,7 @@
     <!-- Select mode (owner, 2026-10-22). -->
     <string name="action_select">Select</string>
     <string name="action_select_all">Select all</string>
+    <string name="action_unselect_all">Unselect all</string>
     <plurals name="selected_count">
         <item quantity="one">%d selected</item>
         <item quantity="other">%d selected</item>

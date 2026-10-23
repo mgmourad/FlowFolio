@@ -81,12 +81,13 @@ import com.flowfolio.core.model.pageLabel
 import com.flowfolio.core.model.printedPages
 
 /**
- * `.hdr`: "Library", the count line, and search, sort, import and select. On a narrow screen (the cover screen) the
- * buttons go under the title, which keeps its one line, and the count takes two lines (owner, 2026-10-22).
+ * `.hdr`: "Library", the library's totals, and search, sort and import. On a narrow screen (the cover screen) the
+ * title keeps its one line and the totals and buttons share the row under it (owner, 2026-10-22).
  */
 @Composable
 internal fun LibraryHeader(
     state: LibraryUiState,
+    stats: LibraryStats,
     searching: Boolean,
     onSearch: () -> Unit,
     actions: LibraryActions,
@@ -101,29 +102,26 @@ internal fun LibraryHeader(
                 maxLines = 1,
                 softWrap = false
             )
-            if (!state.libraryEmpty) {
-                val books = pluralStringResource(R.plurals.book_count, state.totalCount, state.totalCount)
-                val count = if (narrow) {
-                    books + "\n" + stringResource(R.string.library_in_progress, state.inProgressCount)
-                } else {
-                    stringResource(R.string.library_sub, books, state.inProgressCount)
-                }
-                Text(count, style = FlowFolioType.sub.merge(FlowFolio.hint), modifier = Modifier.padding(top = 6.dp))
-            }
         }
+        val totals = @Composable { if (!state.libraryEmpty) LibraryTotals(state, stats, Modifier.padding(top = 8.dp)) }
         val buttons = @Composable { HeaderButtons(state, searching, onSearch, actions) }
         if (narrow) {
             Column(Modifier.fillMaxWidth()) {
                 title()
-                Row(
-                    Modifier.fillMaxWidth().padding(top = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
-                    verticalAlignment = Alignment.CenterVertically
-                ) { buttons() }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                    Column(Modifier.weight(1f)) { totals() }
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) { buttons() }
+                }
             }
         } else {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                Column(Modifier.weight(1f)) { title() }
+                Column(Modifier.weight(1f)) {
+                    title()
+                    totals()
+                }
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -135,14 +133,10 @@ internal fun LibraryHeader(
     }
 }
 
-/** Search, sort, import and Select; while selecting, the selection's own controls instead. */
+/** Search, sort and import. No select mode here: bulk deletion from the whole library was too easy to do by
+ * accident (owner, 2026-10-23); shelf pages keep it. */
 @Composable
 private fun HeaderButtons(state: LibraryUiState, searching: Boolean, onSearch: () -> Unit, actions: LibraryActions) {
-    val selection = actions.selection
-    if (selection != null && selection.active) {
-        SelectControls(selection, state.items.map { it.book.id }, actions.onDeleteChosen)
-        return
-    }
     if (!state.libraryEmpty) {
         FlowFolioIconButton(onClick = onSearch, modifier = Modifier.testTag(LibraryTestTags.SEARCH)) {
             FlowFolioGlyph(
@@ -156,7 +150,6 @@ private fun HeaderButtons(state: LibraryUiState, searching: Boolean, onSearch: (
     FlowFolioIconButton(onClick = actions.onImport, modifier = Modifier.testTag(LibraryTestTags.IMPORT)) {
         FlowFolioGlyph(Glyph.Add, contentDescription = stringResource(R.string.action_import))
     }
-    if (selection != null) SelectControls(selection, state.items.map { it.book.id }, actions.onDeleteChosen)
 }
 
 @Composable
