@@ -50,7 +50,6 @@ import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Selection
-import com.flowfolio.core.designsystem.jiggle
 import com.flowfolio.core.designsystem.marker
 import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.model.Annotation
@@ -151,9 +150,9 @@ fun BookAnnotationsContent(
         items(state.annotations, key = { it.id }) { a ->
             Row(Modifier.widthIn(max = LIST_WIDTH).fillMaxWidth()) {
                 if (selection.active) {
-                    // Select mode: the card jiggles and a tap chooses it; no swiping.
+                    // Select mode: a tap chooses the card (it stays still here); no swiping.
                     val key = a.id.toString()
-                    Box(Modifier.jiggle(true, key)) {
+                    Box {
                         AnnotationCard(a, state.chapters[a.id]) { selection.toggle(key) }
                         SelectionMark(selection, key)
                     }

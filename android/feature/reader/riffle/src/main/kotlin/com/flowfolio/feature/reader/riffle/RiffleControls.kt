@@ -79,7 +79,7 @@ private fun Arrow(glyph: String, label: String, modifier: Modifier, onClick: () 
             .semantics { contentDescription = label },
         contentAlignment = Alignment.Center
     ) {
-        // Twice the first design's 30 dp (owner, 2026-10-22).
+        // Larger than the first design's 30 dp, for easy reach (owner, 2026-10-22).
         Box(
             Modifier
                 .size(ARROW_DISC)
@@ -90,7 +90,7 @@ private fun Arrow(glyph: String, label: String, modifier: Modifier, onClick: () 
             Text(
                 glyph,
                 color = palette.item,
-                style = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight.Bold, fontSize = 36.sp)
+                style = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight.Bold, fontSize = 26.sp)
             )
         }
     }
@@ -200,7 +200,7 @@ private fun numbersOnly(book: BookGeometry): Boolean =
     (0 until minOf(book.pageCount, FRONT_MATTER_PAGES)).all { book.label(it).all(Char::isDigit) }
 
 private const val MAX_LABEL = 12
-private val ARROW_TOUCH = 64.dp
-private val ARROW_DISC = 60.dp
+private val ARROW_TOUCH = 52.dp
+private val ARROW_DISC = 42.dp
 private const val FIELD_HEIGHT_FRACTION = 0.22f
 private const val FRONT_MATTER_PAGES = 40

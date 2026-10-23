@@ -155,6 +155,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Annotations show the chapter (the deepest contents entry) they are in.
   - Select mode with an iOS-style jiggle in Library, Shelves, Bookmarks (and a book's bookmarks), Annotations (and a
     book's annotations): choose items, Select all, and remove them together after a confirmation.
+  - Follow-up (owner, 2026-10-22): the reader's buttons 56 dp unfolded (50 dp folded) and the riffle arrows 42 dp,
+    instead of doubled; a quicker jiggle, none on the Bookmarks and Annotations pages (they still select); select mode
+    on a shelf's page (tiles and list); Continue Reading's shortcuts at the right.
 - Islands per layout (M3, ADR-0031): after a text size change, equations already drawn at the nearest other size stand
   in at once, scaled (their sizes lay the pages out, their images show), until this size's are measured and drawn.
 - Memory and speed (M3, ADR-0031; results in `docs/plans/phase2-m3-memory.md`): the island WebView is created only for

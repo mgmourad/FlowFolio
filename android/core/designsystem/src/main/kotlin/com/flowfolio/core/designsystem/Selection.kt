@@ -181,7 +181,7 @@ fun SelectButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifi
     }
 }
 
-private const val JIGGLE_MS = 260
+private const val JIGGLE_MS = 150
 private const val JIGGLE_DEGREES = 1.6f
 private val JIGGLE_LIFT = 0.6.dp
 private val CHECK = 26.dp

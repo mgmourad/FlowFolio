@@ -93,7 +93,12 @@ internal fun ContinueReadingCard(
                         modifier = Modifier.testTag(LibraryTestTags.RESUME),
                         icon = { PlayGlyph() }
                     )
-                    HeroShortcuts(book, actions, shelfId)
+                    // The shortcuts take the rest of the line, at its right end (owner, 2026-10-22).
+                    Row(
+                        Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) { HeroShortcuts(book, actions, shelfId) }
                 }
             }
         }
