@@ -207,7 +207,11 @@ private fun ChapterRow(entry: OutlineEntry, label: String, index: Int, current: 
 /** The chapter containing [lastPage]: the last entry starting at or before it; -1 when not started. */
 internal fun currentChapter(entries: List<OutlineEntry>, lastPage: Int?): Int {
     if (lastPage == null) return -1
-    return entries.indexOfLast { it.pageIndex <= lastPage }
+    // Nearest by page, not by place in the list: a stray entry listed late can point early in the book.
+    return entries.withIndex()
+        .filter { it.value.pageIndex <= lastPage }
+        .maxWithOrNull(compareBy({ it.value.pageIndex }, { it.index }))
+        ?.index ?: -1
 }
 
 private const val PERCENT = 100

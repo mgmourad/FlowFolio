@@ -1,6 +1,5 @@
 package com.flowfolio.core.designsystem
 
-import androidx.compose.animation.core.EaseIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.WindowInsets
@@ -19,59 +18,74 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeInput
-import dev.chrisbanes.haze.HazeProgressive
 import dev.chrisbanes.haze.blur.HazeBlurStyle
 import dev.chrisbanes.haze.blur.hazeBlur
 
 /**
  * Soft, blurred fades at the top and bottom of the screen (owner, 2026-10-23), so content scrolling under the status
  * bar, the front camera and the navigation bar melts into the theme instead of running into them. Each fade blurs what
- * is behind it, most at the edge and not at all where it ends, and tints it with the background colour drawn at that
- * edge (the surface at the top, the deep background at the bottom). The blur needs [LocalGlassState]; without it the
- * tint alone shows.
+ * is behind the system bar and tints it with the background colour drawn at that edge (the surface at the top, the
+ * deep background at the bottom), the tint fading out a little past the bar. The blur needs [LocalGlassState]; without
+ * it the tint alone shows.
  */
 @Composable
 fun BoxScope.EdgeFades(alpha: Float = 1f) {
     val density = LocalDensity.current
-    val top = with(density) { WindowInsets.statusBars.getTop(this).toDp() } + TOP_REACH
-    val bottom = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() } + BOTTOM_REACH
+    val status = with(density) { WindowInsets.statusBars.getTop(this).toDp() }
+    val navigation = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
     val p = FlowFolio.palette
-    EdgeFade(Modifier.align(Alignment.TopCenter).alpha(alpha), top, p.surface, fromTop = true)
-    EdgeFade(Modifier.align(Alignment.BottomCenter).alpha(alpha), bottom, p.backgroundDeep, fromTop = false)
+    val top = status + TOP_REACH
+    val bottom = navigation + BOTTOM_REACH
+    EdgeFade(Modifier.align(Alignment.TopCenter).alpha(alpha), top, p.surface, fromTop = true, hold = status / top)
+    EdgeFade(
+        Modifier.align(Alignment.BottomCenter).alpha(alpha),
+        bottom,
+        p.backgroundDeep,
+        fromTop = false,
+        hold = navigation / bottom
+    )
 }
 
+/**
+ * One soft, blurred fade in [color], [height] tall, darkest at the screen's edge ([fromTop] or bottom). The first
+ * [hold] of it (a share of the height) stays at full strength, for something drawn over it, such as the reader's top
+ * bar (owner, 2026-10-23); the rest fades away.
+ */
 @Composable
-private fun EdgeFade(modifier: Modifier, height: Dp, color: Color, fromTop: Boolean) {
+fun EdgeFade(modifier: Modifier, height: Dp, color: Color, fromTop: Boolean, hold: Float = 0f) {
     val state = LocalGlassState.current
     val edge = color.copy(alpha = EDGE_ALPHA)
     val mid = color.copy(alpha = MID_ALPHA)
+    // Full strength for the held share, half strength a little further on, then nothing.
+    val midStop = hold + (1f - hold) * MID_STOP
     val brush = if (fromTop) {
-        Brush.verticalGradient(0f to edge, MID_STOP to mid, 1f to Color.Transparent)
+        Brush.verticalGradient(0f to edge, hold to edge, midStop to mid, 1f to Color.Transparent)
     } else {
-        Brush.verticalGradient(0f to Color.Transparent, 1f - MID_STOP to mid, 1f to edge)
+        Brush.verticalGradient(0f to Color.Transparent, 1f - midStop to mid, 1f - hold to edge, 1f to edge)
     }
-    val blurred = if (state != null) {
-        Modifier.hazeBlur(
-            HazeInput.Sources(state),
-            HazeBlurStyle {
-                blurRadius(EDGE_BLUR)
-                backgroundColor(color)
-                progressive(
-                    HazeProgressive.verticalGradient(
-                        easing = EaseIn,
-                        startIntensity = if (fromTop) 1f else 0f,
-                        endIntensity = if (fromTop) 0f else 1f
+    // The blur covers the held share only (behind the system bar or the reader's buttons); past it the tint alone
+    // fades out, so no blurred edge ever cuts across a line of text.
+    Box(modifier.fillMaxWidth().height(height)) {
+        if (state != null && hold > 0f) {
+            Box(
+                Modifier
+                    .align(if (fromTop) Alignment.TopCenter else Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .height(height * hold)
+                    .hazeBlur(
+                        HazeInput.Sources(state),
+                        HazeBlurStyle {
+                            blurRadius(EDGE_BLUR)
+                            backgroundColor(color)
+                        }
                     )
-                )
-            }
-        )
-    } else {
-        Modifier
+            )
+        }
+        Box(Modifier.matchParentSize().drawBehind { drawRect(brush) })
     }
-    Box(modifier.fillMaxWidth().height(height).then(blurred).drawBehind { drawRect(brush) })
 }
 
-private val TOP_REACH = 28.dp
+private val TOP_REACH = 10.dp
 private val BOTTOM_REACH = 24.dp
 private val EDGE_BLUR = 12.dp
 private const val EDGE_ALPHA = 0.92f
