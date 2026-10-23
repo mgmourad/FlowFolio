@@ -158,6 +158,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Follow-up (owner, 2026-10-22): the reader's buttons 56 dp unfolded (50 dp folded) and the riffle arrows 42 dp,
     instead of doubled; a quicker jiggle, none on the Bookmarks and Annotations pages (they still select); select mode
     on a shelf's page (tiles and list); Continue Reading's shortcuts at the right.
+  - From the owner's marked-up cover-screen screenshots: lists never jiggle (only tiles and cards); shelf-page tile
+    titles in the display face, bold and centred; on a narrow screen the library header keeps "Library" on one line,
+    the count on two lines and the buttons under it; buttons and chips off glass carry a faint accent ring; a shelf's
+    "N books ›" is a bold shaded pill; the tab bar's tabs share its width and their labels shrink to fit one line.
 - Islands per layout (M3, ADR-0031): after a text size change, equations already drawn at the nearest other size stand
   in at once, scaled (their sizes lay the pages out, their images show), until this size's are measured and drawn.
 - Memory and speed (M3, ADR-0031; results in `docs/plans/phase2-m3-memory.md`): the island WebView is created only for
