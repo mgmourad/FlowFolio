@@ -7,6 +7,7 @@ import com.flowfolio.core.data.ShelfRepository
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.Shelf
+import com.flowfolio.core.model.ShelfColor
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,9 +32,9 @@ class ShelvesViewModel @Inject constructor(private val shelves: ShelfRepository,
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ShelvesUiState())
 
     /** Makes a shelf; when [bookId] is given the book goes on it straight away (the "New shelf" in the picker). */
-    fun create(name: String, bookId: String? = null) = viewModelScope.launch {
+    fun create(name: String, bookId: String? = null, color: ShelfColor? = null) = viewModelScope.launch {
         if (name.isBlank()) return@launch
-        val id = shelves.create(name)
+        val id = shelves.create(name, color)
         if (bookId != null) {
             val current = uiState.value.cards.filter { bookId in it.shelf.bookIds }.map { it.shelf.id }.toSet()
             shelves.setShelves(bookId, current + id)
@@ -43,6 +44,8 @@ class ShelvesViewModel @Inject constructor(private val shelves: ShelfRepository,
     fun rename(shelfId: Long, name: String) = viewModelScope.launch {
         if (name.isNotBlank()) shelves.rename(shelfId, name)
     }
+
+    fun setColor(shelfId: Long, color: ShelfColor?) = viewModelScope.launch { shelves.setColor(shelfId, color) }
 
     fun delete(shelfId: Long) = viewModelScope.launch { shelves.delete(shelfId) }
 

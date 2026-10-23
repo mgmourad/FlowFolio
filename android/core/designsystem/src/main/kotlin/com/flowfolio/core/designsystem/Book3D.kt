@@ -166,19 +166,27 @@ private class Projector(
 }
 
 private fun DrawScope.drawContactShadow(w: Float, h: Float, rise: Float) {
-    // `.book-wrap::after`: an ellipse under the book, smaller and fainter while lifted.
+    // An ellipse of shade under the book, smaller and fainter while lifted: a wide, soft diffuse shade that fades
+    // out gradually, with a faint tighter one just under the book (owner, 2026-10-22: no solid drop).
     val shrink = 1f - rise * (1f - LIFTED_SHADOW_SCALE)
-    val left = w * 0.08f
-    val right = w * 1.06f
-    val cx = (left + right) / 2f
-    val half = (right - left) / 2f * shrink
-    val top = h + 2.dp.toPx()
+    val fade = 1f - rise * (1f - LIFTED_SHADOW_ALPHA)
+    val cx = w * 0.57f
+    val top = h - 2.dp.toPx()
+    val wide = w * 0.62f * shrink
     blurredShape(
-        Color.Black.copy(alpha = 0.55f * (1f - rise * (1f - LIFTED_SHADOW_ALPHA))),
-        6.dp.toPx(),
+        Color.Black.copy(alpha = 0.32f * fade),
+        18.dp.toPx(),
         BlurShape.Oval,
-        Offset(cx - half, top),
-        Size(2 * half, 16.dp.toPx())
+        Offset(cx - wide, top),
+        Size(2 * wide, 26.dp.toPx())
+    )
+    val near = w * 0.46f * shrink
+    blurredShape(
+        Color.Black.copy(alpha = 0.18f * fade),
+        8.dp.toPx(),
+        BlurShape.Oval,
+        Offset(cx - near, top + 2.dp.toPx()),
+        Size(2 * near, 12.dp.toPx())
     )
 }
 

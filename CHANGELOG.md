@@ -140,6 +140,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   reader's card then says "Book's (none)"). Fonts are read from the book only, de-obfuscated (IDPF, Adobe), WOFF 1 is
   unwrapped, and only real TrueType/OpenType files up to 16 MB are loaded; WOFF 2 is not read. Checked on the Fold
   with the IDPF *Moby-Dick* (STIX, four faces).
+- Owner's batch, 2026-10-22:
+  - Rustic keeps the original design's toggle colours; ribbons keep the original colours in every theme.
+  - Book shadows are a soft, wide diffuse shade instead of a solid dark drop (library, details, shelves).
+  - Font cards: every "Ag" on one baseline and fully shown, at the same size.
+  - Riffle arrows twice as large and level with the page block; the reader's top-bar buttons twice as large unfolded
+    (84 dp; 56 dp on the cover screen).
+  - Page sounds on the media stream with a pool that rebuilds itself, and the volume keys set them in the reader
+    (ADR-0032), after flips once went silent until the phone restarted.
+  - Shelves have a colour, chosen when made (the theme's or Material You's six; Room v11 `shelves.color`): the shelf
+    card is outlined in it and its library row (title and plank edge) takes it; "Not on a shelf" keeps the theme's.
+    Shelf cards fan up to five books; tapping one opens the shelf's own page.
+  - Continue Reading has shortcuts to the book's annotations, its bookmarks and its shelf.
+  - Annotations show the chapter (the deepest contents entry) they are in.
+  - Select mode with an iOS-style jiggle in Library, Shelves, Bookmarks (and a book's bookmarks), Annotations (and a
+    book's annotations): choose items, Select all, and remove them together after a confirmation.
 - Islands per layout (M3, ADR-0031): after a text size change, equations already drawn at the nearest other size stand
   in at once, scaled (their sizes lay the pages out, their images show), until this size's are measured and drawn.
 - Memory and speed (M3, ADR-0031; results in `docs/plans/phase2-m3-memory.md`): the island WebView is created only for

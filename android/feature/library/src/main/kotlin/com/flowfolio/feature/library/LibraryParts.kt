@@ -10,6 +10,8 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -58,9 +60,11 @@ import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalCoverFlights
 import com.flowfolio.core.designsystem.SHELF_ANGLE
 import com.flowfolio.core.designsystem.ShelfPlank
+import com.flowfolio.core.designsystem.color
 import com.flowfolio.core.designsystem.coverLanding
 import com.flowfolio.core.designsystem.coverSpot
 import com.flowfolio.core.designsystem.detailsCoverKey
+import com.flowfolio.core.designsystem.jiggle
 import com.flowfolio.core.designsystem.shelfCoverKey
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
@@ -93,7 +97,12 @@ internal fun LibraryHeader(
                 )
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            val selection = actions.selection
+            if (selection != null && selection.active) {
+                SelectControls(selection, state.items.map { it.book.id }, actions.onDeleteChosen)
+                return@Row
+            }
             if (!state.libraryEmpty) {
                 FlowFolioIconButton(onClick = onSearch, modifier = Modifier.testTag(LibraryTestTags.SEARCH)) {
                     FlowFolioGlyph(
@@ -107,6 +116,7 @@ internal fun LibraryHeader(
             FlowFolioIconButton(onClick = actions.onImport, modifier = Modifier.testTag(LibraryTestTags.IMPORT)) {
                 FlowFolioGlyph(Glyph.Add, contentDescription = stringResource(R.string.action_import))
             }
+            if (selection != null) SelectControls(selection, state.items.map { it.book.id }, actions.onDeleteChosen)
         }
     }
 }
@@ -166,78 +176,26 @@ private val LibraryFilter.label: Int
         LibraryFilter.NOVELS -> R.string.filter_novels
     }
 
-/** `.hero-card`: the book in progress, how far along, and Resume. */
-@Composable
-internal fun ContinueReadingCard(item: LibraryItem, actions: LibraryActions, modifier: Modifier = Modifier) {
-    val book = item.book
-    val glow = FlowFolio.palette.item
-    FlowFolioCard(
-        modifier
-            .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 10.dp)
-            .testTag(LibraryTestTags.HERO),
-        radius = 26.dp
-    ) {
-        // `.hero-card::before`: a soft glow in the item colour, top right.
-        Box(
-            Modifier.matchParentSize().drawBehind {
-                val r = HERO_GLOW.toPx()
-                drawCircle(
-                    Brush.radialGradient(
-                        listOf(glow.copy(alpha = HERO_GLOW_ALPHA), Color.Transparent),
-                        center = Offset(size.width + r * 0.1f, -r * 0.1f),
-                        radius = r
-                    ),
-                    radius = r,
-                    center = Offset(size.width + r * 0.1f, -r * 0.1f)
-                )
-            }
-        )
-        Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
-            val cover by rememberCover(book)
-            actions.heroSpot.face = book.face(cover)
-            Box(Modifier.coverSpot(actions.heroSpot)) {
-                ShelfBook(item, HERO_ORIGIN, actions, width = 104.dp, height = 152.dp)
-            }
-            Column(Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.continue_reading).uppercase(),
-                    style = FlowFolioType.eyebrow.merge(FlowFolio.subItem)
-                )
-                Text(
-                    book.title,
-                    style = FlowFolioType.heroTitle.merge(FlowFolio.item),
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)
-                )
-                book.author?.let { Text(it, style = FlowFolioType.sub.merge(FlowFolio.hint), maxLines = 1) }
-                FlowFolioProgressBar(book.progress, Modifier.padding(top = 12.dp, bottom = 6.dp))
-                Text(
-                    stringResource(R.string.page_of, book.pageLabel(book.lastPage ?: 0), book.printedPages()),
-                    style = FlowFolioType.rowDetail.merge(FlowFolio.hint)
-                )
-                FlowFolioPrimaryButton(
-                    text = stringResource(R.string.action_resume),
-                    onClick = { actions.onResume(item) },
-                    modifier = Modifier.padding(top = 12.dp).testTag(LibraryTestTags.RESUME),
-                    icon = { PlayGlyph() }
-                )
-            }
-        }
-    }
-}
-
 /** `.shelf`: the shelf's name and count, its books standing in a row, and the plank under them. */
 @Composable
 internal fun ShelfRowView(row: ShelfRow, noShelves: Boolean, actions: LibraryActions, modifier: Modifier = Modifier) {
     val origin = row.shelf?.id?.toString() ?: LOOSE_ORIGIN
     val name = row.shelf?.name ?: stringResource(if (noShelves) R.string.shelf_all_books else R.string.shelf_loose)
+    // A shelf in its own colour; books not on a shelf (and shelves without one) keep the theme's (owner, 2026-10-22).
+    val accent = row.shelf?.color?.color
     Column(modifier.fillMaxWidth().padding(top = 22.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 22.dp), verticalAlignment = Alignment.Bottom) {
             Text(
                 name,
-                style = FlowFolioType.sectionTitle.merge(FlowFolio.title),
+                style = FlowFolioType.sectionTitle.merge(FlowFolio.title).let {
+                    if (accent !=
+                        null
+                    ) {
+                        it.copy(color = accent)
+                    } else {
+                        it
+                    }
+                },
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -266,7 +224,7 @@ internal fun ShelfRowView(row: ShelfRow, noShelves: Boolean, actions: LibraryAct
                 ShelfBook(item, origin, actions, width = SHELF_BOOK_WIDTH, height = h)
             }
         }
-        ShelfPlank(Modifier.padding(horizontal = 14.dp))
+        ShelfPlank(Modifier.padding(horizontal = 14.dp), accent)
     }
 }
 
@@ -291,20 +249,27 @@ internal fun ShelfBook(
     val flights = LocalCoverFlights.current
     val spot = remember { CoverSpot() }
     spot.face = book.face(cover)
+    val selection = actions.selection
+    val selecting = selection?.active == true
     Column(Modifier.width(width + BOOK_SPINE_ROOM)) {
         Box(
             Modifier
+                .jiggle(selecting, book.id)
                 .semantics { contentDescription = book.title }
                 .testTag(LibraryTestTags.book(book.id))
                 .combinedClickable(
                     interactionSource = source,
                     indication = null,
                     onClick = {
+                        if (selection != null && selecting) {
+                            selection.toggle(book.id)
+                            return@combinedClickable
+                        }
                         // The cover flies to the details page; a missing book goes to Locate instead.
                         if (item.availability != Availability.MISSING) flights?.launch(spot, detailsCoverKey(book.id))
                         actions.onOpen(item, origin)
                     },
-                    onLongClick = { menu = true }
+                    onLongClick = { if (!selecting) menu = true }
                 )
         ) {
             Book3D(
@@ -315,6 +280,7 @@ internal fun ShelfBook(
                 lifted = pressed
             )
             BookBadge(item, Modifier.align(Alignment.TopStart))
+            selection?.let { SelectionMark(it, book.id) }
             BookMenu(item, menu, actions) { menu = false }
         }
     }
@@ -408,9 +374,7 @@ internal fun SortMenu(current: LibrarySort, onSort: (LibrarySort) -> Unit) {
 internal const val HERO_ORIGIN = "hero"
 private const val LOOSE_ORIGIN = "loose"
 private const val SEARCH_FILL = 0.6f
-private const val HERO_GLOW_ALPHA = 0.22f
 private const val PAGES_PER_DP = 70
-private val HERO_GLOW = 110.dp
 private val SHELF_BOOK_WIDTH = 90.dp
 private val SHELF_BOOK_HEIGHT = 124.dp
 private const val SHELF_BOOK_EXTRA = 18

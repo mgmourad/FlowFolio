@@ -1,5 +1,6 @@
 package com.flowfolio.feature.library
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +22,9 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,8 +42,11 @@ import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalChromePadding
+import com.flowfolio.core.designsystem.Selection
 import com.flowfolio.core.designsystem.chromeStart
+import com.flowfolio.core.designsystem.jiggle
 import com.flowfolio.core.designsystem.marker
+import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.model.Book
 
@@ -50,11 +57,32 @@ import com.flowfolio.core.model.Book
 @Composable
 fun AnnotationsScreen(onOpenBook: (Book) -> Unit, viewModel: AnnotationsViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    AnnotationsContent(state, onOpenBook)
+    val selection = rememberSelection()
+    var confirmBulk by remember { mutableStateOf(false) }
+    AnnotationsContent(state, onOpenBook, selection) { confirmBulk = true }
+    if (confirmBulk) {
+        val n = selection.chosen.size
+        BulkDeleteDialog(
+            pluralStringResource(R.plurals.delete_annotated_books_title, n, n),
+            stringResource(R.string.delete_cannot_undo),
+            onConfirm = {
+                viewModel.removeBooks(selection.chosen)
+                selection.done()
+                confirmBulk = false
+            },
+            onDismiss = { confirmBulk = false }
+        )
+    }
+    BackHandler(selection.active) { selection.done() }
 }
 
 @Composable
-fun AnnotationsContent(state: AnnotationsUiState, onOpenBook: (Book) -> Unit) {
+fun AnnotationsContent(
+    state: AnnotationsUiState,
+    onOpenBook: (Book) -> Unit,
+    selection: Selection = rememberSelection(),
+    onDeleteChosen: () -> Unit = {}
+) {
     val chrome = LocalChromePadding.current
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     Box(Modifier.fillMaxSize().chromeStart().testTag(LibraryTestTags.ANNOTATIONS)) {
@@ -72,10 +100,19 @@ fun AnnotationsContent(state: AnnotationsUiState, onOpenBook: (Book) -> Unit) {
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Column(Modifier.padding(start = 4.dp, top = 10.dp, bottom = 4.dp).reveal(0)) {
-                    Text(
-                        stringResource(R.string.annotations_title),
-                        style = FlowFolioType.screenTitle.merge(FlowFolio.title)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            stringResource(R.string.annotations_title),
+                            style = FlowFolioType.screenTitle.merge(FlowFolio.title),
+                            modifier = Modifier.weight(1f)
+                        )
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            SelectControls(selection, state.books.map { it.book.id }, onDeleteChosen)
+                        }
+                    }
                     if (state.total > 0) {
                         Text(
                             stringResource(
@@ -92,14 +129,25 @@ fun AnnotationsContent(state: AnnotationsUiState, onOpenBook: (Book) -> Unit) {
             if (!state.loading && state.total == 0) {
                 item(span = { GridItemSpan(maxLineSpan) }) { NoAnnotations(Modifier.reveal(1)) }
             }
-            items(state.books, key = { it.book.id }) { AnnotatedBookCard(it) { onOpenBook(it.book) } }
+            items(state.books, key = { it.book.id }) { item ->
+                val key = item.book.id
+                Box(Modifier.jiggle(selection.active, key)) {
+                    AnnotatedBookCard(item, state.chapters[item.latest.id]) {
+                        if (selection.active) selection.toggle(key) else onOpenBook(item.book)
+                    }
+                    SelectionMark(selection, key)
+                }
+            }
         }
     }
 }
 
-/** A book with annotations: its cover, title and author, the counts, its colours and the latest passage. */
+/**
+ * A book with annotations: its cover, title and author, the counts, its colours, and the latest passage under the
+ * chapter it is in.
+ */
 @Composable
-private fun AnnotatedBookCard(item: AnnotatedBook, onClick: () -> Unit) {
+private fun AnnotatedBookCard(item: AnnotatedBook, chapter: String?, onClick: () -> Unit) {
     val cover by rememberCover(item.book)
     FlowFolioCard(
         Modifier.fillMaxWidth().clickable(onClick = onClick).testTag(LibraryTestTags.annotatedBook(item.book.id)),
@@ -127,6 +175,15 @@ private fun AnnotatedBookCard(item: AnnotatedBook, onClick: () -> Unit) {
                 )
                 Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     item.colours.forEach { c -> Dot(c.marker) }
+                }
+                chapter?.let {
+                    Text(
+                        it,
+                        style = FlowFolioType.rowDetail.merge(FlowFolio.title),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 6.dp)
+                    )
                 }
                 Text(
                     "“${item.latest.text}”",

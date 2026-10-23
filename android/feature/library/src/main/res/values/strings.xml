@@ -45,6 +45,10 @@
     <string name="msg_relink_different">That\'s a different file. Choose the same book you imported.</string>
     <string name="msg_relink_failed">That file couldn\'t be used</string>
     <string name="msg_deleted">Removed “%1$s”</string>
+    <plurals name="msg_deleted_many">
+        <item quantity="one">Removed %d book</item>
+        <item quantity="other">Removed %d books</item>
+    </plurals>
 
     <string name="settings_title">Settings</string>
     <string name="settings_import_section">When importing books</string>
@@ -170,6 +174,13 @@
     <string name="turn_scroll">Scroll</string>
     <string name="settings_reading">Reading</string>
     <string name="settings_text">Text</string>
+    <string name="shelf_colour">Colour</string>
+    <string name="hero_annotations">Annotations</string>
+    <string name="hero_bookmarks">Bookmarks</string>
+    <string name="hero_open_shelf">Open shelf</string>
+    <string name="action_edit">Edit</string>
+    <string name="shelf_edit">Edit shelf</string>
+    <string name="shelf_colour_theme">Theme colour</string>
     <string name="settings_text_font">Font</string>
     <string name="settings_text_font_detail">For EPUBs; PDFs keep their own type. “Book’s font” uses the fonts a book ships, or Literata</string>
     <string name="settings_text_sample">The wind had dropped by evening, and the lamps along the harbour came on one by one, each throwing a long, unsteady line across the water.</string>
@@ -276,4 +287,34 @@
     <string name="edit_lookup">Look up online</string>
     <string name="edit_lookup_found">Filled in what Open Library knows. Check it, then save.</string>
     <string name="edit_lookup_none">Open Library has nothing more for this book.</string>
+    <!-- Select mode (owner, 2026-10-22). -->
+    <string name="action_select">Select</string>
+    <string name="action_select_all">Select all</string>
+    <plurals name="selected_count">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
+    <plurals name="delete_books_title">
+        <item quantity="one">Remove %d book?</item>
+        <item quantity="other">Remove %d books?</item>
+    </plurals>
+    <string name="delete_books_body">FlowFolio’s copies of these books, their ribbons and their annotations will be deleted. Original files you read in place are not affected.</string>
+    <plurals name="delete_shelves_title">
+        <item quantity="one">Remove %d shelf?</item>
+        <item quantity="other">Remove %d shelves?</item>
+    </plurals>
+    <string name="delete_shelves_body">Their books stay in your library.</string>
+    <plurals name="delete_ribbons_title">
+        <item quantity="one">Remove %d ribbon?</item>
+        <item quantity="other">Remove %d ribbons?</item>
+    </plurals>
+    <plurals name="delete_annotated_books_title">
+        <item quantity="one">Remove the annotations of %d book?</item>
+        <item quantity="other">Remove the annotations of %d books?</item>
+    </plurals>
+    <plurals name="delete_annotations_title">
+        <item quantity="one">Remove %d annotation?</item>
+        <item quantity="other">Remove %d annotations?</item>
+    </plurals>
+    <string name="delete_cannot_undo">This cannot be undone.</string>
 </resources>

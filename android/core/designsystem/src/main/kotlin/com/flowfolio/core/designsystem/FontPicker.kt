@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.paddingFromBaseline
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -74,9 +75,11 @@ fun FlowFolioFontPicker(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Box(Modifier.fillMaxWidth().height(SAMPLE_HEIGHT), contentAlignment = Alignment.Center) {
+                // Every sample on one baseline, whatever the font's own ascent and descent, with room above and below.
+                Box(Modifier.fillMaxWidth().height(SAMPLE_HEIGHT), contentAlignment = Alignment.TopCenter) {
                     Text(
                         "Ag",
+                        modifier = Modifier.paddingFromBaseline(top = SAMPLE_BASELINE),
                         style = TextStyle(
                             fontFamily = if (font ==
                                 ReadingFont.BOOK
@@ -104,6 +107,7 @@ fun FlowFolioFontPicker(
 }
 
 private val FONT_CARD_WIDTH = 92.dp
-private val FONT_CARD_HEIGHT = 76.dp
-private val SAMPLE_HEIGHT = 38.dp
+private val FONT_CARD_HEIGHT = 86.dp
+private val SAMPLE_HEIGHT = 46.dp
+private val SAMPLE_BASELINE = 34.dp
 private const val OUTLINE_ALPHA = 0.35f

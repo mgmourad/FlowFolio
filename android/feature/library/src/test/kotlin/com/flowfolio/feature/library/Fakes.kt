@@ -13,6 +13,7 @@ import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.Shelf
+import com.flowfolio.core.model.ShelfColor
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
@@ -118,8 +119,11 @@ class FakeShelves(initial: List<Shelf> = emptyList()) : ShelfRepository {
 
     override fun observeShelves(): Flow<List<Shelf>> = shelves
 
-    override suspend fun create(name: String): Long =
-        nextId++.also { id -> shelves.update { it + Shelf(id, name.trim(), emptyList()) } }
+    override suspend fun create(name: String, color: ShelfColor?): Long =
+        nextId++.also { id -> shelves.update { it + Shelf(id, name.trim(), emptyList(), color) } }
+
+    override suspend fun setColor(shelfId: Long, color: ShelfColor?) =
+        shelves.update { list -> list.map { if (it.id == shelfId) it.copy(color = color) else it } }
 
     override suspend fun rename(shelfId: Long, name: String) =
         shelves.update { list -> list.map { if (it.id == shelfId) it.copy(name = name) else it } }

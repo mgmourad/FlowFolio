@@ -3,6 +3,7 @@ package com.flowfolio.core.data
 import com.flowfolio.core.database.ShelfDao
 import com.flowfolio.core.database.ShelfEntity
 import com.flowfolio.core.model.Shelf
+import com.flowfolio.core.model.ShelfColor
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
@@ -14,8 +15,10 @@ interface ShelfRepository {
     /** Shelves in the order they were made, each with its books (most recently added first). */
     fun observeShelves(): Flow<List<Shelf>>
 
-    /** Makes a shelf and returns its id. [name] is trimmed and must not be blank. */
-    suspend fun create(name: String): Long
+    /** Makes a shelf in [color] (null: the theme's) and returns its id. [name] is trimmed and must not be blank. */
+    suspend fun create(name: String, color: ShelfColor? = null): Long
+
+    suspend fun setColor(shelfId: Long, color: ShelfColor?)
 
     suspend fun rename(shelfId: Long, name: String)
 
@@ -34,12 +37,18 @@ class DefaultShelfRepository @Inject constructor(
     override fun observeShelves(): Flow<List<Shelf>> =
         combine(dao.observeShelves(), dao.observeMemberships()) { shelves, rows ->
             val byShelf = rows.groupBy({ it.shelfId }, { it.bookId })
-            shelves.map { Shelf(it.id, it.name, byShelf[it.id].orEmpty()) }
+            shelves.map { s ->
+                Shelf(s.id, s.name, byShelf[s.id].orEmpty(), ShelfColor.entries.firstOrNull { it.name == s.color })
+            }
         }
 
-    override suspend fun create(name: String): Long = withContext(io) {
+    override suspend fun create(name: String, color: ShelfColor?): Long = withContext(io) {
         require(name.isNotBlank()) { "shelf name is blank" }
-        dao.insert(ShelfEntity(name = name.trim(), createdAt = clock.now()))
+        dao.insert(ShelfEntity(name = name.trim(), createdAt = clock.now(), color = color?.name))
+    }
+
+    override suspend fun setColor(shelfId: Long, color: ShelfColor?) = withContext(io) {
+        dao.setColor(shelfId, color?.name)
     }
 
     override suspend fun rename(shelfId: Long, name: String) = withContext(io) {

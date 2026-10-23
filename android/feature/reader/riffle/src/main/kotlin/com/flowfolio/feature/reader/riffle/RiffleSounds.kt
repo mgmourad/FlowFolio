@@ -7,29 +7,79 @@ import android.media.SoundPool
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 
 /**
  * The scrubber's paper sounds (ADR-0025): the owner's recordings, prepared by
  * `tools/sounds/prepare_recorded_sounds.py`. While the ribbon drags, the riffle forward or backward recording loops,
  * louder and quicker the faster pages pass; it fades out when the pages stop or the ribbon is let go. Each landing
  * plays a page flip in its direction. Silent in silent and vibrate ringer modes. [release] when the reader closes.
+ *
+ * The sounds play on the media stream (ADR-0032), which the volume keys control in the reader, rather than as system
+ * sounds, which some phones route elsewhere or mute separately (a flip that went silent until the phone restarted,
+ * owner 2026-10-22). A pool that stops playing (the audio service restarted) is built again.
  */
 class RiffleSounds(context: Context) {
+    private val app = context.applicationContext
     private val audio = context.getSystemService(AudioManager::class.java)
-    private val pool = SoundPool.Builder()
+    private var pool = newPool()
+    private val loaded = HashSet<Int>()
+    private var riffleForward = 0
+    private var riffleBackward = 0
+    private var flipForward = 0
+    private var flipBackward = 0
+    private val handler = Handler(Looper.getMainLooper())
+
+    init {
+        loadAll()
+    }
+
+    private fun newPool(): SoundPool = SoundPool.Builder()
         .setMaxStreams(MAX_STREAMS)
         .setAudioAttributes(
             AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_GAME)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build()
         )
         .build()
-    private val riffleForward = pool.load(context, R.raw.riffle_forward, 1)
-    private val riffleBackward = pool.load(context, R.raw.riffle_backward, 1)
-    private val flipForward = pool.load(context, R.raw.flip_forward, 1)
-    private val flipBackward = pool.load(context, R.raw.flip_backward, 1)
-    private val handler = Handler(Looper.getMainLooper())
+        .also {
+            it.setOnLoadCompleteListener { _, id, status ->
+                if (status ==
+                    0
+                ) {
+                    synchronized(loaded) { loaded += id }
+                }
+            }
+        }
+
+    private fun loadAll() {
+        riffleForward = pool.load(app, R.raw.riffle_forward, 1)
+        riffleBackward = pool.load(app, R.raw.riffle_backward, 1)
+        flipForward = pool.load(app, R.raw.flip_forward, 1)
+        flipBackward = pool.load(app, R.raw.flip_backward, 1)
+    }
+
+    /**
+     * Plays [sound]; a pool that refuses a loaded sound is broken (its audio tracks died with the audio service), so it
+     * is built again, and the sound plays once the new one has loaded.
+     */
+    private fun start(sound: Int, volume: Float, priority: Int, loop: Int, rate: Float): Int {
+        val id = pool.play(sound, volume, volume, priority, loop, rate)
+        if (id == 0 && synchronized(loaded) { sound in loaded }) {
+            Log.w(TAG, "the sound pool stopped playing; building it again")
+            rebuild()
+        }
+        return id
+    }
+
+    private fun rebuild() {
+        stopNow()
+        pool.release()
+        synchronized(loaded) { loaded.clear() }
+        pool = newPool()
+        loadAll()
+    }
 
     /** The riffle's and the flips' loudness, 0 to 1 (the reader's settings), applied on top of the speed. */
     var riffleVolume = 1f
@@ -69,7 +119,7 @@ class RiffleSounds(context: Context) {
         if (stream == 0 || streamForward != feedback.forward) {
             stopNow()
             streamForward = feedback.forward
-            stream = pool.play(if (streamForward) riffleForward else riffleBackward, 0f, 0f, 1, -1, 1f)
+            stream = start(if (streamForward) riffleForward else riffleBackward, 0f, 1, -1, 1f)
         }
         volume = (MIN_VOLUME + speed / LOUD_SPEED).coerceAtMost(MAX_VOLUME) * riffleVolume
         pool.setVolume(stream, volume, volume)
@@ -89,7 +139,7 @@ class RiffleSounds(context: Context) {
     fun flip(forward: Boolean) {
         if (!audible()) return
         val v = FLIP_VOLUME * flipVolume
-        pool.play(if (forward) flipForward else flipBackward, v, v, 2, 0, 1f)
+        start(if (forward) flipForward else flipBackward, v, 2, 0, 1f)
     }
 
     /** A moment of the riffle at its natural pace, so a volume slider can be heard. */
@@ -97,7 +147,7 @@ class RiffleSounds(context: Context) {
         if (!audible()) return
         stopNow()
         volume = PREVIEW_VOLUME * riffleVolume
-        stream = pool.play(riffleForward, volume, volume, 1, -1, 1f)
+        stream = start(riffleForward, volume, 1, -1, 1f)
         handler.postDelayed(fade, PREVIEW_MS)
     }
 
@@ -108,7 +158,15 @@ class RiffleSounds(context: Context) {
         volume = 0f
     }
 
-    private fun audible() = audio?.ringerMode == AudioManager.RINGER_MODE_NORMAL
+    private fun audible(): Boolean {
+        val mode = audio?.ringerMode
+        // Said once a reader visit, so a silent flip can be explained from the log.
+        if (mode != AudioManager.RINGER_MODE_NORMAL && !toldSilent) Log.i(TAG, "ringer mode $mode: page sounds are off")
+        toldSilent = mode != AudioManager.RINGER_MODE_NORMAL
+        return mode == AudioManager.RINGER_MODE_NORMAL
+    }
+
+    private var toldSilent = false
 
     fun release() {
         stopNow()
@@ -116,6 +174,7 @@ class RiffleSounds(context: Context) {
     }
 
     private companion object {
+        const val TAG = "FlowFolioSounds"
         const val MAX_STREAMS = 3
         const val MS_PER_S = 1_000f
         const val MIN_STEP_MS = 8L

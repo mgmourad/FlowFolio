@@ -140,6 +140,8 @@ sealed interface LibraryMessage {
     data object RelinkFailed : LibraryMessage
 
     data class Deleted(val title: String) : LibraryMessage
+
+    data class DeletedMany(val count: Int) : LibraryMessage
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -242,6 +244,12 @@ class LibraryViewModel @Inject constructor(
         dismissDialog()
         library.delete(book.id)
         messageChannel.send(LibraryMessage.Deleted(book.title))
+    }
+
+    /** Select mode's Delete (owner, 2026-10-22), after its confirmation. */
+    fun deleteBooks(ids: Set<String>) = viewModelScope.launch {
+        ids.forEach { library.delete(it) }
+        messageChannel.send(LibraryMessage.DeletedMany(ids.size))
     }
 
     fun onRelinkPicked(bookId: String, uri: String) = viewModelScope.launch {

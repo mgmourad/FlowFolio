@@ -6,11 +6,14 @@ import androidx.compose.ui.graphics.Color
 import com.flowfolio.core.model.BookmarkColor
 import com.flowfolio.core.model.HighlightColor
 
-/** The colour of a ribbon in the current theme (bookmark colours are the app's colour roles, plus a green). */
+/**
+ * The colour of a ribbon: the original FlowFolio design's colour roles (plus a green) in light or dark, whatever the
+ * app's theme (owner, 2026-10-22), so a ribbon keeps its colour when the theme changes.
+ */
 val BookmarkColor.color: Color
     @Composable @ReadOnlyComposable
     get() {
-        val p = FlowFolio.palette
+        val p = if (FlowFolio.palette.dark) DarkPalette else LightPalette
         return when (this) {
             BookmarkColor.SUB_ITEM -> p.subItem
             BookmarkColor.TITLE -> p.title

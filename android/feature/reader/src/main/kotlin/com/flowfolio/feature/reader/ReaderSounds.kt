@@ -1,5 +1,9 @@
 package com.flowfolio.feature.reader
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.media.AudioManager
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
@@ -46,6 +50,12 @@ internal class ReaderSounds(private val sounds: RiffleSounds) {
     fun release() = sounds.release()
 }
 
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
 /** The open book's sounds, for the pages, the bars and the "Aa" panel; null outside the reader. */
 internal val LocalReaderSounds = staticCompositionLocalOf<ReaderSounds?> { null }
 
@@ -56,5 +66,12 @@ internal fun rememberReaderSounds(viewModel: ReaderViewModel): ReaderSounds {
     val sounds = remember { ReaderSounds(RiffleSounds(context)) }
     SideEffect { sounds.settings = settings }
     DisposableEffect(sounds) { onDispose { sounds.release() } }
+    // In the reader the volume keys set the page sounds' volume (the media stream, ADR-0032), not the ringer's.
+    DisposableEffect(context) {
+        val activity = context.findActivity()
+        val before = activity?.volumeControlStream
+        activity?.volumeControlStream = AudioManager.STREAM_MUSIC
+        onDispose { if (activity != null && before != null) activity.volumeControlStream = before }
+    }
     return sounds
 }

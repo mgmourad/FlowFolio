@@ -27,6 +27,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGlyph
@@ -43,16 +44,18 @@ import com.flowfolio.core.model.BookmarkColor
  * one, to remove it.
  */
 @Composable
-internal fun BookmarkButton(mark: ChromeMark, actions: ChromeActions) {
+internal fun BookmarkButton(mark: ChromeMark, actions: ChromeActions, size: Dp) {
     FlowFolioIconButton(
         onClick = { actions.onPanel(Panel.MARK) },
         glass = true,
+        size = size,
         modifier = Modifier.testTag(ReaderTestTags.BOOKMARK)
     ) {
         FlowFolioGlyph(
             Glyph.Bookmark,
             stringResource(if (mark.color != null) R.string.reader_bookmarked else R.string.reader_bookmark),
             color = mark.color?.color ?: FlowFolio.palette.subItem,
+            size = size * GLYPH_SHARE,
             glow = mark.color != null
         )
     }
