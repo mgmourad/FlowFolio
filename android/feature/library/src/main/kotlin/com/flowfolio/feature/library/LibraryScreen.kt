@@ -271,7 +271,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.libraryBody(state: Li
                     row,
                     noShelves = state.shelves.isEmpty(),
                     actions = actions,
-                    modifier = Modifier.reveal(ROWS_REVEAL_ORDER)
+                    modifier = Modifier.animateItem().reveal(ROWS_REVEAL_ORDER)
                 )
             }
         }

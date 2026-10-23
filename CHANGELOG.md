@@ -162,6 +162,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     titles in the display face, bold and centred; on a narrow screen the library header keeps "Library" on one line,
     the count on two lines and the buttons under it; buttons and chips off glass carry a faint accent ring; a shelf's
     "N books ›" is a bold shaded pill; the tab bar's tabs share its width and their labels shrink to fit one line.
+- Motion (ADR-0033, owner 2026-10-23): fade through between the tabs; shared axis X into and out of pages (a shelf,
+  a book's bookmarks or annotations, edit details), scrubbed by the predictive back gesture; a plain fade around the
+  details page and the reader, whose cover flight and book opening carry the motion. Items in lists and grids glide
+  into place and fade as they come and go; the header's buttons cross-fade into the selection bar; selection checks pop
+  in; the details tabs slide their content in from the side they lie on. Shelf-page titles sit below the book's shadow.
 - Islands per layout (M3, ADR-0031): after a text size change, equations already drawn at the nearest other size stand
   in at once, scaled (their sizes lay the pages out, their images show), until this size's are measured and drawn.
 - Memory and speed (M3, ADR-0031; results in `docs/plans/phase2-m3-memory.md`): the island WebView is created only for

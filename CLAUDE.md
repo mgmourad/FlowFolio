@@ -252,8 +252,8 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
 ## Decision log
 
-ADRs 0001–0032 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0033 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
-Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026), reading fonts (0027), app themes (0028), Rustic without texture (0029), the book's own fonts (0030), EPUB memory and island stand-ins (0031), page sounds on the media stream (0032).
+Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026), reading fonts (0027), app themes (0028), Rustic without texture (0029), the book's own fonts (0030), EPUB memory and island stand-ins (0031), page sounds on the media stream (0032), the motion system (0033).

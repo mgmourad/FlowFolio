@@ -130,7 +130,7 @@ fun AnnotationsContent(
             }
             items(state.books, key = { it.book.id }) { item ->
                 val key = item.book.id
-                Box {
+                Box(Modifier.animateItem()) {
                     AnnotatedBookCard(item, state.chapters[item.latest.id]) {
                         if (selection.active) selection.toggle(key) else onOpenBook(item.book)
                     }

@@ -3,12 +3,18 @@ package com.flowfolio.feature.library
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -390,8 +396,22 @@ private fun DetailsTabs(state: DetailsUiState, book: Book, tab: Int, onTab: (Int
         stringResource(R.string.tab_contents)
     )
     FlowFolioUnderlineTabs(tabs, tab, onTab, Modifier.padding(top = 26.dp))
-    Box(Modifier.padding(top = 22.dp, bottom = 10.dp)) {
-        when (tab) {
+    // The new tab's content slides in from the side its tab lies on, the old one fades (ADR-0033).
+    AnimatedContent(
+        tab,
+        Modifier.padding(top = 22.dp, bottom = 10.dp),
+        transitionSpec = {
+            val dir = if (targetState > initialState) 1 else -1
+            (
+                slideInHorizontally(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { it / TAB_SLIDE * dir } +
+                    fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut))
+                )
+                .togetherWith(fadeOut(tween(Motion.FAST_MS)))
+                .using(SizeTransform(clip = false))
+        },
+        label = "detailsTab"
+    ) { shown ->
+        when (shown) {
             0 -> OverviewPanel(state, book)
             1 -> InfoPanel(state, book)
             2 -> AuthorPanel(state, book, actions.onBook)
@@ -413,6 +433,7 @@ internal fun PlayGlyph() {
 }
 
 private val TWO_PANE_WIDTH = 600.dp
+private const val TAB_SLIDE = 8
 private const val LEFT_PANE = 0.46f
 private val HERO_HEIGHT = 430.dp
 private val HERO_OVERLAP = 40.dp

@@ -96,8 +96,11 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                 NavHost(
                     navController = nav,
                     startDestination = TopLevel.Library.route,
-                    enterTransition = { fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) },
-                    exitTransition = { fadeOut(tween(Motion.FAST_MS, easing = Motion.EaseOut)) }
+                    // The app's motion (ADR-0033): fade through between tabs, shared axis into pages.
+                    enterTransition = NavMotion.enter,
+                    exitTransition = NavMotion.exit,
+                    popEnterTransition = NavMotion.popEnter,
+                    popExitTransition = NavMotion.popExit
                 ) {
                     destination(TopLevel.Library.route) {
                         val library: LibraryViewModel = hiltViewModel()

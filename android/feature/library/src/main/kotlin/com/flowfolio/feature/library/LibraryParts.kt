@@ -261,7 +261,7 @@ internal fun ShelfRowView(row: ShelfRow, noShelves: Boolean, actions: LibraryAct
         ) {
             items(row.items, key = { it.book.id }) { item ->
                 val h = SHELF_BOOK_HEIGHT + minOf(SHELF_BOOK_EXTRA, item.book.pageCount / PAGES_PER_DP).dp
-                ShelfBook(item, origin, actions, width = SHELF_BOOK_WIDTH, height = h)
+                Box(Modifier.animateItem()) { ShelfBook(item, origin, actions, width = SHELF_BOOK_WIDTH, height = h) }
             }
         }
         ShelfPlank(Modifier.padding(horizontal = 14.dp), accent)
