@@ -44,7 +44,6 @@ import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalChromePadding
 import com.flowfolio.core.designsystem.Selection
 import com.flowfolio.core.designsystem.chromeStart
-import com.flowfolio.core.designsystem.jiggle
 import com.flowfolio.core.designsystem.marker
 import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.designsystem.reveal
@@ -131,7 +130,7 @@ fun AnnotationsContent(
             }
             items(state.books, key = { it.book.id }) { item ->
                 val key = item.book.id
-                Box(Modifier.jiggle(selection.active, key)) {
+                Box {
                     AnnotatedBookCard(item, state.chapters[item.latest.id]) {
                         if (selection.active) selection.toggle(key) else onOpenBook(item.book)
                     }

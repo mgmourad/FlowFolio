@@ -75,7 +75,6 @@ import com.flowfolio.core.designsystem.card
 import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.color
 import com.flowfolio.core.designsystem.coverSpot
-import com.flowfolio.core.designsystem.jiggle
 import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.designsystem.softShadow
@@ -264,9 +263,9 @@ private fun ColourChip(colour: BookmarkColor, selected: Boolean, onClick: () -> 
 private fun BookmarkRow(item: BookmarkItem, actions: BookmarkActions, uniform: Boolean) {
     val selection = actions.selection
     if (selection != null && selection.active) {
-        // Select mode: the card jiggles and a tap chooses it; no swiping.
+        // Select mode: a tap chooses the card (it stays still here; owner, 2026-10-22); no swiping.
         val key = item.bookmark.id.toString()
-        Box(Modifier.jiggle(true, key).testTag(LibraryTestTags.bookmark(item.bookmark.id))) {
+        Box(Modifier.testTag(LibraryTestTags.bookmark(item.bookmark.id))) {
             BookmarkCard(item, uniform) { selection.toggle(key) }
             SelectionMark(selection, key)
         }

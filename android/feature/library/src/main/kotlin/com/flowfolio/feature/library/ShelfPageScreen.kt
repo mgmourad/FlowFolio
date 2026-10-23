@@ -1,6 +1,7 @@
 package com.flowfolio.feature.library
 
 import android.text.format.Formatter
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -61,6 +62,9 @@ import com.flowfolio.core.designsystem.FlowFolioProgressBar
 import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.Selection
+import com.flowfolio.core.designsystem.jiggle
+import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
@@ -86,7 +90,10 @@ internal data class BookRowActions(
     val onShelves: (Book) -> Unit,
     val onLocate: (Book) -> Unit,
     /** The book's ribbons (its Bookmarks page). */
-    val onBookmarks: (Book) -> Unit = {}
+    val onBookmarks: (Book) -> Unit = {},
+    /** Select mode (owner, 2026-10-22); null where books cannot be selected. */
+    val selection: Selection? = null,
+    val onDeleteChosen: () -> Unit = {}
 )
 
 /**
@@ -103,6 +110,8 @@ fun ShelfPageScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var prompt by remember { mutableStateOf<BookPrompt?>(null) }
+    val selection = rememberSelection()
+    var confirmBulk by remember { mutableStateOf(false) }
     var relinkId by rememberSaveable { mutableStateOf<String?>(null) }
     val relink = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         val id = relinkId
@@ -125,10 +134,30 @@ fun ShelfPageScreen(
             relinkId = it.id
             relink.launch(arrayOf("application/pdf", "application/epub+zip"))
         },
-        onBookmarks = onBookmarks
+        onBookmarks = onBookmarks,
+        selection = selection,
+        onDeleteChosen = { confirmBulk = true }
     )
     ShelfPageContent(state, onBack, actions)
+    if (confirmBulk) ConfirmShelfBooksDelete(selection, viewModel) { confirmBulk = false }
+    BackHandler(selection.active) { selection.done() }
     BookPromptDialogs(prompt, state, viewModel, shelvesVm) { prompt = null }
+}
+
+/** Asks before select mode removes the chosen books from the library (as on the Library tab). */
+@Composable
+private fun ConfirmShelfBooksDelete(selection: Selection, viewModel: ShelfPageViewModel, onClose: () -> Unit) {
+    val n = selection.chosen.size
+    BulkDeleteDialog(
+        pluralStringResource(R.plurals.delete_books_title, n, n),
+        stringResource(R.string.delete_books_body),
+        onConfirm = {
+            selection.chosen.forEach(viewModel::delete)
+            selection.done()
+            onClose()
+        },
+        onDismiss = onClose
+    )
 }
 
 /** The dialog for what is being asked about a book: rename it, remove it, or choose its shelves. */
@@ -189,7 +218,13 @@ internal fun ShelfPageContent(state: ShelfPageUiState, onBack: () -> Unit, actio
         top = insets.calculateTopPadding(),
         bottom = insets.calculateBottomPadding() + 24.dp
     )
-    val header: @Composable () -> Unit = { ShelfPageHeader(state, view, { view = it }, onBack) }
+    val header: @Composable () -> Unit = {
+        ShelfPageHeader(state, view, { view = it }, onBack) {
+            actions.selection?.let { selection ->
+                SelectControls(selection, state.items.map { it.book.id }, actions.onDeleteChosen)
+            }
+        }
+    }
     if (view == 0) {
         LazyVerticalGrid(
             columns = GridCells.Adaptive(TILE_MIN),
@@ -214,12 +249,25 @@ internal fun ShelfPageContent(state: ShelfPageUiState, onBack: () -> Unit, actio
 }
 
 @Composable
-private fun ShelfPageHeader(state: ShelfPageUiState, view: Int, onView: (Int) -> Unit, onBack: () -> Unit) {
+private fun ShelfPageHeader(
+    state: ShelfPageUiState,
+    view: Int,
+    onView: (Int) -> Unit,
+    onBack: () -> Unit,
+    select: @Composable () -> Unit
+) {
     val name = state.shelf?.name
         ?: stringResource(if (state.noShelves) R.string.shelf_all_books else R.string.shelf_loose)
     Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
-        FlowFolioIconButton(onClick = onBack) {
-            FlowFolioGlyph(Glyph.Back, contentDescription = stringResource(R.string.action_back))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            FlowFolioIconButton(onClick = onBack) {
+                FlowFolioGlyph(Glyph.Back, contentDescription = stringResource(R.string.action_back))
+            }
+            Row(
+                Modifier.weight(1f),
+                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically
+            ) { select() }
         }
         Text(
             name,
@@ -257,7 +305,8 @@ private fun BookTile(item: LibraryItem, actions: BookRowActions) {
                 onLocate = actions.onLocate,
                 onAddToShelf = actions.onShelves,
                 onRename = actions.onRename,
-                onBookmarks = actions.onBookmarks
+                onBookmarks = actions.onBookmarks,
+                selection = actions.selection
             ),
             width = TILE_BOOK_WIDTH,
             height = TILE_BOOK_HEIGHT
@@ -279,6 +328,15 @@ private fun BookTile(item: LibraryItem, actions: BookRowActions) {
 @Composable
 private fun BookListRow(item: LibraryItem, actions: BookRowActions) {
     val book = item.book
+    val selection = actions.selection
+    if (selection != null && selection.active) {
+        // Select mode: the row jiggles and a tap chooses it; no swiping.
+        Box(Modifier.jiggle(true, book.id).testTag(LibraryTestTags.row(book.id))) {
+            BookRowCard(item, actions.copy(onOpen = { selection.toggle(it.book.id) }))
+            SelectionMark(selection, book.id)
+        }
+        return
+    }
     val linked = book.storage is BookStorage.Linked
     SwipeRow(
         startWidth = if (linked) ACTION_WIDTH * 3 else ACTION_WIDTH * 2,

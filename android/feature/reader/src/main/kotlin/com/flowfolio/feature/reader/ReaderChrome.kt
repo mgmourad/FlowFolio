@@ -91,7 +91,7 @@ internal fun BoxScope.ReaderChrome(
 private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, reflowable: Boolean) {
     // Unfolded, the title sits beside Back at the top left (owner, 2026-10-18); folded, it is centred.
     val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
-    // Twice the usual size for easy reach (owner, 2026-10-22); folded, half as much again, so five still fit.
+    // A third larger than the app's usual 42 dp for easy reach (owner, 2026-10-22); folded, a little less.
     val button = if (wide) BIG_BUTTON else FOLDED_BUTTON
     val glyph = button * GLYPH_SHARE
     Row(
@@ -231,10 +231,10 @@ private val FOOTER_MARGIN = 14.dp
 private val TITLE_MAX_WIDTH = 520.dp
 private val TITLE_BESIDE_BACK = 600.dp
 
-/** The reader's round buttons: twice the app's usual 42 dp unfolded (owner, 2026-10-22), 56 dp on the cover screen. */
+/** The reader's round buttons: 56 dp unfolded, 50 dp folded (the app's usual is 42 dp; owner, 2026-10-22). */
 private val BASE_BUTTON = 42.dp
-private val BIG_BUTTON = 84.dp
-private val FOLDED_BUTTON = 56.dp
+private val BIG_BUTTON = 56.dp
+private val FOLDED_BUTTON = 50.dp
 private const val SETTINGS_TEXT_SP = 16f
 
 /** A glyph's share of its round button (24 dp in 42 dp). */
