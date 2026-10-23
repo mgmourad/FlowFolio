@@ -167,8 +167,8 @@ class ReaderViewModel @Inject constructor(
     /** The next equations, SVG or tables for the island WebView to lay out or draw (EPUBs only). */
     internal val islandWork: StateFlow<IslandWork?> = _islandWork.asStateFlow()
 
-    /** The open EPUB's files, for the island WebView. */
-    internal val epubArchive get() = epub?.opened?.archive
+    /** The open EPUB's archive for the island WebView; null when the book has no islands (no WebView then). */
+    internal val epubArchive get() = epub?.takeIf { it.islands.any }?.opened?.archive
 
     /** The open document (for page text when selecting); null until the book is open. */
     internal val document: PdfDocument? get() = opened?.document
@@ -359,6 +359,7 @@ class ReaderViewModel @Inject constructor(
             _relayingOut.value = false
             finishLayout(session)
             session.trimIslands()
+            session.packIslands()
         }
     }
 

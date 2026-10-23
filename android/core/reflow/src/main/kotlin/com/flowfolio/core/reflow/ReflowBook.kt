@@ -212,6 +212,24 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
         return chapters[chapter].footnotes[href.substringAfter('#', "")]
     }
 
+    /**
+     * Packs every island's markup (M3 EPUB memory): run in the background once the book is open, so opening is not
+     * slowed; markup is read as it is until then.
+     */
+    fun packIslands() = chapters.asSequence().flatMap { it.blocks }.flatMap(::markupOf).forEach(PackedText::pack)
+
+    /** The ids of [chapter]'s equations (`math` islands), without unpacking their markup. */
+    fun mathIds(chapter: Int): List<Int> = chapters[chapter].blocks.flatMap { b ->
+        when (b) {
+            is Block.Island -> listOfNotNull(b.id.takeIf { b.kind == "math" })
+
+            is Block.Text -> b.text.getSpans(0, b.text.length, IslandSpan::class.java)
+                .filter { it.kind == "math" }.map { it.id }
+
+            is Block.Image -> emptyList()
+        }
+    }
+
     /** Every island in reading order, with its chapter (block islands and inline ones). */
     fun islands(chapter: Int): List<Pair<Int, String>> = chapters[chapter].blocks.flatMap { b ->
         when (b) {
@@ -220,6 +238,13 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
             is Block.Image -> emptyList()
         }
     }
+}
+
+/** The island markup in [b]: a block island's, or the inline ones in its text. */
+private fun markupOf(b: Block): List<PackedText> = when (b) {
+    is Block.Island -> listOf(b.packed)
+    is Block.Text -> b.text.getSpans(0, b.text.length, IslandSpan::class.java).map { it.packed }
+    is Block.Image -> emptyList()
 }
 
 /** Marks an image whose size couldn't be read (a concurrent map holds no nulls). */

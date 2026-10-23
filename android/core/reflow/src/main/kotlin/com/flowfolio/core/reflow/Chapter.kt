@@ -32,8 +32,10 @@ sealed interface Block {
         override val length get() = 1
     }
 
-    /** Content laid out by the WebView ([kind] is `math`, `svg` or `table`); [xml] is its markup. */
-    class Island(override val start: Int, val id: Int, val kind: String, val xml: String) : Block {
+    /** Content laid out by the WebView ([kind] is `math`, `svg` or `table`); [xml] is its markup, kept packed. */
+    class Island(override val start: Int, val id: Int, val kind: String, xml: String) : Block {
+        internal val packed = PackedText(xml)
+        val xml: String get() = packed.text()
         override val length get() = 1
     }
 }
