@@ -235,7 +235,7 @@ internal fun ShelfPageContent(state: ShelfPageUiState, onBack: () -> Unit, actio
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) { header() }
-            items(state.items, key = { it.book.id }) { item -> BookTile(item, actions) }
+            items(state.items, key = { it.book.id }) { item -> Box(Modifier.animateItem()) { BookTile(item, actions) } }
         }
     } else {
         LazyColumn(
@@ -244,7 +244,9 @@ internal fun ShelfPageContent(state: ShelfPageUiState, onBack: () -> Unit, actio
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item { header() }
-            items(state.items, key = { it.book.id }) { item -> BookListRow(item, actions) }
+            items(state.items, key = {
+                it.book.id
+            }) { item -> Box(Modifier.animateItem()) { BookListRow(item, actions) } }
         }
     }
 }
@@ -320,7 +322,8 @@ private fun BookTile(item: LibraryItem, actions: BookRowActions) {
             textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 16.dp, start = 4.dp, end = 4.dp)
+            // Clear of the book's soft shadow, which spreads about 26 dp under it.
+            modifier = Modifier.padding(top = TILE_TITLE_GAP, start = 4.dp, end = 4.dp)
         )
     }
 }
@@ -484,3 +487,4 @@ private val ROW_COVER_HEIGHT = 66.dp
 
 private val TILE_TITLE_SP = 15.sp
 private val TILE_TITLE_LINE = 19.sp
+private val TILE_TITLE_GAP = 34.dp

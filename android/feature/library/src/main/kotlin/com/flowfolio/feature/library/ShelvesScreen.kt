@@ -181,7 +181,7 @@ internal fun ShelvesContent(
             items(state.cards, key = { it.shelf.id }) { card ->
                 val key = card.shelf.id.toString()
                 val open: (Long) -> Unit = { if (selection.active) selection.toggle(key) else onOpen(it) }
-                Box(Modifier.reveal(1).jiggle(selection.active, key)) {
+                Box(Modifier.animateItem().reveal(1).jiggle(selection.active, key)) {
                     ShelfCardView(card, open, onRename, onDelete, Modifier, menuEnabled = !selection.active)
                     SelectionMark(selection, key)
                 }

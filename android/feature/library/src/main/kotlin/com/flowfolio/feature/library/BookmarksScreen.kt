@@ -156,7 +156,9 @@ fun BookmarksContent(state: BookmarksUiState, actions: BookmarkActions) {
             if (!state.loading && state.total == 0) {
                 item(span = { GridItemSpan(maxLineSpan) }) { EmptyBookmarks(Modifier.reveal(1)) }
             }
-            items(state.items, key = { it.bookmark.id }) { item -> BookmarkRow(item, actions, twoColumns) }
+            items(state.items, key = { it.bookmark.id }) { item ->
+                Box(Modifier.animateItem()) { BookmarkRow(item, actions, twoColumns) }
+            }
         }
     }
 }

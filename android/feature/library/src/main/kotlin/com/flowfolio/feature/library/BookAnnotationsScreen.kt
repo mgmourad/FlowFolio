@@ -148,7 +148,7 @@ fun BookAnnotationsContent(
             }
         }
         items(state.annotations, key = { it.id }) { a ->
-            Row(Modifier.widthIn(max = LIST_WIDTH).fillMaxWidth()) {
+            Row(Modifier.animateItem().widthIn(max = LIST_WIDTH).fillMaxWidth()) {
                 if (selection.active) {
                     // Select mode: a tap chooses the card (it stays still here); no swiping.
                     val key = a.id.toString()
