@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
@@ -70,6 +71,7 @@ import com.flowfolio.core.designsystem.coverLanding
 import com.flowfolio.core.designsystem.coverSpot
 import com.flowfolio.core.designsystem.detailsCoverKey
 import com.flowfolio.core.designsystem.jiggle
+import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.designsystem.shelfCoverKey
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
@@ -214,13 +216,22 @@ private val LibraryFilter.label: Int
 
 /** `.shelf`: the shelf's name and count, its books standing in a row, and the plank under them. */
 @Composable
-internal fun ShelfRowView(row: ShelfRow, noShelves: Boolean, actions: LibraryActions, modifier: Modifier = Modifier) {
+internal fun ShelfRowView(
+    row: ShelfRow,
+    noShelves: Boolean,
+    actions: LibraryActions,
+    modifier: Modifier = Modifier,
+    order: Int = 0
+) {
     val origin = row.shelf?.id?.toString() ?: LOOSE_ORIGIN
     val name = row.shelf?.name ?: stringResource(if (noShelves) R.string.shelf_all_books else R.string.shelf_loose)
     // A shelf in its own colour; books not on a shelf (and shelves without one) keep the theme's (owner, 2026-10-22).
     val accent = row.shelf?.color?.color
     Column(modifier.fillMaxWidth().padding(top = 22.dp)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 22.dp), verticalAlignment = Alignment.Bottom) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 22.dp).reveal(order),
+            verticalAlignment = Alignment.Bottom
+        ) {
             Text(
                 name,
                 style = FlowFolioType.sectionTitle.merge(FlowFolio.title).let {
@@ -259,12 +270,14 @@ internal fun ShelfRowView(row: ShelfRow, noShelves: Boolean, actions: LibraryAct
             horizontalArrangement = Arrangement.spacedBy(22.dp),
             verticalAlignment = Alignment.Bottom
         ) {
-            items(row.items, key = { it.book.id }) { item ->
+            itemsIndexed(row.items, key = { _, entry -> entry.book.id }) { i, item ->
                 val h = SHELF_BOOK_HEIGHT + minOf(SHELF_BOOK_EXTRA, item.book.pageCount / PAGES_PER_DP).dp
-                Box(Modifier.animateItem()) { ShelfBook(item, origin, actions, width = SHELF_BOOK_WIDTH, height = h) }
+                Box(Modifier.animateItem().reveal(order + 1 + i)) {
+                    ShelfBook(item, origin, actions, width = SHELF_BOOK_WIDTH, height = h)
+                }
             }
         }
-        ShelfPlank(Modifier.padding(horizontal = 14.dp), accent)
+        ShelfPlank(Modifier.padding(horizontal = 14.dp).reveal(order), accent)
     }
 }
 

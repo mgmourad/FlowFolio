@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.SnackbarHost
@@ -266,12 +267,13 @@ private fun androidx.compose.foundation.lazy.LazyListScope.libraryBody(state: Li
             }
             val rows = shelfRows(state.items, state.shelves)
             if (rows.isEmpty()) item(key = "nomatch") { NoMatch() }
-            items(rows, key = { "row-" + (it.shelf?.id ?: "loose") }) { row ->
+            itemsIndexed(rows, key = { _, r -> "row-" + (r.shelf?.id ?: "loose") }) { i, row ->
                 ShelfRowView(
                     row,
                     noShelves = state.shelves.isEmpty(),
                     actions = actions,
-                    modifier = Modifier.animateItem().reveal(ROWS_REVEAL_ORDER)
+                    modifier = Modifier.animateItem(),
+                    order = ROWS_REVEAL_ORDER + i
                 )
             }
         }

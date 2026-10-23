@@ -45,6 +45,7 @@ import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
 import androidx.compose.ui.unit.sp
+import com.flowfolio.core.designsystem.EdgeFades
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioType
@@ -85,7 +86,12 @@ object ShellTestTags {
  * Screens learn the space it takes from [LocalChromePadding]; the glass blurs them through [LocalGlassState].
  */
 @Composable
-fun AppShell(current: TopLevel?, onSelect: (TopLevel) -> Unit, content: @Composable () -> Unit) {
+fun AppShell(
+    current: TopLevel?,
+    onSelect: (TopLevel) -> Unit,
+    reading: Boolean = false,
+    content: @Composable () -> Unit
+) {
     val p = FlowFolio.palette
     // Exposes Compose test tags as resource ids so UiAutomator (on-device gesture tests, benchmarks) can find them.
     BoxWithConstraints(Modifier.fillMaxSize().appBackground(p).semantics { testTagsAsResourceId = true }) {
@@ -109,8 +115,17 @@ fun AppShell(current: TopLevel?, onSelect: (TopLevel) -> Unit, content: @Composa
             // lighter on GPU memory on the large unfolded screen (ADR-0013).
             LocalHazePerformanceMode provides HazePerformanceMode.Performance
         ) {
-            // Only top-level screens are recorded for the blur, so the reader pays nothing for it.
-            Box(Modifier.fillMaxSize().then(if (shown) Modifier.glassSource() else Modifier)) { content() }
+            // Every screen but the reader is recorded for the blur (the glass bars and the edge fades), so the reader
+            // pays nothing for it.
+            // The background is drawn inside the recording too, so the fades blur it along with the content instead
+            // of filling a flat band where the screen has nothing of its own.
+            Box(
+                Modifier.fillMaxSize().then(if (reading) Modifier else Modifier.glassSource().appBackground(p))
+            ) { content() }
+            // The themed, blurred fades under the status bar and over the navigation bar (owner, 2026-10-23); the
+            // reader's pages fill the screen instead.
+            val fades by animateFloatAsState(if (reading) 0f else 1f, tween(Motion.FAST_MS), label = "edgeFades")
+            if (fades > 0f) EdgeFades(fades)
             val selected = current ?: TopLevel.Library
             if (wide) {
                 AnimatedVisibility(

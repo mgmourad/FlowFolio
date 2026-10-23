@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -178,15 +179,15 @@ internal fun ShelvesContent(
             }
         }
         if (!state.loading) {
-            items(state.cards, key = { it.shelf.id }) { card ->
+            itemsIndexed(state.cards, key = { _, entry -> entry.shelf.id }) { i, card ->
                 val key = card.shelf.id.toString()
                 val open: (Long) -> Unit = { if (selection.active) selection.toggle(key) else onOpen(it) }
-                Box(Modifier.animateItem().reveal(1).jiggle(selection.active, key)) {
+                Box(Modifier.animateItem().reveal(1 + i).jiggle(selection.active, key)) {
                     ShelfCardView(card, open, onRename, onDelete, Modifier, menuEnabled = !selection.active)
                     SelectionMark(selection, key)
                 }
             }
-            if (!selection.active) item(key = "new") { NewShelfCard(onNew, Modifier.reveal(2)) }
+            if (!selection.active) item(key = "new") { NewShelfCard(onNew, Modifier.reveal(1 + state.cards.size)) }
         }
     }
 }

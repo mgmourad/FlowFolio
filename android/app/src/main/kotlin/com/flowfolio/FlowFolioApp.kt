@@ -90,7 +90,8 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
     val entry by nav.currentBackStackEntryAsState()
     // A shelf tapped on the Shelves tab: the library scrolls to its row.
     var shelfToShow by rememberSaveable { mutableStateOf<Long?>(null) }
-    AppShell(current = TopLevel.of(entry?.destination?.route), onSelect = nav::switchTo) {
+    val route = entry?.destination?.route
+    AppShell(TopLevel.of(route), nav::switchTo, reading = route?.startsWith("reader/") == true) {
         SharedTransitionLayout {
             CompositionLocalProvider(LocalSharedTransition provides this) {
                 NavHost(
@@ -163,13 +164,16 @@ private fun NavGraphBuilder.detailsDestination(nav: NavHostController) = composa
     )
 ) { backStack ->
     CompositionLocalProvider(LocalDestinationScope provides this) {
-        DetailsScreen(
-            origin = backStack.arguments?.getString("from").orEmpty(),
-            onBack = { nav.popBackStack() },
-            onRead = { book -> nav.navigate(Routes.reader(book.id)) },
-            onEdit = { book -> nav.navigate(Routes.edit(book.id)) },
-            onOpenBook = { book -> nav.navigate(Routes.details(book.id, "")) }
-        )
+        // The cover flies in while the page settles around it (ADR-0034).
+        ScreenEntrance(holdForLandings = false) {
+            DetailsScreen(
+                origin = backStack.arguments?.getString("from").orEmpty(),
+                onBack = { nav.popBackStack() },
+                onRead = { book -> nav.navigate(Routes.reader(book.id)) },
+                onEdit = { book -> nav.navigate(Routes.edit(book.id)) },
+                onOpenBook = { book -> nav.navigate(Routes.details(book.id, "")) }
+            )
+        }
     }
 }
 
@@ -180,7 +184,9 @@ private fun NavGraphBuilder.bookBookmarksDestination(nav: NavHostController) = c
 ) {
     // Not a tab: no bar or rail here, so no room kept for one.
     CompositionLocalProvider(LocalChromePadding provides PaddingValues()) {
-        BookmarksScreen(onRead = { book -> nav.navigate(Routes.reader(book.id)) }, onBack = { nav.popBackStack() })
+        ScreenEntrance {
+            BookmarksScreen(onRead = { book -> nav.navigate(Routes.reader(book.id)) }, onBack = { nav.popBackStack() })
+        }
     }
 }
 
@@ -189,7 +195,12 @@ private fun NavGraphBuilder.bookAnnotationsDestination(nav: NavHostController) =
     Routes.BOOK_ANNOTATIONS,
     arguments = listOf(navArgument(AnnotationsViewModel.ARG_BOOK_ID) { type = NavType.StringType })
 ) {
-    BookAnnotationsScreen(onBack = { nav.popBackStack() }, onRead = { book -> nav.navigate(Routes.reader(book.id)) })
+    ScreenEntrance {
+        BookAnnotationsScreen(
+            onBack = { nav.popBackStack() },
+            onRead = { book -> nav.navigate(Routes.reader(book.id)) }
+        )
+    }
 }
 
 /** Edit details for a book (from the details page's menu). */
@@ -197,7 +208,7 @@ private fun NavGraphBuilder.editDestination(nav: NavHostController) = composable
     Routes.EDIT,
     arguments = listOf(navArgument(DetailsViewModel.ARG_BOOK_ID) { type = NavType.StringType })
 ) {
-    EditDetailsScreen(onDone = { nav.popBackStack() })
+    ScreenEntrance { EditDetailsScreen(onDone = { nav.popBackStack() }) }
 }
 
 /** A whole shelf, as tiles or a list (opened from a shelf's book count in the library). */
@@ -206,11 +217,13 @@ private fun NavGraphBuilder.shelfDestination(nav: NavHostController) = composabl
     arguments = listOf(navArgument(ShelfPageViewModel.ARG_SHELF_ID) { type = NavType.LongType })
 ) {
     CompositionLocalProvider(LocalDestinationScope provides this) {
-        ShelfPageScreen(
-            onBack = { nav.popBackStack() },
-            onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) },
-            onBookmarks = { book -> nav.navigate(Routes.bookBookmarks(book.id)) }
-        )
+        ScreenEntrance {
+            ShelfPageScreen(
+                onBack = { nav.popBackStack() },
+                onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) },
+                onBookmarks = { book -> nav.navigate(Routes.bookBookmarks(book.id)) }
+            )
+        }
     }
 }
 

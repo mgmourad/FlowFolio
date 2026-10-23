@@ -26,7 +26,9 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -66,6 +68,7 @@ import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Selection
 import com.flowfolio.core.designsystem.rememberSelection
+import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
@@ -231,11 +234,14 @@ internal fun ShelfPageContent(state: ShelfPageUiState, onBack: () -> Unit, actio
             columns = GridCells.Adaptive(TILE_MIN),
             modifier = Modifier.fillMaxSize().testTag(LibraryTestTags.SHELF_TILES),
             contentPadding = padding,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+            // Rows well apart, so each title clearly belongs to the book above it (owner, 2026-10-23).
+            horizontalArrangement = Arrangement.spacedBy(TILE_COLUMN_GAP),
+            verticalArrangement = Arrangement.spacedBy(TILE_ROW_GAP)
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) { header() }
-            items(state.items, key = { it.book.id }) { item -> Box(Modifier.animateItem()) { BookTile(item, actions) } }
+            item(span = { GridItemSpan(maxLineSpan) }) { Box(Modifier.reveal(0)) { header() } }
+            itemsIndexed(state.items, key = { _, entry -> entry.book.id }) { i, item ->
+                Box(Modifier.animateItem().reveal(1 + i).fillMaxWidth()) { BookTile(item, actions) }
+            }
         }
     } else {
         LazyColumn(
@@ -243,10 +249,10 @@ internal fun ShelfPageContent(state: ShelfPageUiState, onBack: () -> Unit, actio
             contentPadding = padding,
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            item { header() }
-            items(state.items, key = {
-                it.book.id
-            }) { item -> Box(Modifier.animateItem()) { BookListRow(item, actions) } }
+            item { Box(Modifier.reveal(0)) { header() } }
+            itemsIndexed(state.items, key = { _, entry -> entry.book.id }) { i, item ->
+                Box(Modifier.animateItem().reveal(1 + i)) { BookListRow(item, actions) }
+            }
         }
     }
 }
@@ -298,7 +304,8 @@ private fun ShelfPageHeader(
 /** A tile: the 3D book with its title; press and hold for the book's menu. */
 @Composable
 private fun BookTile(item: LibraryItem, actions: BookRowActions) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    // The tile fills its cell, so every book and title is centred on the same column line.
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         ShelfBook(
             item,
             SHELF_PAGE_ORIGIN,
@@ -323,7 +330,7 @@ private fun BookTile(item: LibraryItem, actions: BookRowActions) {
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             // Clear of the book's soft shadow, which spreads about 26 dp under it.
-            modifier = Modifier.padding(top = TILE_TITLE_GAP, start = 4.dp, end = 4.dp)
+            modifier = Modifier.fillMaxWidth().padding(top = TILE_TITLE_GAP, start = 4.dp, end = 4.dp)
         )
     }
 }
@@ -488,3 +495,5 @@ private val ROW_COVER_HEIGHT = 66.dp
 private val TILE_TITLE_SP = 15.sp
 private val TILE_TITLE_LINE = 19.sp
 private val TILE_TITLE_GAP = 34.dp
+private val TILE_COLUMN_GAP = 20.dp
+private val TILE_ROW_GAP = 44.dp

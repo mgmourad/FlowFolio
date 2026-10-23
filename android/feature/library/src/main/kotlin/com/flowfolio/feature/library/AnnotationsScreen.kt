@@ -19,6 +19,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -128,9 +129,9 @@ fun AnnotationsContent(
             if (!state.loading && state.total == 0) {
                 item(span = { GridItemSpan(maxLineSpan) }) { NoAnnotations(Modifier.reveal(1)) }
             }
-            items(state.books, key = { it.book.id }) { item ->
+            itemsIndexed(state.books, key = { _, entry -> entry.book.id }) { i, item ->
                 val key = item.book.id
-                Box(Modifier.animateItem()) {
+                Box(Modifier.animateItem().reveal(1 + i)) {
                     AnnotatedBookCard(item, state.chapters[item.latest.id]) {
                         if (selection.active) selection.toggle(key) else onOpenBook(item.book)
                     }
