@@ -162,6 +162,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     titles in the display face, bold and centred; on a narrow screen the library header keeps "Library" on one line,
     the count on two lines and the buttons under it; buttons and chips off glass carry a faint accent ring; a shelf's
     "N books ›" is a bold shaded pill; the tab bar's tabs share its width and their labels shrink to fit one line.
+- Entrances and edge fades (ADR-0034, owner 2026-10-23): on every visit to a screen or page its elements fall into
+  place one after another (fading in while settling from 112%), like icons after unlocking a phone; the library's books
+  arrive one by one, shelf by shelf, and the details page settles around the cover flying in. A screen a cover is
+  flying home to stays still. Tabs zoom through (the old one recedes, the new one settles from slightly larger). In the
+  reader the bars' buttons fall in each time the bars show, and the bars fade as they slide. Soft, blurred fades in the
+  theme's colour at the top and bottom of the screen keep content clear of the status bar, the camera and the
+  navigation bar. Shelf-page tiles fill their cells (titles centred under their books) and stand further apart.
 - Motion (ADR-0033, owner 2026-10-23): fade through between the tabs; shared axis X into and out of pages (a shelf,
   a book's bookmarks or annotations, edit details), scrubbed by the predictive back gesture; a plain fade around the
   details page and the reader, whose cover flight and book opening carry the motion. Items in lists and grids glide

@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -156,8 +157,8 @@ fun BookmarksContent(state: BookmarksUiState, actions: BookmarkActions) {
             if (!state.loading && state.total == 0) {
                 item(span = { GridItemSpan(maxLineSpan) }) { EmptyBookmarks(Modifier.reveal(1)) }
             }
-            items(state.items, key = { it.bookmark.id }) { item ->
-                Box(Modifier.animateItem()) { BookmarkRow(item, actions, twoColumns) }
+            itemsIndexed(state.items, key = { _, entry -> entry.bookmark.id }) { i, item ->
+                Box(Modifier.animateItem().reveal(2 + i)) { BookmarkRow(item, actions, twoColumns) }
             }
         }
     }

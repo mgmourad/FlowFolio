@@ -42,6 +42,7 @@ import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
 import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookDetails
 import com.flowfolio.core.model.BookType
@@ -84,7 +85,8 @@ fun EditDetailsContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Column(Modifier.widthIn(max = FORM_WIDTH).fillMaxWidth()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // The form settles section by section (ADR-0034).
+            Row(Modifier.reveal(0), verticalAlignment = Alignment.CenterVertically) {
                 FlowFolioIconButton(onClick = onCancel, glass = true) {
                     FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = FlowFolio.palette.text)
                 }
@@ -94,14 +96,18 @@ fun EditDetailsContent(
                     modifier = Modifier.padding(start = 14.dp)
                 )
             }
-            Section(R.string.edit_section_book) { BookFields(form, type) { type = it } }
-            Section(R.string.edit_section_author) {
-                Field(R.string.edit_author_role, form.authorRole) { form.authorRole = it }
-                Field(R.string.edit_author_bio, form.authorBio, lines = DESCRIPTION_LINES) { form.authorBio = it }
+            Column(Modifier.reveal(1)) { Section(R.string.edit_section_book) { BookFields(form, type) { type = it } } }
+            Column(Modifier.reveal(2)) {
+                Section(R.string.edit_section_author) {
+                    Field(R.string.edit_author_role, form.authorRole) { form.authorRole = it }
+                    Field(R.string.edit_author_bio, form.authorBio, lines = DESCRIPTION_LINES) { form.authorBio = it }
+                }
             }
-            onLookUp?.let { LookUpRow(book, form, type, it) { found -> type = type ?: found } }
+            onLookUp?.let {
+                Column(Modifier.reveal(3)) { LookUpRow(book, form, type, it) { found -> type = type ?: found } }
+            }
             Row(
-                Modifier.fillMaxWidth().padding(vertical = 22.dp),
+                Modifier.fillMaxWidth().padding(vertical = 22.dp).reveal(4),
                 horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)
             ) {
                 FlowFolioGhostButton(stringResource(R.string.action_cancel), onCancel)

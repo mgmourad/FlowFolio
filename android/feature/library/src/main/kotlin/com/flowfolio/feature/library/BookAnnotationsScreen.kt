@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,6 +53,7 @@ import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Selection
 import com.flowfolio.core.designsystem.marker
 import com.flowfolio.core.designsystem.rememberSelection
+import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.shareQuote
@@ -121,7 +123,7 @@ fun BookAnnotationsContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         item {
-            Column(Modifier.widthIn(max = LIST_WIDTH).fillMaxWidth().padding(top = 10.dp, bottom = 4.dp)) {
+            Column(Modifier.widthIn(max = LIST_WIDTH).fillMaxWidth().padding(top = 10.dp, bottom = 4.dp).reveal(0)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     FlowFolioIconButton(onClick = onBack, glass = true, modifier = Modifier.padding(end = 14.dp)) {
                         FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = FlowFolio.palette.text)
@@ -147,8 +149,8 @@ fun BookAnnotationsContent(
                 }
             }
         }
-        items(state.annotations, key = { it.id }) { a ->
-            Row(Modifier.animateItem().widthIn(max = LIST_WIDTH).fillMaxWidth()) {
+        itemsIndexed(state.annotations, key = { _, entry -> entry.id }) { i, a ->
+            Row(Modifier.animateItem().reveal(1 + i).widthIn(max = LIST_WIDTH).fillMaxWidth()) {
                 if (selection.active) {
                     // Select mode: a tap chooses the card (it stays still here); no swiping.
                     val key = a.id.toString()

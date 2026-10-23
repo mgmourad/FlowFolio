@@ -2,6 +2,8 @@ package com.flowfolio.feature.reader
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -44,7 +46,9 @@ import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Motion
+import com.flowfolio.core.designsystem.ScreenEntrance
 import com.flowfolio.core.designsystem.glass
+import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.feature.reader.layout.ReaderLayout
 import com.flowfolio.feature.reader.layout.Spreads
@@ -69,18 +73,19 @@ internal fun BoxScope.ReaderChrome(
     AnimatedVisibility(
         controlsVisible,
         Modifier.align(Alignment.TopCenter),
-        enter = slideInVertically(slide) { -it * 2 },
-        exit = slideOutVertically(slide) { -it * 2 }
+        enter = slideInVertically(slide) { -it * 2 } + fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)),
+        exit = slideOutVertically(slide) { -it * 2 } + fadeOut(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut))
     ) {
-        TopBar(state.title, mark, actions, reflowable = state.reflowable)
+        // Each time the bars show, their buttons fall into place one after another (ADR-0034).
+        ScreenEntrance(holdForLandings = false) { TopBar(state.title, mark, actions, reflowable = state.reflowable) }
     }
     AnimatedVisibility(
         controlsVisible,
         Modifier.align(Alignment.BottomCenter),
-        enter = slideInVertically(slide) { it * 2 },
-        exit = slideOutVertically(slide) { it * 2 }
+        enter = slideInVertically(slide) { it * 2 } + fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)),
+        exit = slideOutVertically(slide) { it * 2 } + fadeOut(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut))
     ) {
-        bottomBar()
+        ScreenEntrance(holdForLandings = false) { Box(Modifier.reveal(DOCK_ORDER)) { bottomBar() } }
     }
     // In Scroll the number would float over the text; the bars show the page there.
     if (!controlsVisible && state.turn != PageTurn.SCROLL) PageNumber(state, navigation.labels)
@@ -102,7 +107,7 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, refl
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        FlowFolioIconButton(onClick = actions.onBack, glass = true, size = button) {
+        FlowFolioIconButton(onClick = actions.onBack, Modifier.reveal(0), glass = true, size = button) {
             FlowFolioGlyph(
                 Glyph.Back,
                 stringResource(R.string.reader_back),
@@ -110,23 +115,23 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, refl
                 size = glyph
             )
         }
-        TitlePill(title, wide, Modifier.weight(1f))
-        val contents = Modifier.testTag(ReaderTestTags.CONTENTS)
+        TitlePill(title, wide, Modifier.weight(1f).reveal(1))
+        val contents = Modifier.testTag(ReaderTestTags.CONTENTS).reveal(2)
         FlowFolioIconButton({ actions.onPanel(Panel.CONTENTS) }, contents, glass = true, size = button) {
             FlowFolioGlyph(Glyph.Contents, stringResource(R.string.reader_contents), size = glyph)
         }
-        val goTo = Modifier.testTag(ReaderTestTags.GO_TO)
+        val goTo = Modifier.testTag(ReaderTestTags.GO_TO).reveal(3)
         FlowFolioIconButton({ actions.onPanel(Panel.GO_TO) }, goTo, glass = true, size = button) {
             FlowFolioGlyph(Glyph.GoTo, stringResource(R.string.reader_go_to), size = glyph)
         }
         // Highlights and ribbons are PDF-only until EPUB annotations (Phase 2 milestone 4).
         if (!reflowable) {
-            val notes = Modifier.testTag(ReaderTestTags.ANNOTATIONS)
+            val notes = Modifier.testTag(ReaderTestTags.ANNOTATIONS).reveal(4)
             FlowFolioIconButton({ actions.onPanel(Panel.ANNOTATIONS) }, notes, glass = true, size = button) {
                 FlowFolioGlyph(Glyph.Highlight, stringResource(R.string.reader_annotations), size = glyph)
             }
         }
-        val settings = Modifier.testTag(ReaderTestTags.SETTINGS)
+        val settings = Modifier.testTag(ReaderTestTags.SETTINGS).reveal(5)
         FlowFolioIconButton({ actions.onPanel(Panel.SETTINGS) }, settings, glass = true, size = button) {
             Text(
                 stringResource(R.string.reader_settings_button),
@@ -137,7 +142,7 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, refl
                     .merge(FlowFolio.title)
             )
         }
-        if (!reflowable) BookmarkButton(mark, actions, button)
+        if (!reflowable) Box(Modifier.reveal(6)) { BookmarkButton(mark, actions, button) }
     }
 }
 
@@ -239,3 +244,6 @@ private const val SETTINGS_TEXT_SP = 16f
 
 /** A glyph's share of its round button (24 dp in 42 dp). */
 internal const val GLYPH_SHARE = 24f / 42f
+
+/** The riffle dock falls in just after the top bar's first buttons. */
+private const val DOCK_ORDER = 2

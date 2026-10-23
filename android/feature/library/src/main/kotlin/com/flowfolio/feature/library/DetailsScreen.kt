@@ -83,6 +83,7 @@ import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.coverLanding
 import com.flowfolio.core.designsystem.coverSpot
 import com.flowfolio.core.designsystem.detailsCoverKey
+import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.designsystem.shelfCoverKey
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
@@ -275,13 +276,19 @@ private fun Backdrop(backdrop: androidx.compose.ui.graphics.ImageBitmap?, modifi
 @Composable
 private fun DetailsHeading(state: DetailsUiState, book: Book, actions: DetailsActions, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth().padding(horizontal = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(book.title, style = FlowFolioType.bookTitle.merge(FlowFolio.title), textAlign = TextAlign.Center)
+        // Around the cover flying in, the page settles one line after another (ADR-0034).
+        Text(
+            book.title,
+            style = FlowFolioType.bookTitle.merge(FlowFolio.title),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.reveal(1)
+        )
         book.details.subtitle?.let {
             Text(
                 it,
                 style = FlowFolioType.sub.merge(FlowFolio.hint),
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 4.dp)
+                modifier = Modifier.padding(top = 4.dp).reveal(2)
             )
         }
         book.author?.let {
@@ -289,12 +296,12 @@ private fun DetailsHeading(state: DetailsUiState, book: Book, actions: DetailsAc
                 it,
                 style = FlowFolioType.rowLabel.merge(FlowFolio.item),
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 10.dp)
+                modifier = Modifier.padding(top = 10.dp).reveal(2)
             )
         }
-        DetailsMeta(state, book, Modifier.padding(top = 10.dp))
+        DetailsMeta(state, book, Modifier.padding(top = 10.dp).reveal(3))
         Row(
-            Modifier.padding(top = 18.dp),
+            Modifier.padding(top = 18.dp).reveal(4),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -343,7 +350,8 @@ private fun TopButtons(state: DetailsUiState, actions: DetailsActions) {
         Modifier
             .fillMaxWidth()
             .padding(WindowInsets.safeDrawing.asPaddingValues())
-            .padding(horizontal = 18.dp, vertical = 8.dp),
+            .padding(horizontal = 18.dp, vertical = 8.dp)
+            .reveal(0),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         FlowFolioIconButton(onClick = actions.onBack, glass = true) {
@@ -395,11 +403,11 @@ private fun DetailsTabs(state: DetailsUiState, book: Book, tab: Int, onTab: (Int
         stringResource(R.string.tab_author),
         stringResource(R.string.tab_contents)
     )
-    FlowFolioUnderlineTabs(tabs, tab, onTab, Modifier.padding(top = 26.dp))
+    FlowFolioUnderlineTabs(tabs, tab, onTab, Modifier.padding(top = 26.dp).reveal(5))
     // The new tab's content slides in from the side its tab lies on, the old one fades (ADR-0033).
     AnimatedContent(
         tab,
-        Modifier.padding(top = 22.dp, bottom = 10.dp),
+        Modifier.padding(top = 22.dp, bottom = 10.dp).reveal(6),
         transitionSpec = {
             val dir = if (targetState > initialState) 1 else -1
             (
