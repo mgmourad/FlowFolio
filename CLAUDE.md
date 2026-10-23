@@ -19,7 +19,7 @@ footnote popovers (`docs/plans/phase2-m2-links.md`) built. M3, typography (`docs
 under way: seven bundled reading fonts, the tabbed "Aa" sheet with text settings (`ReaderText`, `EpubLayout`), pinch to
 size, and fast re-layout (up to the reader's chapter first, `ReflowBook.layOutRest`; hourglass `Hourglass.kt`) built;
 Settings' text group (`SettingsText.kt`) and the book's own fonts (ADR-0030, `EpubFonts`, `BookTypeface`) built;
-next islands per layout, EPUB memory, the M2 carry-overs. Between M2 and M3 (owner,
+islands per layout and EPUB memory (ADR-0031, `docs/plans/phase2-m3-memory.md`) built; next the M2 carry-overs. Between M2 and M3 (owner,
 2026-10-22): app themes FlowFolio / Rustic / Material You (ADR-0028, `RusticPalette.kt`, `MaterialPalette.kt`,
 `ThemePicker.kt`), a Rustic paper, and a redesigned details page (approved; Rustic without texture, ADR-0029); riffle arrows at the strip's ends** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
 spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).
@@ -175,6 +175,10 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     floor-relative verdict no longer means anything. Judge the reader by its absolute memory against the pre-M5 floor
     (182 MB + 110 = 292 MB): slice 4 build, spread, Night paper, 300 turns: 263 MB, growth 2.3%. Opened from the
     library in the same process the reader reads about 456 MB, because the library's glow caches stay allocated.
+    M3 (ADR-0031, 2026-10-22, Material You dark, debug): Moby-Dick 308 MB, Linear Algebra 366 MB (was 468-572), the
+    PDF 278 MB, library 280-303 MB. About 90 MB of graphics on any screen is the window's four full-screen buffers.
+    The measurement script reopens books at fixed pages and adds reading time: snapshot `databases/flowfolio.db*` with
+    `run-as cp` (app stopped) before, and copy it back afterwards.
 15. Measuring on the Fold: logical display 0 is always the active panel; the phone must stay unlocked during runs
     (`tools/measure-reader.ps1` aborts if the lock screen shows). Debug-only intent extras `importPath`,
     `openBookId`, `layout`, `startPage` (0-based; the script sets it, since the position persists) drive the app from
@@ -246,8 +250,8 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
 ## Decision log
 
-ADRs 0001–0030 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0031 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
-Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026), reading fonts (0027), app themes (0028), Rustic without texture (0029), the book's own fonts (0030).
+Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026), reading fonts (0027), app themes (0028), Rustic without texture (0029), the book's own fonts (0030), EPUB memory and island stand-ins (0031).

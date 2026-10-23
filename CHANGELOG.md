@@ -140,6 +140,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   reader's card then says "Book's (none)"). Fonts are read from the book only, de-obfuscated (IDPF, Adobe), WOFF 1 is
   unwrapped, and only real TrueType/OpenType files up to 16 MB are loaded; WOFF 2 is not read. Checked on the Fold
   with the IDPF *Moby-Dick* (STIX, four faces).
+- Islands per layout (M3, ADR-0031): after a text size change, equations already drawn at the nearest other size stand
+  in at once, scaled (their sizes lay the pages out, their images show), until this size's are measured and drawn.
+- Memory and speed (M3, ADR-0031; results in `docs/plans/phase2-m3-memory.md`): the island WebView is created only for
+  books with equations, SVG or complex tables; island markup is kept packed after the book opens; island images in
+  memory are capped at 16 MB (was 32); EPUB pages are drawn into one reused 16-bit bitmap instead of a new 32-bit one
+  per page; covers are decoded once for every screen and kept on the GPU only.
 - The riffle scrubber's one-page arrows sit at the two ends of the strip and are always there with the dock; they no
   longer appear beside the ribbon after a release, where they got in the way of dragging it on (owner, 2026-10-22).
 - Book details redesigned to look less like a page of buttons: the pills became one quiet line (format, pages,

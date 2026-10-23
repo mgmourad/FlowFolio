@@ -11,8 +11,9 @@ import kotlin.math.roundToInt
  * and are stored per paper ink. Lives in the app's cache directory, which Android may clear. Thread-safe; does disk
  * work, so call it off the main thread.
  */
-internal class IslandStore(root: File, bookId: String, bodyPx: Float, widthPx: Int) {
-    val dir = File(root, "$bookId/v$VERSION-${bodyPx.roundToInt()}-$widthPx")
+internal class IslandStore private constructor(val dir: File, val bodyPx: Float) {
+    constructor(root: File, bookId: String, bodyPx: Float, widthPx: Int) :
+        this(File(root, "$bookId/v$VERSION-${bodyPx.roundToInt()}-$widthPx"), bodyPx)
 
     /** Names of the files already written, read once. */
     private val present: MutableSet<String> = HashSet<String>().also { names ->
@@ -73,6 +74,7 @@ internal class IslandStore(root: File, bookId: String, bodyPx: Float, widthPx: I
          */
         private const val VERSION = 2
         private const val SIZES = "sizes-"
+        private val LAYOUT = Regex("v$VERSION-([0-9]+)-([0-9]+)")
         private const val SIZE_FIELDS = 4
 
         /** Ignored for PNG, which is lossless. */
@@ -80,6 +82,18 @@ internal class IslandStore(root: File, bookId: String, bodyPx: Float, widthPx: I
 
         /** The whole island cache, all books and layouts. */
         const val CAP_BYTES = 200L * 1024 * 1024
+
+        /**
+         * Another text size already stored for [bookId] (M3: islands per layout), nearest [bodyPx], or null: its
+         * equations, scaled, stand in while this size's are drawn. Equations do not wrap, so any column width will do.
+         */
+        fun nearest(root: File, bookId: String, bodyPx: Float, except: File): IslandStore? =
+            File(root, bookId).listFiles().orEmpty()
+                .filter { it != except && it.isDirectory }
+                .mapNotNull { d -> LAYOUT.matchEntire(d.name)?.let { d to it.groupValues[1].toFloat() } }
+                .filter { (d, _) -> d.list()?.any { it.endsWith(".png") } == true }
+                .minByOrNull { (_, px) -> kotlin.math.abs(px - bodyPx) }
+                ?.let { (d, px) -> IslandStore(d, px) }
 
         /** Deletes the least recently opened layouts until the cache fits [capBytes]; [keep] (in use) stays. */
         fun trim(root: File, keep: File, capBytes: Long = CAP_BYTES) {

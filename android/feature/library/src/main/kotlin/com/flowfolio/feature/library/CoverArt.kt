@@ -2,6 +2,7 @@ package com.flowfolio.feature.library
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.util.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.produceState
@@ -11,20 +12,48 @@ import com.flowfolio.core.designsystem.BookColors
 import com.flowfolio.core.designsystem.BookFace
 import com.flowfolio.core.designsystem.coverColors
 import com.flowfolio.core.model.Book
+import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /** A decoded cover thumbnail and the colours taken from it (spine, ink). */
 internal class CoverArt(val image: ImageBitmap, val colors: BookColors)
 
-/** The book's cover thumbnail (page 1, written at import) and its colours, decoded off the main thread; null until
- * ready or when there is none. */
+/**
+ * The book's cover thumbnail (page 1, written at import) and its colours, decoded off the main thread; null until
+ * ready or when there is none. Covers are shared by every screen ([Covers]): one shown before appears at once.
+ */
 @Composable
-internal fun rememberCover(book: Book): State<CoverArt?> = produceState<CoverArt?>(null, book.coverPath) {
-    value = book.coverPath?.let { path ->
-        withContext(Dispatchers.IO) {
-            BitmapFactory.decodeFile(path)?.let { CoverArt(it.asImageBitmap(), coverColors(it)) }
-        }
+internal fun rememberCover(book: Book): State<CoverArt?> =
+    produceState(book.coverPath?.let(Covers::peek), book.coverPath) {
+        value = book.coverPath?.let { path -> withContext(Dispatchers.IO) { Covers.load(path) } }
+    }
+
+/**
+ * Decoded covers for all screens (the library, shelves, details and lists show the same few covers): each is decoded
+ * once and kept on the GPU only (no second CPU copy), under a small byte budget, and decoded again when the file
+ * changes (edited details).
+ */
+private object Covers {
+    private class Entry(val art: CoverArt, val modified: Long)
+
+    private val cache = object : LruCache<String, Entry>(COVER_CACHE_BYTES) {
+        override fun sizeOf(key: String, value: Entry) = value.art.image.width * value.art.image.height * ARGB_BYTES
+    }
+
+    fun peek(path: String): CoverArt? = cache.get(path)?.art
+
+    fun load(path: String): CoverArt? {
+        val modified = File(path).lastModified()
+        return cache.get(path)?.takeIf { it.modified == modified }?.art
+            ?: decode(path)?.also { cache.put(path, Entry(it, modified)) }
+    }
+
+    private fun decode(path: String): CoverArt? = BitmapFactory.decodeFile(path)?.let { decoded ->
+        val colors = coverColors(decoded)
+        // The colours are read on the CPU; after that a GPU-only copy is all the screens need.
+        val gpu = decoded.copy(Bitmap.Config.HARDWARE, false)?.also { decoded.recycle() } ?: decoded
+        CoverArt(gpu.asImageBitmap(), colors)
     }
 }
 
@@ -98,6 +127,10 @@ private fun blurLine(src: IntArray, dst: IntArray, line: Line) {
 }
 
 private const val BACKDROP_WIDTH = 40
+
+/** About forty 360 px covers. */
+private const val COVER_CACHE_BYTES = 32 * 1024 * 1024
+private const val ARGB_BYTES = 4
 private const val BLUR_RADIUS = 3
 private const val BLUR_PASSES = 3
 private const val RED = 16

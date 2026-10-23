@@ -73,6 +73,16 @@ internal class EpubSession private constructor(
         override fun sizeOf(key: String, value: Bitmap) = value.allocationByteCount
     }
 
+    /** The 16-bit page every [render] draws into before its GPU copy; one pane-sized bitmap, reused. */
+    private var scratchPage: Bitmap? = null
+
+    private fun scratch(width: Int, height: Int): Bitmap = scratchPage
+        ?.takeIf { it.width == width && it.height == height && !it.isRecycled }
+        ?: Bitmap.createBitmap(width, height, Bitmap.Config.RGB_565).also {
+            scratchPage?.recycle()
+            scratchPage = it
+        }
+
     /** Raised by every layout: page numbers may now show other text, so cached page images no longer match them. */
     @Volatile private var layouts = 0
 
@@ -88,6 +98,15 @@ internal class EpubSession private constructor(
      */
     suspend fun trimIslands() = withContext(Dispatchers.IO) {
         trimLater?.let { IslandStore.trim(islandRoot, keep = it) }
+    }
+
+    @Volatile private var packed = false
+
+    /** Packs the islands' markup once, after the first layout (M3 EPUB memory): not in the way of opening. */
+    suspend fun packIslands() {
+        if (packed) return
+        packed = true
+        withContext(Dispatchers.Default) { book.packIslands() }
     }
 
     /** Lays the book out for [layout] ([density] pixels per dp); returns the page now showing [keep]. */
@@ -117,7 +136,9 @@ internal class EpubSession private constructor(
                 )
                 val store = IslandStore(islandRoot, opened.book.id, bodyPx, spec.width)
                 val t1 = android.os.SystemClock.elapsedRealtime()
-                islands.prepare(bodyPx, spec.width, store)
+                // Equations already drawn at another text size stand in, scaled, until this size's are drawn.
+                val nearest = IslandStore.nearest(islandRoot, opened.book.id, bodyPx, except = store.dir)
+                islands.prepare(bodyPx, spec.width, store, nearest)
                 val t2 = android.os.SystemClock.elapsedRealtime()
                 // Up to the reader's chapter now, the chapters after it in [finishLayout] (M3's 300 ms target).
                 val first = if (chapterFirst) keep?.chapter ?: 0 else -1
@@ -195,19 +216,15 @@ internal class EpubSession private constructor(
         val page = book.pages.getOrNull(key.page)
         if (p == null || page == null || key.size != pane) return@withLock null
         withContext(Dispatchers.Default) {
-            val bmp = Bitmap.createBitmap(key.size.width, key.size.height, Bitmap.Config.ARGB_8888)
             val colors = colorsOf(key.tone)
             // The page's equations and tables, from memory or the disk cache, before it is drawn.
             islands.useInk(colors.ink)
             islands.loadFor(page)
+            // Drawn straight into one reused 16-bit page (the paper is opaque), then uploaded to the GPU (ADR-0013).
+            val bmp = scratch(key.size.width, key.size.height)
             bmp.eraseColor(colors.paper)
             drawer.draw(PageDrawer.Target(Canvas(bmp), margins.left.toFloat(), margins.top.toFloat(), p), page, colors)
-            // 16-bit GPU pages, as for PDFs (ADR-0013).
-            val small = bmp.copy(Bitmap.Config.RGB_565, false) ?: bmp
-            if (small !== bmp) bmp.recycle()
-            val image = small.copy(Bitmap.Config.HARDWARE, false) ?: small
-            if (image !== small) small.recycle()
-            image.asImageBitmap()
+            (bmp.copy(Bitmap.Config.HARDWARE, false) ?: bmp.copy(Bitmap.Config.RGB_565, false)).asImageBitmap()
         }
     }
 
@@ -287,6 +304,7 @@ internal class EpubSession private constructor(
 
     fun close() {
         images.evictAll()
+        scratchPage = null // a render may still hold the lock; the collector frees it
         opened.archive.close()
     }
 
@@ -311,7 +329,9 @@ internal class EpubSession private constructor(
             fonts: (ReadingFont) -> android.graphics.Typeface?,
             islandRoot: java.io.File
         ): EpubSession = withContext(Dispatchers.Default) {
+            val started = android.os.SystemClock.elapsedRealtime()
             val book = ReflowBook(opened.archive, opened.pkg)
+            android.util.Log.i("FlowFolioLayout", "parsed in ${android.os.SystemClock.elapsedRealtime() - started} ms")
             EpubSession(opened, book, heading, fonts, islandRoot, runCatching { BookTypeface.load(opened) }.getOrNull())
         }
 

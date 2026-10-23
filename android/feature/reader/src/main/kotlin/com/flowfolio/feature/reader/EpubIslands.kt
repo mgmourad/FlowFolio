@@ -37,10 +37,19 @@ internal data class IslandWork(
  * images. Sizes feed pagination; images are drawn into pages. Both are kept on disk ([IslandStore]); images in use are
  * also kept in memory under a byte budget, tinted to the paper's ink.
  */
+@Suppress("TooManyFunctions") // the book's one place for island sizes, images and the work queue
 internal class EpubIslands(private val book: ReflowBook) {
     private var measuredFor: Pair<Float, Int>? = null
     private var store: IslandStore? = null
     private val sizes = HashMap<Int, IslandBox>()
+
+    /**
+     * Another text size's stored equations (M3: islands per layout): scaled, their sizes lay the book out and their
+     * images show until this size's are measured and drawn. Ids in [estimated] and [standIns] are still to do.
+     */
+    private var fallback: IslandStore? = null
+    private val estimated = HashSet<Int>()
+    private val standIns = HashSet<Int>()
     private val spans: Map<Int, IslandSpan> = book.chapters.flatMap { c ->
         c.blocks.filterIsInstance<Block.Text>().flatMap {
             it.text.getSpans(0, it.text.length, IslandSpan::class.java).asList()
@@ -48,8 +57,7 @@ internal class EpubIslands(private val book: ReflowBook) {
     }.associateBy { it.id }
 
     /** Equations, which are stored in black whatever the paper. */
-    private val math: Set<Int> = book.chapters.indices.flatMap { book.islands(it) }
-        .filter { (_, xml) -> xml.startsWith("<math") }.map { it.first }.toSet()
+    private val math: Set<Int> = book.chapters.indices.flatMap { book.mathIds(it) }.toSet()
     private val images = object : LruCache<Int, Bitmap>(IMAGE_BYTES) {
         override fun sizeOf(key: Int, value: Bitmap) = value.allocationByteCount
 
@@ -65,22 +73,34 @@ internal class EpubIslands(private val book: ReflowBook) {
     var revision = 0
         private set
 
-    val any: Boolean get() = book.chapters.indices.any { book.islands(it).isNotEmpty() }
+    /** The book has islands at all (without unpacking their markup). */
+    val any: Boolean = spans.isNotEmpty() || book.chapters.any { c -> c.blocks.any { it is Block.Island } }
 
     /**
      * A layout for [bodyPx] text in a column [widthPx] wide, with [store] holding what earlier visits measured and drew
      * for it. Sizes found there lay the book out correctly at once. Off the main thread (reads the disk).
      */
-    fun prepare(bodyPx: Float, widthPx: Int, store: IslandStore?) {
+    fun prepare(bodyPx: Float, widthPx: Int, store: IslandStore?, fallback: IslandStore? = null) {
         val stored = store?.sizes().orEmpty()
+        // Equations this size has not measured yet take another size's measures, scaled (they do not wrap).
+        val scale = fallback?.let { bodyPx / it.bodyPx } ?: 1f
+        val borrowed = fallback?.sizes().orEmpty()
+            .filter { (id, _) -> id in math && id !in stored }
+            .mapValues { (_, b) -> b.scaled(scale) }
         synchronized(this) {
             if (measuredFor != bodyPx to widthPx) {
                 measuredFor = bodyPx to widthPx
                 sizes.clear()
+                estimated.clear()
+                standIns.clear()
                 images.evictAll()
             }
             this.store = store
+            this.fallback = fallback?.takeIf { borrowed.isNotEmpty() }
+            borrowed.forEach { (id, box) -> if (id !in sizes) estimated += id }
+            sizes.putAll(borrowed.filterKeys { it in estimated })
             sizes.putAll(stored)
+            estimated.removeAll(stored.keys)
             applySpans()
         }
     }
@@ -117,13 +137,24 @@ internal class EpubIslands(private val book: ReflowBook) {
 
     private fun loadStored(id: Int): Bitmap? {
         val ink = imageInk
-        val bmp = ink?.let { store?.load(id, inkOf(id, it)) }
+        val own = ink?.let { store?.load(id, inkOf(id, it)) }
+        val bmp = own ?: ink?.let { standIn(id) }
         if (ink == null || bmp == null) return null
         if (id in math) tint(bmp, ink)
         synchronized(this) {
-            if (imageInk == ink) remember(id, bmp)
+            if (imageInk == ink) {
+                remember(id, bmp)
+                if (own == null) standIns += id
+            }
         }
         return bmp
+    }
+
+    /** Another size's stored equation, scaled to its estimated measure here; drawn properly later. */
+    private fun standIn(id: Int): Bitmap? {
+        val other = fallback?.takeIf { id in math }
+        val box = synchronized(this) { sizes[id] }
+        return if (other == null || box == null) null else other.load(id, null)?.let { scaledTo(it, box.w, box.h) }
     }
 
     /** Loads the images of [page]'s islands, so inline ones are in their spans before the page is drawn. */
@@ -137,7 +168,7 @@ internal class EpubIslands(private val book: ReflowBook) {
     fun toMeasure(current: Int, onlyCurrent: Boolean = false): IslandWork? {
         val (bodyPx, width) = measuredFor ?: return null
         val order = if (onlyCurrent) listOf(current) else book.nearestChapters(current)
-        return order.firstOrNull { c -> items(c).any { it.id !in sizes } }?.let { chapter ->
+        return order.firstOrNull { c -> items(c).any { it.id !in sizes || it.id in estimated } }?.let { chapter ->
             IslandWork(chapter, book.chapters[chapter].path, items(chapter), bodyPx, width)
         }
     }
@@ -150,7 +181,8 @@ internal class EpubIslands(private val book: ReflowBook) {
         return pages.asSequence()
             .map { page ->
                 page.chapter to book.islandIdsOn(page).filter { id ->
-                    id in sizes && images.get(id) == null && store?.has(id, inkOf(id, ink)) != true
+                    id in sizes && id !in estimated && (images.get(id) == null || id in standIns) &&
+                        store?.has(id, inkOf(id, ink)) != true
                 }.toSet()
             }
             .firstOrNull { (_, missing) -> missing.isNotEmpty() }
@@ -170,7 +202,8 @@ internal class EpubIslands(private val book: ReflowBook) {
         if (disk == null || layout == null) return null
         val (bodyPx, width) = layout
         // Islands in memory were just drawn for the pages in view and are being written already.
-        fun due(id: Int) = id in sizes && images.get(id) == null && !disk.has(id, inkOf(id, ink))
+        fun due(id: Int) = id in sizes && id !in estimated && (images.get(id) == null || id in standIns) &&
+            !disk.has(id, inkOf(id, ink))
         return book.nearestChapters(current).asSequence()
             .map { c -> c to items(c).map { it.id }.filter(::due) }
             .firstOrNull { (_, ids) -> ids.isNotEmpty() }
@@ -188,6 +221,7 @@ internal class EpubIslands(private val book: ReflowBook) {
     fun addSizes(work: IslandWork, boxes: Map<Int, IslandBox>): List<IslandBox>? {
         if (measuredFor != work.bodyPx to work.widthPx) return null
         work.items.forEach { item ->
+            estimated -= item.id
             sizes[item.id] = boxes[item.id]
                 ?: IslandBox(item.id, work.widthPx / 2, (work.bodyPx * 2).toInt(), work.bodyPx.toInt(), 0, 0)
         }
@@ -226,19 +260,27 @@ internal class EpubIslands(private val book: ReflowBook) {
     val disk: IslandStore? get() = store
 
     private fun remember(id: Int, bmp: Bitmap) {
+        standIns -= id
         images.put(id, bmp)
         spans[id]?.image = bmp
     }
 
     private fun inkOf(id: Int, ink: Int): Int? = if (id in math) null else ink
 
-    private fun items(chapter: Int): List<IslandItem> {
-        val inline = spans.keys
-        return book.islands(chapter).map { (id, xml) -> IslandItem(id, xml, id in inline) }
-    }
+    /** The last chapter's islands, unpacked: the queue asks for one chapter many times in a row. */
+    private var lastItems: Pair<Int, List<IslandItem>>? = null
+
+    private fun items(chapter: Int): List<IslandItem> = lastItems?.takeIf { it.first == chapter }?.second
+        ?: book.islands(chapter).map { (id, xml) -> IslandItem(id, xml, id in spans) }.also {
+            lastItems = chapter to it
+        }
 
     private companion object {
-        const val IMAGE_BYTES = 32 * 1024 * 1024
+        /**
+         * Islands in memory are only needed while their pages are drawn; others load again from disk (ADR-0021). More
+         * than a full page of islands, so one page's inline equations are never evicted while it is drawn.
+         */
+        const val IMAGE_BYTES = 16 * 1024 * 1024
 
         /** Islands drawn ahead per WebView page: small pages, and a page turn never waits long for the WebView. */
         const val CACHE_BATCH = 24
@@ -247,6 +289,17 @@ internal class EpubIslands(private val book: ReflowBook) {
         fun tint(bmp: Bitmap, ink: Int) = Canvas(bmp).drawColor(ink, PorterDuff.Mode.SRC_IN)
     }
 }
+
+/** [src] at [w] x [h], mutable (equations are tinted in place); [src] is released when a copy is made. */
+private fun scaledTo(src: Bitmap, w: Int, h: Int): Bitmap {
+    if (w == src.width && h == src.height) return src
+    val scaled = Bitmap.createScaledBitmap(src, w, h, true)
+    if (scaled !== src) src.recycle()
+    return if (scaled.isMutable) scaled else scaled.copy(Bitmap.Config.ARGB_8888, true).also { scaled.recycle() }
+}
+
+private fun IslandBox.scaled(s: Float) =
+    IslandBox(id, (w * s).toInt().coerceAtLeast(1), (h * s).toInt().coerceAtLeast(1), (baseline * s).toInt(), top, left)
 
 /** Chapters ordered by distance from [current], [current] first. */
 private fun ReflowBook.nearestChapters(current: Int) = chapters.indices.sortedBy { kotlin.math.abs(it - current) }

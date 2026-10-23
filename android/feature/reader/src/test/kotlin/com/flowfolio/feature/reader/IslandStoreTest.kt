@@ -36,6 +36,21 @@ class IslandStoreTest {
     }
 
     @Test
+    fun theNearestStoredTextSizeStandsIn() {
+        val small = IslandStore(root, "book", 48f, 900).also { File(it.dir, "1.png").writeText("x") }
+        IslandStore(root, "book", 72f, 600).also { File(it.dir, "1.png").writeText("x") }
+        IslandStore(root, "book", 52f, 900) // measured only: no images to lend
+        IslandStore(root, "other", 54f, 900).also { File(it.dir, "1.png").writeText("x") }
+        val current = IslandStore(root, "book", 54f, 900)
+
+        val nearest = IslandStore.nearest(root, "book", 54f, except = current.dir)
+        assertEquals(small.dir, nearest?.dir)
+        assertEquals(48f, nearest?.bodyPx)
+        // Nothing else stored: no stand-ins.
+        assertEquals(null, IslandStore.nearest(root, "none", 54f, except = current.dir))
+    }
+
+    @Test
     fun trimDeletesTheOldestLayoutsButNotTheOneInUse() {
         val old = IslandStore(root, "a", 54f, 900).also { fill(it, 600) }
         val newer = IslandStore(root, "b", 54f, 900).also { fill(it, 600) }

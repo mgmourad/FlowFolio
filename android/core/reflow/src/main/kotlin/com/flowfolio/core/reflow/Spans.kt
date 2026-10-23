@@ -22,7 +22,11 @@ class LinkSpan(val href: String) :
  * An inline island (an equation in running text). Until the WebView has measured it, it takes a few ems of space; once
  * measured it has its real size and sits on the baseline, and once rendered it draws its image.
  */
-class IslandSpan(val id: Int, val kind: String, val xml: String) : ReplacementSpan() {
+class IslandSpan(val id: Int, val kind: String, xml: String) : ReplacementSpan() {
+    /** The markup, kept packed (M3 EPUB memory): read only when the WebView lays the island out. */
+    internal val packed = PackedText(xml)
+    val xml: String get() = packed.text()
+
     /** Measured size in pixels and the baseline from its top; 0 until measured. */
     @Volatile var width = 0
 
