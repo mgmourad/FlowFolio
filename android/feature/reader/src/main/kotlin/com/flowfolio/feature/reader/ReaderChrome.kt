@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,6 +32,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -40,6 +43,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.flowfolio.core.designsystem.EdgeFade
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
@@ -70,6 +74,20 @@ internal fun BoxScope.ReaderChrome(
     bottomBar: @Composable () -> Unit
 ) {
     val slide = tween<IntOffset>(Motion.SLOW_MS, easing = Motion.EaseOut)
+    // A soft, blurred fade in the paper's colour behind the top bar while it shows, so its buttons never sit on the
+    // book's text (owner, 2026-10-23). It fades rather than slides, and stays solid behind the buttons.
+    AnimatedVisibility(
+        controlsVisible,
+        Modifier.align(Alignment.TopCenter),
+        enter = fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)),
+        exit = fadeOut(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut))
+    ) {
+        val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
+        val status = with(LocalDensity.current) { WindowInsets.statusBars.getTop(this).toDp() }
+        val solid = status + (if (wide) BIG_BUTTON else FOLDED_BUTTON) + BAR_VERTICAL_PADDING * 2
+        val total = solid + TOP_FADE_TAIL
+        EdgeFade(Modifier, total, state.tone.paper, fromTop = true, hold = solid / total)
+    }
     AnimatedVisibility(
         controlsVisible,
         Modifier.align(Alignment.TopCenter),
@@ -103,7 +121,7 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, refl
         Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = BAR_INSET, vertical = 8.dp),
+            .padding(horizontal = BAR_INSET, vertical = BAR_VERTICAL_PADDING),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -231,6 +249,8 @@ private val PrintStyle = TextStyle(
 
 private const val CENTRE_ZONE = 0.4f
 private val BAR_INSET = 14.dp
+private val BAR_VERTICAL_PADDING = 8.dp
+private val TOP_FADE_TAIL = 36.dp
 private val PAGE_MARGIN = 32.dp
 private val FOOTER_MARGIN = 14.dp
 private val TITLE_MAX_WIDTH = 520.dp

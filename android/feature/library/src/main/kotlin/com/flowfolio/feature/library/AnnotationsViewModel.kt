@@ -134,9 +134,19 @@ class AnnotationsViewModel @Inject constructor(
     }
 
     companion object {
-        /** The last contents entry starting at or before [page] (in reading order, so the deepest section). */
-        internal fun chapterOf(entries: List<OutlineEntry>?, page: Int): String? =
-            entries?.lastOrNull { it.pageIndex in 0..page }?.title?.takeIf { it.isNotBlank() }
+        /**
+         * The contents entry starting nearest before or on [page]; of several on that page, the last listed (the
+         * deepest section). By page, not by place in the list: an outline can list a stray entry late that points
+         * early in the book (OpenStax's "Blank Page"), which must not stand for every page after it. Entries without a
+         * real title, or naming a blank page, are passed over.
+         */
+        internal fun chapterOf(entries: List<OutlineEntry>?, page: Int): String? = entries.orEmpty()
+            .withIndex()
+            .filter { (_, e) -> e.pageIndex in 0..page && e.title.isNotBlank() && !e.title.isBlankPageName() }
+            .maxWithOrNull(compareBy({ it.value.pageIndex }, { it.index }))
+            ?.value?.title
+
+        private fun String.isBlankPageName() = trim().equals("blank page", ignoreCase = true)
 
         /** Optional: one book's annotations. */
         const val ARG_BOOK_ID = "bookId"

@@ -162,6 +162,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     titles in the display face, bold and centred; on a narrow screen the library header keeps "Library" on one line,
     the count on two lines and the buttons under it; buttons and chips off glass carry a faint accent ring; a shelf's
     "N books ›" is a bold shaded pill; the tab bar's tabs share its width and their labels shrink to fit one line.
+- Owner's follow-ups (ADR-0035, 2026-10-23): the edge fades blur only behind the system bars and the top one ends
+  closer to them, clear of the titles; in the reader a fade in the paper's colour lies behind the top bar while it shows.
+  Annotations name the section they come from by page: a stray outline entry listed late (University Physics' "Blank
+  Page") no longer stands for every page after it; the details page's Contents marks the current chapter the same way.
 - Entrances and edge fades (ADR-0034, owner 2026-10-23): on every visit to a screen or page its elements fall into
   place one after another (fading in while settling from 112%), like icons after unlocking a phone; the library's books
   arrive one by one, shelf by shelf, and the details page settles around the cover flying in. A screen a cover is

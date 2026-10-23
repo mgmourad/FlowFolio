@@ -5,6 +5,7 @@ import app.cash.turbine.test
 import com.flowfolio.core.data.AnnotationRepository
 import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.HighlightColor
+import com.flowfolio.core.model.OutlineEntry
 import com.flowfolio.core.model.Passage
 import com.flowfolio.core.model.shareQuote
 import kotlinx.coroutines.Dispatchers
@@ -100,5 +101,23 @@ class AnnotationsViewModelTest {
             shareQuote(" Passive transport never requires ATP. ", "Cellular Biology", "Amara Okafor", "216")
         )
         assertEquals("“Q”\n— T, p. 3", shareQuote("Q", "T", null, "3"))
+    }
+
+    @Test
+    fun chapterIsTheNearestEntryByPageNotTheLastListed() {
+        // An outline flattened chapter by chapter, with a stray "Blank Page" listed last that points near the start.
+        val toc = listOf(
+            OutlineEntry(0, 10, "Chapter 1"),
+            OutlineEntry(0, 40, "Chapter 2"),
+            OutlineEntry(1, 12, "1.1 Units"),
+            OutlineEntry(1, 42, "2.1 Vectors"),
+            OutlineEntry(1, 42, "2.1.1 Scalars"),
+            OutlineEntry(0, 2, "Blank Page")
+        )
+        assertEquals("1.1 Units", AnnotationsViewModel.chapterOf(toc, 20))
+        assertEquals("2.1.1 Scalars", AnnotationsViewModel.chapterOf(toc, 45))
+        assertEquals("Chapter 2", AnnotationsViewModel.chapterOf(toc, 40))
+        assertEquals(null, AnnotationsViewModel.chapterOf(toc, 3))
+        assertEquals(null, AnnotationsViewModel.chapterOf(null, 3))
     }
 }

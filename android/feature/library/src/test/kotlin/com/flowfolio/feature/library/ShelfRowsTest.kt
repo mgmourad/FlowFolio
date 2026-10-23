@@ -55,4 +55,11 @@ class ShelfRowsTest {
         assertEquals(1, currentChapter(toc, 10))
         assertEquals(2, currentChapter(toc, 99))
     }
+
+    @Test
+    fun currentChapterIgnoresAStrayEntryListedLate() {
+        val toc = listOf(OutlineEntry(0, 10, "One"), OutlineEntry(1, 12, "1.1"), OutlineEntry(0, 2, "Blank Page"))
+        assertEquals(1, currentChapter(toc, 30))
+        assertEquals(2, currentChapter(toc, 5))
+    }
 }
