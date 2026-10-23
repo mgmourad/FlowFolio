@@ -14,6 +14,9 @@ interface ReadingRepository {
 
     /** Total time read in [bookId], in milliseconds. */
     fun observeReadMillis(bookId: String): Flow<Long>
+
+    /** Total time read in the whole library, in milliseconds. */
+    fun observeLibraryReadMillis(): Flow<Long>
 }
 
 class DefaultReadingRepository @Inject constructor(
@@ -26,4 +29,6 @@ class DefaultReadingRepository @Inject constructor(
     }
 
     override fun observeReadMillis(bookId: String): Flow<Long> = dao.observeTotal(bookId)
+
+    override fun observeLibraryReadMillis(): Flow<Long> = dao.observeLibraryTotal()
 }

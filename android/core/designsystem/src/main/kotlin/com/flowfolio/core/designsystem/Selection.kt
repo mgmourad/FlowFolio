@@ -13,11 +13,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +36,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 
@@ -128,50 +131,69 @@ fun SelectionCheck(chosen: Boolean, modifier: Modifier = Modifier) {
 }
 
 /**
- * The header's controls in select mode: how many are chosen, choose all, delete them (asks first, the caller's
- * dialog), and Done.
+ * Select mode's bar, a full-width row under the header's title (owner, 2026-10-23: sharing the title's row squeezed
+ * the title on the cover screen): how many are chosen, Select all (Unselect all once all are chosen), delete them
+ * (asks first, the caller's dialog), and Done.
  */
 @Composable
 fun SelectionBar(
     selection: Selection,
-    countLabel: String,
-    selectAllLabel: String,
-    doneLabel: String,
-    deleteLabel: String,
+    labels: SelectionLabels,
+    allChosen: Boolean,
     onSelectAll: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val p = FlowFolio.palette
     Row(
-        modifier,
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(countLabel, style = FlowFolioType.rowLabel.merge(FlowFolio.item))
         Text(
-            selectAllLabel,
+            labels.count,
+            style = FlowFolioType.rowLabel.merge(FlowFolio.item),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            if (allChosen) labels.unselectAll else labels.selectAll,
             style = FlowFolioType.rowLabel.merge(FlowFolio.subItem),
+            maxLines = 1,
+            softWrap = false,
             modifier = Modifier
-                .clickable(role = Role.Button, onClick = onSelectAll)
-                .padding(horizontal = 6.dp, vertical = 12.dp)
+                .clickable(role = Role.Button) { if (allChosen) selection.setAll(emptyList()) else onSelectAll() }
+                .padding(horizontal = 8.dp, vertical = 12.dp)
         )
         FlowFolioIconButton(onClick = { if (selection.chosen.isNotEmpty()) onDelete() }) {
             FlowFolioGlyph(
                 Glyph.Trash,
-                deleteLabel,
+                labels.delete,
                 color = if (selection.chosen.isEmpty()) p.hint else p.subItem
             )
         }
         Text(
-            doneLabel,
+            labels.done,
             style = FlowFolioType.button.merge(FlowFolio.title),
+            maxLines = 1,
+            softWrap = false,
             modifier = Modifier
                 .clickable(role = Role.Button, onClick = selection::done)
-                .padding(horizontal = 14.dp, vertical = 12.dp)
+                .padding(start = 8.dp, top = 12.dp, bottom = 12.dp)
         )
     }
 }
+
+/** The words on [SelectionBar], from the caller's strings. */
+@Immutable
+data class SelectionLabels(
+    val count: String,
+    val selectAll: String,
+    val unselectAll: String,
+    val delete: String,
+    val done: String
+)
 
 /** The header button that starts select mode. */
 @Composable

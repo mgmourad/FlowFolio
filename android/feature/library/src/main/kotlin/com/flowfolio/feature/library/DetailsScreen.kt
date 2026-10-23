@@ -19,6 +19,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -61,6 +62,7 @@ import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -161,7 +163,8 @@ internal data class DetailsActions(
 @Composable
 internal fun DetailsContent(state: DetailsUiState, book: Book, hero: CoverSpot, actions: DetailsActions) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
-    BoxWithConstraints(Modifier.fillMaxSize().testTag(LibraryTestTags.DETAILS)) {
+    // A sideways swipe anywhere on the page moves between the tabs (owner, 2026-10-23).
+    BoxWithConstraints(Modifier.fillMaxSize().swipeTabs(tab, TAB_COUNT) { tab = it }.testTag(LibraryTestTags.DETAILS)) {
         if (maxWidth >= TWO_PANE_WIDTH) {
             // Unfolded, the blurred cover spans the top half of the whole screen, as it does folded (owner).
             val blurred by rememberBackdrop(book)
@@ -337,7 +340,7 @@ private fun ShelfButton(onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        FlowFolioGlyph(Glyph.Bookmark, contentDescription = null, size = 16.dp, color = p.glyph, glow = false)
+        FlowFolioGlyph(Glyph.Shelves, contentDescription = null, size = 18.dp, color = p.glyph, glow = false)
         Text(stringResource(R.string.action_add_to_shelf), style = FlowFolioType.rowLabel.merge(FlowFolio.item))
     }
 }
@@ -435,13 +438,34 @@ internal fun PlayGlyph() {
         Glyph.Play,
         contentDescription = null,
         color = FlowFolio.palette.buttonGlyph,
-        size = 14.dp,
+        // Large enough to read as "play" at a glance (owner, 2026-10-23).
+        size = 20.dp,
         glow = false
     )
 }
 
 private val TWO_PANE_WIDTH = 600.dp
 private const val TAB_SLIDE = 8
+private const val TAB_COUNT = 4
+private val SWIPE_TAB = 56.dp
+
+/** Moves to the next tab on a swipe to the left and the previous on a swipe to the right; vertical scrolls pass. */
+private fun Modifier.swipeTabs(tab: Int, count: Int, onTab: (Int) -> Unit): Modifier = pointerInput(tab, count) {
+    var total = 0f
+    detectHorizontalDragGestures(
+        onDragStart = { total = 0f },
+        onDragEnd = {
+            val threshold = SWIPE_TAB.toPx()
+            when {
+                total < -threshold && tab < count - 1 -> onTab(tab + 1)
+                total > threshold && tab > 0 -> onTab(tab - 1)
+            }
+        }
+    ) { change, dx ->
+        change.consume()
+        total += dx
+    }
+}
 private const val LEFT_PANE = 0.46f
 private val HERO_HEIGHT = 430.dp
 private val HERO_OVERLAP = 40.dp

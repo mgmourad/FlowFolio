@@ -1,7 +1,6 @@
 package com.flowfolio.feature.library
 
 import android.text.format.Formatter
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -31,7 +30,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -45,7 +43,6 @@ import com.flowfolio.core.designsystem.LocalBookOpener
 import com.flowfolio.core.designsystem.LocalChromePadding
 import com.flowfolio.core.designsystem.Selection
 import com.flowfolio.core.designsystem.chromeStart
-import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
@@ -91,14 +88,14 @@ fun LibraryScreen(
     scrollToShelf: Long? = null,
     onScrolledToShelf: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
-    shelves: ShelvesViewModel = hiltViewModel()
+    shelves: ShelvesViewModel = hiltViewModel(),
+    statsViewModel: LibraryStatsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val stats by statsViewModel.stats.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     var shelving by remember { mutableStateOf<Book?>(null) }
-    val selection = rememberSelection()
-    var confirmBulk by remember { mutableStateOf(false) }
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.onFilePicked(it.toString()) }
     }
@@ -110,6 +107,7 @@ fun LibraryScreen(
     val heroSpot = remember { CoverSpot() }
     LibraryContent(
         state = state,
+        stats = stats,
         snackbar = snackbar,
         scrollToShelf = scrollToShelf,
         onScrolledToShelf = onScrolledToShelf,
@@ -136,13 +134,9 @@ fun LibraryScreen(
             onSort = viewModel::onSortChange,
             onFilter = viewModel::onFilter,
             onQuery = viewModel::onQuery,
-            heroSpot = heroSpot,
-            selection = selection,
-            onDeleteChosen = { confirmBulk = true }
+            heroSpot = heroSpot
         )
     )
-    if (confirmBulk) ConfirmBooksDelete(selection, viewModel) { confirmBulk = false }
-    BackHandler(selection.active) { selection.done() }
     LibraryDialogs(state.dialog, viewModel)
     shelving?.let { ShelveBookFlow(it, state.shelves, shelves) { shelving = null } }
 }
@@ -162,27 +156,12 @@ private fun rememberLocate(viewModel: LibraryViewModel): (Book) -> Unit {
     }
 }
 
-/** Asks before select mode removes the chosen books. */
-@Composable
-private fun ConfirmBooksDelete(selection: Selection, viewModel: LibraryViewModel, onClose: () -> Unit) {
-    val n = selection.chosen.size
-    BulkDeleteDialog(
-        pluralStringResource(R.plurals.delete_books_title, n, n),
-        stringResource(R.string.delete_books_body),
-        onConfirm = {
-            viewModel.deleteBooks(selection.chosen)
-            selection.done()
-            onClose()
-        },
-        onDismiss = onClose
-    )
-}
-
 /** The library as in the mock: header, chips, "Continue reading" and a shelf row per shelf, on the app background. */
 @Composable
 fun LibraryContent(
     state: LibraryUiState,
     snackbar: SnackbarHostState,
+    stats: LibraryStats = LibraryStats(),
     actions: LibraryActions,
     scrollToShelf: Long? = null,
     onScrolledToShelf: () -> Unit = {}
@@ -211,6 +190,7 @@ fun LibraryContent(
             item(key = "header") {
                 LibraryHeader(
                     state = state,
+                    stats = stats,
                     searching = searching,
                     onSearch = {
                         searching = !searching
@@ -338,6 +318,4 @@ internal fun LibraryMessage.text(context: android.content.Context): String = whe
     LibraryMessage.RelinkFailed -> context.getString(R.string.msg_relink_failed)
 
     is LibraryMessage.Deleted -> context.getString(R.string.msg_deleted, title)
-
-    is LibraryMessage.DeletedMany -> context.resources.getQuantityString(R.plurals.msg_deleted_many, count, count)
 }

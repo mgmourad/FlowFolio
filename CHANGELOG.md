@@ -162,6 +162,13 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     titles in the display face, bold and centred; on a narrow screen the library header keeps "Library" on one line,
     the count on two lines and the buttons under it; buttons and chips off glass carry a faint accent ring; a shelf's
     "N books ›" is a bold shaded pill; the tab bar's tabs share its width and their labels shrink to fit one line.
+- Owner's batch of 2026-10-23: no select mode on the Library (bulk deletion was too easy by accident; shelf pages keep
+  it); elsewhere the selection bar takes a row of its own under the title, so the title no longer collapses on the
+  cover screen, and Select all turns into Unselect all. The library header lists books, books in progress, bookmarks,
+  annotations and reading time, each after its glyph (new Hourglass and Stopwatch glyphs; `LibraryStatsViewModel`).
+  Details: the top fade's blur eases out in bands and is lighter over the cover's backdrop; "Add to shelf" shows a
+  shelf; a sideways swipe moves between the tabs; bigger play triangles on Continue and Resume. Folded, the reader's
+  top bar puts the whole book title on its own centred row above Back and the tools.
 - Owner's follow-ups (ADR-0035, 2026-10-23): the edge fades blur only behind the system bars and the top one ends
   closer to them, clear of the titles; in the reader a fade in the paper's colour lies behind the top bar while it shows.
   Annotations name the section they come from by page: a stray outline entry listed late (University Physics' "Blank

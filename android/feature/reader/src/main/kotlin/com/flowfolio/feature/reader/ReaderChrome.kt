@@ -11,7 +11,9 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -23,7 +25,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -32,6 +37,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
@@ -39,6 +45,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -74,6 +81,8 @@ internal fun BoxScope.ReaderChrome(
     bottomBar: @Composable () -> Unit
 ) {
     val slide = tween<IntOffset>(Motion.SLOW_MS, easing = Motion.EaseOut)
+    val density = LocalDensity.current
+    var barHeight by remember { mutableStateOf(0.dp) }
     // A soft, blurred fade in the paper's colour behind the top bar while it shows, so its buttons never sit on the
     // book's text (owner, 2026-10-23). It fades rather than slides, and stays solid behind the buttons.
     AnimatedVisibility(
@@ -83,8 +92,9 @@ internal fun BoxScope.ReaderChrome(
         exit = fadeOut(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut))
     ) {
         val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
-        val status = with(LocalDensity.current) { WindowInsets.statusBars.getTop(this).toDp() }
-        val solid = status + (if (wide) BIG_BUTTON else FOLDED_BUTTON) + BAR_VERTICAL_PADDING * 2
+        val status = with(density) { WindowInsets.statusBars.getTop(this).toDp() }
+        val solid = barHeight.takeIf { it > 0.dp }
+            ?: (status + (if (wide) BIG_BUTTON else FOLDED_BUTTON) + BAR_VERTICAL_PADDING * 2)
         val total = solid + TOP_FADE_TAIL
         EdgeFade(Modifier, total, state.tone.paper, fromTop = true, hold = solid / total)
     }
@@ -95,7 +105,15 @@ internal fun BoxScope.ReaderChrome(
         exit = slideOutVertically(slide) { -it * 2 } + fadeOut(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut))
     ) {
         // Each time the bars show, their buttons fall into place one after another (ADR-0034).
-        ScreenEntrance(holdForLandings = false) { TopBar(state.title, mark, actions, reflowable = state.reflowable) }
+        ScreenEntrance(holdForLandings = false) {
+            TopBar(
+                state.title,
+                mark,
+                actions,
+                reflowable = state.reflowable,
+                modifier = Modifier.onSizeChanged { barHeight = with(density) { it.height.toDp() } }
+            )
+        }
     }
     AnimatedVisibility(
         controlsVisible,
@@ -109,59 +127,80 @@ internal fun BoxScope.ReaderChrome(
     if (!controlsVisible && state.turn != PageTurn.SCROLL) PageNumber(state, navigation.labels)
 }
 
-/** `.r-top`: Back, the title, and the reading tools, each on glass. */
+/**
+ * `.r-top`: Back, the title, and the reading tools, each on glass. Unfolded, one row with the title beside Back
+ * (owner, 2026-10-18). Folded, the whole title has a centred row of its own above Back and the tools (owner,
+ * 2026-10-23), which leaves the second row room for the tools EPUBs will gain.
+ */
 @Composable
-private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, reflowable: Boolean) {
-    // Unfolded, the title sits beside Back at the top left (owner, 2026-10-18); folded, it is centred.
+private fun TopBar(
+    title: String,
+    mark: ChromeMark,
+    actions: ChromeActions,
+    reflowable: Boolean,
+    modifier: Modifier = Modifier
+) {
     val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
     // A third larger than the app's usual 42 dp for easy reach (owner, 2026-10-22); folded, a little less.
     val button = if (wide) BIG_BUTTON else FOLDED_BUTTON
-    val glyph = button * GLYPH_SHARE
-    Row(
-        Modifier
+    Column(
+        modifier
             .fillMaxWidth()
             .statusBarsPadding()
             .padding(horizontal = BAR_INSET, vertical = BAR_VERTICAL_PADDING),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+        verticalArrangement = Arrangement.spacedBy(BAR_ROW_GAP)
     ) {
-        FlowFolioIconButton(onClick = actions.onBack, Modifier.reveal(0), glass = true, size = button) {
-            FlowFolioGlyph(
-                Glyph.Back,
-                stringResource(R.string.reader_back),
-                color = FlowFolio.palette.text,
-                size = glyph
-            )
-        }
-        TitlePill(title, wide, Modifier.weight(1f).reveal(1))
-        val contents = Modifier.testTag(ReaderTestTags.CONTENTS).reveal(2)
-        FlowFolioIconButton({ actions.onPanel(Panel.CONTENTS) }, contents, glass = true, size = button) {
-            FlowFolioGlyph(Glyph.Contents, stringResource(R.string.reader_contents), size = glyph)
-        }
-        val goTo = Modifier.testTag(ReaderTestTags.GO_TO).reveal(3)
-        FlowFolioIconButton({ actions.onPanel(Panel.GO_TO) }, goTo, glass = true, size = button) {
-            FlowFolioGlyph(Glyph.GoTo, stringResource(R.string.reader_go_to), size = glyph)
-        }
-        // Highlights and ribbons are PDF-only until EPUB annotations (Phase 2 milestone 4).
-        if (!reflowable) {
-            val notes = Modifier.testTag(ReaderTestTags.ANNOTATIONS).reveal(4)
-            FlowFolioIconButton({ actions.onPanel(Panel.ANNOTATIONS) }, notes, glass = true, size = button) {
-                FlowFolioGlyph(Glyph.Highlight, stringResource(R.string.reader_annotations), size = glyph)
-            }
-        }
-        val settings = Modifier.testTag(ReaderTestTags.SETTINGS).reveal(5)
-        FlowFolioIconButton({ actions.onPanel(Panel.SETTINGS) }, settings, glass = true, size = button) {
-            Text(
-                stringResource(R.string.reader_settings_button),
-                style = FlowFolioType.button.copy(
-                    fontSize = (SETTINGS_TEXT_SP * button.value / BASE_BUTTON.value).sp,
-                    fontFamily = FlowFolioType.heroTitle.fontFamily
+        if (!wide) TitlePill(title, wide = false, Modifier.fillMaxWidth().reveal(0))
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            FlowFolioIconButton(onClick = actions.onBack, Modifier.reveal(1), glass = true, size = button) {
+                FlowFolioGlyph(
+                    Glyph.Back,
+                    stringResource(R.string.reader_back),
+                    color = FlowFolio.palette.text,
+                    size = button * GLYPH_SHARE
                 )
-                    .merge(FlowFolio.title)
-            )
+            }
+            if (wide) TitlePill(title, wide = true, Modifier.weight(1f).reveal(1)) else Spacer(Modifier.weight(1f))
+            TopTools(mark, actions, reflowable, button)
         }
-        if (!reflowable) Box(Modifier.reveal(6)) { BookmarkButton(mark, actions, button) }
     }
+}
+
+/** Contents, Go to page, annotations, "Aa" and the ribbon, falling in one after another (ADR-0034). */
+@Composable
+private fun TopTools(mark: ChromeMark, actions: ChromeActions, reflowable: Boolean, button: Dp) {
+    val glyph = button * GLYPH_SHARE
+    val contents = Modifier.testTag(ReaderTestTags.CONTENTS).reveal(2)
+    FlowFolioIconButton({ actions.onPanel(Panel.CONTENTS) }, contents, glass = true, size = button) {
+        FlowFolioGlyph(Glyph.Contents, stringResource(R.string.reader_contents), size = glyph)
+    }
+    val goTo = Modifier.testTag(ReaderTestTags.GO_TO).reveal(3)
+    FlowFolioIconButton({ actions.onPanel(Panel.GO_TO) }, goTo, glass = true, size = button) {
+        FlowFolioGlyph(Glyph.GoTo, stringResource(R.string.reader_go_to), size = glyph)
+    }
+    // Highlights and ribbons are PDF-only until EPUB annotations (Phase 2 milestone 4).
+    if (!reflowable) {
+        val notes = Modifier.testTag(ReaderTestTags.ANNOTATIONS).reveal(4)
+        FlowFolioIconButton({ actions.onPanel(Panel.ANNOTATIONS) }, notes, glass = true, size = button) {
+            FlowFolioGlyph(Glyph.Highlight, stringResource(R.string.reader_annotations), size = glyph)
+        }
+    }
+    val settings = Modifier.testTag(ReaderTestTags.SETTINGS).reveal(5)
+    FlowFolioIconButton({ actions.onPanel(Panel.SETTINGS) }, settings, glass = true, size = button) {
+        Text(
+            stringResource(R.string.reader_settings_button),
+            style = FlowFolioType.button.copy(
+                fontSize = (SETTINGS_TEXT_SP * button.value / BASE_BUTTON.value).sp,
+                fontFamily = FlowFolioType.heroTitle.fontFamily
+            )
+                .merge(FlowFolio.title)
+        )
+    }
+    if (!reflowable) Box(Modifier.reveal(6)) { BookmarkButton(mark, actions, button) }
 }
 
 /** The book's title on glass, beside Back (unfolded) or centred (folded). */
@@ -171,7 +210,8 @@ private fun TitlePill(title: String, wide: Boolean, modifier: Modifier) {
         Text(
             title,
             style = FlowFolioType.rowLabel.copy(fontSize = 13.sp).merge(FlowFolio.item),
-            maxLines = 1,
+            // Folded, the title has its own row and may take two lines to show in full.
+            maxLines = if (wide) 1 else 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
             modifier = Modifier
@@ -251,6 +291,7 @@ private const val CENTRE_ZONE = 0.4f
 private val BAR_INSET = 14.dp
 private val BAR_VERTICAL_PADDING = 8.dp
 private val TOP_FADE_TAIL = 36.dp
+private val BAR_ROW_GAP = 10.dp
 private val PAGE_MARGIN = 32.dp
 private val FOOTER_MARGIN = 14.dp
 private val TITLE_MAX_WIDTH = 520.dp

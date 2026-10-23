@@ -148,7 +148,7 @@ fun ShelfPageScreen(
     BookPromptDialogs(prompt, state, viewModel, shelvesVm) { prompt = null }
 }
 
-/** Asks before select mode removes the chosen books from the library (as on the Library tab). */
+/** Asks before select mode removes the chosen books from the library. */
 @Composable
 private fun ConfirmShelfBooksDelete(selection: Selection, viewModel: ShelfPageViewModel, onClose: () -> Unit) {
     val n = selection.chosen.size
@@ -223,10 +223,12 @@ internal fun ShelfPageContent(state: ShelfPageUiState, onBack: () -> Unit, actio
         bottom = insets.calculateBottomPadding() + 24.dp
     )
     val header: @Composable () -> Unit = {
-        ShelfPageHeader(state, view, { view = it }, onBack) {
-            actions.selection?.let { selection ->
-                SelectControls(selection, state.items.map { it.book.id }, actions.onDeleteChosen)
+        ShelfPageHeader(state, view, { view = it }, onBack, selectionRow = {
+            actions.selection?.let {
+                SelectionRow(it, state.items.map { item -> item.book.id }, actions.onDeleteChosen)
             }
+        }) {
+            actions.selection?.let { SelectControls(it, state.items.map { item -> item.book.id }) }
         }
     }
     if (view == 0) {
@@ -263,6 +265,7 @@ private fun ShelfPageHeader(
     view: Int,
     onView: (Int) -> Unit,
     onBack: () -> Unit,
+    selectionRow: @Composable () -> Unit,
     select: @Composable () -> Unit
 ) {
     val name = state.shelf?.name
@@ -298,6 +301,7 @@ private fun ShelfPageHeader(
                 modifier = Modifier.testTag(LibraryTestTags.SHELF_VIEW)
             )
         }
+        selectionRow()
     }
 }
 

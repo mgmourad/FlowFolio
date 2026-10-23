@@ -178,14 +178,10 @@ private fun BookmarksHeader(state: BookmarksUiState, actions: BookmarkActions, m
                 style = FlowFolioType.screenTitle.merge(FlowFolio.title),
                 modifier = Modifier.weight(1f)
             )
-            actions.selection?.let { selection ->
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SelectControls(selection, state.items.map { it.bookmark.id.toString() }, actions.onDeleteChosen)
-                }
-            }
+            actions.selection?.let { SelectControls(it, state.items.map { item -> item.bookmark.id.toString() }) }
+        }
+        actions.selection?.let {
+            SelectionRow(it, state.items.map { item -> item.bookmark.id.toString() }, actions.onDeleteChosen)
         }
         val book = state.book
         if (book != null) {

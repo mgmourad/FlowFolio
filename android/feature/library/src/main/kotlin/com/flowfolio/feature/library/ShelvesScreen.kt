@@ -174,8 +174,17 @@ internal fun ShelvesContent(
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
-            ShelvesHeader(onNew, Modifier.reveal(0)) {
-                SelectControls(selection, state.cards.map { it.shelf.id.toString() }, onDeleteChosen)
+            val keys = state.cards.map { it.shelf.id.toString() }
+            Column(Modifier.reveal(0)) {
+                ShelvesHeader {
+                    // New shelf steps aside with Select while choosing.
+                    SelectControls(selection, keys) {
+                        FlowFolioIconButton(onClick = onNew, modifier = Modifier.testTag(LibraryTestTags.ADD_SHELF)) {
+                            FlowFolioGlyph(Glyph.Add, contentDescription = stringResource(R.string.shelf_new))
+                        }
+                    }
+                }
+                SelectionRow(selection, keys, onDeleteChosen)
             }
         }
         if (!state.loading) {
@@ -193,9 +202,9 @@ internal fun ShelvesContent(
 }
 
 @Composable
-private fun ShelvesHeader(onNew: () -> Unit, modifier: Modifier, select: @Composable () -> Unit) {
+private fun ShelvesHeader(select: @Composable () -> Unit) {
     Row(
-        modifier.fillMaxWidth().padding(start = 4.dp, top = 10.dp, bottom = 6.dp),
+        Modifier.fillMaxWidth().padding(start = 4.dp, top = 10.dp, bottom = 6.dp),
         verticalAlignment = Alignment.Bottom
     ) {
         Column(Modifier.weight(1f)) {
@@ -206,12 +215,7 @@ private fun ShelvesHeader(onNew: () -> Unit, modifier: Modifier, select: @Compos
                 modifier = Modifier.padding(top = 6.dp)
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            FlowFolioIconButton(onClick = onNew, modifier = Modifier.testTag(LibraryTestTags.ADD_SHELF)) {
-                FlowFolioGlyph(Glyph.Add, contentDescription = stringResource(R.string.shelf_new))
-            }
-            select()
-        }
+        select()
     }
 }
 
