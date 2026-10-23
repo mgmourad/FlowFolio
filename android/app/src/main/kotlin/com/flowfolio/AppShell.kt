@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -43,6 +44,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
+import androidx.compose.ui.unit.sp
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioType
@@ -141,7 +143,8 @@ private fun TabBar(selected: TopLevel, onSelect: (TopLevel) -> Unit) {
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TopLevel.entries.forEach { TabItem(it, it == selected, onSelect) }
+        // Equal shares of the bar, so the last tab never runs off its edge (owner, 2026-10-22).
+        TopLevel.entries.forEach { TabItem(it, it == selected, onSelect, Modifier.weight(1f)) }
     }
 }
 
@@ -165,7 +168,12 @@ private fun Rail(selected: TopLevel, onSelect: (TopLevel) -> Unit) {
 
 /** `.tab`: glyph over label in the hint colour; the selected tab turns title-coloured, glows and lifts (spring). */
 @Composable
-private fun TabItem(destination: TopLevel, selected: Boolean, onSelect: (TopLevel) -> Unit) {
+private fun TabItem(
+    destination: TopLevel,
+    selected: Boolean,
+    onSelect: (TopLevel) -> Unit,
+    modifier: Modifier = Modifier.width(TAB_WIDTH)
+) {
     val lift by animateFloatAsState(
         if (selected) 1f else 0f,
         tween(Motion.SPRING_MS, easing = Motion.Spring),
@@ -174,8 +182,7 @@ private fun TabItem(destination: TopLevel, selected: Boolean, onSelect: (TopLeve
     val style = if (selected) FlowFolio.title else FlowFolio.hint
     val color = if (selected) FlowFolio.palette.title else FlowFolio.palette.hint
     Column(
-        Modifier
-            .width(TAB_WIDTH)
+        modifier
             .selectable(
                 selected = selected,
                 interactionSource = remember { MutableInteractionSource() },
@@ -202,7 +209,14 @@ private fun TabItem(destination: TopLevel, selected: Boolean, onSelect: (TopLeve
                 compositingStrategy = CompositingStrategy.Offscreen
             }
         )
-        Text(stringResource(destination.label), style = FlowFolioType.tab.merge(style))
+        // One line, made smaller when the system's font size would not fit it (long labels on the cover screen).
+        Text(
+            stringResource(destination.label),
+            style = FlowFolioType.tab.merge(style),
+            maxLines = 1,
+            softWrap = false,
+            autoSize = TextAutoSize.StepBased(minFontSize = TAB_MIN_SP, maxFontSize = FlowFolioType.tab.fontSize)
+        )
     }
 }
 
@@ -225,6 +239,7 @@ private val CHROME_INSET = 14.dp
 private val RAIL_WIDTH = 84.dp
 private val RAIL_GAP = 48.dp
 private val TAB_WIDTH = 70.dp
+private val TAB_MIN_SP = 8.sp
 private val TAB_GAP = 4.dp
 private val TAB_GLYPH = 23.dp
 private val TAB_LIFT = 2.dp

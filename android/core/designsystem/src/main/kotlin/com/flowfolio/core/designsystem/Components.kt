@@ -83,11 +83,8 @@ fun FlowFolioCard(
 fun FlowFolioChip(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val p = FlowFolio.palette
     val shape = RoundedCornerShape(50)
-    val ring = if (selected) {
-        Modifier.ringOutline(shape, p.title.copy(alpha = 0.6f))
-    } else {
-        Modifier
-    }
+    // Unselected chips keep a faint ring in the accent, so they stand out from the page (owner, 2026-10-22).
+    val ring = Modifier.ringOutline(shape, p.title.copy(alpha = if (selected) 0.6f else RING_ALPHA))
     Box(
         modifier
             .card(shape)
@@ -136,7 +133,12 @@ fun FlowFolioIconButton(
     content: @Composable BoxScope.() -> Unit
 ) {
     val source = remember { MutableInteractionSource() }
-    val surface = if (glass) Modifier.glass(CircleShape) else Modifier.card(CircleShape)
+    // Off glass, a faint ring in the accent sets the button off from the page (owner, 2026-10-22).
+    val surface = if (glass) {
+        Modifier.glass(CircleShape)
+    } else {
+        Modifier.card(CircleShape).ringOutline(CircleShape, FlowFolio.palette.title.copy(alpha = RING_ALPHA))
+    }
     Box(
         modifier
             .pressScale(source, ICON_PRESSED)
@@ -210,3 +212,6 @@ fun FlowFolioRow(modifier: Modifier = Modifier, content: @Composable RowScope.()
 private const val PRESS_MS = 250
 private const val ICON_PRESSED = 0.9f
 private const val BUTTON_PRESSED = 0.94f
+
+/** The faint accent ring around buttons and chips off glass. */
+private const val RING_ALPHA = 0.28f

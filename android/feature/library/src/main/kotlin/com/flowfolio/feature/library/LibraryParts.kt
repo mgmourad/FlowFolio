@@ -1,6 +1,7 @@
 package com.flowfolio.feature.library
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.snapping.SnapPosition
@@ -9,6 +10,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
@@ -33,6 +36,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -42,6 +46,7 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -73,7 +78,10 @@ import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.pageLabel
 import com.flowfolio.core.model.printedPages
 
-/** `.hdr`: "Library", the count line, and search, sort and import. */
+/**
+ * `.hdr`: "Library", the count line, and search, sort, import and select. On a narrow screen (the cover screen) the
+ * buttons go under the title, which keeps its one line, and the count takes two lines (owner, 2026-10-22).
+ */
 @Composable
 internal fun LibraryHeader(
     state: LibraryUiState,
@@ -82,43 +90,71 @@ internal fun LibraryHeader(
     actions: LibraryActions,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier.fillMaxWidth().padding(start = 22.dp, end = 18.dp, top = 10.dp, bottom = 6.dp),
-        verticalAlignment = Alignment.Bottom
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.library_title), style = FlowFolioType.screenTitle.merge(FlowFolio.title))
+    BoxWithConstraints(modifier.fillMaxWidth().padding(start = 22.dp, end = 18.dp, top = 10.dp, bottom = 6.dp)) {
+        val narrow = maxWidth < NARROW_HEADER
+        val title = @Composable {
+            Text(
+                stringResource(R.string.library_title),
+                style = FlowFolioType.screenTitle.merge(FlowFolio.title),
+                maxLines = 1,
+                softWrap = false
+            )
             if (!state.libraryEmpty) {
                 val books = pluralStringResource(R.plurals.book_count, state.totalCount, state.totalCount)
-                Text(
-                    stringResource(R.string.library_sub, books, state.inProgressCount),
-                    style = FlowFolioType.sub.merge(FlowFolio.hint),
-                    modifier = Modifier.padding(top = 6.dp)
-                )
+                val count = if (narrow) {
+                    books + "\n" + stringResource(R.string.library_in_progress, state.inProgressCount)
+                } else {
+                    stringResource(R.string.library_sub, books, state.inProgressCount)
+                }
+                Text(count, style = FlowFolioType.sub.merge(FlowFolio.hint), modifier = Modifier.padding(top = 6.dp))
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            val selection = actions.selection
-            if (selection != null && selection.active) {
-                SelectControls(selection, state.items.map { it.book.id }, actions.onDeleteChosen)
-                return@Row
+        val buttons = @Composable { HeaderButtons(state, searching, onSearch, actions) }
+        if (narrow) {
+            Column(Modifier.fillMaxWidth()) {
+                title()
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
+                    verticalAlignment = Alignment.CenterVertically
+                ) { buttons() }
             }
-            if (!state.libraryEmpty) {
-                FlowFolioIconButton(onClick = onSearch, modifier = Modifier.testTag(LibraryTestTags.SEARCH)) {
-                    FlowFolioGlyph(
-                        Glyph.Search,
-                        contentDescription = stringResource(R.string.action_search),
-                        color = if (searching) FlowFolio.palette.title else FlowFolio.palette.glyph
-                    )
+        } else {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                Column(Modifier.weight(1f)) { title() }
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    buttons()
                 }
-                SortMenu(state.sort, actions.onSort)
             }
-            FlowFolioIconButton(onClick = actions.onImport, modifier = Modifier.testTag(LibraryTestTags.IMPORT)) {
-                FlowFolioGlyph(Glyph.Add, contentDescription = stringResource(R.string.action_import))
-            }
-            if (selection != null) SelectControls(selection, state.items.map { it.book.id }, actions.onDeleteChosen)
         }
     }
+}
+
+/** Search, sort, import and Select; while selecting, the selection's own controls instead. */
+@Composable
+private fun HeaderButtons(state: LibraryUiState, searching: Boolean, onSearch: () -> Unit, actions: LibraryActions) {
+    val selection = actions.selection
+    if (selection != null && selection.active) {
+        SelectControls(selection, state.items.map { it.book.id }, actions.onDeleteChosen)
+        return
+    }
+    if (!state.libraryEmpty) {
+        FlowFolioIconButton(onClick = onSearch, modifier = Modifier.testTag(LibraryTestTags.SEARCH)) {
+            FlowFolioGlyph(
+                Glyph.Search,
+                contentDescription = stringResource(R.string.action_search),
+                color = if (searching) FlowFolio.palette.title else FlowFolio.palette.glyph
+            )
+        }
+        SortMenu(state.sort, actions.onSort)
+    }
+    FlowFolioIconButton(onClick = actions.onImport, modifier = Modifier.testTag(LibraryTestTags.IMPORT)) {
+        FlowFolioGlyph(Glyph.Add, contentDescription = stringResource(R.string.action_import))
+    }
+    if (selection != null) SelectControls(selection, state.items.map { it.book.id }, actions.onDeleteChosen)
 }
 
 @Composable
@@ -201,12 +237,16 @@ internal fun ShelfRowView(row: ShelfRow, noShelves: Boolean, actions: LibraryAct
                 overflow = TextOverflow.Ellipsis
             )
             // Tapping the count opens the whole shelf (tiles or a list).
+            // A bold pill on a soft shade (owner, 2026-10-22).
             Text(
                 pluralStringResource(R.plurals.book_count, row.items.size, row.items.size) + "  ›",
-                style = FlowFolioType.sub.copy(fontSize = 13.sp).merge(FlowFolio.subItem),
+                style = FlowFolioType.sub.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold).merge(FlowFolio.subItem),
                 modifier = Modifier
+                    .padding(start = 12.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(FlowFolio.palette.subItem.copy(alpha = COUNT_SHADE))
                     .clickable { actions.onOpenShelf(row.shelf?.id ?: ShelfPageViewModel.LOOSE) }
-                    .padding(start = 12.dp, top = 6.dp, bottom = 6.dp)
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
                     .testTag(LibraryTestTags.shelfCount(row.shelf?.id ?: ShelfPageViewModel.LOOSE))
             )
         }
@@ -372,6 +412,10 @@ internal fun SortMenu(current: LibrarySort, onSort: (LibrarySort) -> Unit) {
 }
 
 internal const val HERO_ORIGIN = "hero"
+
+/** Narrower than this, the header's buttons go under the title. */
+private val NARROW_HEADER = 560.dp
+private const val COUNT_SHADE = 0.14f
 private const val LOOSE_ORIGIN = "loose"
 private const val SEARCH_FILL = 0.6f
 private const val PAGES_PER_DP = 70

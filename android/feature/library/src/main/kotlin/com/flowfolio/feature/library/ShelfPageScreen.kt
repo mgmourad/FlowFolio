@@ -47,9 +47,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.FlatCover
@@ -63,7 +65,6 @@ import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Selection
-import com.flowfolio.core.designsystem.jiggle
 import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
@@ -311,12 +312,15 @@ private fun BookTile(item: LibraryItem, actions: BookRowActions) {
             width = TILE_BOOK_WIDTH,
             height = TILE_BOOK_HEIGHT
         )
+        // In the shelf title's own face, bold and centred under the book (owner, 2026-10-22).
         Text(
             item.book.title,
-            style = FlowFolioType.rowDetail.merge(FlowFolio.item),
+            style = FlowFolioType.sectionTitle.copy(fontSize = TILE_TITLE_SP, lineHeight = TILE_TITLE_LINE)
+                .merge(FlowFolio.title),
+            textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(top = 16.dp)
+            modifier = Modifier.padding(top = 16.dp, start = 4.dp, end = 4.dp)
         )
     }
 }
@@ -330,8 +334,8 @@ private fun BookListRow(item: LibraryItem, actions: BookRowActions) {
     val book = item.book
     val selection = actions.selection
     if (selection != null && selection.active) {
-        // Select mode: the row jiggles and a tap chooses it; no swiping.
-        Box(Modifier.jiggle(true, book.id).testTag(LibraryTestTags.row(book.id))) {
+        // Select mode: a tap chooses the row (lists never jiggle; owner, 2026-10-22); no swiping.
+        Box(Modifier.testTag(LibraryTestTags.row(book.id))) {
             BookRowCard(item, actions.copy(onOpen = { selection.toggle(it.book.id) }))
             SelectionMark(selection, book.id)
         }
@@ -477,3 +481,6 @@ private val TILE_BOOK_HEIGHT = 136.dp
 private val ACTION_WIDTH: Dp = 84.dp
 private val ROW_COVER_WIDTH = 48.dp
 private val ROW_COVER_HEIGHT = 66.dp
+
+private val TILE_TITLE_SP = 15.sp
+private val TILE_TITLE_LINE = 19.sp
