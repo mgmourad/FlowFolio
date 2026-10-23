@@ -22,6 +22,9 @@ interface ShelfDao {
     @Query("UPDATE shelves SET name = :name WHERE id = :id")
     suspend fun rename(id: Long, name: String)
 
+    @Query("UPDATE shelves SET color = :color WHERE id = :id")
+    suspend fun setColor(id: Long, color: String?)
+
     @Query("DELETE FROM shelves WHERE id = :id")
     suspend fun delete(id: Long)
 

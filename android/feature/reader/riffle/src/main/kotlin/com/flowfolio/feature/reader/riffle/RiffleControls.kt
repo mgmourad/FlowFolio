@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -57,25 +58,31 @@ internal fun NudgeArrow(state: RiffleScrubberState, events: RiffleEvents, left: 
     val back = if (state.book.rightToLeft) 1 else -1
     val step = if (left) back else -back
     val label = if (step < 0) R.string.riffle_previous else R.string.riffle_next
-    Arrow(if (left) "‹" else "›", stringResource(label)) {
+    // Level with the middle of the page block, not of the whole strip (which also holds the labels and the ribbon).
+    val level = Modifier.offset {
+        val g = state.geometry
+        IntOffset(0, if (g == null) 0 else ((g.top + g.bottom) / 2 - g.height / 2).toInt())
+    }
+    Arrow(if (left) "‹" else "›", stringResource(label), level) {
         events.onInteraction()
         events.onGoTo((state.currentUnit + step).coerceIn(0, state.book.unitCount - 1))
     }
 }
 
 @Composable
-private fun Arrow(glyph: String, label: String, onClick: () -> Unit) {
+private fun Arrow(glyph: String, label: String, modifier: Modifier, onClick: () -> Unit) {
     val palette = FlowFolio.palette
     Box(
-        Modifier
-            .size(48.dp)
+        modifier
+            .size(ARROW_TOUCH)
             .clickable(onClick = onClick)
             .semantics { contentDescription = label },
         contentAlignment = Alignment.Center
     ) {
+        // Twice the first design's 30 dp (owner, 2026-10-22).
         Box(
             Modifier
-                .size(30.dp)
+                .size(ARROW_DISC)
                 .background(palette.surface2, CircleShape)
                 .border(1.dp, palette.edge, CircleShape),
             contentAlignment = Alignment.Center
@@ -83,7 +90,7 @@ private fun Arrow(glyph: String, label: String, onClick: () -> Unit) {
             Text(
                 glyph,
                 color = palette.item,
-                style = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                style = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight.Bold, fontSize = 36.sp)
             )
         }
     }
@@ -193,5 +200,7 @@ private fun numbersOnly(book: BookGeometry): Boolean =
     (0 until minOf(book.pageCount, FRONT_MATTER_PAGES)).all { book.label(it).all(Char::isDigit) }
 
 private const val MAX_LABEL = 12
+private val ARROW_TOUCH = 64.dp
+private val ARROW_DISC = 60.dp
 private const val FIELD_HEIGHT_FRACTION = 0.22f
 private const val FRONT_MATTER_PAGES = 40

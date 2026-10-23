@@ -1,10 +1,13 @@
 package com.flowfolio.feature.library
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -54,7 +57,11 @@ import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalChromePadding
+import com.flowfolio.core.designsystem.Selection
 import com.flowfolio.core.designsystem.chromeStart
+import com.flowfolio.core.designsystem.color
+import com.flowfolio.core.designsystem.jiggle
+import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.Shelf
@@ -73,25 +80,38 @@ private sealed interface ShelfEdit {
 fun ShelvesScreen(onOpenShelf: (Long) -> Unit, viewModel: ShelvesViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var edit by remember { mutableStateOf<ShelfEdit?>(null) }
+    val selection = rememberSelection()
+    var confirmBulk by remember { mutableStateOf(false) }
     ShelvesContent(
         state = state,
         onOpen = onOpenShelf,
         onNew = { edit = ShelfEdit.New },
         onRename = { edit = ShelfEdit.Rename(it) },
-        onDelete = { edit = ShelfEdit.Delete(it) }
+        onDelete = { edit = ShelfEdit.Delete(it) },
+        selection = selection,
+        onDeleteChosen = { confirmBulk = true }
     )
+    if (confirmBulk) ConfirmShelvesDelete(selection, viewModel) { confirmBulk = false }
+    BackHandler(selection.active) { selection.done() }
     when (val e = edit) {
         null -> Unit
 
-        ShelfEdit.New -> ShelfNameDialog(stringResource(R.string.shelf_new), "", onConfirm = {
-            viewModel.create(it)
+        ShelfEdit.New -> ShelfDialog(stringResource(R.string.shelf_new), "", null, onConfirm = { name, color ->
+            viewModel.create(name, color = color)
             edit = null
         }, onDismiss = { edit = null })
 
-        is ShelfEdit.Rename -> ShelfNameDialog(stringResource(R.string.shelf_rename), e.shelf.name, onConfirm = {
-            viewModel.rename(e.shelf.id, it)
-            edit = null
-        }, onDismiss = { edit = null })
+        is ShelfEdit.Rename -> ShelfDialog(
+            stringResource(R.string.shelf_edit),
+            e.shelf.name,
+            e.shelf.color,
+            onConfirm = { name, color ->
+                viewModel.rename(e.shelf.id, name)
+                viewModel.setColor(e.shelf.id, color)
+                edit = null
+            },
+            onDismiss = { edit = null }
+        )
 
         is ShelfEdit.Delete -> FlowFolioAlertDialog(
             onDismissRequest = { edit = null },
@@ -112,13 +132,31 @@ fun ShelvesScreen(onOpenShelf: (Long) -> Unit, viewModel: ShelvesViewModel = hil
     }
 }
 
+/** Asks before select mode removes the chosen shelves (their books stay). */
+@Composable
+private fun ConfirmShelvesDelete(selection: Selection, viewModel: ShelvesViewModel, onClose: () -> Unit) {
+    val n = selection.chosen.size
+    BulkDeleteDialog(
+        pluralStringResource(R.plurals.delete_shelves_title, n, n),
+        stringResource(R.string.delete_shelves_body),
+        onConfirm = {
+            selection.chosen.forEach { viewModel.delete(it.toLong()) }
+            selection.done()
+            onClose()
+        },
+        onDismiss = onClose
+    )
+}
+
 @Composable
 internal fun ShelvesContent(
     state: ShelvesUiState,
     onOpen: (Long) -> Unit,
     onNew: () -> Unit,
     onRename: (Shelf) -> Unit,
-    onDelete: (Shelf) -> Unit
+    onDelete: (Shelf) -> Unit,
+    selection: Selection = rememberSelection(),
+    onDeleteChosen: () -> Unit = {}
 ) {
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     val chrome = LocalChromePadding.current
@@ -134,18 +172,27 @@ internal fun ShelvesContent(
         horizontalArrangement = Arrangement.spacedBy(14.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        item(span = { GridItemSpan(maxLineSpan) }) { ShelvesHeader(onNew, Modifier.reveal(0)) }
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            ShelvesHeader(onNew, Modifier.reveal(0)) {
+                SelectControls(selection, state.cards.map { it.shelf.id.toString() }, onDeleteChosen)
+            }
+        }
         if (!state.loading) {
             items(state.cards, key = { it.shelf.id }) { card ->
-                ShelfCardView(card, onOpen, onRename, onDelete, Modifier.reveal(1))
+                val key = card.shelf.id.toString()
+                val open: (Long) -> Unit = { if (selection.active) selection.toggle(key) else onOpen(it) }
+                Box(Modifier.reveal(1).jiggle(selection.active, key)) {
+                    ShelfCardView(card, open, onRename, onDelete, Modifier, menuEnabled = !selection.active)
+                    SelectionMark(selection, key)
+                }
             }
-            item(key = "new") { NewShelfCard(onNew, Modifier.reveal(2)) }
+            if (!selection.active) item(key = "new") { NewShelfCard(onNew, Modifier.reveal(2)) }
         }
     }
 }
 
 @Composable
-private fun ShelvesHeader(onNew: () -> Unit, modifier: Modifier) {
+private fun ShelvesHeader(onNew: () -> Unit, modifier: Modifier, select: @Composable () -> Unit) {
     Row(
         modifier.fillMaxWidth().padding(start = 4.dp, top = 10.dp, bottom = 6.dp),
         verticalAlignment = Alignment.Bottom
@@ -158,13 +205,19 @@ private fun ShelvesHeader(onNew: () -> Unit, modifier: Modifier) {
                 modifier = Modifier.padding(top = 6.dp)
             )
         }
-        FlowFolioIconButton(onClick = onNew, modifier = Modifier.testTag(LibraryTestTags.ADD_SHELF)) {
-            FlowFolioGlyph(Glyph.Add, contentDescription = stringResource(R.string.shelf_new))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            FlowFolioIconButton(onClick = onNew, modifier = Modifier.testTag(LibraryTestTags.ADD_SHELF)) {
+                FlowFolioGlyph(Glyph.Add, contentDescription = stringResource(R.string.shelf_new))
+            }
+            select()
         }
     }
 }
 
-/** `.col`: up to three books fanned out, the shelf's name and how many books it holds. */
+/**
+ * `.col`: up to five books fanned out, the shelf's name and how many books it holds, outlined in the shelf's colour
+ * (owner, 2026-10-22).
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ShelfCardView(
@@ -172,15 +225,17 @@ private fun ShelfCardView(
     onOpen: (Long) -> Unit,
     onRename: (Shelf) -> Unit,
     onDelete: (Shelf) -> Unit,
-    modifier: Modifier
+    modifier: Modifier,
+    menuEnabled: Boolean = true
 ) {
     var menu by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(24.dp)
-    Box(modifier.clip(shape)) {
+    val outline = card.shelf.color.color
+    Box(modifier.clip(shape).border(OUTLINE, outline, shape)) {
         FlowFolioCard(
             Modifier
                 .fillMaxWidth()
-                .combinedClickable(onClick = { onOpen(card.shelf.id) }, onLongClick = { menu = true })
+                .combinedClickable(onClick = { onOpen(card.shelf.id) }, onLongClick = { if (menuEnabled) menu = true })
                 .testTag(LibraryTestTags.shelf(card.shelf.id)),
             radius = 24.dp,
             padding = PaddingValues(start = 14.dp, end = 14.dp, top = 16.dp, bottom = 14.dp)
@@ -202,7 +257,7 @@ private fun ShelfCardView(
         }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
             DropdownMenuItem(text = {
-                Text(stringResource(R.string.action_rename), style = FlowFolio.title)
+                Text(stringResource(R.string.action_edit), style = FlowFolio.title)
             }, onClick = {
                 menu = false
                 onRename(card.shelf)
@@ -217,20 +272,26 @@ private fun ShelfCardView(
     }
 }
 
-/** `.fan`: the books overlap, the outer two tilted (-8 and 7 degrees), the middle one in front. */
+/**
+ * `.fan`: the books overlap across the card's width, the outer ones tilted most, the middle one in front; up to five
+ * (owner, 2026-10-22; the mock fanned three).
+ */
 @Composable
 private fun Fan(books: List<Book>) {
-    Box(Modifier.fillMaxWidth().height(FAN_HEIGHT)) {
-        // Outer books first so the middle one is drawn in front (`z-index:2`).
-        FAN_ORDER.filter { it < books.size }.forEach { i ->
+    BoxWithConstraints(Modifier.fillMaxWidth().height(FAN_HEIGHT)) {
+        val n = books.size
+        val step = if (n > 1) (maxWidth - FAN_BOOK_WIDTH - FAN_EDGE * 2) / (n - 1) else 0.dp
+        val middle = (n - 1) / 2f
+        // Outer books first, so the middle one is drawn in front.
+        books.indices.sortedByDescending { kotlin.math.abs(it - middle) }.forEach { i ->
             val book = books[i]
             val cover by rememberCover(book)
             Box(
                 Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = FAN_LEFT[i], bottom = 4.dp)
+                    .padding(start = FAN_EDGE + step * i, bottom = 4.dp)
                     .graphicsLayer {
-                        rotationZ = FAN_TILT[i]
+                        rotationZ = if (n > 1) (i - middle) / middle * FAN_MAX_TILT else 0f
                         // Drawn once at rest and turned as a layer, so the shadow is not re-blurred.
                         compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
                     }
@@ -267,12 +328,12 @@ private fun NewShelfCard(onNew: () -> Unit, modifier: Modifier) {
     }
 }
 
-private const val FAN_SIZE = 3
+private const val FAN_SIZE = 5
 private val CARD_MIN = 160.dp
 private val NEW_CARD_MIN = 190.dp
 private val FAN_HEIGHT = 120.dp
 private val FAN_BOOK_WIDTH = 64.dp
 private val FAN_BOOK_HEIGHT = 94.dp
-private val FAN_LEFT = listOf(6.dp, 34.dp, 62.dp)
-private val FAN_TILT = listOf(-8f, 0f, 7f)
-private val FAN_ORDER = listOf(0, 2, 1)
+private val FAN_EDGE = 4.dp
+private const val FAN_MAX_TILT = 9f
+private val OUTLINE = 2.dp

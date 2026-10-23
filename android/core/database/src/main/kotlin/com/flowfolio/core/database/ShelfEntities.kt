@@ -11,7 +11,9 @@ import androidx.room.PrimaryKey
 data class ShelfEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
-    @ColumnInfo(name = "created_at") val createdAt: Long
+    @ColumnInfo(name = "created_at") val createdAt: Long,
+    /** A [com.flowfolio.core.model.ShelfColor] name, or null for the theme's colour. Added in schema v11. */
+    @ColumnInfo(name = "color") val color: String? = null
 )
 
 /** A book on a shelf. Removing the shelf or the book removes the row. Added in schema v3. */

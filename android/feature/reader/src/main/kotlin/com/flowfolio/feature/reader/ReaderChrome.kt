@@ -91,6 +91,9 @@ internal fun BoxScope.ReaderChrome(
 private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, reflowable: Boolean) {
     // Unfolded, the title sits beside Back at the top left (owner, 2026-10-18); folded, it is centred.
     val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
+    // Twice the usual size for easy reach (owner, 2026-10-22); folded, half as much again, so five still fit.
+    val button = if (wide) BIG_BUTTON else FOLDED_BUTTON
+    val glyph = button * GLYPH_SHARE
     Row(
         Modifier
             .fillMaxWidth()
@@ -99,47 +102,61 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, refl
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        FlowFolioIconButton(onClick = actions.onBack, glass = true) {
-            FlowFolioGlyph(Glyph.Back, stringResource(R.string.reader_back), color = FlowFolio.palette.text)
-        }
-        Box(Modifier.weight(1f), contentAlignment = if (wide) Alignment.CenterStart else Alignment.Center) {
-            Text(
-                title,
-                style = FlowFolioType.rowLabel.copy(fontSize = 13.sp).merge(FlowFolio.item),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .widthIn(max = TITLE_MAX_WIDTH)
-                    .glass(RoundedCornerShape(50))
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-                    .testTag(ReaderTestTags.TITLE)
+        FlowFolioIconButton(onClick = actions.onBack, glass = true, size = button) {
+            FlowFolioGlyph(
+                Glyph.Back,
+                stringResource(R.string.reader_back),
+                color = FlowFolio.palette.text,
+                size = glyph
             )
         }
+        TitlePill(title, wide, Modifier.weight(1f))
         val contents = Modifier.testTag(ReaderTestTags.CONTENTS)
-        FlowFolioIconButton(onClick = { actions.onPanel(Panel.CONTENTS) }, glass = true, modifier = contents) {
-            FlowFolioGlyph(Glyph.Contents, stringResource(R.string.reader_contents))
+        FlowFolioIconButton({ actions.onPanel(Panel.CONTENTS) }, contents, glass = true, size = button) {
+            FlowFolioGlyph(Glyph.Contents, stringResource(R.string.reader_contents), size = glyph)
         }
         val goTo = Modifier.testTag(ReaderTestTags.GO_TO)
-        FlowFolioIconButton(onClick = { actions.onPanel(Panel.GO_TO) }, glass = true, modifier = goTo) {
-            FlowFolioGlyph(Glyph.GoTo, stringResource(R.string.reader_go_to))
+        FlowFolioIconButton({ actions.onPanel(Panel.GO_TO) }, goTo, glass = true, size = button) {
+            FlowFolioGlyph(Glyph.GoTo, stringResource(R.string.reader_go_to), size = glyph)
         }
         // Highlights and ribbons are PDF-only until EPUB annotations (Phase 2 milestone 4).
         if (!reflowable) {
             val notes = Modifier.testTag(ReaderTestTags.ANNOTATIONS)
-            FlowFolioIconButton(onClick = { actions.onPanel(Panel.ANNOTATIONS) }, glass = true, modifier = notes) {
-                FlowFolioGlyph(Glyph.Highlight, stringResource(R.string.reader_annotations))
+            FlowFolioIconButton({ actions.onPanel(Panel.ANNOTATIONS) }, notes, glass = true, size = button) {
+                FlowFolioGlyph(Glyph.Highlight, stringResource(R.string.reader_annotations), size = glyph)
             }
         }
         val settings = Modifier.testTag(ReaderTestTags.SETTINGS)
-        FlowFolioIconButton(onClick = { actions.onPanel(Panel.SETTINGS) }, glass = true, modifier = settings) {
+        FlowFolioIconButton({ actions.onPanel(Panel.SETTINGS) }, settings, glass = true, size = button) {
             Text(
                 stringResource(R.string.reader_settings_button),
-                style = FlowFolioType.button.copy(fontSize = 16.sp, fontFamily = FlowFolioType.heroTitle.fontFamily)
+                style = FlowFolioType.button.copy(
+                    fontSize = (SETTINGS_TEXT_SP * button.value / BASE_BUTTON.value).sp,
+                    fontFamily = FlowFolioType.heroTitle.fontFamily
+                )
                     .merge(FlowFolio.title)
             )
         }
-        if (!reflowable) BookmarkButton(mark, actions)
+        if (!reflowable) BookmarkButton(mark, actions, button)
+    }
+}
+
+/** The book's title on glass, beside Back (unfolded) or centred (folded). */
+@Composable
+private fun TitlePill(title: String, wide: Boolean, modifier: Modifier) {
+    Box(modifier, contentAlignment = if (wide) Alignment.CenterStart else Alignment.Center) {
+        Text(
+            title,
+            style = FlowFolioType.rowLabel.copy(fontSize = 13.sp).merge(FlowFolio.item),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .widthIn(max = TITLE_MAX_WIDTH)
+                .glass(RoundedCornerShape(50))
+                .padding(horizontal = 16.dp, vertical = 10.dp)
+                .testTag(ReaderTestTags.TITLE)
+        )
     }
 }
 
@@ -213,3 +230,12 @@ private val PAGE_MARGIN = 32.dp
 private val FOOTER_MARGIN = 14.dp
 private val TITLE_MAX_WIDTH = 520.dp
 private val TITLE_BESIDE_BACK = 600.dp
+
+/** The reader's round buttons: twice the app's usual 42 dp unfolded (owner, 2026-10-22), 56 dp on the cover screen. */
+private val BASE_BUTTON = 42.dp
+private val BIG_BUTTON = 84.dp
+private val FOLDED_BUTTON = 56.dp
+private const val SETTINGS_TEXT_SP = 16f
+
+/** A glyph's share of its round button (24 dp in 42 dp). */
+internal const val GLYPH_SHARE = 24f / 42f

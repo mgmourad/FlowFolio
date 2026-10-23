@@ -1,5 +1,6 @@
 package com.flowfolio.feature.library
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -32,7 +33,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,6 +75,8 @@ import com.flowfolio.core.designsystem.card
 import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.color
 import com.flowfolio.core.designsystem.coverSpot
+import com.flowfolio.core.designsystem.jiggle
+import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.designsystem.softShadow
 import com.flowfolio.core.model.Book
@@ -90,6 +95,8 @@ fun BookmarksScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val opener = LocalBookOpener.current
+    val selection = rememberSelection()
+    var confirmBulk by remember { mutableStateOf(false) }
     BookmarksContent(
         state,
         BookmarkActions(
@@ -102,9 +109,25 @@ fun BookmarksScreen(
             onRecolour = viewModel::recolour,
             onRemove = viewModel::remove,
             onFilter = viewModel::setFilter,
-            onBack = onBack
+            onBack = onBack,
+            selection = selection,
+            onDeleteChosen = { confirmBulk = true }
         )
     )
+    if (confirmBulk) {
+        val n = selection.chosen.size
+        BulkDeleteDialog(
+            pluralStringResource(R.plurals.delete_ribbons_title, n, n),
+            stringResource(R.string.delete_cannot_undo),
+            onConfirm = {
+                viewModel.removeAll(selection.chosen.map(String::toLong))
+                selection.done()
+                confirmBulk = false
+            },
+            onDismiss = { confirmBulk = false }
+        )
+    }
+    BackHandler(selection.active) { selection.done() }
 }
 
 @Composable
@@ -125,7 +148,7 @@ fun BookmarksContent(state: BookmarksUiState, actions: BookmarkActions) {
             verticalArrangement = Arrangement.spacedBy(GRID_GAP),
             modifier = Modifier.fillMaxSize()
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) { BookmarksHeader(state, actions.onBack, Modifier.reveal(0)) }
+            item(span = { GridItemSpan(maxLineSpan) }) { BookmarksHeader(state, actions, Modifier.reveal(0)) }
             if (state.colours.size > 1) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     ColourFilter(state.colours, state.filter, actions.onFilter, Modifier.reveal(1))
@@ -140,15 +163,27 @@ fun BookmarksContent(state: BookmarksUiState, actions: BookmarkActions) {
 }
 
 @Composable
-private fun BookmarksHeader(state: BookmarksUiState, onBack: (() -> Unit)?, modifier: Modifier) {
+private fun BookmarksHeader(state: BookmarksUiState, actions: BookmarkActions, modifier: Modifier) {
     Column(modifier.padding(start = 4.dp, top = 10.dp, bottom = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            onBack?.let {
+            actions.onBack?.let {
                 FlowFolioIconButton(onClick = it, glass = true, modifier = Modifier.padding(end = 14.dp)) {
                     FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = FlowFolio.palette.text)
                 }
             }
-            Text(stringResource(R.string.bookmarks_title), style = FlowFolioType.screenTitle.merge(FlowFolio.title))
+            Text(
+                stringResource(R.string.bookmarks_title),
+                style = FlowFolioType.screenTitle.merge(FlowFolio.title),
+                modifier = Modifier.weight(1f)
+            )
+            actions.selection?.let { selection ->
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SelectControls(selection, state.items.map { it.bookmark.id.toString() }, actions.onDeleteChosen)
+                }
+            }
         }
         val book = state.book
         if (book != null) {
@@ -227,6 +262,16 @@ private fun ColourChip(colour: BookmarkColor, selected: Boolean, onClick: () -> 
 /** A card that slides: right for the colours, left for Remove. */
 @Composable
 private fun BookmarkRow(item: BookmarkItem, actions: BookmarkActions, uniform: Boolean) {
+    val selection = actions.selection
+    if (selection != null && selection.active) {
+        // Select mode: the card jiggles and a tap chooses it; no swiping.
+        val key = item.bookmark.id.toString()
+        Box(Modifier.jiggle(true, key).testTag(LibraryTestTags.bookmark(item.bookmark.id))) {
+            BookmarkCard(item, uniform) { selection.toggle(key) }
+            SelectionMark(selection, key)
+        }
+        return
+    }
     SwipeRow(
         startWidth = SWATCH_STRIP,
         endWidth = REMOVE_WIDTH,

@@ -3,9 +3,11 @@ package com.flowfolio.feature.library
 import android.content.Context
 import android.content.Intent
 import android.text.format.DateFormat
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -32,8 +34,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -45,7 +49,10 @@ import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.Selection
+import com.flowfolio.core.designsystem.jiggle
 import com.flowfolio.core.designsystem.marker
+import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.shareQuote
@@ -64,6 +71,8 @@ fun BookAnnotationsScreen(
     val context = LocalContext.current
     var editing by remember { mutableStateOf<Annotation?>(null) }
     val book = state.book
+    val selection = rememberSelection()
+    var confirmBulk by remember { mutableStateOf(false) }
     BookAnnotationsContent(
         state,
         onBack,
@@ -72,13 +81,34 @@ fun BookAnnotationsScreen(
             onShare = { a -> book?.let { shareAnnotation(context, a, it) } },
             onNote = { editing = it },
             onDelete = viewModel::remove
+        ),
+        selection
+    ) { confirmBulk = true }
+    if (confirmBulk) {
+        val n = selection.chosen.size
+        BulkDeleteDialog(
+            pluralStringResource(R.plurals.delete_annotations_title, n, n),
+            stringResource(R.string.delete_cannot_undo),
+            onConfirm = {
+                viewModel.removeAll(selection.chosen.map(String::toLong))
+                selection.done()
+                confirmBulk = false
+            },
+            onDismiss = { confirmBulk = false }
         )
-    )
+    }
+    BackHandler(selection.active) { selection.done() }
     editing?.let { a -> NoteDialog(a, onSave = { viewModel.setNote(a, it) }) { editing = null } }
 }
 
 @Composable
-fun BookAnnotationsContent(state: AnnotationsUiState, onBack: () -> Unit, actions: AnnotationActions) {
+fun BookAnnotationsContent(
+    state: AnnotationsUiState,
+    onBack: () -> Unit,
+    actions: AnnotationActions,
+    selection: Selection = rememberSelection(),
+    onDeleteChosen: () -> Unit = {}
+) {
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     LazyColumn(
         Modifier.fillMaxSize().testTag(LibraryTestTags.BOOK_ANNOTATIONS),
@@ -99,8 +129,15 @@ fun BookAnnotationsContent(state: AnnotationsUiState, onBack: () -> Unit, action
                     }
                     Text(
                         stringResource(R.string.annotations_title),
-                        style = FlowFolioType.screenTitle.merge(FlowFolio.title)
+                        style = FlowFolioType.screenTitle.merge(FlowFolio.title),
+                        modifier = Modifier.weight(1f)
                     )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SelectControls(selection, state.annotations.map { it.id.toString() }, onDeleteChosen)
+                    }
                 }
                 state.book?.let {
                     Text(
@@ -112,13 +149,24 @@ fun BookAnnotationsContent(state: AnnotationsUiState, onBack: () -> Unit, action
             }
         }
         items(state.annotations, key = { it.id }) { a ->
-            Row(Modifier.widthIn(max = LIST_WIDTH).fillMaxWidth()) { AnnotationRow(a, actions) }
+            Row(Modifier.widthIn(max = LIST_WIDTH).fillMaxWidth()) {
+                if (selection.active) {
+                    // Select mode: the card jiggles and a tap chooses it; no swiping.
+                    val key = a.id.toString()
+                    Box(Modifier.jiggle(true, key)) {
+                        AnnotationCard(a, state.chapters[a.id]) { selection.toggle(key) }
+                        SelectionMark(selection, key)
+                    }
+                } else {
+                    AnnotationRow(a, state.chapters[a.id], actions)
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun AnnotationRow(a: Annotation, actions: AnnotationActions) {
+private fun AnnotationRow(a: Annotation, chapter: String?, actions: AnnotationActions) {
     SwipeRow(
         startWidth = ACTION * 2,
         endWidth = ACTION,
@@ -140,19 +188,29 @@ private fun AnnotationRow(a: Annotation, actions: AnnotationActions) {
         },
         modifier = Modifier.testTag(LibraryTestTags.annotation(a.id))
     ) {
-        AnnotationCard(a) { actions.onOpen(a) }
+        AnnotationCard(a, chapter) { actions.onOpen(a) }
     }
 }
 
-/** A passage with its colour bar, the note under it, and its page and date. */
+/** The chapter, then the passage with its colour bar, the note under it, and its page and date. */
 @Composable
-private fun AnnotationCard(a: Annotation, onOpen: () -> Unit) {
+private fun AnnotationCard(a: Annotation, chapter: String?, onOpen: () -> Unit) {
     val context = LocalContext.current
     val bar = a.color.marker
     FlowFolioCard(Modifier.fillMaxWidth().clickable(onClick = onOpen), radius = 22.dp, padding = PaddingValues(16.dp)) {
         Row {
             Canvas(Modifier.size(4.dp, 56.dp)) { drawRect(bar) }
             Column(Modifier.weight(1f).padding(start = 14.dp)) {
+                // The chapter it belongs to, on top (owner, 2026-10-22).
+                chapter?.let {
+                    Text(
+                        it,
+                        style = FlowFolioType.eyebrow.merge(FlowFolio.title),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+                }
                 Text(
                     "“${a.text}”",
                     style = FlowFolioType.sub.copy(

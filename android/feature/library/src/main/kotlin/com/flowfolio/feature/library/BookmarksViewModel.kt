@@ -47,7 +47,10 @@ data class BookmarkActions(
     val onRemove: (BookmarkItem) -> Unit = {},
     val onFilter: (BookmarkColor?) -> Unit = {},
     /** Back, on a book's own Bookmarks page (none on the tab). */
-    val onBack: (() -> Unit)? = null
+    val onBack: (() -> Unit)? = null,
+    /** Select mode (owner, 2026-10-22); null where ribbons cannot be selected. */
+    val selection: com.flowfolio.core.designsystem.Selection? = null,
+    val onDeleteChosen: () -> Unit = {}
 )
 
 /**
@@ -102,6 +105,9 @@ class BookmarksViewModel @Inject constructor(
         viewModelScope.launch { bookmarks.setColor(item.bookmark.id, colour) }
 
     fun remove(item: BookmarkItem) = viewModelScope.launch { bookmarks.remove(item.bookmark.id) }
+
+    /** Select mode's Delete, after its confirmation. */
+    fun removeAll(ids: Collection<Long>) = viewModelScope.launch { ids.forEach { bookmarks.remove(it) } }
 
     /** Makes the ribbon's page the reading position, then calls [then] (to open the reader there). */
     fun open(item: BookmarkItem, then: () -> Unit) = viewModelScope.launch {

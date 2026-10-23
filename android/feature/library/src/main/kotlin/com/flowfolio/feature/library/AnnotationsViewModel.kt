@@ -10,13 +10,21 @@ import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.HighlightColor
 import com.flowfolio.core.model.LibrarySort
+import com.flowfolio.core.model.OutlineEntry
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** A book on the Annotations tab: how many highlights and notes it has, in which colours, and when last changed. */
 data class AnnotatedBook(
@@ -42,7 +50,9 @@ data class AnnotationsUiState(
     /** A book's page: that book and its annotations in page order. */
     val book: Book? = null,
     val annotations: List<Annotation> = emptyList(),
-    val total: Int = 0
+    val total: Int = 0,
+    /** The chapter (the deepest contents entry) each annotation is in, by annotation id; missing when unknown. */
+    val chapters: Map<Long, String> = emptyMap()
 )
 
 /**
@@ -58,10 +68,27 @@ class AnnotationsViewModel @Inject constructor(
 ) : ViewModel() {
     private val onlyBook: String? = saved[ARG_BOOK_ID]
 
+    /** Each annotated book's contents with their pages, read once (PDF outlines). */
+    private val outlines = MutableStateFlow<Map<String, List<OutlineEntry>>>(emptyMap())
+
+    init {
+        viewModelScope.launch {
+            repository.observeAll().map { all -> all.map { it.bookId }.toSet() }.distinctUntilChanged().collect { ids ->
+                ids.filterNot { it in outlines.value }.forEach { id -> outlines.update { it + (id to outlineOf(id)) } }
+            }
+        }
+    }
+
+    private suspend fun outlineOf(bookId: String): List<OutlineEntry> = withContext(Dispatchers.IO) {
+        runCatching { reader.open(bookId).document.use { doc -> doc.outline().filter { it.pageIndex >= 0 } } }
+            .getOrNull().orEmpty()
+    }
+
     val uiState: StateFlow<AnnotationsUiState> = combine(
         repository.observeAll(),
-        library.observeBooks(LibrarySort.RECENT)
-    ) { all, books ->
+        library.observeBooks(LibrarySort.RECENT),
+        outlines
+    ) { all, books, contents ->
         val byId = books.associateBy { it.id }
         val known = all.filter { it.bookId in byId }
         val book = onlyBook?.let { byId[it] }
@@ -83,13 +110,22 @@ class AnnotationsViewModel @Inject constructor(
                 known.filter { it.bookId == onlyBook }
                     .sortedWith(compareBy({ it.page }, { it.start }))
             },
-            total = known.size
+            total = known.size,
+            chapters = known.mapNotNull { a -> chapterOf(contents[a.bookId], a.page)?.let { a.id to it } }.toMap()
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), AnnotationsUiState())
 
     fun setNote(a: Annotation, note: String?) = viewModelScope.launch { repository.setNote(a.id, note) }
 
     fun remove(a: Annotation) = viewModelScope.launch { repository.remove(a.id) }
+
+    /** Select mode's Delete on a book's page, after its confirmation. */
+    fun removeAll(ids: Collection<Long>) = viewModelScope.launch { ids.forEach { repository.remove(it) } }
+
+    /** Select mode's Delete on the tab: every annotation of [bookIds], after its confirmation. */
+    fun removeBooks(bookIds: Collection<String>) = viewModelScope.launch {
+        repository.observeAll().first().filter { it.bookId in bookIds }.forEach { repository.remove(it.id) }
+    }
 
     /** Makes the highlight's page the reading position, then calls [then] (to open the reader there). */
     fun open(a: Annotation, then: () -> Unit) = viewModelScope.launch {
@@ -98,6 +134,10 @@ class AnnotationsViewModel @Inject constructor(
     }
 
     companion object {
+        /** The last contents entry starting at or before [page] (in reading order, so the deepest section). */
+        internal fun chapterOf(entries: List<OutlineEntry>?, page: Int): String? =
+            entries?.lastOrNull { it.pageIndex in 0..page }?.title?.takeIf { it.isNotBlank() }
+
         /** Optional: one book's annotations. */
         const val ARG_BOOK_ID = "bookId"
         private const val STOP_MS = 5_000L

@@ -13,6 +13,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import com.flowfolio.core.model.MaterialSeed
+import com.flowfolio.core.model.ShelfColor
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
@@ -176,3 +177,11 @@ private const val KAPPA = 24389.0 / 27.0
 private const val KAPPA_EPSILON = 8.0
 private const val LINEAR_LIMIT = 0.0031308
 private const val GAMUT_SLACK = 0.0005
+
+/** A shelf's colour (owner, 2026-10-22) at the tone of Material You's accents in light or dark. */
+fun ShelfColor.tint(dark: Boolean): Color = MaterialSeed.valueOf(name).swatch(dark)
+
+/** A shelf's colour in the current light or dark; null (no colour chosen) is the theme's title colour. */
+val ShelfColor?.color: Color
+    @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable
+    get() = this?.tint(FlowFolio.palette.dark) ?: FlowFolio.palette.title

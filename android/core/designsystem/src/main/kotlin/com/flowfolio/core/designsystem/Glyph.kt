@@ -62,7 +62,13 @@ enum class Glyph(internal val pathData: String, internal val stroke: Float = 2f,
     Page("M6 3h8.5L19 7.5V21H6z M14.5 3v4.5H19 M9 12h7 M9 15.5h7"),
 
     /** Three sliders: controls and sound. */
-    Sliders("M4 6h9 M17 6h3 M4 12h3 M11 12h9 M4 18h11 M19 18h1 M15 4v4 M9 10v4 M17 16v4")
+    Sliders("M4 6h9 M17 6h3 M4 12h3 M11 12h9 M4 18h11 M19 18h1 M15 4v4 M9 10v4 M17 16v4"),
+
+    /** A tick in a circle: select mode. */
+    Select("M12 3a9 9 0 1 1 0 18a9 9 0 1 1 0-18z M8 12.4l2.8 2.8L16.2 9.6"),
+
+    /** A tick: chosen. */
+    Check("M5 12.5l4.5 4.5L19 7.5", stroke = 2.6f)
 }
 
 /**

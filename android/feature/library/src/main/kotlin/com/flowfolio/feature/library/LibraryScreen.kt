@@ -1,6 +1,7 @@
 package com.flowfolio.feature.library
 
 import android.text.format.Formatter
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -40,7 +42,9 @@ import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.LocalBookOpener
 import com.flowfolio.core.designsystem.LocalChromePadding
+import com.flowfolio.core.designsystem.Selection
 import com.flowfolio.core.designsystem.chromeStart
+import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
@@ -60,13 +64,19 @@ data class LibraryActions(
     val onRename: ((Book) -> Unit)? = null,
     /** The book's ribbons; null hides the menu entry. */
     val onBookmarks: ((Book) -> Unit)? = null,
+    /** The book's highlights and notes; null hides the Continue Reading shortcut. */
+    val onAnnotations: ((Book) -> Unit)? = null,
     /** Opens a whole shelf ([ShelfPageViewModel.LOOSE] for the books on no shelf). */
     val onOpenShelf: (Long) -> Unit = {},
     val onSort: (LibrarySort) -> Unit = {},
     val onFilter: (LibraryFilter) -> Unit = {},
     val onQuery: (String) -> Unit = {},
     /** Where the "Continue reading" cover is, so Resume opens the book from it. */
-    val heroSpot: CoverSpot = CoverSpot()
+    val heroSpot: CoverSpot = CoverSpot(),
+    /** Select mode (owner, 2026-10-22); null where books cannot be selected. */
+    val selection: Selection? = null,
+    /** Asks to remove the chosen books. */
+    val onDeleteChosen: () -> Unit = {}
 )
 
 /** Library route: wires the ViewModels, file pickers, snackbar messages and shelf dialogs to [LibraryContent]. */
@@ -76,6 +86,7 @@ fun LibraryScreen(
     onRead: (Book) -> Unit,
     onOpenShelf: (Long) -> Unit = {},
     onBookmarks: (Book) -> Unit = {},
+    onAnnotations: (Book) -> Unit = {},
     scrollToShelf: Long? = null,
     onScrolledToShelf: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
@@ -84,26 +95,16 @@ fun LibraryScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
-    var relinkBookId by rememberSaveable { mutableStateOf<String?>(null) }
     var shelving by remember { mutableStateOf<Book?>(null) }
-
+    val selection = rememberSelection()
+    var confirmBulk by remember { mutableStateOf(false) }
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let { viewModel.onFilePicked(it.toString()) }
     }
-    val relinkPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        val id = relinkBookId
-        if (uri != null && id != null) viewModel.onRelinkPicked(id, uri.toString())
-        relinkBookId = null
-    }
-    val locate = { book: Book ->
-        relinkBookId = book.id
-        relinkPicker.launch(PDF_TYPES)
-    }
-
+    val locate = rememberLocate(viewModel)
     LaunchedEffect(viewModel) {
         viewModel.messages.collect { snackbar.showSnackbar(it.text(context)) }
     }
-
     val opener = LocalBookOpener.current
     val heroSpot = remember { CoverSpot() }
     LibraryContent(
@@ -130,14 +131,50 @@ fun LibraryScreen(
             onAddToShelf = { shelving = it },
             onOpenShelf = onOpenShelf,
             onBookmarks = onBookmarks,
+            onAnnotations = onAnnotations,
             onSort = viewModel::onSortChange,
             onFilter = viewModel::onFilter,
             onQuery = viewModel::onQuery,
-            heroSpot = heroSpot
+            heroSpot = heroSpot,
+            selection = selection,
+            onDeleteChosen = { confirmBulk = true }
         )
     )
+    if (confirmBulk) ConfirmBooksDelete(selection, viewModel) { confirmBulk = false }
+    BackHandler(selection.active) { selection.done() }
     LibraryDialogs(state.dialog, viewModel)
     shelving?.let { ShelveBookFlow(it, state.shelves, shelves) { shelving = null } }
+}
+
+/** Locate for a moved or missing book: the system picker, then the book is pointed at the file chosen. */
+@Composable
+private fun rememberLocate(viewModel: LibraryViewModel): (Book) -> Unit {
+    var relinkBookId by rememberSaveable { mutableStateOf<String?>(null) }
+    val relinkPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val id = relinkBookId
+        if (uri != null && id != null) viewModel.onRelinkPicked(id, uri.toString())
+        relinkBookId = null
+    }
+    return { book: Book ->
+        relinkBookId = book.id
+        relinkPicker.launch(PDF_TYPES)
+    }
+}
+
+/** Asks before select mode removes the chosen books. */
+@Composable
+private fun ConfirmBooksDelete(selection: Selection, viewModel: LibraryViewModel, onClose: () -> Unit) {
+    val n = selection.chosen.size
+    BulkDeleteDialog(
+        pluralStringResource(R.plurals.delete_books_title, n, n),
+        stringResource(R.string.delete_books_body),
+        onConfirm = {
+            viewModel.deleteBooks(selection.chosen)
+            selection.done()
+            onClose()
+        },
+        onDismiss = onClose
+    )
 }
 
 /** The library as in the mock: header, chips, "Continue reading" and a shelf row per shelf, on the app background. */
@@ -223,7 +260,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.libraryBody(state: Li
             item(key = "chips") { FilterChips(state.filters, state.filter, actions.onFilter, Modifier.reveal(1)) }
             val hero = state.continueReading
             if (hero != null && state.filter == LibraryFilter.ALL && state.query.isBlank()) {
-                item(key = "hero") { ContinueReadingCard(hero, actions, Modifier.reveal(2)) }
+                // The shelf its shortcut opens: the first it is on, or the books on no shelf.
+                val shelf = state.shelves.firstOrNull { hero.book.id in it.bookIds }?.id ?: ShelfPageViewModel.LOOSE
+                item(key = "hero") { ContinueReadingCard(hero, actions, shelf, Modifier.reveal(2)) }
             }
             val rows = shelfRows(state.items, state.shelves)
             if (rows.isEmpty()) item(key = "nomatch") { NoMatch() }
@@ -297,4 +336,6 @@ internal fun LibraryMessage.text(context: android.content.Context): String = whe
     LibraryMessage.RelinkFailed -> context.getString(R.string.msg_relink_failed)
 
     is LibraryMessage.Deleted -> context.getString(R.string.msg_deleted, title)
+
+    is LibraryMessage.DeletedMany -> context.resources.getQuantityString(R.plurals.msg_deleted_many, count, count)
 }

@@ -108,6 +108,7 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                                 onRead = { book -> nav.navigate(Routes.reader(book.id)) },
                                 onOpenShelf = { id -> nav.navigate(Routes.shelf(id)) },
                                 onBookmarks = { book -> nav.navigate(Routes.bookBookmarks(book.id)) },
+                                onAnnotations = { book -> nav.navigate(Routes.bookAnnotations(book.id)) },
                                 scrollToShelf = shelfToShow,
                                 onScrolledToShelf = { shelfToShow = null },
                                 viewModel = library
@@ -116,10 +117,8 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                     }
                     destination(TopLevel.Shelves.route) {
                         ScreenEntrance {
-                            ShelvesScreen(onOpenShelf = { id ->
-                                shelfToShow = id
-                                nav.switchTo(TopLevel.Library)
-                            })
+                            // A shelf opens on its own page, as from its book count in the library (owner, 2026-10-22).
+                            ShelvesScreen(onOpenShelf = { id -> nav.navigate(Routes.shelf(id)) })
                         }
                     }
                     destination(TopLevel.Bookmarks.route) {

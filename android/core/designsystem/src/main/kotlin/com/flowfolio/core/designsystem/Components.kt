@@ -132,6 +132,7 @@ fun FlowFolioIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     glass: Boolean = false,
+    size: Dp = 42.dp,
     content: @Composable BoxScope.() -> Unit
 ) {
     val source = remember { MutableInteractionSource() }
@@ -139,7 +140,7 @@ fun FlowFolioIconButton(
     Box(
         modifier
             .pressScale(source, ICON_PRESSED)
-            .size(42.dp)
+            .size(size)
             .then(surface)
             .clip(CircleShape)
             .clickable(source, indication = null, role = Role.Button, onClick = onClick),
