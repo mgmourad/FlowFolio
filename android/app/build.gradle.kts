@@ -21,11 +21,25 @@ android {
 
     buildFeatures { buildConfig = true }
 
+    // ADR-0036: one fixed key for the dev builds the owner sideloads, so each APK updates the last in place. It lives
+    // outside the repo (`flowfolio.devSigning.*` in ~/.gradle/gradle.properties); without it (CI, other machines)
+    // debug builds keep the SDK's own debug key.
+    val devStore = providers.gradleProperty("flowfolio.devSigning.storeFile").orNull
+    val devSigning = devStore?.let {
+        signingConfigs.create("dev") {
+            storeFile = file(it)
+            storePassword = providers.gradleProperty("flowfolio.devSigning.storePassword").get()
+            keyAlias = providers.gradleProperty("flowfolio.devSigning.keyAlias").get()
+            keyPassword = providers.gradleProperty("flowfolio.devSigning.keyPassword").get()
+        }
+    }
+
     buildTypes {
         debug {
             // Lets a debug build sit next to a future release build on the same device.
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
+            devSigning?.let { signingConfig = it }
         }
         release {
             isMinifyEnabled = true
