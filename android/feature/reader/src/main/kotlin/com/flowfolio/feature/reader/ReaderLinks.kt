@@ -14,6 +14,9 @@ internal sealed interface LinkTarget {
 
     /** Show the footnote or endnote [href] points at in a popover (EPUBs). */
     data class Note(val href: String) : LinkTarget
+
+    /** Show island [id] (an equation or table drawn smaller than its size to fit the column) zoomable (EPUBs). */
+    data class Island(val id: Int) : LinkTarget
 }
 
 /** A link on a page, its box as fractions of the page image (0 to 1), from a PDF's links or an EPUB's text. */

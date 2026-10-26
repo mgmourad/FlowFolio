@@ -56,7 +56,7 @@ sealed interface ReaderState {
 
     data class NeedsPassword(val wrongPassword: Boolean) : ReaderState
 
-    data class Failed(val missingFile: Boolean, val notYetReadable: Boolean = false) : ReaderState
+    data class Failed(val missingFile: Boolean, val epub: Boolean = false) : ReaderState
 
     data class Ready(
         val title: String,
@@ -79,6 +79,8 @@ sealed interface ReaderState {
          * Phase 2 milestone 4.
          */
         val reflowable: Boolean = false,
+        /** An EPUB's pages as Scroll shows them, one continuous column of text; null for PDFs. */
+        val scrollBands: ScrollBands? = null,
         /** The open EPUB's own body font (ADR-0030), shown on the "Book's font" card; null when it ships none. */
         val bookFont: android.graphics.Typeface? = null
     ) : ReaderState
@@ -273,10 +275,10 @@ class ReaderViewModel @Inject constructor(
                 java.io.File(context.cacheDir, ISLAND_DIR)
             )
         } catch (_: FileNotFoundException) {
-            _state.value = ReaderState.Failed(missingFile = true)
+            _state.value = ReaderState.Failed(missingFile = true, epub = true)
             return
         } catch (_: EpubException) {
-            _state.value = ReaderState.Failed(missingFile = false)
+            _state.value = ReaderState.Failed(missingFile = false, epub = true)
             return
         }
         epub = session
@@ -499,6 +501,7 @@ class ReaderViewModel @Inject constructor(
                 pageAspect = session?.pane?.let { it.width.toFloat() / it.height }
                     ?: sizes[anchorPage]?.let { it.widthPt / it.heightPt } ?: LETTER_ASPECT,
                 reflowable = session != null,
+                scrollBands = session?.scrollBands,
                 bookFont = session?.bookFont
             )
         }
@@ -576,6 +579,12 @@ class ReaderViewModel @Inject constructor(
             val found = session.links(page)
             if (session.revision == linksRevision) _links.update { it + (page to found) }
         }
+    }
+
+    /** EPUB island [id] at its own size on the current paper, for the zoomed view; null when not drawn yet. */
+    internal suspend fun islandImage(id: Int): ImageBitmap? {
+        val tone = (_state.value as? ReaderState.Ready)?.tone ?: return null
+        return epub?.islandImage(id, tone)
     }
 
     /** The text of the EPUB footnote or endnote [href] points at, or null. */

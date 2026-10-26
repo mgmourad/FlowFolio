@@ -46,10 +46,12 @@ internal object PageFrames {
             // Small links (footnote markers, single digits) are hard to hit; allow a little slack around them.
             val slackX = TOUCH_SLACK_PX / f.w
             val slackY = TOUCH_SLACK_PX / f.h
-            return links[f.page].orEmpty().firstOrNull { it.contains(fx, fy) }
+            // Scroll's frames overlap where one page's text ends and the next one's begins: try every page there.
+            val hit = links[f.page].orEmpty().firstOrNull { it.contains(fx, fy) }
                 ?: links[f.page].orEmpty().firstOrNull {
                     fx in (it.left - slackX)..(it.right + slackX) && fy in (it.top - slackY)..(it.bottom + slackY)
                 }
+            if (hit != null) return hit
         }
         return null
     }
@@ -63,6 +65,9 @@ internal object PageFrames {
         /** An EPUB footnote reference, tapped at [at]: its note opens in a popover there. */
         data class Note(val href: String, val at: Offset) : TapTarget
 
+        /** An EPUB equation or table shown smaller than its size: it opens zoomable. */
+        data class Island(val id: Int) : TapTarget
+
         data object Centre : TapTarget
 
         data object Page : TapTarget
@@ -73,6 +78,7 @@ internal object PageFrames {
         when (val target = linkAt(tap, frames, links)?.target) {
             is LinkTarget.Page -> TapTarget.Jump(target.page)
             is LinkTarget.Note -> TapTarget.Note(target.href, tap)
+            is LinkTarget.Island -> TapTarget.Island(target.id)
             is LinkTarget.Web if isOpenable(target.uri) -> TapTarget.Web(target.uri)
             else -> if (isCentre(tap, size)) TapTarget.Centre else TapTarget.Page
         }

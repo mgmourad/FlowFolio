@@ -42,6 +42,50 @@ private fun Slice.Lines.linkAreas(indent: Float): List<LinkArea> {
     return out
 }
 
+/** Where an island (block or inline) is drawn on a page, in pixels from the page box's top left. */
+data class IslandArea(val id: Int, val left: Float, val top: Float, val right: Float, val bottom: Float)
+
+/** Where [page]'s islands are drawn, laid out by [paginator]: block islands and the ones inline in its text. */
+fun ReflowBook.islandAreas(page: Page, paginator: Paginator): List<IslandArea> {
+    val chapter = chapters.getOrNull(page.chapter) ?: return emptyList()
+    return page.slices.flatMap { slice ->
+        when (slice) {
+            is Slice.Box -> listOfNotNull(
+                (chapter.blocks.getOrNull(slice.block) as? Block.Island)?.let {
+                    val left = (spec.width - slice.w) / 2f
+                    IslandArea(it.id, left, slice.y, left + slice.w, slice.y + slice.h)
+                }
+            )
+
+            is Slice.Lines -> {
+                val block = chapter.blocks.getOrNull(slice.block) as? Block.Text
+                block?.let { slice.islandAreas(paginator.indentPx(it).toFloat()) }.orEmpty()
+            }
+        }
+    }
+}
+
+/** The inline islands on this slice's lines; [indent] is where the block's text starts. */
+private fun Slice.Lines.islandAreas(indent: Float): List<IslandArea> {
+    val text = layout.text as? Spanned ?: return emptyList()
+    val from = layout.getLineStart(first)
+    val to = layout.getLineEnd(last - 1)
+    val top = layout.getLineTop(first)
+    return text.getSpans(from, to, IslandSpan::class.java).mapNotNull { span ->
+        val start = text.getSpanStart(span)
+        val line = layout.getLineForOffset(start)
+        val box = layout.box(line, start, text.getSpanEnd(span))
+        if (line !in first until last || box == null) return@mapNotNull null
+        IslandArea(
+            span.id,
+            indent + box.first,
+            y + layout.getLineTop(line) - top,
+            indent + box.second,
+            y + layout.getLineBottom(line) - top
+        )
+    }
+}
+
 /** The horizontal extent of `start until end` on [line], left to right whatever the text's direction; null if empty. */
 private fun StaticLayout.box(line: Int, start: Int, end: Int): Pair<Float, Float>? {
     val a = max(start, getLineStart(line))

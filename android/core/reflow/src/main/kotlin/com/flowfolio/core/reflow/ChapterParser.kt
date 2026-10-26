@@ -31,6 +31,9 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
     /** Spans still open: the tag that opened each, the span, and where it starts in [text]. */
     private val open = ArrayList<OpenSpan>()
     private var indent = 0f
+
+    /** Lists open around the text: their items' paragraphs are set ragged, since short justified lines gape. */
+    private var lists = 0
     private var skipDepth = 0
     private var depth = 0
     private var pre = 0
@@ -109,7 +112,7 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
 
             in BLOCKS -> startBlock(name)
 
-            in INDENTED -> startIndented()
+            in INDENTED -> startIndented(name)
 
             "a" -> p.getAttributeValue(null, "href")?.let {
                 open += OpenSpan(name, LinkSpan(resolved(it)), text.length)
@@ -133,6 +136,7 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
 
             in INDENTED -> {
                 flush()
+                if (name in LISTS) lists--
                 indent = (indent - INDENT_EM).coerceAtLeast(0f)
                 style = TextStyle(indentEm = indent)
             }
@@ -164,14 +168,15 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
             indentEm = indent,
             spaceBeforeEm = if (heading != null) HEADING_SPACE_BEFORE_EM else 0f,
             spaceAfterEm = if (heading != null) HEADING_SPACE_AFTER_EM else TextStyle.BODY_SPACE_AFTER_EM,
-            justify = name == "p" || name == "dd",
+            justify = (name == "p" || name == "dd") && lists == 0,
             centered = name == "figcaption" || name == "caption",
             preformatted = name == "pre"
         )
     }
 
-    private fun startIndented() {
+    private fun startIndented(name: String) {
         flush()
+        if (name in LISTS) lists++
         indent += INDENT_EM
         style = TextStyle(indentEm = indent)
     }
@@ -250,7 +255,9 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
         }
         open.forEach { it.at = 0 }
         if (text.isNotEmpty()) {
-            val block = Block.Text(flushed, text, style)
+            // Lines broken by hand (a list or verse written with <br>) are short: justified, they would gape.
+            val broken = text.count { it == '\n' } >= HAND_BROKEN_LINES
+            val block = Block.Text(flushed, text, if (broken) style.copy(justify = false) else style)
             blocks += block
             flushed += block.length
         }
@@ -307,6 +314,10 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
             "pre"
         )
         val INDENTED = setOf("aside", "ul", "ol", "dl")
+        val LISTS = setOf("ul", "ol", "dl")
+
+        /** A paragraph with this many <br> line breaks or more is a list or verse, set ragged. */
+        const val HAND_BROKEN_LINES = 2
 
         /** Notes that stay in the flow: endnotes and rear notes in a notes section, and plain notes. */
         val KEPT_NOTES = setOf("endnote", "rearnote", "note")

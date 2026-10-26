@@ -21,7 +21,8 @@ size, and fast re-layout (up to the reader's chapter first, `ReflowBook.layOutRe
 Settings' text group (`SettingsText.kt`) and the book's own fonts (ADR-0030, `EpubFonts`, `BookTypeface`) built;
 islands per layout and EPUB memory (ADR-0031, `docs/plans/phase2-m3-memory.md`) built; the owner's batch of
 2026-10-22 (shelf colours, select mode `Selection.kt`, hero shortcuts, chapters on annotations, sounds ADR-0032) built;
-next the M2 carry-overs. Between M2 and M3 (owner,
+the M2 carry-overs (ragged lists, themed notice `ReaderNotice`, continuous EPUB Scroll `ScrollBand`, island zoom
+`IslandZoom`) built 2026-10-26, checked on the emulator, not yet on the Fold; next M3's checks. Between M2 and M3 (owner,
 2026-10-22): app themes FlowFolio / Rustic / Material You (ADR-0028, `RusticPalette.kt`, `MaterialPalette.kt`,
 `ThemePicker.kt`), a Rustic paper, and a redesigned details page (approved; Rustic without texture, ADR-0029); riffle arrows at the strip's ends** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
 spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).
