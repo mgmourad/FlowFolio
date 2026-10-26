@@ -75,6 +75,19 @@ class ReflowBookTest {
     }
 
     @Test
+    fun scrollShowsEachPageDownToItsTextWithAWiderGapBetweenChapters() {
+        val book = book()
+        book.paginate(SPEC, DENSITY)
+        val chapterGap = (3 * SPEC.bodyPx).toInt()
+        book.pages.indices.forEach { assertTrue(book.scrollExtent(it) in 1..SPEC.height + chapterGap) }
+        // The last page of a chapter ends in at least the gap between chapters below its text.
+        val last = book.pages.indexOfLast { it.chapter == 0 }
+        val text = book.pages[last].slices.last()
+        assertTrue(book.scrollExtent(last) >= text.y.toInt() + chapterGap)
+        assertEquals(0, book.scrollExtent(book.pages.size))
+    }
+
+    @Test
     fun layingOutOneChapterAgainKeepsTheOthers() {
         val book = book()
         var islandSize: Pair<Int, Int>? = null

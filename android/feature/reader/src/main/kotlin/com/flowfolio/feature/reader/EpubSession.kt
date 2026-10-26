@@ -20,7 +20,9 @@ import com.flowfolio.core.reflow.PageDrawer
 import com.flowfolio.core.reflow.PageSpec
 import com.flowfolio.core.reflow.Paginator
 import com.flowfolio.core.reflow.ReflowBook
+import com.flowfolio.core.reflow.islandAreas
 import com.flowfolio.core.reflow.linkAreas
+import com.flowfolio.core.reflow.scrollExtent
 import com.flowfolio.feature.reader.cache.PageKey
 import com.flowfolio.feature.reader.cache.PageSource
 import kotlinx.coroutines.Dispatchers
@@ -65,6 +67,17 @@ internal class EpubSession private constructor(
         private set
 
     private var margins = Margins(0, 0, 0, 0)
+
+    /** How Scroll shows each page of the current layout (continuous text); null before the first layout. */
+    @Volatile var scrollBands: ScrollBands? = null
+        private set
+
+    /** Measures [scrollBands] for the pages as they now are. Call holding the lock, after any change of pages. */
+    private fun measureBands() {
+        val pane = pane ?: return
+        val room = (pane.height - margins.top).coerceAtLeast(1)
+        scrollBands = ScrollBands(margins.top, IntArray(book.pages.size) { book.scrollExtent(it).coerceAtMost(room) })
+    }
 
     val pageCount: Int get() = book.pages.size
 
@@ -153,6 +166,7 @@ internal class EpubSession private constructor(
                 column = bodyPx to spec.width
                 drawer = PageDrawer(book, ::image, islands::image)
                 layouts++
+                measureBands()
                 keep?.let(book::pageOf) ?: 0
             }
         }
@@ -170,6 +184,7 @@ internal class EpubSession private constructor(
             if (book.generation != generation) return@withLock null
             val before = book.pages
             book.applyRest(rest)
+            measureBands()
             val now = java.util.IdentityHashMap<com.flowfolio.core.reflow.Page, Int>()
             book.pages.forEachIndexed { i, page -> now[page] = i }
             val moves: (Int) -> Int? = { old -> before.getOrNull(old)?.let { now[it] } }
@@ -182,6 +197,7 @@ internal class EpubSession private constructor(
         withContext(Dispatchers.Default) {
             val first = book.pageOf(Locator(chapter, 0))
             paginator?.let { book.repaginate(chapter, it) }
+            measureBands()
             val page = keep?.let(book::pageOf) ?: 0
             // Pages before the chapter keep their numbers and text; only a chapter near or before the reader's place
             // can change pages that are cached.
@@ -262,7 +278,7 @@ internal class EpubSession private constructor(
         val pane = pane
         val laidOut = book.pages.getOrNull(page)
         if (p == null || pane == null || laidOut == null) return@withLock emptyList()
-        book.linkAreas(laidOut, p).mapNotNull { area ->
+        val text = book.linkAreas(laidOut, p).mapNotNull { area ->
             linkTarget(book, area.href)?.let { target ->
                 ReaderLink(
                     (margins.left + area.left) / pane.width,
@@ -272,6 +288,29 @@ internal class EpubSession private constructor(
                     target
                 )
             }
+        }
+        text + shrunkIslands(laidOut, p, pane)
+    }
+
+    /** [page]'s equations and tables drawn noticeably smaller than their size, to fit the column: tapped, they zoom. */
+    private fun shrunkIslands(page: com.flowfolio.core.reflow.Page, p: Paginator, pane: PixelSize): List<ReaderLink> =
+        book.islandAreas(page, p).mapNotNull { area ->
+            val width = islands.size(area.id)?.first
+            if (width == null || width < (area.right - area.left) * ZOOM_WORTH) return@mapNotNull null
+            ReaderLink(
+                (margins.left + area.left) / pane.width,
+                (margins.top + area.top) / pane.height,
+                (margins.left + area.right) / pane.width,
+                (margins.top + area.bottom) / pane.height,
+                LinkTarget.Island(area.id)
+            )
+        }
+
+    /** Island [id]'s image at its own size in [tone]'s ink, for the zoomed view; null when it isn't drawn yet. */
+    suspend fun islandImage(id: Int, tone: PageTone): ImageBitmap? = lock.withLock {
+        withContext(Dispatchers.Default) {
+            islands.useInk(colorsOf(tone).ink)
+            islands.image(id)?.let { it.copy(Bitmap.Config.HARDWARE, false) ?: it }?.asImageBitmap()
         }
     }
 
@@ -347,6 +386,9 @@ internal class EpubSession private constructor(
 
         /** Pages past the reader's place that may be cached (the planned neighbours, with room to spare). */
         private const val NEAR_PAGES = 16
+
+        /** An island drawn at under 1 / this of its size is worth zooming. */
+        private const val ZOOM_WORTH = 1.15f
         private const val RGB = 0x00FFFFFF
         private const val FAINT_ALPHA = 0x22000000
     }
@@ -354,3 +396,9 @@ internal class EpubSession private constructor(
 
 /** What an EPUB is laid out for: the page pane in pixels and the reader's text settings. */
 internal data class EpubLayout(val pane: PixelSize, val text: ReaderText)
+
+/**
+ * Scroll's view of an EPUB's pages: page `i` is shown from [top] pixels down its image (where its text box starts)
+ * for `heights[i]` pixels, so pages stacked in a column read as one continuous text without page margins between them.
+ */
+class ScrollBands(val top: Int, val heights: IntArray)

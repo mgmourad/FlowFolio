@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -200,7 +201,8 @@ private fun StackUnit(state: ReaderState.Ready, images: Map<Int, ImageBitmap>, u
 
 /**
  * Scroll: the whole book as one continuous column of pages, each as wide as the screen. The page at the top counts
- * as the page being read; tapping the outer thirds moves a page up or down.
+ * as the page being read; tapping the outer thirds moves a page up or down. An EPUB's pages show only their text
+ * ([ScrollBands]), so the column reads as one continuous text, as on the web.
  */
 @Composable
 internal fun ScrollReader(
@@ -215,8 +217,11 @@ internal fun ScrollReader(
     val report by rememberUpdatedState(onUnitShown)
     LaunchedEffect(list) { snapshotFlow { list.firstVisibleItemIndex }.collect { report(it) } }
     LaunchedEffect(state.unit) { if (list.firstVisibleItemIndex != state.unit) list.scrollToItem(state.unit) }
+    val bands = state.scrollBands
+    val edge = with(LocalDensity.current) { (bands?.top ?: 0).toDp() }
     LazyColumn(
         state = list,
+        contentPadding = PaddingValues(top = edge, bottom = edge),
         modifier = Modifier
             .fillMaxSize()
             .testTag(ReaderTestTags.PAGE)
@@ -226,6 +231,10 @@ internal fun ScrollReader(
     ) {
         items(state.pageCount, key = { it }) { page ->
             val image = images[page]
+            if (bands != null) {
+                ScrollBand(page, image, bands)
+                return@items
+            }
             val aspect = image?.let { it.width.toFloat() / it.height } ?: placeholderAspect
             PagePane(
                 page,

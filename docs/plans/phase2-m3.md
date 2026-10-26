@@ -41,7 +41,10 @@ original design, four styles) or XCharter or Charis SIL.
    islands, dropping parsed chapters far from the reader.
 6. **Carried from M2:** gappy justified short lines in lists; the reader's plain white error and notice pages; Scroll
    for reflowed books as one continuous column (no page margins mid-text); a zoom for islands too small on the cover
-   screen.
+   screen. **Built 2026-10-26**, checked on the emulator (Pixel 7, cover-screen width) with Linear Algebra: lists and
+   `<br>`-broken paragraphs set ragged; themed notice cards (missing file, damaged EPUB); Scroll continuous across
+   page boundaries; tapping a shrunk derivation opens it zoomed. Not yet checked on the Fold (its installed build is
+   signed with another key), and the pinch inside the zoom is untested (adb can't pinch).
 7. **Checks:** the pagination test (pages joined reproduce the chapter exactly) at five sizes and in every font;
    re-pagination time on the Fold; memory before and after; screenshots of each font in each paper; CI green.
 

@@ -169,6 +169,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   Details: the top fade's blur eases out in bands and is lighter over the cover's backdrop; "Add to shelf" shows a
   shelf; a sideways swipe moves between the tabs; bigger play triangles on Continue and Resume. Folded, the reader's
   top bar puts the whole book title on its own centred row above Back and the tools.
+- M2 carry-overs (Phase 2, 2026-10-26). Paragraphs inside lists, and paragraphs broken into several lines with `<br>`
+  (lists and verse written by hand), are set ragged, not justified, so their short lines no longer gape. A book that
+  can't open (file missing, damaged PDF or EPUB) shows a card in the app's theme instead of black text on blank paper.
+  Scroll shows an EPUB as one continuous column: each page only down to its last line (`ReflowBook.scrollExtent`,
+  `ScrollBands`, `ScrollBand`), so no page margins interrupt the text, and chapters stand 3 ems apart; links in Scroll
+  are found where the pages lie. An equation or table drawn noticeably smaller than its size (a wide derivation on the
+  cover screen) opens on its own when tapped (`IslandZoom`): fitted to the screen, pinch to zoom up to 4x and pan,
+  tap or Back to close.
 - Owner's follow-ups (ADR-0035, 2026-10-23): the edge fades blur only behind the system bars and the top one ends
   closer to them, clear of the titles; in the reader a fade in the paper's colour lies behind the top bar while it shows.
   Annotations name the section they come from by page: a stray outline entry listed late (University Physics' "Blank

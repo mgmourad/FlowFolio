@@ -49,6 +49,9 @@ private class Overlay(val chrome: ChromeClock, val textPinch: TextPinch) {
     /** The EPUB footnote shown in a popover, if any. */
     var note by mutableStateOf<ShownNote?>(null)
 
+    /** The EPUB island (equation or table) shown zoomed, if any. */
+    var island by mutableStateOf<Int?>(null)
+
     /** Non-null while zoomed in; page turns and the chrome are paused meanwhile. */
     var zoom by mutableStateOf<ZoomState?>(null)
 
@@ -77,6 +80,7 @@ private class Overlay(val chrome: ChromeClock, val textPinch: TextPinch) {
             is PageFrames.TapTarget.Jump -> jump(target.page)
             is PageFrames.TapTarget.Web -> webLink = target.uri
             is PageFrames.TapTarget.Note -> note = ShownNote(target.href, target.at)
+            is PageFrames.TapTarget.Island -> island = target.id
             PageFrames.TapTarget.Centre -> toggle()
             PageFrames.TapTarget.Page -> Unit
         }
@@ -87,6 +91,7 @@ private class Overlay(val chrome: ChromeClock, val textPinch: TextPinch) {
     fun leavePage() {
         zoom = null
         note = null
+        island = null
     }
 
     fun closeAll() {
@@ -113,7 +118,6 @@ internal fun BoxScope.ReadyReader(
     val tiles by viewModel.tiles.collectAsStateWithLifecycle()
     val uriHandler = LocalUriHandler.current
     val overlay = rememberOverlay(viewModel)
-    val chrome = overlay.chrome
     val riffling = rememberRiffling(s, navigation, viewModel)
     LaunchedEffect(s.unit, s.layout, s.coverAlone) { overlay.leavePage() }
     val jump = { page: Int ->
@@ -129,9 +133,10 @@ internal fun BoxScope.ReadyReader(
         overlay.zoom?.let { framesFor(size).zoomed(it) } ?: pageBounds.frames(s, size)
     }
     val mark = chromeMark(s, marks, bookmarks, annotating.all)
-    // A tap on a highlight opens its menu; otherwise links, the centre and page turns as before.
+    // A tap on a highlight opens its menu; otherwise links (in Scroll, where the pages lie), the centre, page turns.
     val onTap = { tap: Offset, size: IntSize ->
-        annotating.tap(tap, size) || overlay.handle(PageFrames.route(tap, size, framesFor(size), links), jump)
+        val frames = if (s.turn == PageTurn.SCROLL) pageBounds.frames(s, size) else framesFor(size)
+        annotating.tap(tap, size) || overlay.handle(PageFrames.route(tap, size, frames, links), jump)
     }
     // Under the pages, which cover it: lays out and draws an EPUB's equations, SVG and tables.
     if (s.reflowable) IslandHost(viewModel)
@@ -157,9 +162,9 @@ internal fun BoxScope.ReadyReader(
     // Selection and highlight menus: over the pages, and over the zoomed view too; under the bars.
     CompositionLocalProvider(LocalGlassState provides haze) { AnnotatingLayer(annotating, s) }
     if (overlay.zoom == null) {
-        val bar: @Composable () -> Unit = { RiffleBar(s, riffling, marks, viewModel, chrome) }
+        val bar: @Composable () -> Unit = { RiffleBar(s, riffling, marks, viewModel, overlay.chrome) }
         CompositionLocalProvider(LocalGlassState provides haze, LocalReaderSounds provides riffling.sounds) {
-            Controls(s, navigation, overlay, mark, ChromeParts(onBack, jump, bar, viewModel::footnote))
+            Controls(s, navigation, overlay, mark, ChromeParts(onBack, jump, bar, viewModel))
         }
     }
     overlay.webLink?.let { uri ->
@@ -229,13 +234,12 @@ private fun MirroredBook(mirrored: Boolean, content: @Composable () -> Unit) {
     }
 }
 
-/** Back, a jump from a panel, and the bottom bar (the riffle scrubber). */
+/** Back, a jump from a panel, the bottom bar (the riffle scrubber), and the book, for footnotes and islands. */
 private class ChromeParts(
     val onBack: () -> Unit,
     val jump: (Int) -> Unit,
     val bar: @Composable () -> Unit,
-    /** An EPUB footnote's text by its href, for the popover. */
-    val footnote: (String) -> CharSequence?
+    val book: ReaderViewModel
 )
 
 /**
@@ -262,7 +266,8 @@ private fun BoxScope.Controls(
                 bottomBar = parts.bar
             )
             ReaderPanels(overlay.panel, s, navigation, mark, parts.jump, onDismiss = { overlay.panel = Panel.NONE })
-            FootnotePopover(overlay.note, parts.footnote, onDismiss = { overlay.note = null })
+            FootnotePopover(overlay.note, parts.book::footnote, onDismiss = { overlay.note = null })
+            overlay.island?.let { IslandZoom(it, parts.book::islandImage, onDismiss = { overlay.island = null }) }
         }
     }
 }
