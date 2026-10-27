@@ -8,11 +8,15 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import com.flowfolio.core.data.OpenedEpub
+import com.flowfolio.core.model.Annotation
+import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.OutlineEntry
 import com.flowfolio.core.model.PageMargins
+import com.flowfolio.core.model.PageRect
 import com.flowfolio.core.model.PixelSize
 import com.flowfolio.core.model.ReaderText
 import com.flowfolio.core.model.ReadingFont
+import com.flowfolio.core.model.chapterOfLocator
 import com.flowfolio.core.reflow.Block
 import com.flowfolio.core.reflow.Locator
 import com.flowfolio.core.reflow.PageColors
@@ -20,8 +24,10 @@ import com.flowfolio.core.reflow.PageDrawer
 import com.flowfolio.core.reflow.PageSpec
 import com.flowfolio.core.reflow.Paginator
 import com.flowfolio.core.reflow.ReflowBook
+import com.flowfolio.core.reflow.imageAreas
 import com.flowfolio.core.reflow.islandAreas
 import com.flowfolio.core.reflow.linkAreas
+import com.flowfolio.core.reflow.pageGlyphs
 import com.flowfolio.core.reflow.scrollExtent
 import com.flowfolio.feature.reader.cache.PageKey
 import com.flowfolio.feature.reader.cache.PageSource
@@ -99,8 +105,14 @@ internal class EpubSession private constructor(
     /** Raised by every layout: page numbers may now show other text, so cached page images no longer match them. */
     @Volatile private var layouts = 0
 
-    /** Changes whenever a page's image would: a new layout, or islands drawn. Part of every [PageKey]. */
+    /** Changes whenever a page's image would: a new layout, or islands drawn. */
     val revision: Int get() = layouts + islands.revision
+
+    /** The current layout, for [PageKey.layout]: pages keep their text until it changes. */
+    val layout: Int get() = layouts
+
+    /** Raised as islands are drawn, for [PageKey.revision]. */
+    val islandRevision: Int get() = islands.revision
 
     /** The island folder of the last layout, for [trimIslands] to keep. */
     @Volatile private var trimLater: java.io.File? = null
@@ -153,9 +165,9 @@ internal class EpubSession private constructor(
                 val nearest = IslandStore.nearest(islandRoot, opened.book.id, bodyPx, except = store.dir)
                 islands.prepare(bodyPx, spec.width, store, nearest)
                 val t2 = android.os.SystemClock.elapsedRealtime()
-                // Up to the reader's chapter now, the chapters after it in [finishLayout] (M3's 300 ms target).
+                // The reader's chapter now, every other chapter in [finishLayout] (ADR-0041: 300 ms to the page).
                 val first = if (chapterFirst) keep?.chapter ?: 0 else -1
-                paginator = book.paginate(spec, density, first, islands::size)
+                paginator = book.paginate(spec, density, first, islands::size, layout.spreadShift)
                 android.util.Log.i(
                     "FlowFolioLayout",
                     "islands ${t2 - t1} ms, paginate ${android.os.SystemClock.elapsedRealtime() - t2} ms"
@@ -226,11 +238,32 @@ internal class EpubSession private constructor(
         labels = book.printedPages()
     )
 
+    /** Page renders waiting for the lock: background work ([background]) lets them go first. */
+    private val rendersWaiting = java.util.concurrent.atomic.AtomicInteger()
+
+    /**
+     * [block] under the lock once no page render is waiting for it: thumbnails, links and placing highlights come after
+     * the pages a reader is waiting for (M5: after a re-layout the reader's page waited 50 ms behind them).
+     */
+    private suspend fun <T> background(block: suspend () -> T): T {
+        while (rendersWaiting.get() > 0) kotlinx.coroutines.delay(YIELD_MS)
+        return lock.withLock { block() }
+    }
+
     /** Draws one page. Pages of another pane size (an old layout) are not drawn. */
-    override suspend fun render(key: PageKey): ImageBitmap? = lock.withLock {
+    override suspend fun render(key: PageKey): ImageBitmap? {
+        rendersWaiting.incrementAndGet()
+        return try {
+            lock.withLock { renderLocked(key) }
+        } finally {
+            rendersWaiting.decrementAndGet()
+        }
+    }
+
+    private suspend fun renderLocked(key: PageKey): ImageBitmap? = run {
         val p = paginator
         val page = book.pages.getOrNull(key.page)
-        if (p == null || page == null || key.size != pane) return@withLock null
+        if (p == null || page == null || key.size != pane) return@run null
         withContext(Dispatchers.Default) {
             val colors = colorsOf(key.tone)
             // The page's equations and tables, from memory or the disk cache, before it is drawn.
@@ -248,12 +281,12 @@ internal class EpubSession private constructor(
      * [page] drawn small, [size] in pixels, for the riffle scrubber's loupe (ADR-0022): the full page scaled down, its
      * equations and images as far as they are ready. Null before the first layout.
      */
-    suspend fun thumbnail(page: Int, size: PixelSize, tone: PageTone): ImageBitmap? = lock.withLock {
+    suspend fun thumbnail(page: Int, size: PixelSize, tone: PageTone): ImageBitmap? = background {
         val p = paginator
         val pane = pane
         val laidOut = book.pages.getOrNull(page)
-        if (minOf(size.width, size.height) <= 0) return@withLock null
-        if (p == null || pane == null || laidOut == null) return@withLock null
+        if (minOf(size.width, size.height) <= 0) return@background null
+        if (p == null || pane == null || laidOut == null) return@background null
         withContext(Dispatchers.Default) {
             val bmp = Bitmap.createBitmap(size.width, size.height, Bitmap.Config.ARGB_8888)
             val colors = colorsOf(tone)
@@ -273,11 +306,11 @@ internal class EpubSession private constructor(
      * [page]'s links as the reader taps them: boxes on the page image (0 to 1), each leading to a web address, a
      * footnote's popover, or a page in the reading order; links to anything else are left out. Empty before layout.
      */
-    suspend fun links(page: Int): List<ReaderLink> = lock.withLock {
+    suspend fun links(page: Int): List<ReaderLink> = background {
         val p = paginator
         val pane = pane
         val laidOut = book.pages.getOrNull(page)
-        if (p == null || pane == null || laidOut == null) return@withLock emptyList()
+        if (p == null || pane == null || laidOut == null) return@background emptyList()
         val text = book.linkAreas(laidOut, p).mapNotNull { area ->
             linkTarget(book, area.href)?.let { target ->
                 ReaderLink(
@@ -289,8 +322,114 @@ internal class EpubSession private constructor(
                 )
             }
         }
-        text + shrunkIslands(laidOut, p, pane)
+        text + shrunkIslands(laidOut, p, pane) + pictures(laidOut, pane)
     }
+
+    /** [page]'s pictures big enough to be worth a closer look (not ornaments): tapped, they open zoomable (M4). */
+    private fun pictures(page: com.flowfolio.core.reflow.Page, pane: PixelSize): List<ReaderLink> {
+        val least = (column?.first ?: 0f) * PICTURE_MIN_EMS
+        return book.imageAreas(page).filter { it.right - it.left >= least && it.bottom - it.top >= least }.map {
+            ReaderLink(
+                (margins.left + it.left) / pane.width,
+                (margins.top + it.top) / pane.height,
+                (margins.left + it.right) / pane.width,
+                (margins.top + it.bottom) / pane.height,
+                LinkTarget.Picture(it.path)
+            )
+        }
+    }
+
+    /**
+     * The book picture [path] for the image viewer: decoded at up to twice [maxSide] pixels on its longer side (so
+     * pinching it up stays sharp), or null when it cannot be read.
+     */
+    suspend fun picture(path: String, maxSide: Int): ImageBitmap? = lock.withLock {
+        withContext(Dispatchers.IO) {
+            val bytes = book.archive.read(path) ?: return@withContext null
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+            var sample = 1
+            while (maxOf(bounds.outWidth, bounds.outHeight) / sample > maxSide * 2) sample *= 2
+            val options = BitmapFactory.Options().apply { inSampleSize = sample }
+            val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options) ?: return@withContext null
+            (bmp.copy(Bitmap.Config.HARDWARE, false)?.also { bmp.recycle() } ?: bmp).asImageBitmap()
+        }
+    }
+
+    /** Page texts read for selecting and placing highlights, by laid-out page (a new layout makes new pages). */
+    private val glyphs = object : LinkedHashMap<com.flowfolio.core.reflow.Page, EpubPageText>(
+        GLYPH_PAGES,
+        LOAD_FACTOR,
+        true
+    ) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<com.flowfolio.core.reflow.Page, EpubPageText>?) =
+            size > GLYPH_PAGES
+    }
+
+    /** [page]'s text and where each character is (fractions of the page image), for selecting (M4). */
+    suspend fun pageText(page: Int): EpubPageText? = lock.withLock { withContext(Dispatchers.Default) { textOf(page) } }
+
+    /** [page]'s text; call holding the lock. */
+    private fun textOf(page: Int): EpubPageText? {
+        val p = paginator
+        val pane = pane
+        val laidOut = book.pages.getOrNull(page)?.takeIf { it.slices.isNotEmpty() }
+        if (p == null || pane == null) return null
+        return laidOut?.let {
+            glyphs.getOrPut(it) { EpubPageText.of(book.pageGlyphs(it, p), margins.left, margins.top, pane) }
+        }
+    }
+
+    /**
+     * Where [all] the book's highlights are in the current layout (ADR-0040): each one's first page, and its rectangles
+     * on the pages in [near] (the ones shown or about to be); a highlight running onto later pages near the reader
+     * gets a copy for each of them in [Placement.extra].
+     */
+    suspend fun place(all: List<Annotation>, near: Set<Int>): Placement = background {
+        withContext(Dispatchers.Default) {
+            val primary = ArrayList<Annotation>(all.size)
+            val extra = ArrayList<Annotation>()
+            for (a in all) {
+                val chapter = chapterOfLocator(a.locator)
+                if (chapter == null || book.pages.isEmpty()) {
+                    primary += a
+                    continue
+                }
+                val first = book.pageOf(Locator(chapter, a.start))
+                val last = maxOf(first, book.pageOf(Locator(chapter, a.end)))
+                for (page in first..last) {
+                    val rects = if (page in near) rectsOn(page, a.start, a.end) else emptyList()
+                    if (page == first) {
+                        primary += a.copy(page = page, rects = rects)
+                    } else if (rects.isNotEmpty()) {
+                        extra += a.copy(page = page, rects = rects)
+                    }
+                }
+            }
+            Placement(primary, extra, exact = book.complete)
+        }
+    }
+
+    /** The rectangles chapter offsets [start]..[end] cover on [page]; call holding the lock. */
+    private fun rectsOn(page: Int, start: Int, end: Int): List<PageRect> {
+        val text = textOf(page)
+        val range = text?.glyphs?.indicesOf(start, end)
+        return if (text == null || range == null) emptyList() else TextSelection.rects(text.text, range)
+    }
+
+    /** Where [marks] are in the current layout: on the page now showing each EPUB ribbon's text (ADR-0040). */
+    suspend fun placeRibbons(marks: List<Bookmark>): List<Bookmark> = background {
+        if (book.pages.isEmpty()) return@background marks
+        marks.map { m -> Locator.decode(m.locator)?.let { m.copy(page = book.pageOf(it)) } ?: m }
+    }
+
+    /** Reads the islands of [pages] (the ones in view after a layout) ahead of drawing them, off the drawing lock. */
+    suspend fun preloadIslands(pages: List<Int>) = withContext(Dispatchers.IO) {
+        islands.preload(pages.mapNotNull { book.pages.getOrNull(it) })
+    }
+
+    /** Every chapter is laid out exactly: page numbers are final for this layout. */
+    val exact: Boolean get() = book.complete
 
     /** [page]'s equations and tables drawn noticeably smaller than their size, to fit the column: tapped, they zoom. */
     private fun shrunkIslands(page: com.flowfolio.core.reflow.Page, p: Paginator, pane: PixelSize): List<ReaderLink> =
@@ -389,13 +528,25 @@ internal class EpubSession private constructor(
 
         /** An island drawn at under 1 / this of its size is worth zooming. */
         private const val ZOOM_WORTH = 1.15f
+
+        /** Pictures smaller than this many ems on either side are ornaments, not worth opening. */
+        private const val PICTURE_MIN_EMS = 3f
+        private const val GLYPH_PAGES = 8
+
+        /** How often background work looks again whether page renders still wait. */
+        private const val YIELD_MS = 8L
+        private const val LOAD_FACTOR = 0.75f
         private const val RGB = 0x00FFFFFF
         private const val FAINT_ALPHA = 0x22000000
     }
 }
 
-/** What an EPUB is laid out for: the page pane in pixels and the reader's text settings. */
-internal data class EpubLayout(val pane: PixelSize, val text: ReaderText)
+/**
+ * What an EPUB is laid out for: the page pane in pixels, the reader's text settings and, in a spread, its pairing
+ * ([spreadShift] as `Spreads` counts it; null in single-page layout), which puts chapters on their own spreads
+ * (ADR-0041).
+ */
+internal data class EpubLayout(val pane: PixelSize, val text: ReaderText, val spreadShift: Int? = null)
 
 /**
  * Scroll's view of an EPUB's pages: page `i` is shown from [top] pixels down its image (where its text box starts)

@@ -32,6 +32,9 @@ interface AnnotationRepository {
 
     suspend fun remove(id: Long)
 
+    /** Where EPUB highlights now start after a re-layout, by id (not a change by the reader). */
+    suspend fun setPages(pages: Map<Long, Int>) = Unit
+
     /** Whether the book's pages run right to left. */
     suspend fun setRightToLeft(bookId: String, on: Boolean)
 }
@@ -61,7 +64,8 @@ class DefaultAnnotationRepository @Inject constructor(
                     color = color.name,
                     note = note?.trim()?.takeIf { it.isNotEmpty() },
                     createdAt = now,
-                    updatedAt = now
+                    updatedAt = now,
+                    locator = passage.locator
                 )
             )
         }
@@ -73,6 +77,9 @@ class DefaultAnnotationRepository @Inject constructor(
         withContext(io) { dao.setNote(id, note?.trim()?.takeIf { it.isNotEmpty() }, clock.now()) }
 
     override suspend fun remove(id: Long) = withContext(io) { dao.delete(id) }
+
+    override suspend fun setPages(pages: Map<Long, Int>) =
+        withContext(io) { pages.forEach { (id, page) -> dao.setPage(id, page) } }
 
     override suspend fun setRightToLeft(bookId: String, on: Boolean) =
         withContext(io) { books.setRightToLeft(bookId, on) }
@@ -89,7 +96,8 @@ class DefaultAnnotationRepository @Inject constructor(
         color = HighlightColor.entries.firstOrNull { it.name == e.color } ?: HighlightColor.YELLOW,
         note = e.note,
         createdAtMillis = e.createdAt,
-        updatedAtMillis = e.updatedAt
+        updatedAtMillis = e.updatedAt,
+        locator = e.locator
     )
 }
 

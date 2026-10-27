@@ -68,6 +68,9 @@ internal object PageFrames {
         /** An EPUB equation or table shown smaller than its size: it opens zoomable. */
         data class Island(val id: Int) : TapTarget
 
+        /** An EPUB picture: it opens zoomable (M4). */
+        data class Picture(val path: String) : TapTarget
+
         data object Centre : TapTarget
 
         data object Page : TapTarget
@@ -79,6 +82,7 @@ internal object PageFrames {
             is LinkTarget.Page -> TapTarget.Jump(target.page)
             is LinkTarget.Note -> TapTarget.Note(target.href, tap)
             is LinkTarget.Island -> TapTarget.Island(target.id)
+            is LinkTarget.Picture -> TapTarget.Picture(target.path)
             is LinkTarget.Web if isOpenable(target.uri) -> TapTarget.Web(target.uri)
             else -> if (isCentre(tap, size)) TapTarget.Centre else TapTarget.Page
         }

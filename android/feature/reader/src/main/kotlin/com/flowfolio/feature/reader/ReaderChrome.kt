@@ -110,7 +110,6 @@ internal fun BoxScope.ReaderChrome(
                 state.title,
                 mark,
                 actions,
-                reflowable = state.reflowable,
                 modifier = Modifier.onSizeChanged { barHeight = with(density) { it.height.toDp() } }
             )
         }
@@ -133,19 +132,13 @@ internal fun BoxScope.ReaderChrome(
  * 2026-10-23), which leaves the second row room for the tools EPUBs will gain.
  */
 @Composable
-private fun TopBar(
-    title: String,
-    mark: ChromeMark,
-    actions: ChromeActions,
-    reflowable: Boolean,
-    modifier: Modifier = Modifier
-) {
+private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, modifier: Modifier = Modifier) {
     val width = LocalWindowInfo.current.containerDpSize.width
     val wide = width >= TITLE_BESIDE_BACK
     // A third larger than the app's usual 42 dp for easy reach (owner, 2026-10-22); folded, a little less, and never
     // more than the row holds: a PDF's six buttons overflowed the cover screen and the row squeezed the last one, the
     // ribbon, smaller than the rest (owner, 2026-10-26). Every button shares the width equally instead.
-    val buttons = if (reflowable) EPUB_BUTTONS else PDF_BUTTONS
+    val buttons = TOOL_BUTTONS
     // The row's gaps: one between each button and around the spacer that pushes the tools right.
     val fits = (width - BAR_INSET * 2 - TOOL_GAP * buttons) / buttons
     val button = if (wide) BIG_BUTTON else minOf(FOLDED_BUTTON, fits)
@@ -171,14 +164,14 @@ private fun TopBar(
                 )
             }
             if (wide) TitlePill(title, wide = true, Modifier.weight(1f).reveal(1)) else Spacer(Modifier.weight(1f))
-            TopTools(mark, actions, reflowable, button)
+            TopTools(mark, actions, button)
         }
     }
 }
 
 /** Contents, Go to page, annotations, "Aa" and the ribbon, falling in one after another (ADR-0034). */
 @Composable
-private fun TopTools(mark: ChromeMark, actions: ChromeActions, reflowable: Boolean, button: Dp) {
+private fun TopTools(mark: ChromeMark, actions: ChromeActions, button: Dp) {
     val glyph = button * GLYPH_SHARE
     val contents = Modifier.testTag(ReaderTestTags.CONTENTS).reveal(2)
     FlowFolioIconButton({ actions.onPanel(Panel.CONTENTS) }, contents, glass = true, size = button) {
@@ -188,12 +181,9 @@ private fun TopTools(mark: ChromeMark, actions: ChromeActions, reflowable: Boole
     FlowFolioIconButton({ actions.onPanel(Panel.GO_TO) }, goTo, glass = true, size = button) {
         FlowFolioGlyph(Glyph.GoTo, stringResource(R.string.reader_go_to), size = glyph)
     }
-    // Highlights and ribbons are PDF-only until EPUB annotations (Phase 2 milestone 4).
-    if (!reflowable) {
-        val notes = Modifier.testTag(ReaderTestTags.ANNOTATIONS).reveal(4)
-        FlowFolioIconButton({ actions.onPanel(Panel.ANNOTATIONS) }, notes, glass = true, size = button) {
-            FlowFolioGlyph(Glyph.Highlight, stringResource(R.string.reader_annotations), size = glyph)
-        }
+    val notes = Modifier.testTag(ReaderTestTags.ANNOTATIONS).reveal(4)
+    FlowFolioIconButton({ actions.onPanel(Panel.ANNOTATIONS) }, notes, glass = true, size = button) {
+        FlowFolioGlyph(Glyph.Highlight, stringResource(R.string.reader_annotations), size = glyph)
     }
     val settings = Modifier.testTag(ReaderTestTags.SETTINGS).reveal(5)
     FlowFolioIconButton({ actions.onPanel(Panel.SETTINGS) }, settings, glass = true, size = button) {
@@ -206,7 +196,7 @@ private fun TopTools(mark: ChromeMark, actions: ChromeActions, reflowable: Boole
                 .merge(FlowFolio.title)
         )
     }
-    if (!reflowable) Box(Modifier.reveal(6)) { BookmarkButton(mark, actions, button) }
+    Box(Modifier.reveal(6)) { BookmarkButton(mark, actions, button) }
 }
 
 /** The book's title on glass, beside Back (unfolded) or centred (folded). */
@@ -309,9 +299,8 @@ private val BIG_BUTTON = 56.dp
 private val FOLDED_BUTTON = 50.dp
 private val TOOL_GAP = 10.dp
 
-/** Back, Contents, Go to page and Aa; a PDF adds annotations and the ribbon. */
-private const val EPUB_BUTTONS = 4
-private const val PDF_BUTTONS = 6
+/** Back, Contents, Go to page, annotations, Aa and the ribbon, for PDFs and EPUBs alike (M4). */
+private const val TOOL_BUTTONS = 6
 private const val SETTINGS_TEXT_SP = 16f
 
 /** A glyph's share of its round button (24 dp in 42 dp). */

@@ -161,6 +161,14 @@ internal class EpubIslands(private val book: ReflowBook) {
     fun loadFor(page: Page) = book.islandIdsOn(page).forEach(::image)
 
     /**
+     * Reads the images of [pages]' islands from disk on all cores at once, ahead of drawing them: an equation-dense
+     * page took about 180 ms to draw on the Fold reading them one by one under the drawing lock (ADR-0041).
+     */
+    fun preload(pages: List<Page>) {
+        pages.flatMap { book.islandIdsOn(it) }.distinct().parallelStream().forEach { image(it) }
+    }
+
+    /**
      * The next chapter whose islands still need sizes: [current] first (it is being read), then the nearest ones
      * around it. One chapter at a time, so the WebView's page stays small and only that chapter is laid out again.
      */

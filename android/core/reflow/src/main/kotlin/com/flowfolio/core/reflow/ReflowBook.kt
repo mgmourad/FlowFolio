@@ -40,8 +40,20 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
     var pages: List<Page> = emptyList()
         private set
 
-    /** First page of each chapter. */
+    /** First page of each chapter in [pages] (its blank page, when it has one). */
     private var chapterStart = IntArray(0)
+
+    /** Each chapter's own pages, laid out or estimated; [join] puts them together, with blanks, as [pages]. */
+    private var byChapter: Array<List<Page>> = emptyArray()
+
+    /**
+     * Spread pairing to keep, as `Spreads` counts it (1 with the cover on its own, else 0), or null in single-page
+     * layout. In a spread every chapter after the first starts on a left page (ADR-0041).
+     */
+    private var spreadShift: Int? = null
+
+    /** The blank page before each chapter that needs one, made once per layout so cached images can follow it. */
+    private var blanks: Array<Page?> = emptyArray()
 
     /** Image sizes by path, read once; [NO_SIZE] for images that can't be read. Chapters are laid out in parallel. */
     private val imageSizes = java.util.concurrent.ConcurrentHashMap<String, Pair<Int, Int>>()
@@ -58,21 +70,27 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
 
     /**
      * Lays the book out for [spec]. [density] turns CSS pixels (images) into screen pixels; [islandSize] gives
-     * measured islands (null: placeholder size). With a [first] chapter, the chapters up to and including it are laid
-     * out now (so every page number up to the reader's is exact, and spreads pair as they will stay); the chapters
-     * after it get pages estimated from its text per page, until [layOutRest] and [applyRest] replace them.
+     * measured islands (null: placeholder size). [spreadShift] keeps chapters on their own spreads (see the property).
+     * With a [first] chapter, only that chapter is laid out now (ADR-0041: the reader's page shows within 300 ms
+     * wherever it is in the book); every other chapter gets pages estimated from its text per page, until [layOutRest]
+     * and [applyRest] replace them. In a spread the first chapter still starts on a left page, so the spread shown
+     * never re-pairs; only page numbers settle.
      */
     fun paginate(
         spec: PageSpec,
         density: Float,
         first: Int = -1,
-        islandSize: (Int) -> Pair<Int, Int>? = { null }
+        islandSize: (Int) -> Pair<Int, Int>? = { null },
+        spreadShift: Int? = null
     ): Paginator {
         this.spec = spec
+        this.spreadShift = spreadShift
         generation++
         // The old layout's text layouts go now, not after the new ones are built: holding both made the collector work
         // through the layout (270 ms on a fresh open, 450 ms or more on a re-layout).
         pages = emptyList()
+        byChapter = emptyArray()
+        blanks = arrayOfNulls(chapters.size)
         val paginator = Paginator(spec) { block ->
             when (block) {
                 is Block.Image -> imageSize(block.path)?.let { (w, h) ->
@@ -84,31 +102,51 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
                 is Block.Text -> null
             }
         }
-        val last = if (first in chapters.indices) first else chapters.lastIndex
-        exact = BooleanArray(chapters.size) { it <= last }
-        val laidOut = layOutAll(paginator, (0..last).toList())
-        val all = ArrayList<Page>()
-        val starts = IntArray(chapters.size)
-        var charsPerPage = 1f
-        chapters.forEachIndexed { i, c ->
-            starts[i] = all.size
-            val pages = laidOut[i]
-            if (pages != null) {
-                if (pages.isNotEmpty() && c.length > 0) charsPerPage = c.length.toFloat() / pages.size
-                all += pages
-            } else {
-                all += estimate(i, c, charsPerPage)
-            }
-        }
-        pages = all
-        chapterStart = starts
+        val now = if (first in chapters.indices) listOf(first) else chapters.indices.toList()
+        exact = BooleanArray(chapters.size) { it in now }
+        val laidOut = layOutAll(paginator, now)
+        val perPage = charsPerPage(laidOut, spec)
+        byChapter = Array(chapters.size) { i -> laidOut[i] ?: estimate(i, chapters[i], perPage) }
+        join()
         return paginator
+    }
+
+    /**
+     * Text per page for estimates: from the chapters laid out, or, when they hold too little text to tell (a title
+     * page), from the page's size in lines and characters.
+     */
+    private fun charsPerPage(laidOut: Map<Int, List<Page>>, spec: PageSpec): Float {
+        val chars = laidOut.keys.sumOf { chapters[it].length }
+        val count = laidOut.values.sumOf { it.size }
+        if (chars >= MIN_SAMPLE_CHARS && count > 0) return chars.toFloat() / count
+        val perLine = spec.width / (spec.bodyPx * AVERAGE_CHAR_EMS)
+        val lines = spec.height / (spec.bodyPx * spec.lineSpacing)
+        return perLine * lines
     }
 
     /** Pages standing in for [chapter] until it is laid out: empty, evenly over its text, so locators still map. */
     private fun estimate(chapter: Int, c: Chapter, charsPerPage: Float): List<Page> {
         val count = (c.length / charsPerPage.coerceAtLeast(1f)).toInt().coerceAtLeast(1)
         return List(count) { k -> Page(chapter, emptyList(), c.length * k / count, c.length * (k + 1) / count) }
+    }
+
+    /**
+     * [pages] from each chapter's pages: in a spread, a blank page before every chapter after the first that would
+     * otherwise start on a right page (ADR-0041).
+     */
+    private fun join() {
+        val all = ArrayList<Page>()
+        val starts = IntArray(chapters.size)
+        val shift = spreadShift
+        for (i in chapters.indices) {
+            starts[i] = all.size
+            if (shift != null && i > 0 && (all.size + shift) % 2 == 1) {
+                all += blanks[i] ?: Page(i, emptyList(), 0, 0).also { blanks[i] = it }
+            }
+            all += byChapter[i]
+        }
+        pages = all
+        chapterStart = starts
     }
 
     /**
@@ -120,8 +158,7 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
 
     /**
      * [indices]' chapters laid out at once on the device's cores: chapters are independent (each builds its own text
-     * layouts and paints; image sizes are a concurrent map), so a re-layout late in a long book no longer waits for
-     * every chapter before it one by one (M3's 300 ms to the reader's page).
+     * layouts and paints; image sizes are a concurrent map).
      */
     private fun layOutAll(paginator: Paginator, indices: List<Int>): Map<Int, List<Page>> = indices.parallelStream()
         .map { it to paginator.paginate(it, chapters[it]) }
@@ -132,16 +169,12 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
      * pages already laid out keep their objects, so whoever holds one can find its new number.
      */
     fun applyRest(rest: Map<Int, List<Page>>) {
-        val all = ArrayList<Page>()
-        val starts = IntArray(chapters.size)
-        for (i in chapters.indices) {
-            starts[i] = all.size
-            val end = if (i + 1 < chapters.size) chapterStart[i + 1] else pages.size
-            all += if (exact[i]) pages.subList(chapterStart[i], end) else rest[i] ?: pages.subList(chapterStart[i], end)
-            if (i in rest) exact[i] = true
+        for ((i, laidOut) in rest) {
+            if (exact[i]) continue
+            byChapter[i] = laidOut
+            exact[i] = true
         }
-        pages = all
-        chapterStart = starts
+        join()
     }
 
     /**
@@ -149,13 +182,9 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
      * sizes. Other chapters keep their pages; only page numbers after it move.
      */
     fun repaginate(chapter: Int, paginator: Paginator) {
-        val first = chapterStart[chapter]
-        val end = if (chapter + 1 < chapters.size) chapterStart[chapter + 1] else pages.size
-        val fresh = paginator.paginate(chapter, chapters[chapter])
-        pages = pages.subList(0, first) + fresh + pages.subList(end, pages.size)
-        val shift = fresh.size - (end - first)
-        for (i in chapter + 1 until chapters.size) chapterStart[i] += shift
+        byChapter[chapter] = paginator.paginate(chapter, chapters[chapter])
         exact[chapter] = true
+        join()
     }
 
     fun imageSize(path: String): Pair<Int, Int>? = imageSizes.getOrPut(path) {
@@ -255,6 +284,12 @@ private fun markupOf(b: Block): List<PackedText> = when (b) {
     is Block.Text -> b.text.getSpans(0, b.text.length, IslandSpan::class.java).map { it.packed }
     is Block.Image -> emptyList()
 }
+
+/** A chapter with less text than this is too small to estimate the others' pages from. */
+private const val MIN_SAMPLE_CHARS = 2_000
+
+/** The average character's width in ems, for estimating pages from the page's size alone. */
+private const val AVERAGE_CHAR_EMS = 0.5f
 
 /** Marks an image whose size couldn't be read (a concurrent map holds no nulls). */
 private val NO_SIZE = -1 to -1

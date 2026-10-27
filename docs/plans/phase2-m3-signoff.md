@@ -1,6 +1,7 @@
 # Phase 2, milestone 3 sign-off: typography
 
-- **Status:** Built and checked by the lead engineer, 2026-10-26; waiting for the owner's sign-off.
+- **Status:** Built and checked by the lead engineer, 2026-10-26; signed off with Phase 2, 2026-10-27
+  ([`phase2-signoff.md`](phase2-signoff.md)).
 - **Plans:** [`phase2-m3.md`](phase2-m3.md) (M3) and [`phase2-m3-memory.md`](phase2-m3-memory.md); ADR-0027 (reading
   fonts), ADR-0030 (the book's own fonts), ADR-0031 (EPUB memory and island stand-ins)
 - **Checked on:** the `fold8_api37` emulator (inner 2256 x 2504 and cover 1080 x 2520, density 480, API 37, 4 cores),

@@ -53,6 +53,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.color
+import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.pagecurl.config.PageCurlConfig
 import com.flowfolio.core.pagecurl.config.rememberPageCurlConfig
 import com.flowfolio.core.pagecurl.page.PageCurl
@@ -89,7 +90,7 @@ fun ReaderScreen(
     LaunchedEffect(unit) { if (unit != null) readingTime.onActivity() }
 
     val tone = (state as? ReaderState.Ready)?.tone ?: PageTone.PRINTED
-    val marks by bookmarks.bookmarks.collectAsStateWithLifecycle()
+    val marks = placedRibbons(viewModel, bookmarks)
     CompositionLocalProvider(
         LocalTone provides tone,
         LocalRibbons provides marks.associate { it.page to it.color },
@@ -97,9 +98,25 @@ fun ReaderScreen(
     ) {
         PaperRevealHost(FlowFolio.palette.dark, state, images) {
             StatusBarForPaper(LocalPaperReveal.current?.fromTone ?: tone)
-            ReaderRoot(state, images, navigation, viewModel, bookmarks, onBack)
+            ReaderRoot(state, images, navigation, viewModel, bookmarks, marks, onBack)
         }
     }
+}
+
+/**
+ * The book's ribbons on the pages now showing them: an EPUB's follow their text through every layout, and are saved on
+ * their new pages once the layout is final (ADR-0040).
+ */
+@Composable
+private fun placedRibbons(viewModel: ReaderViewModel, bookmarks: ReaderBookmarksViewModel): List<Bookmark> {
+    val stored by bookmarks.bookmarks.collectAsStateWithLifecycle()
+    val revision by viewModel.layoutRevision.collectAsStateWithLifecycle()
+    var placed by remember { mutableStateOf(stored) }
+    LaunchedEffect(stored, revision) {
+        placed = viewModel.placeRibbons(stored)
+        if (viewModel.pagesFinal) bookmarks.syncPages(stored, placed)
+    }
+    return placed
 }
 
 @Composable
@@ -109,6 +126,7 @@ private fun ReaderRoot(
     navigation: BookNavigation,
     viewModel: ReaderViewModel,
     bookmarks: ReaderBookmarksViewModel,
+    marks: List<Bookmark>,
     onBack: () -> Unit
 ) {
     val dark = FlowFolio.palette.dark
@@ -120,7 +138,7 @@ private fun ReaderRoot(
             ReaderState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
             is ReaderState.NeedsPassword -> PasswordPrompt(s.wrongPassword, viewModel::submitPassword, onBack)
             is ReaderState.Failed -> ReaderNotice(s, onBack)
-            is ReaderState.Ready -> ReadyReader(s, images, navigation, viewModel, bookmarks, onBack)
+            is ReaderState.Ready -> ReadyReader(s, images, navigation, viewModel, bookmarks, marks, onBack)
         }
     }
 }

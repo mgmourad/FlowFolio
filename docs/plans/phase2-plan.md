@@ -1,6 +1,7 @@
 # Phase 2 plan: EPUB reading and pagination engine
 
-- **Status:** Approved to start by the product owner, 2026-10-20 ("proceed with writing the Phase 2 plan and start it
+- **Status:** Signed off by the product owner, 2026-10-27 ([`phase2-signoff.md`](phase2-signoff.md)).
+  Approved to start by the product owner, 2026-10-20 ("proceed with writing the Phase 2 plan and start it
   automatically"). Dependencies and downloads are still cleared one by one, as the working agreement requires.
 - **Brief:** "Pagination engine spike and ADR. EPUB open, paginate, curl, typography settings, page-list support for
   print page numbers. Exit criteria: correct pagination at multiple font sizes, curl over reflowable content."

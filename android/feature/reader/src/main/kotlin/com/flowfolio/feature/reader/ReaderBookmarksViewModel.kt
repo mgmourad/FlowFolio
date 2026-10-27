@@ -24,15 +24,29 @@ class ReaderBookmarksViewModel @Inject constructor(
     val bookmarks: StateFlow<List<Bookmark>> = repository.observe(bookId)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
-    /** Marks [page] in [color], or recolours its ribbon when it already has one. */
-    fun mark(page: Int, color: BookmarkColor) = viewModelScope.launch {
-        val existing = bookmarks.value.firstOrNull { it.page == page }
-        if (existing == null) repository.add(bookId, page, color) else repository.setColor(existing.id, color)
-    }
+    /**
+     * Marks [page] in [color] ([locator]: an EPUB's text at its top, ADR-0040), or recolours the [existing] ribbon on
+     * the pages in view.
+     */
+    fun mark(page: Int, color: BookmarkColor, locator: String? = null, existing: Bookmark? = null) =
+        viewModelScope.launch {
+            if (existing ==
+                null
+            ) {
+                repository.add(bookId, page, color, locator)
+            } else {
+                repository.setColor(existing.id, color)
+            }
+        }
 
-    /** Takes the ribbon off [page]. */
-    fun unmark(page: Int) = viewModelScope.launch {
-        bookmarks.value.filter { it.page == page }.forEach { repository.remove(it.id) }
+    /** Takes these ribbons off. */
+    fun remove(ids: Collection<Long>) = viewModelScope.launch { ids.forEach { repository.remove(it) } }
+
+    /** EPUB ribbons placed on other pages by a new layout: saved with them (ADR-0040). */
+    fun syncPages(stored: List<Bookmark>, placed: List<Bookmark>) = viewModelScope.launch {
+        val before = stored.associate { it.id to it.page }
+        val moved = placed.filter { it.locator != null && before[it.id] != it.page }.associate { it.id to it.page }
+        if (moved.isNotEmpty()) repository.setPages(moved)
     }
 
     private companion object {

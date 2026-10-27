@@ -12,6 +12,7 @@ import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.BookmarkColor
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.OutlineEntry
+import com.flowfolio.core.model.chapterOfLocator
 import com.flowfolio.core.model.pageLabel
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -57,7 +58,12 @@ data class BookmarkActions(
  * Where a book's ribbons are: its outline (for the chapter) and the printed labels of the marked pages. Read once per
  * book from the PDF; a book that cannot be opened has neither.
  */
-private class BookIndex(val outline: List<OutlineEntry>, val labels: Map<Int, String>)
+private class BookIndex(
+    val outline: List<OutlineEntry>,
+    val labels: Map<Int, String>,
+    /** An EPUB's chapter titles in reading order, for naming ribbons by their locator (ADR-0040). */
+    val titles: List<String?> = emptyList()
+)
 
 /** The Bookmarks tab: every ribbon in the library, newest first, filterable by colour. */
 @HiltViewModel
@@ -111,14 +117,20 @@ class BookmarksViewModel @Inject constructor(
 
     /** Makes the ribbon's page the reading position, then calls [then] (to open the reader there). */
     fun open(item: BookmarkItem, then: () -> Unit) = viewModelScope.launch {
-        reader.saveProgress(item.book.id, item.bookmark.page)
+        val locator = item.bookmark.locator
+        if (locator != null) {
+            reader.saveEpubPosition(item.book.id, locator, item.bookmark.page)
+        } else {
+            reader.saveProgress(item.book.id, item.bookmark.page)
+        }
         then()
     }
 
     private fun item(mark: Bookmark, book: Book, index: BookIndex?): BookmarkItem {
-        val chapter = index?.outline?.let { outline ->
-            outline.filter { it.pageIndex in 0..mark.page }.maxByOrNull { it.pageIndex }?.title
-        }
+        val chapter = chapterOfLocator(mark.locator)?.let { index?.titles?.getOrNull(it) }
+            ?: index?.outline?.let { outline ->
+                outline.filter { it.pageIndex in 0..mark.page }.maxByOrNull { it.pageIndex }?.title
+            }
         return BookmarkItem(mark, book, chapter, index?.labels?.get(mark.page) ?: book.pageLabel(mark.page))
     }
 
@@ -131,10 +143,10 @@ class BookmarksViewModel @Inject constructor(
                 reader.open(bookId).document.use { doc ->
                     BookIndex(doc.outline(), pages.mapNotNull { p -> doc.pageLabel(p)?.let { p to it } }.toMap())
                 }
-            }.getOrDefault(BookIndex(emptyList(), emptyMap()))
+            }.getOrElse { BookIndex(emptyList(), emptyMap(), reader.epubChapterTitles(bookId)) }
             indexes.update { all ->
                 val before = all[bookId]
-                all + (bookId to BookIndex(index.outline, before?.labels.orEmpty() + index.labels))
+                all + (bookId to BookIndex(index.outline, before?.labels.orEmpty() + index.labels, index.titles))
             }
         }
     }

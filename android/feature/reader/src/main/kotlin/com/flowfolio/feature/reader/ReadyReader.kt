@@ -49,8 +49,8 @@ private class Overlay(val chrome: ChromeClock, val textPinch: TextPinch) {
     /** The EPUB footnote shown in a popover, if any. */
     var note by mutableStateOf<ShownNote?>(null)
 
-    /** The EPUB island (equation or table) shown zoomed, if any. */
-    var island by mutableStateOf<Int?>(null)
+    /** The EPUB island (equation or table) or picture shown zoomed, if any. */
+    var figure by mutableStateOf<Figure?>(null)
 
     /** Non-null while zoomed in; page turns and the chrome are paused meanwhile. */
     var zoom by mutableStateOf<ZoomState?>(null)
@@ -80,7 +80,8 @@ private class Overlay(val chrome: ChromeClock, val textPinch: TextPinch) {
             is PageFrames.TapTarget.Jump -> jump(target.page)
             is PageFrames.TapTarget.Web -> webLink = target.uri
             is PageFrames.TapTarget.Note -> note = ShownNote(target.href, target.at)
-            is PageFrames.TapTarget.Island -> island = target.id
+            is PageFrames.TapTarget.Island -> figure = Figure.Island(target.id)
+            is PageFrames.TapTarget.Picture -> figure = Figure.Picture(target.path)
             PageFrames.TapTarget.Centre -> toggle()
             PageFrames.TapTarget.Page -> Unit
         }
@@ -91,7 +92,7 @@ private class Overlay(val chrome: ChromeClock, val textPinch: TextPinch) {
     fun leavePage() {
         zoom = null
         note = null
-        island = null
+        figure = null
     }
 
     fun closeAll() {
@@ -108,11 +109,11 @@ internal fun BoxScope.ReadyReader(
     navigation: BookNavigation,
     viewModel: ReaderViewModel,
     bookmarks: ReaderBookmarksViewModel,
+    marks: List<Bookmark>,
     onBack: () -> Unit
 ) {
     val links by viewModel.links.collectAsStateWithLifecycle()
     val rtl = LocalRightToLeft.current
-    val marks by bookmarks.bookmarks.collectAsStateWithLifecycle()
     val bounce = remember { EdgeBounce() }
     val haze = rememberHazeState()
     val tiles by viewModel.tiles.collectAsStateWithLifecycle()
@@ -132,7 +133,7 @@ internal fun BoxScope.ReadyReader(
     val annotating = rememberAnnotating(s, viewModel, navigation) { size ->
         overlay.zoom?.let { framesFor(size).zoomed(it) } ?: pageBounds.frames(s, size)
     }
-    val mark = chromeMark(s, marks, bookmarks, annotating.all)
+    val mark = chromeMark(s, marks, bookmarks, annotating.all, viewModel::locatorOfPage)
     // A tap on a highlight opens its menu; otherwise links (in Scroll, where the pages lie), the centre, page turns.
     val onTap = { tap: Offset, size: IntSize ->
         val frames = if (s.turn == PageTurn.SCROLL) pageBounds.frames(s, size) else framesFor(size)
@@ -145,7 +146,7 @@ internal fun BoxScope.ReadyReader(
             .fillMaxSize()
             .toggleOnEnter(overlay::toggle)
             .hazeSource(haze)
-            .annotate(annotating, enabled = overlay.zoom == null && !s.reflowable)
+            .annotate(annotating, enabled = overlay.zoom == null)
             .interceptTaps(onTap)
             .bookPinch(s, overlay, viewModel)
             .edgeBounce(bounce, atStart = s.unit <= 0, atEnd = s.unit >= s.unitCount - 1, reversed = rtl)
@@ -267,7 +268,7 @@ private fun BoxScope.Controls(
             )
             ReaderPanels(overlay.panel, s, navigation, mark, parts.jump, onDismiss = { overlay.panel = Panel.NONE })
             FootnotePopover(overlay.note, parts.book::footnote, onDismiss = { overlay.note = null })
-            overlay.island?.let { IslandZoom(it, parts.book::islandImage, onDismiss = { overlay.island = null }) }
+            overlay.figure?.let { FigureZoom(it, parts.book, onDismiss = { overlay.figure = null }) }
         }
     }
 }
@@ -288,15 +289,17 @@ private fun chromeMark(
     s: ReaderState.Ready,
     marks: List<Bookmark>,
     bookmarks: ReaderBookmarksViewModel,
-    notes: List<Annotation>
+    notes: List<Annotation>,
+    locatorOf: (Int) -> String?
 ): ChromeMark {
     val inView = pagesInView(s)
+    val shown = marks.filter { it.page in inView }
     return ChromeMark(
-        color = marks.firstOrNull { it.page in inView }?.color,
+        color = shown.firstOrNull()?.color,
         all = marks,
         notes = notes,
-        onMark = { bookmarks.mark(inView.first(), it) },
-        onUnmark = { inView.forEach(bookmarks::unmark) }
+        onMark = { bookmarks.mark(inView.first(), it, locatorOf(inView.first()), shown.firstOrNull()) },
+        onUnmark = { bookmarks.remove(shown.map { it.id }) }
     )
 }
 

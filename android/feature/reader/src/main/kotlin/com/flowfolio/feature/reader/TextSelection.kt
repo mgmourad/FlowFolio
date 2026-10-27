@@ -106,6 +106,14 @@ internal object TextSelection {
             .trim()
     }
 
+    /** Whether [range] reads right to left: its first letter is Arabic, Hebrew or another right-to-left script. */
+    fun isRightToLeft(text: PageText, range: IntRange): Boolean {
+        val first = range.firstOrNull { it in 0 until text.length && text.text[it].isLetter() } ?: return false
+        val direction = Character.getDirectionality(text.text[first])
+        return direction == Character.DIRECTIONALITY_RIGHT_TO_LEFT ||
+            direction == Character.DIRECTIONALITY_RIGHT_TO_LEFT_ARABIC
+    }
+
     /** [a]..[b] in reading order, whichever end was dragged past the other. */
     fun ordered(a: Int, b: Int): IntRange = minOf(a, b)..maxOf(a, b)
 

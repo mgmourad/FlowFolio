@@ -41,6 +41,9 @@ class ReaderAnnotationsViewModel @Inject constructor(
 
     fun remove(id: Long) = viewModelScope.launch { annotations.remove(id) }
 
+    /** EPUB highlights whose first page moved in a new layout (ADR-0040). */
+    internal fun syncPages(pages: Map<Long, Int>) = viewModelScope.launch { annotations.setPages(pages) }
+
     private companion object {
         const val STOP_MS = 5_000L
     }

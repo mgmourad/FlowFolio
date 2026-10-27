@@ -10,8 +10,10 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
@@ -25,6 +27,8 @@ internal fun ScrollBand(page: Int, image: ImageBitmap?, bands: ScrollBands) {
     val height = with(LocalDensity.current) { bands.heights.getOrElse(page) { 1 }.toDp() }
     val paper = PAPER
     val mirrored = LocalMirroredPages.current
+    val highlights = LocalHighlights.current[page].orEmpty()
+    val dark = isDarkPaper
     Box(
         Modifier
             .fillMaxWidth()
@@ -35,7 +39,12 @@ internal fun ScrollBand(page: Int, image: ImageBitmap?, bands: ScrollBands) {
                 drawRect(paper)
                 if (image != null) {
                     scale(if (mirrored) -1f else 1f, 1f) {
-                        drawImage(image, Offset((size.width - image.width) / 2f, -bands.top.toFloat()))
+                        val at = Offset((size.width - image.width) / 2f, -bands.top.toFloat())
+                        drawImage(image, at)
+                        // The page's highlights (M4), moved up with its text.
+                        translate(at.x, at.y) {
+                            drawHighlights(highlights, dark, Size(image.width.toFloat(), image.height.toFloat()))
+                        }
                     }
                 }
             }

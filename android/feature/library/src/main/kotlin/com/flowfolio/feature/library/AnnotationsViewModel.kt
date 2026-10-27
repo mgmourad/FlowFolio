@@ -11,6 +11,7 @@ import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.HighlightColor
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.OutlineEntry
+import com.flowfolio.core.model.chapterOfLocator
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -73,10 +74,17 @@ class AnnotationsViewModel @Inject constructor(
     /** Each annotated book's contents with their pages, read once (PDF outlines). */
     private val outlines = MutableStateFlow<Map<String, List<OutlineEntry>>>(emptyMap())
 
+    /** Each annotated EPUB's chapter titles in reading order, read once, for naming highlights by locator. */
+    private val titles = MutableStateFlow<Map<String, List<String?>>>(emptyMap())
+
     init {
         viewModelScope.launch {
             repository.observeAll().map { all -> all.map { it.bookId }.toSet() }.distinctUntilChanged().collect { ids ->
-                ids.filterNot { it in outlines.value }.forEach { id -> outlines.update { it + (id to outlineOf(id)) } }
+                ids.filterNot { it in outlines.value }.forEach { id ->
+                    val outline = outlineOf(id)
+                    if (outline.isEmpty()) titles.update { it + (id to reader.epubChapterTitles(id)) }
+                    outlines.update { it + (id to outline) }
+                }
             }
         }
     }
@@ -89,8 +97,9 @@ class AnnotationsViewModel @Inject constructor(
     val uiState: StateFlow<AnnotationsUiState> = combine(
         repository.observeAll(),
         library.observeBooks(LibrarySort.RECENT),
-        outlines
-    ) { all, books, contents ->
+        outlines,
+        titles
+    ) { all, books, contents, chapterTitles ->
         val byId = books.associateBy { it.id }
         val known = all.filter { it.bookId in byId }
         val book = onlyBook?.let { byId[it] }
@@ -113,7 +122,10 @@ class AnnotationsViewModel @Inject constructor(
                     .sortedWith(compareBy({ it.page }, { it.start }))
             },
             total = known.size,
-            chapters = known.mapNotNull { a -> chapterOf(contents[a.bookId], a.page)?.let { a.id to it } }.toMap()
+            chapters = known.mapNotNull { a ->
+                val epub = chapterOfLocator(a.locator)?.let { chapterTitles[a.bookId]?.getOrNull(it) }
+                (epub ?: chapterOf(contents[a.bookId], a.page))?.let { a.id to it }
+            }.toMap()
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), AnnotationsUiState())
 
@@ -131,7 +143,14 @@ class AnnotationsViewModel @Inject constructor(
 
     /** Makes the highlight's page the reading position, then calls [then] (to open the reader there). */
     fun open(a: Annotation, then: () -> Unit) = viewModelScope.launch {
-        reader.saveProgress(a.bookId, a.page)
+        val locator = a.locator
+        if (locator !=
+            null
+        ) {
+            reader.saveEpubPosition(a.bookId, locator, a.page)
+        } else {
+            reader.saveProgress(a.bookId, a.page)
+        }
         then()
     }
 

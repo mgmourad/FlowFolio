@@ -31,7 +31,9 @@ data class AnnotationEntity(
     val color: String,
     val note: String?,
     @ColumnInfo(name = "created_at") val createdAt: Long,
-    @ColumnInfo(name = "updated_at") val updatedAt: Long
+    @ColumnInfo(name = "updated_at") val updatedAt: Long,
+    /** An EPUB highlight's `chapter:offset` (ADR-0040; char_start and char_end are chapter offsets). Added in v14. */
+    val locator: String? = null
 )
 
 @Dao
@@ -54,6 +56,10 @@ interface AnnotationDao {
 
     @Query("DELETE FROM annotations WHERE id = :id")
     suspend fun delete(id: Long)
+
+    /** Where an EPUB highlight now starts, after a re-layout (not a change by the reader: updated_at stays). */
+    @Query("UPDATE annotations SET page = :page WHERE id = :id")
+    suspend fun setPage(id: Long, page: Int)
 }
 
 /** Per-book reading choices that are not part of a book's details. */
@@ -70,4 +76,8 @@ interface BookReadingDao {
     /** An EPUB's position: the locator, and the page and page count at the size it was read (for progress). */
     @Query("UPDATE books SET last_locator = :locator, last_page = :page, page_count = :pageCount WHERE id = :id")
     suspend fun updateEpubProgress(id: String, locator: String, page: Int, pageCount: Int)
+
+    /** An EPUB's position set from outside the reader (a highlight or ribbon opened from the library). */
+    @Query("UPDATE books SET last_locator = :locator, last_page = :page WHERE id = :id")
+    suspend fun updateEpubPosition(id: String, locator: String, page: Int)
 }

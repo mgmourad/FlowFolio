@@ -4,34 +4,27 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
-**Phase 2: EPUB reading and pagination engine. Milestone 1 (EPUB in the library) built; milestone 2 (the paginated EPUB reader) signed off 2026-10-20
-(`docs/plans/phase2-m2-signoff.md`). Now M2b, the riffle scrubber (spec `docs/design/riffle-scrubber-spec.md`, mock
-`docs/design/FlowFolio_Riffle_Scrubber.html`, ADR-0022/0023): R1 (logic) and R2 (drawing, physics, demo
-screen: `adb shell am start -n com.flowfolio.dev/com.flowfolio.MainActivity --ez riffleDemo true [--es theme light]`)
-built; R3 (gestures, flag taps and stacks, loupe, haptics) and R4's module part (landing turn with a reduced-motion
-crossfade, Go to page by printed number, nudge arrows, auto-hide in the demo) built and checked on the Fold; R5 (the
-scrubber in the real reader: `ReaderRiffle`, `ReaderLanding`, `ChromeClock`, `ReaderThumbnails`, settings, EPUB
-margins, accessibility) and the owner's tweaks of 2026-10-21 (no floor shadow, a red pin into the pages, a "Page 306 – 307 of 842 — 36%" header, looser physics, recorded
-sounds per ADR-0025 via `tools/sounds/prepare_recorded_sounds.py`; flips on every page turn and separate turn and riffle
-sound switches and volumes per ADR-0026) built. Left for M2b: the owner's listen and feel on
-the Fold, memory and frame measurements, the M2b sign-off (the owner moved on without them, 2026-10-21). EPUB links and
-footnote popovers (`docs/plans/phase2-m2-links.md`) built. M3, typography (`docs/plans/phase2-m3.md`, ADR-0027),
-under way: seven bundled reading fonts, the tabbed "Aa" sheet with text settings (`ReaderText`, `EpubLayout`), pinch to
-size, and fast re-layout (up to the reader's chapter first, `ReflowBook.layOutRest`; hourglass `Hourglass.kt`) built;
-Settings' text group (`SettingsText.kt`) and the book's own fonts (ADR-0030, `EpubFonts`, `BookTypeface`) built;
-islands per layout and EPUB memory (ADR-0031, `docs/plans/phase2-m3-memory.md`) built; the owner's batch of
-2026-10-22 (shelf colours, select mode `Selection.kt`, hero shortcuts, chapters on annotations, sounds ADR-0032) built;
-the M2 carry-overs (ragged lists, themed notice `ReaderNotice`, continuous EPUB Scroll `ScrollBand`, island zoom
-`IslandZoom`) built 2026-10-26; the owner's library batch of 2026-10-26 (multi-file and folder import `BatchImport`, the Folders
-chip and folder pages, shelf row height and gaps, bigger grid tiles with author, fuller Open Library details, Google Books tried and removed, ADR-0039;
-EPUBs read in place through their descriptor, `ChannelZip`) built and checked on `fold8_api37`; the owner's shelf batch of
-2026-10-26 (Add books `ShelfAdding.kt`, Select in every press-and-hold menu, batch Add to shelf, drag-and-drop shelf
-order `ReorderState.kt`, paper switch keeping the reader's panels, `FlowFolioPalette`) built and checked there too, checked on the emulator and the unfolded Fold (island zoom on the cover screen not yet); M3's checks done 2026-10-26
-(`docs/plans/phase2-m3-signoff.md`: 415 exact layouts in every font, the fonts × papers sheet, chapters laid out in
-parallel), waiting for the owner's sign-off and a re-pagination timing on the Fold; next M4. Between M2 and M3 (owner,
-2026-10-22): app themes FlowFolio / Rustic / Material You (ADR-0028, `RusticPalette.kt`, `MaterialPalette.kt`,
-`ThemePicker.kt`), a Rustic paper, and a redesigned details page (approved; Rustic without texture, ADR-0029); riffle arrows at the strip's ends** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
-spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).
+**Phase 2 (EPUB reading and the pagination engine) signed off by the owner 2026-10-27**
+(`docs/plans/phase2-signoff.md`). Next: Phase 3 (the converter and FlowFolio mode for PDFs; plan before code, and
+the plan decides the Python `converter/`'s fate).
+
+Phase 2 in brief (details in the milestone sign-offs and the CHANGELOG):
+- M1 EPUB in the library (ADR-0020); M2 the paginated reader (ADR-0019, islands ADR-0021); M2b the riffle scrubber
+  (ADR-0022 to 0026; demo: `adb shell am start -n com.flowfolio.dev/com.flowfolio.MainActivity --ez riffleDemo true`);
+  EPUB links and footnote popovers.
+- M3 typography: seven reading fonts and the book's own (ADR-0027, ADR-0030), text settings and pinch, islands per
+  layout and EPUB memory (ADR-0031), the M2 carry-overs.
+- M4 Phase 1 features on EPUB (ADR-0040): selection from the layout (`ReflowBook.pageGlyphs`), highlights and ribbons by
+  locator (`EpubSession.place`), the image viewer (`FigureZoom`); fixed-layout EPUBs moved to Phase 8.
+- M5 close-out: `EpubPageTurnBenchmark`, `RobustnessOnDeviceTest`, memory run; chapters start on their own spread and
+  only the reader's chapter is laid out before the pages show (ADR-0041).
+- The owner's rounds: app themes (ADR-0028/0029), motion (ADR-0033 to 0035), shelves and select mode, folder import
+  (ADR-0038), Open Library details (ADR-0039), the fixed dev signing key (ADR-0036).
+- Measured on the Fold 2026-10-27, release build: page turns P50 3.2 ms; memory 279-291 MB over 300 turns; re-pagination
+  18-45 ms on text, about 270 ms on equation spreads.
+- Left open from Phase 2: the island zoom on the cover screen and pinch inside it not checked on a device; equation
+  spreads can still take a little over 300 ms after a size change (the WebView re-measures the chapter).
+
 Phase 1 signed off by the owner 2026-10-20 (`docs/plans/phase1-signoff.md`); ADRs 0014, 0016-0018 accepted.
 Phase 0 approved 2026-10-16 (first green CI: run 38979039796).
 Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) and ADR-0011 (vendored pagecurl) accepted.
@@ -139,6 +132,10 @@ uv tool install pre-commit; pre-commit install          # hooks: pre-commit + co
 # `com.flowfolio` app with its own library; uninstall it afterwards). Commit the regenerated profile.
 .\gradlew.bat :app:generateBaselineProfile               # -> app/src/release/generated/baselineProfiles/
 .\gradlew.bat :benchmark:connectedBenchmarkReleaseAndroidTest "-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.enabledRules=Macrobenchmark"
+# EpubPageTurnBenchmark needs moby-dick.epub in /data/local/tmp/flowfolio; on an emulator add
+#   "-Pandroid.testInstrumentationRunnerArguments.androidx.benchmark.suppressErrors=EMULATOR" (numbers only relative).
+# Robustness corpus (M5): push samples/corpus/cache/epub-idpf/*.epub and epub-generated/*.epub to the same folder, then
+#   .\gradlew.bat :core:reflow:connectedDebugAndroidTest   (RobustnessOnDeviceTest, PaginationOnDeviceTest)
 # Textbook-based device tests skip unless the book is on the device:
 #   adb push samples\corpus\cache\university-physics-volume-1.pdf /data/local/tmp/flowfolio/
 # Regenerate the robustness PDFs (stdlib only):
@@ -246,7 +243,9 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     `app/build.gradle.kts` (the plugin overwrites DSL settings on those build types); real release builds keep it false.
     Gradle's connected run uninstalls the test APK and hides crashes: when a run reports 0 tests, install both APKs and
     run `am instrument -w -r -e class ... -e androidx.benchmark.enabledRules BaselineProfile` by hand.
-32. Room is at schema v13 (v13: `shelf_books.position`, a shelf's drag-and-drop order, smallest first, ties newest first).
+32. Room is at schema v14 (v14: `annotations.locator` and `bookmarks.locator`, an EPUB highlight's or ribbon's
+    `chapter:offset`; an EPUB highlight's `char_start`/`char_end` are then chapter offsets and its `page` and `rects` only
+    where the reader last placed it, ADR-0040). At v13: `shelf_books.position`, a shelf's drag-and-drop order, smallest first, ties newest first).
     At v12: `books.folder`, the folder a book came in with a folder import, and the looked-up `subjects`,
     `print_pages`, `series`, `rating`, `ratings_count`; ADR-0037/0038). At v11: `shelves.color`, a `ShelfColor` name or null for the theme's). At v10: `books.format` (PDF or EPUB) and `books.last_locator` (an EPUB's position, `chapter:offset`;
     `last_page` and `page_count` are at the size it was last read). Saving a plain page clears the locator, so the
@@ -270,8 +269,8 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
 ## Decision log
 
-ADRs 0001–0039 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0041 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
-Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026), reading fonts (0027), app themes (0028), Rustic without texture (0029), the book's own fonts (0030), EPUB memory and island stand-ins (0031), page sounds on the media stream (0032), the motion system (0033), element entrances and edge fades (0034), edge fades blurring behind the bars only (0035), the fixed signing key for sideloaded dev builds (0036), Google Books as a second details source (0037, its Google part superseded by 0039), multi-file and folder imports with folders as book paths (0038), book details from Open Library only (0039).
+Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026), reading fonts (0027), app themes (0028), Rustic without texture (0029), the book's own fonts (0030), EPUB memory and island stand-ins (0031), page sounds on the media stream (0032), the motion system (0033), element entrances and edge fades (0034), edge fades blurring behind the bars only (0035), the fixed signing key for sideloaded dev builds (0036), Google Books as a second details source (0037, its Google part superseded by 0039), multi-file and folder imports with folders as book paths (0038), book details from Open Library only (0039), EPUB highlights and ribbons stored by locator (0040), chapters on their own spread and the reader's chapter laid out first (0041).
