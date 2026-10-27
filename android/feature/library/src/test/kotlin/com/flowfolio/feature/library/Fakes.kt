@@ -159,6 +159,22 @@ class FakeShelves(initial: List<Shelf> = emptyList()) : ShelfRepository {
             }
         }
     }
+
+    override suspend fun addBooks(shelfId: Long, bookIds: List<String>) = shelves.update { list ->
+        list.map { s ->
+            if (s.id ==
+                shelfId
+            ) {
+                s.copy(bookIds = bookIds.filterNot { it in s.bookIds } + s.bookIds)
+            } else {
+                s
+            }
+        }
+    }
+
+    override suspend fun setOrder(shelfId: Long, bookIds: List<String>) = shelves.update { list ->
+        list.map { s -> if (s.id == shelfId) s.copy(bookIds = bookIds + (s.bookIds - bookIds.toSet())) else s }
+    }
 }
 
 /** An online lookup that finds what it is given (or nothing). */

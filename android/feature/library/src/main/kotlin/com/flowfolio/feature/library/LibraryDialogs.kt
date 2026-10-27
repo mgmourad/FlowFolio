@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
@@ -37,6 +38,7 @@ import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.flowFolioRadioColors
 import com.flowfolio.core.model.BookStorage
+import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.StorageMode
 
 @Composable
@@ -237,4 +239,39 @@ internal fun RemoveFolderDialog(folder: FolderEntry, onConfirm: () -> Unit, onCl
         },
         onDismiss = onClose
     )
+}
+
+@Composable
+internal fun SortMenu(current: LibrarySort, onSort: (LibrarySort) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        FlowFolioIconButton(onClick = { open = true }) {
+            FlowFolioGlyph(Glyph.Sort, contentDescription = stringResource(R.string.action_sort))
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            listOf(
+                LibrarySort.RECENT to R.string.sort_recent,
+                LibrarySort.TITLE to R.string.sort_title
+            ).forEach { (sort, label) ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(label),
+                            style = if (sort ==
+                                current
+                            ) {
+                                FlowFolio.title
+                            } else {
+                                FlowFolio.item
+                            }
+                        )
+                    },
+                    onClick = {
+                        open = false
+                        onSort(sort)
+                    }
+                )
+            }
+        }
+    }
 }

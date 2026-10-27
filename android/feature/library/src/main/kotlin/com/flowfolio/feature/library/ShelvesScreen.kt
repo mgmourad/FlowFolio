@@ -74,6 +74,9 @@ private sealed interface ShelfEdit {
     data class Rename(val shelf: Shelf) : ShelfEdit
 
     data class Delete(val shelf: Shelf) : ShelfEdit
+
+    /** "Add books" from a shelf's press-and-hold menu (owner, 2026-10-26). */
+    data class AddBooks(val shelf: Shelf) : ShelfEdit
 }
 
 /** Shelves (the mock's `#s-shelves`): a card per shelf; tapping one shows it in the library. */
@@ -90,12 +93,18 @@ fun ShelvesScreen(onOpenShelf: (Long) -> Unit, viewModel: ShelvesViewModel = hil
         onRename = { edit = ShelfEdit.Rename(it) },
         onDelete = { edit = ShelfEdit.Delete(it) },
         selection = selection,
-        onDeleteChosen = { confirmBulk = true }
+        onDeleteChosen = { confirmBulk = true },
+        onAddBooks = { edit = ShelfEdit.AddBooks(it) }
     )
     if (confirmBulk) ConfirmShelvesDelete(selection, viewModel) { confirmBulk = false }
     BackHandler(selection.active) { selection.done() }
     when (val e = edit) {
         null -> Unit
+
+        is ShelfEdit.AddBooks -> AddBooksDialog(e.shelf, state.books, onConfirm = {
+            viewModel.addBooks(e.shelf.id, it)
+            edit = null
+        }, onDismiss = { edit = null })
 
         ShelfEdit.New -> ShelfDialog(stringResource(R.string.shelf_new), "", null, onConfirm = { name, color ->
             viewModel.create(name, color = color)
@@ -157,7 +166,8 @@ internal fun ShelvesContent(
     onRename: (Shelf) -> Unit,
     onDelete: (Shelf) -> Unit,
     selection: Selection = rememberSelection(),
-    onDeleteChosen: () -> Unit = {}
+    onDeleteChosen: () -> Unit = {},
+    onAddBooks: (Shelf) -> Unit = {}
 ) {
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     val chrome = LocalChromePadding.current
@@ -192,7 +202,13 @@ internal fun ShelvesContent(
                 val key = card.shelf.id.toString()
                 val open: (Long) -> Unit = { if (selection.active) selection.toggle(key) else onOpen(it) }
                 Box(Modifier.animateItem().reveal(1 + i).jiggle(selection.active, key)) {
-                    ShelfCardView(card, open, onRename, onDelete, Modifier, menuEnabled = !selection.active)
+                    ShelfCardView(
+                        card,
+                        open,
+                        ShelfMenu(onRename, onDelete, onAddBooks, onSelect = { selection.startWith(key) }),
+                        Modifier,
+                        menuEnabled = !selection.active
+                    )
                     SelectionMark(selection, key)
                 }
             }
@@ -219,6 +235,14 @@ private fun ShelvesHeader(select: @Composable () -> Unit) {
     }
 }
 
+/** What a shelf card's press-and-hold menu does. */
+private class ShelfMenu(
+    val onRename: (Shelf) -> Unit,
+    val onDelete: (Shelf) -> Unit,
+    val onAddBooks: (Shelf) -> Unit,
+    val onSelect: () -> Unit
+)
+
 /**
  * `.col`: up to five books fanned out, the shelf's name and how many books it holds, outlined in the shelf's colour
  * (owner, 2026-10-22).
@@ -228,8 +252,7 @@ private fun ShelvesHeader(select: @Composable () -> Unit) {
 private fun ShelfCardView(
     card: ShelfCard,
     onOpen: (Long) -> Unit,
-    onRename: (Shelf) -> Unit,
-    onDelete: (Shelf) -> Unit,
+    actions: ShelfMenu,
     modifier: Modifier,
     menuEnabled: Boolean = true
 ) {
@@ -261,18 +284,22 @@ private fun ShelfCardView(
             }
         }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            DropdownMenuItem(text = {
-                Text(stringResource(R.string.action_edit), style = FlowFolio.title)
-            }, onClick = {
+            HoldEntry(R.string.action_select) {
                 menu = false
-                onRename(card.shelf)
-            })
-            DropdownMenuItem(text = {
-                Text(stringResource(R.string.action_remove), style = FlowFolio.subItem)
-            }, onClick = {
+                actions.onSelect()
+            }
+            HoldEntry(R.string.action_add_books) {
                 menu = false
-                onDelete(card.shelf)
-            })
+                actions.onAddBooks(card.shelf)
+            }
+            HoldEntry(R.string.action_edit) {
+                menu = false
+                actions.onRename(card.shelf)
+            }
+            HoldEntry(R.string.action_remove, warn = true) {
+                menu = false
+                actions.onDelete(card.shelf)
+            }
         }
     }
 }

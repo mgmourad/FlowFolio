@@ -24,7 +24,9 @@ islands per layout and EPUB memory (ADR-0031, `docs/plans/phase2-m3-memory.md`) 
 the M2 carry-overs (ragged lists, themed notice `ReaderNotice`, continuous EPUB Scroll `ScrollBand`, island zoom
 `IslandZoom`) built 2026-10-26; the owner's library batch of 2026-10-26 (multi-file and folder import `BatchImport`, the Folders
 chip and folder pages, shelf row height and gaps, bigger grid tiles with author, fuller Open Library details, Google Books tried and removed, ADR-0039;
-EPUBs read in place through their descriptor, `ChannelZip`) built and checked on `fold8_api37`, checked on the emulator and the unfolded Fold (island zoom on the cover screen not yet); next M3's checks. Between M2 and M3 (owner,
+EPUBs read in place through their descriptor, `ChannelZip`) built and checked on `fold8_api37`; the owner's shelf batch of
+2026-10-26 (Add books `ShelfAdding.kt`, Select in every press-and-hold menu, batch Add to shelf, drag-and-drop shelf
+order `ReorderState.kt`, paper switch keeping the reader's panels, `FlowFolioPalette`) built and checked there too, checked on the emulator and the unfolded Fold (island zoom on the cover screen not yet); next M3's checks. Between M2 and M3 (owner,
 2026-10-22): app themes FlowFolio / Rustic / Material You (ADR-0028, `RusticPalette.kt`, `MaterialPalette.kt`,
 `ThemePicker.kt`), a Rustic paper, and a redesigned details page (approved; Rustic without texture, ADR-0029); riffle arrows at the strip's ends** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
 spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).
@@ -242,7 +244,8 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     `app/build.gradle.kts` (the plugin overwrites DSL settings on those build types); real release builds keep it false.
     Gradle's connected run uninstalls the test APK and hides crashes: when a run reports 0 tests, install both APKs and
     run `am instrument -w -r -e class ... -e androidx.benchmark.enabledRules BaselineProfile` by hand.
-32. Room is at schema v12 (v12: `books.folder`, the folder a book came in with a folder import, and the looked-up `subjects`,
+32. Room is at schema v13 (v13: `shelf_books.position`, a shelf's drag-and-drop order, smallest first, ties newest first).
+    At v12: `books.folder`, the folder a book came in with a folder import, and the looked-up `subjects`,
     `print_pages`, `series`, `rating`, `ratings_count`; ADR-0037/0038). At v11: `shelves.color`, a `ShelfColor` name or null for the theme's). At v10: `books.format` (PDF or EPUB) and `books.last_locator` (an EPUB's position, `chapter:offset`;
     `last_page` and `page_count` are at the size it was last read). Saving a plain page clears the locator, so the
     `startPage` debug extra works for EPUBs too. `tools/testepubs/make_test_epubs.py` makes the synthetic and hostile

@@ -78,16 +78,19 @@ fun FlowFolioTheme(
 @Composable
 fun FlowFolioPalette(dark: Boolean, content: @Composable () -> Unit) {
     val current = LocalPalette.current
-    if (current.dark == dark) {
-        content()
-        return
+    val same = current.dark == dark
+    val palette = if (same) {
+        current
+    } else {
+        val base = LocalPaletteFamily.current.of(dark)
+        val glowOff = current.titleGlow == Glow.None && current.itemGlow == Glow.None
+        if (glowOff) base.withoutGlow() else base
     }
-    val base = LocalPaletteFamily.current.of(dark)
-    val glowOff = current.titleGlow == Glow.None && current.itemGlow == Glow.None
-    val palette = if (glowOff) base.withoutGlow() else base
+    // One shape whichever way round, so content keeps its state when the paper flips between light and dark (an early
+    // return here put it in another group: the reader's bars and panels were rebuilt mid-reveal, tabs reset).
     CompositionLocalProvider(LocalPalette provides palette) {
         MaterialTheme(
-            colorScheme = palette.toColorScheme(),
+            colorScheme = if (same) MaterialTheme.colorScheme else palette.toColorScheme(),
             typography = MaterialTheme.typography,
             shapes = MaterialTheme.shapes,
             content = content

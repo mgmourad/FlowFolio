@@ -39,9 +39,10 @@ class ShelfDaoTest {
         dao.setShelves("a", setOf(fall), now = 10)
         dao.setShelves("a", setOf(fall, fun2), now = 20)
         dao.observeMemberships().test {
+            // Shelves, books and dates (positions are checked in ShelfOrderTest).
             assertEquals(
-                listOf(ShelfBookEntity(fun2, "a", 20), ShelfBookEntity(fall, "a", 10)),
-                awaitItem()
+                listOf(Triple(fun2, "a", 20L), Triple(fall, "a", 10L)),
+                awaitItem().map { Triple(it.shelfId, it.bookId, it.addedAt) }
             )
         }
         dao.setShelves("a", setOf(fun2), now = 30)

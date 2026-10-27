@@ -40,7 +40,9 @@ data class AnnotationActions(
     val onOpen: (Annotation) -> Unit = {},
     val onShare: (Annotation) -> Unit = {},
     val onNote: (Annotation) -> Unit = {},
-    val onDelete: (Annotation) -> Unit = {}
+    val onDelete: (Annotation) -> Unit = {},
+    /** Press and hold → Select: select mode, with this one chosen. */
+    val onSelect: ((Annotation) -> Unit)? = null
 )
 
 data class AnnotationsUiState(
