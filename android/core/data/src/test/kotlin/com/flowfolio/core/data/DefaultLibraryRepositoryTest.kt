@@ -231,6 +231,13 @@ internal class FakeDocumentSource : DocumentSource {
     override fun releaseReadAccess(uri: String) {
         persisted -= uri
     }
+
+    /** Folder listings by tree URI. */
+    val folders = mutableMapOf<String, List<FolderFile>>()
+
+    override fun listFolder(treeUri: String): List<FolderFile>? = folders[treeUri]
+
+    override fun persistFolderAccess(treeUri: String): Boolean = persistReadAccess(treeUri)
 }
 
 /** EPUB stand-in: "good" books carry metadata, "drm" ones are encrypted, anything else is damaged. */

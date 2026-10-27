@@ -39,13 +39,24 @@ internal fun InfoPanel(state: DetailsUiState, book: Book) {
             R.string.info_group_book,
             listOf(
                 R.string.info_author to book.author,
+                R.string.info_series to d.series,
                 R.string.info_pages to book.pageCount.takeIf { it > 0 }?.toString(),
+                R.string.info_print_pages to d.printPages?.toString(),
                 R.string.info_publisher to d.publisher,
                 R.string.info_released to d.released,
                 R.string.info_edition to d.edition,
                 R.string.info_isbn to d.isbn,
                 R.string.info_language to d.language,
-                R.string.info_type to type
+                R.string.info_type to type,
+                R.string.info_subjects to d.subjects.takeIf { it.isNotEmpty() }?.joinToString(", "),
+                R.string.info_rating to d.rating?.let { r ->
+                    val count = d.ratingsCount
+                    if (count != null) {
+                        stringResource(R.string.info_rating_value, "%.1f".format(r), count)
+                    } else {
+                        stringResource(R.string.info_rating_alone, "%.1f".format(r))
+                    }
+                }
             )
         )
         InfoGroup(
@@ -56,6 +67,7 @@ internal fun InfoPanel(state: DetailsUiState, book: Book) {
                 R.string.info_added to dateFormat.format(book.addedAtMillis),
                 R.string.info_last_opened to lastOpened,
                 R.string.info_storage to stringResource(storageLabel(state, book)),
+                R.string.info_folder to book.folder,
                 R.string.info_cover to stringResource(coverLabel(book))
             )
         )

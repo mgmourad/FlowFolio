@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
+@Suppress("TooManyFunctions") // the repository's calls and the import steps behind them
 class DefaultLibraryRepository @Inject constructor(
     private val dao: BookDao,
     private val source: DocumentSource,
@@ -36,22 +37,38 @@ class DefaultLibraryRepository @Inject constructor(
         return source.map { list -> list.map { it.toBook() } }
     }
 
-    override suspend fun import(uri: String, mode: StorageMode, fromShare: Boolean): ImportResult = withContext(io) {
+    override suspend fun import(
+        uri: String,
+        mode: StorageMode,
+        fromShare: Boolean,
+        folder: String?,
+        accessHeld: Boolean
+    ): ImportResult = withContext(io) {
         val effectiveMode = if (fromShare) StorageMode.COPY else mode
-        if (effectiveMode == StorageMode.LINK && !source.persistReadAccess(uri)) {
-            return@withContext ImportResult.LinkNotPossible
-        }
+        val ownGrant = effectiveMode == StorageMode.LINK && !accessHeld
+        if (ownGrant && !source.persistReadAccess(uri)) return@withContext ImportResult.LinkNotPossible
         val outcome = when (effectiveMode) {
-            StorageMode.COPY -> importCopy(uri)
-            StorageMode.LINK -> importLink(uri)
+            StorageMode.COPY -> importCopy(uri, folder)
+            StorageMode.LINK -> importLink(uri, folder)
         }
-        if (outcome !is ImportResult.Imported && effectiveMode == StorageMode.LINK) source.releaseReadAccess(uri)
+        if (outcome !is ImportResult.Imported && ownGrant) source.releaseReadAccess(uri)
         outcome
+    }
+
+    override suspend fun listFolder(treeUri: String): List<FolderFile>? = withContext(io) { source.listFolder(treeUri) }
+
+    override suspend fun persistFolderAccess(treeUri: String): Boolean =
+        withContext(io) { source.persistFolderAccess(treeUri) }
+
+    /** A book already in the library: it joins the imported folder when it was imported on its own before. */
+    private suspend fun duplicate(existing: BookEntity, folder: String?): ImportResult {
+        if (folder != null && existing.folder == null) dao.setFolder(existing.id, folder)
+        return ImportResult.Duplicate(existing.toBook())
     }
 
     // Each early return is a distinct, user-visible import outcome; nesting them would hide that.
     @Suppress("ReturnCount")
-    private suspend fun importCopy(uri: String): ImportResult {
+    private suspend fun importCopy(uri: String, folder: String?): ImportResult {
         val fd = source.open(uri) ?: return ImportResult.Unreadable
         val size = fd.statSize
         if (size > 0 && files.usableBytes() < size + SPACE_RESERVE_BYTES) {
@@ -68,7 +85,7 @@ class DefaultLibraryRepository @Inject constructor(
         }
         dao.get(id)?.let {
             temp.delete()
-            return ImportResult.Duplicate(it.toBook())
+            return duplicate(it, folder)
         }
         val format = formatOf(ParcelFileDescriptor.open(temp, ParcelFileDescriptor.MODE_READ_ONLY))
         val target = files.book(id, format)
@@ -81,18 +98,18 @@ class DefaultLibraryRepository @Inject constructor(
             target.delete()
             return info.failure()
         }
-        return save(Stored(id, bytes, StorageMode.COPY, target.absolutePath), info, uri)
+        return save(Stored(id, bytes, StorageMode.COPY, target.absolutePath, folder), info, uri)
     }
 
     @Suppress("ReturnCount")
-    private suspend fun importLink(uri: String): ImportResult {
+    private suspend fun importLink(uri: String, folder: String?): ImportResult {
         val (id, bytes) = hashOrNull(uri) ?: return ImportResult.Unreadable
-        dao.get(id)?.let { return ImportResult.Duplicate(it.toBook()) }
+        dao.get(id)?.let { return duplicate(it, folder) }
         val format = source.open(uri)?.let(::formatOf) ?: return ImportResult.Unreadable
         val fd = source.open(uri) ?: return ImportResult.Unreadable
         val info = inspect(fd, id, format)
         if (info !is Inspected.Ok) return info.failure()
-        return save(Stored(id, bytes, StorageMode.LINK, uri), info, uri)
+        return save(Stored(id, bytes, StorageMode.LINK, uri, folder), info, uri)
     }
 
     private fun hashOrNull(uri: String): Pair<String, Long>? =
@@ -134,7 +151,13 @@ class DefaultLibraryRepository @Inject constructor(
     }
 
     /** Where an imported file ended up. */
-    private data class Stored(val id: String, val bytes: Long, val mode: StorageMode, val location: String)
+    private data class Stored(
+        val id: String,
+        val bytes: Long,
+        val mode: StorageMode,
+        val location: String,
+        val folder: String? = null
+    )
 
     private suspend fun save(stored: Stored, info: Inspected.Ok, uri: String): ImportResult {
         val cover = files.cover(stored.id).takeIf { it.exists() }?.absolutePath
@@ -160,7 +183,8 @@ class DefaultLibraryRepository @Inject constructor(
             language = epub?.language,
             released = epub?.released,
             rightToLeft = epub?.rightToLeft ?: false,
-            format = info.format.name
+            format = info.format.name,
+            folder = stored.folder
         )
         dao.insert(entity)
         return ImportResult.Imported(entity.toBook())
@@ -219,7 +243,13 @@ class DefaultLibraryRepository @Inject constructor(
                 released = details.released.clean(),
                 authorRole = details.authorRole.clean(),
                 authorBio = details.authorBio.clean(),
-                bookType = details.type?.name
+                bookType = details.type?.name,
+                subjects = details.subjects.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
+                    .joinToString(SUBJECT_SEPARATOR).ifEmpty { null },
+                printPages = details.printPages?.takeIf { it > 0 },
+                series = details.series.clean(),
+                rating = details.rating?.takeIf { it in 0f..MAX_RATING },
+                ratingsCount = details.ratingsCount?.takeIf { it > 0 }
             )
         }
 
@@ -257,13 +287,22 @@ internal fun BookEntity.toBook() = Book(
         released = released,
         authorRole = authorRole,
         authorBio = authorBio,
-        type = BookType.entries.firstOrNull { it.name == bookType }
+        type = BookType.entries.firstOrNull { it.name == bookType },
+        subjects = subjects?.split(SUBJECT_SEPARATOR)?.filter { it.isNotBlank() }.orEmpty(),
+        printPages = printPages,
+        series = series,
+        rating = rating,
+        ratingsCount = ratingsCount
     ),
     rightToLeft = rightToLeft,
     pageLabels = pageLabels,
     format = BookFormat.entries.firstOrNull { it.name == format } ?: BookFormat.PDF,
-    lastLocator = lastLocator
+    lastLocator = lastLocator,
+    folder = folder
 )
+
+private const val SUBJECT_SEPARATOR = "; "
+private const val MAX_RATING = 5f
 
 /** Trimmed, and null when blank, so an emptied field reads as unknown. */
 private fun String?.clean(): String? = this?.trim()?.takeIf { it.isNotEmpty() }

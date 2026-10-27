@@ -145,7 +145,7 @@ class LibraryViewModelTest {
         backgroundScope.launch { vm.uiState.collect {} }
         vm.onFilePicked("content://docs/a")
         val dialog = vm.uiState.value.dialog as LibraryDialog.LinkNotPossible
-        vm.onCopyInstead(dialog.uri)
+        vm.onCopyInstead(dialog.request)
         assertEquals(StorageMode.COPY, library.imports.last().second)
         assertNull(vm.uiState.value.dialog)
     }

@@ -1,12 +1,16 @@
 package com.flowfolio.feature.library
 
 import android.text.format.Formatter
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -14,16 +18,23 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioAlertDialog
+import com.flowfolio.core.designsystem.FlowFolioGlyph
+import com.flowfolio.core.designsystem.FlowFolioIconButton
+import com.flowfolio.core.designsystem.FlowFolioType
+import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.flowFolioRadioColors
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.StorageMode
@@ -56,7 +67,7 @@ internal fun LibraryDialogs(dialog: LibraryDialog?, viewModel: LibraryViewModel)
             onDismissRequest = viewModel::dismissDialog,
             title = { Text(stringResource(R.string.link_not_possible_title)) },
             text = { Text(stringResource(R.string.link_not_possible_body)) },
-            confirmButton = { DialogButton(R.string.action_copy_instead) { viewModel.onCopyInstead(dialog.uri) } },
+            confirmButton = { DialogButton(R.string.action_copy_instead) { viewModel.onCopyInstead(dialog.request) } },
             dismissButton = { DialogButton(R.string.action_cancel, viewModel::dismissDialog) }
         )
 
@@ -156,4 +167,74 @@ private fun StorageOption(selected: Boolean, label: String, disclaimer: String, 
 @Composable
 private fun DialogButton(label: Int, onClick: () -> Unit) {
     TextButton(onClick = onClick) { Text(stringResource(label)) }
+}
+
+/** Import: files (one or several) or a whole folder, from a small menu under the + button (owner, 2026-10-26). */
+@Composable
+internal fun ImportMenu(actions: LibraryActions) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        FlowFolioIconButton(onClick = { open = true }, modifier = Modifier.testTag(LibraryTestTags.IMPORT)) {
+            FlowFolioGlyph(Glyph.Add, contentDescription = stringResource(R.string.action_import))
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            ImportEntry(R.string.import_files) {
+                open = false
+                actions.onImport()
+            }
+            ImportEntry(R.string.import_folder) {
+                open = false
+                actions.onImportFolder()
+            }
+        }
+    }
+}
+
+@Composable
+private fun ImportEntry(label: Int, onClick: () -> Unit) {
+    androidx.compose.material3.DropdownMenuItem(
+        text = { Text(stringResource(label), style = FlowFolio.title) },
+        onClick = onClick
+    )
+}
+
+/** An import running: how far a batch has got, or an open-ended bar for a single book. */
+@Composable
+internal fun ImportProgress(progress: Pair<Int, Int>?) {
+    androidx.compose.foundation.layout.Column(Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 6.dp)) {
+        if (progress == null) {
+            LinearProgressIndicator(
+                Modifier.fillMaxWidth(),
+                color = FlowFolio.palette.title,
+                trackColor = FlowFolio.palette.edge
+            )
+        } else {
+            val (done, total) = progress
+            LinearProgressIndicator(
+                progress = { done.toFloat() / total.coerceAtLeast(1) },
+                modifier = Modifier.fillMaxWidth(),
+                color = FlowFolio.palette.title,
+                trackColor = FlowFolio.palette.edge
+            )
+            Text(
+                stringResource(R.string.import_progress, done + 1, total),
+                style = FlowFolioType.sub.merge(FlowFolio.hint),
+                modifier = Modifier.padding(top = 6.dp).testTag(LibraryTestTags.IMPORT_PROGRESS)
+            )
+        }
+    }
+}
+
+/** Asks before a folder's books leave the library. */
+@Composable
+internal fun RemoveFolderDialog(folder: FolderEntry, onConfirm: () -> Unit, onClose: () -> Unit) {
+    BulkDeleteDialog(
+        androidx.compose.ui.res.pluralStringResource(R.plurals.delete_books_title, folder.bookCount, folder.bookCount),
+        stringResource(R.string.remove_folder_body, folder.name),
+        onConfirm = {
+            onConfirm()
+            onClose()
+        },
+        onDismiss = onClose
+    )
 }

@@ -38,8 +38,18 @@ import kotlinx.coroutines.launch
 
 data class LibraryItem(val book: Book, val availability: Availability = Availability.AVAILABLE)
 
-/** The library chips. [TEXTBOOKS] and [NOVELS] (the mock's chips) appear once a book has that type. */
-enum class LibraryFilter { ALL, IN_PROGRESS, NOT_STARTED, TEXTBOOKS, NOVELS, RECENT }
+/**
+ * The library chips. [TEXTBOOKS] and [NOVELS] (the mock's chips) appear once a book has that type; [FOLDERS] shows the
+ * imported folders instead of the shelves (owner, 2026-10-26).
+ */
+enum class LibraryFilter { ALL, IN_PROGRESS, NOT_STARTED, TEXTBOOKS, NOVELS, RECENT, FOLDERS }
+
+/** What the reader picked to import: some files, or a whole folder with every folder inside it. */
+sealed interface ImportRequest {
+    data class Files(val uris: List<String>) : ImportRequest
+
+    data class Folder(val treeUri: String) : ImportRequest
+}
 
 data class LibraryUiState(
     /** The books that pass [filter] and [query], in the chosen sort order. */
@@ -47,6 +57,8 @@ data class LibraryUiState(
     val loading: Boolean = true,
     val sort: LibrarySort = LibrarySort.RECENT,
     val importing: Boolean = false,
+    /** Books done and books in all, while a batch (several files, a folder) imports. */
+    val importProgress: Pair<Int, Int>? = null,
     val dialog: LibraryDialog? = null,
     val shelves: List<Shelf> = emptyList(),
     val filter: LibraryFilter = LibraryFilter.ALL,
@@ -88,6 +100,7 @@ internal fun LibraryFilter.accepts(book: Book, now: Long): Boolean = when (this)
     LibraryFilter.NOT_STARTED -> !book.started()
     LibraryFilter.RECENT -> now - book.addedAtMillis <= RECENT_WINDOW_MS
     LibraryFilter.TEXTBOOKS, LibraryFilter.NOVELS -> book.details.type == type
+    LibraryFilter.FOLDERS -> book.folder != null
 }
 
 /** The book type a chip stands for, or null for the reading-state chips. */
@@ -106,24 +119,31 @@ private const val RECENT_WINDOW_MS = 30L * 24 * 60 * 60 * 1000
 sealed interface LibraryDialog {
     /** First import ever, or "ask every time": choose copy or read-in-place, with both disclaimers. */
     data class ChooseStorage(
-        val uri: String,
+        val request: ImportRequest,
         val initial: StorageMode,
         val firstTime: Boolean,
         val sizeBytes: Long? = null
     ) : LibraryDialog
 
-    data class LinkNotPossible(val uri: String) : LibraryDialog
+    /** Reading in place was refused for [request] (or the files in it that refused); it can be copied instead. */
+    data class LinkNotPossible(val request: ImportRequest) : LibraryDialog
 
     data class ConfirmDelete(val book: Book) : LibraryDialog
 
     /** After the first import: may FlowFolio look book details up online (ADR-0017)? */
-    data class AskLookup(val book: Book) : LibraryDialog
+    data class AskLookup(val books: List<Book>) : LibraryDialog
 }
 
 sealed interface LibraryMessage {
     data class Imported(val title: String) : LibraryMessage
 
     data class Duplicate(val title: String) : LibraryMessage
+
+    /** A batch is done: how many books came in, were in the library already, or could not be opened. */
+    data class ImportedMany(val imported: Int, val already: Int, val failed: Int) : LibraryMessage
+
+    /** The folder picked holds no PDFs or EPUBs. */
+    data object FolderEmpty : LibraryMessage
 
     data object NotABook : LibraryMessage
 
@@ -185,6 +205,7 @@ class LibraryViewModel @Inject constructor(
             loading = false,
             sort = s.librarySort,
             importing = t.importing,
+            importProgress = t.progress,
             dialog = t.dialog,
             shelves = shelves,
             filter = v.filter,
@@ -202,19 +223,57 @@ class LibraryViewModel @Inject constructor(
     fun onQuery(query: String) = view.update { it.copy(query = query) }
 
     /** A file chosen with the in-app picker. */
-    fun onFilePicked(uri: String) = viewModelScope.launch {
+    fun onFilePicked(uri: String) = onFilesPicked(listOf(uri))
+
+    /** Files chosen with the in-app picker (one or several). */
+    fun onFilesPicked(uris: List<String>) {
+        if (uris.isNotEmpty()) request(ImportRequest.Files(uris.distinct()))
+    }
+
+    /** A folder chosen with the system's folder picker: its books and those in every folder inside it. */
+    fun onFolderPicked(treeUri: String) = request(ImportRequest.Folder(treeUri))
+
+    private fun request(request: ImportRequest) = viewModelScope.launch {
         val s = settings.value ?: settingsRepo.settings.first()
+        val size = (request as? ImportRequest.Files)?.uris?.map { library.sizeOf(it) }
+            ?.takeIf { sizes -> sizes.all { it != null } }?.sumOf { it ?: 0L }
         when {
-            !s.storageNoticeSeen -> showDialog(
-                LibraryDialog.ChooseStorage(uri, s.storageMode, true, library.sizeOf(uri))
-            )
-
-            s.askStorageEachImport -> showDialog(
-                LibraryDialog.ChooseStorage(uri, s.storageMode, false, library.sizeOf(uri))
-            )
-
-            else -> import(uri, s.storageMode)
+            !s.storageNoticeSeen -> showDialog(LibraryDialog.ChooseStorage(request, s.storageMode, true, size))
+            s.askStorageEachImport -> showDialog(LibraryDialog.ChooseStorage(request, s.storageMode, false, size))
+            else -> run(request, s.storageMode)
         }
+    }
+
+    private suspend fun run(request: ImportRequest, mode: StorageMode) {
+        val single = (request as? ImportRequest.Files)?.uris?.singleOrNull()
+        if (single != null) import(single, mode) else batch.run(request, mode)
+    }
+
+    private val batch = BatchImport(
+        library,
+        onProgress = { p -> transient.update { it.copy(importing = p != null, progress = p) } },
+        onDone = { outcome -> afterBatch(outcome) }
+    )
+
+    private suspend fun afterBatch(outcome: BatchImport.Outcome) {
+        when {
+            outcome.unreadable -> messageChannel.send(LibraryMessage.Unreadable)
+
+            outcome.empty -> messageChannel.send(LibraryMessage.FolderEmpty)
+
+            else -> messageChannel.send(
+                LibraryMessage.ImportedMany(outcome.imported.size, outcome.already, outcome.failed)
+            )
+        }
+        outcome.linkRefused?.let { showDialog(LibraryDialog.LinkNotPossible(it)) }
+        if (outcome.imported.isNotEmpty()) lookUp(outcome.imported)
+    }
+
+    /** The online lookup for new books: runs when allowed, or asks once (off until agreed, ADR-0017). */
+    private fun lookUp(books: List<Book>) = viewModelScope.launch {
+        val enricher = BookEnricher(lookup, library)
+        val ask = books.map { enricher.afterImport(it, settingsRepo) }.firstOrNull() ?: false
+        if (ask) showDialog(LibraryDialog.AskLookup(books))
     }
 
     /** A file handed over by another app ("Open with", share sheet): always copied. */
@@ -228,15 +287,20 @@ class LibraryViewModel @Inject constructor(
             settingsRepo.setStorageMode(mode)
             settingsRepo.setStorageNoticeSeen()
         }
-        import(dialog.uri, mode)
+        run(dialog.request, mode)
     }
 
-    fun onCopyInstead(uri: String) = viewModelScope.launch {
+    fun onCopyInstead(request: ImportRequest) = viewModelScope.launch {
         dismissDialog()
-        import(uri, StorageMode.COPY)
+        run(request, StorageMode.COPY)
     }
 
     fun onRequestDelete(book: Book) = showDialog(LibraryDialog.ConfirmDelete(book))
+
+    /** Removes every book in the folder [path] and the folders inside it (asked first). */
+    fun onRemoveFolder(path: String) = viewModelScope.launch {
+        uiState.value.items.map { it.book }.filter { it.isUnder(path) }.forEach { library.delete(it.id) }
+    }
 
     fun onConfirmDelete(book: Book) = viewModelScope.launch {
         dismissDialog()
@@ -264,7 +328,7 @@ class LibraryViewModel @Inject constructor(
     fun onLookupAnswer(dialog: LibraryDialog.AskLookup, allow: Boolean) = viewModelScope.launch {
         dismissDialog()
         settingsRepo.setOnlineLookup(allow)
-        if (allow) BookEnricher(lookup, library).enrich(dialog.book)
+        if (allow) dialog.books.forEach { BookEnricher(lookup, library).enrich(it) }
     }
 
     private fun showDialog(dialog: LibraryDialog) = transient.update { it.copy(dialog = dialog) }
@@ -275,12 +339,7 @@ class LibraryViewModel @Inject constructor(
             when (val r = library.import(uri, mode, fromShare)) {
                 is ImportResult.Imported -> {
                     messageChannel.send(LibraryMessage.Imported(r.book.title))
-                    // The online lookup: runs when allowed, or asks the first time (off until agreed).
-                    viewModelScope.launch {
-                        if (BookEnricher(lookup, library).afterImport(r.book, settingsRepo)) {
-                            showDialog(LibraryDialog.AskLookup(r.book))
-                        }
-                    }
+                    lookUp(listOf(r.book))
                 }
 
                 is ImportResult.Duplicate -> messageChannel.send(LibraryMessage.Duplicate(r.existing.title))
@@ -293,7 +352,9 @@ class LibraryViewModel @Inject constructor(
 
                 is ImportResult.NotEnoughSpace -> messageChannel.send(LibraryMessage.NotEnoughSpace(r.neededBytes))
 
-                ImportResult.LinkNotPossible -> showDialog(LibraryDialog.LinkNotPossible(uri))
+                ImportResult.LinkNotPossible -> showDialog(
+                    LibraryDialog.LinkNotPossible(ImportRequest.Files(listOf(uri)))
+                )
             }
         } finally {
             transient.update { it.copy(importing = false) }
@@ -309,7 +370,11 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    private data class Transient(val importing: Boolean = false, val dialog: LibraryDialog? = null)
+    private data class Transient(
+        val importing: Boolean = false,
+        val progress: Pair<Int, Int>? = null,
+        val dialog: LibraryDialog? = null
+    )
 
     private data class View(val filter: LibraryFilter = LibraryFilter.ALL, val query: String = "")
 
