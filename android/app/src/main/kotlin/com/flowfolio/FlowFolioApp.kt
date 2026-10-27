@@ -86,6 +86,7 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                                 onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) },
                                 onRead = { book -> nav.navigate(Routes.reader(book.id)) },
                                 onOpenShelf = { id -> nav.navigate(Routes.shelf(id)) },
+                                onOpenFolder = { path -> nav.navigate(Routes.folder(path)) },
                                 onBookmarks = { book -> nav.navigate(Routes.bookBookmarks(book.id)) },
                                 onAnnotations = { book -> nav.navigate(Routes.bookAnnotations(book.id)) },
                                 scrollToShelf = shelfToShow,
@@ -114,6 +115,7 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                     bookBookmarksDestination(nav)
                     bookAnnotationsDestination(nav)
                     shelfDestination(nav)
+                    folderDestination(nav)
                     readerDestination(nav)
                 }
             }
@@ -197,6 +199,23 @@ private fun NavGraphBuilder.shelfDestination(nav: NavHostController) = composabl
                 onBack = { nav.popBackStack() },
                 onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) },
                 onBookmarks = { book -> nav.navigate(Routes.bookBookmarks(book.id)) }
+            )
+        }
+    }
+}
+
+/** An imported folder: its folders and books, as tiles or a list (from the library's Folders chip). */
+private fun NavGraphBuilder.folderDestination(nav: NavHostController) = composable(
+    Routes.FOLDER,
+    arguments = listOf(navArgument(ShelfPageViewModel.ARG_FOLDER) { type = NavType.StringType })
+) {
+    CompositionLocalProvider(LocalDestinationScope provides this) {
+        ScreenEntrance {
+            ShelfPageScreen(
+                onBack = { nav.popBackStack() },
+                onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) },
+                onBookmarks = { book -> nav.navigate(Routes.bookBookmarks(book.id)) },
+                onOpenFolder = { path -> nav.navigate(Routes.folder(path)) }
             )
         }
     }

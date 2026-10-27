@@ -26,7 +26,9 @@ data class Book(
     val pageLabels: String? = null,
     val format: BookFormat = BookFormat.PDF,
     /** An EPUB's reading position as a reflow locator; [lastPage] and [pageCount] are at the size it was last read. */
-    val lastLocator: String? = null
+    val lastLocator: String? = null,
+    /** The folder it was imported with ("Books/Physics"), or null when it was imported on its own. */
+    val folder: String? = null
 ) {
     /** How far through the book the reader is, 0..1 (0 when not started). */
     val progress: Float

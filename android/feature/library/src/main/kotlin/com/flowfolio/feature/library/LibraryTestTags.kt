@@ -2,6 +2,7 @@ package com.flowfolio.feature.library
 
 /** Semantic tags used by UI tests to find library, shelves and details elements. */
 object LibraryTestTags {
+    const val IMPORT_PROGRESS = "library_import_progress"
     const val EMPTY = "library_empty"
     const val GRID = "library_grid"
     const val IMPORT = "library_import"
@@ -48,6 +49,8 @@ object LibraryTestTags {
     fun shelfCount(id: Long) = "shelf_count_$id"
 
     fun row(bookId: String) = "row_$bookId"
+
+    fun folder(path: String) = "folder_$path"
 
     fun bookmark(id: Long) = "bookmark_$id"
 

@@ -74,6 +74,8 @@ fun Book3D(
     modifier: Modifier = Modifier,
     lifted: Boolean = false,
     restAngle: Float = REST_ANGLE,
+    /** The soft contact shadow under the book; grids leave it out (owner, 2026-10-26). */
+    shadow: Boolean = true,
     onClick: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -95,7 +97,7 @@ fun Book3D(
         val h = size.height
         val depth = max(MIN_DEPTH.dp.toPx(), bookDepth(face.pageCount) * w / DEPTH_REFERENCE)
         val lift = rise * LIFT.dp.toPx()
-        drawContactShadow(w, h, rise)
+        if (shadow) drawContactShadow(w, h, rise)
         val projector = Projector(w, h, depth, angle, PERSPECTIVE.dp.toPx(), lift)
         drawIntoCanvas { c ->
             val canvas = c.nativeCanvas

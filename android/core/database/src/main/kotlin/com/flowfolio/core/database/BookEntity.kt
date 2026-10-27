@@ -42,5 +42,19 @@ data class BookEntity(
     /** A BookFormat name (PDF or EPUB). Added in schema v9; earlier books are PDFs. */
     @ColumnInfo(defaultValue = "PDF") val format: String = "PDF",
     /** Where an EPUB was left: a reflow locator (chapter:offset), which survives re-pagination. Added in schema v10. */
-    @ColumnInfo(name = "last_locator") val lastLocator: String? = null
+    @ColumnInfo(name = "last_locator") val lastLocator: String? = null,
+    /**
+     * The folder the book came in when a whole folder was imported: its path from the imported folder, that folder's
+     * own name first ("Books/Physics"); null for books imported on their own. Added in schema v12.
+     */
+    val folder: String? = null,
+    // More details from the online lookup (ADR-0036), added in schema v12. All optional.
+    /** Subjects or categories, joined by "; ". */
+    val subjects: String? = null,
+    /** Pages in the printed edition. */
+    @ColumnInfo(name = "print_pages") val printPages: Int? = null,
+    val series: String? = null,
+    /** Average reader rating out of 5, and how many ratings it averages. */
+    val rating: Float? = null,
+    @ColumnInfo(name = "ratings_count") val ratingsCount: Int? = null
 )

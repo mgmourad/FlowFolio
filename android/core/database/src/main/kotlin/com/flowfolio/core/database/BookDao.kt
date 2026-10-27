@@ -7,6 +7,7 @@ import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 
 @Dao
+@Suppress("TooManyFunctions") // one query per change the app makes to a book
 interface BookDao {
     /** Most recently opened first; never-opened books by date added. */
     @Query("SELECT * FROM books ORDER BY COALESCE(last_opened_at, added_at) DESC")
@@ -27,6 +28,9 @@ interface BookDao {
     @Query("UPDATE books SET storage_mode = :storageMode, location = :location WHERE id = :id")
     suspend fun updateLocation(id: String, storageMode: String, location: String)
 
+    @Query("UPDATE books SET folder = :folder WHERE id = :id")
+    suspend fun setFolder(id: String, folder: String?)
+
     @Query("UPDATE books SET last_opened_at = :at WHERE id = :id")
     suspend fun markOpened(id: String, at: Long)
 
@@ -34,7 +38,8 @@ interface BookDao {
     @Query(
         """UPDATE books SET title = :title, author = :author, subtitle = :subtitle, edition = :edition,
         publisher = :publisher, isbn = :isbn, description = :description, language = :language, released = :released,
-        author_role = :authorRole, author_bio = :authorBio, book_type = :bookType WHERE id = :id"""
+        author_role = :authorRole, author_bio = :authorBio, book_type = :bookType, subjects = :subjects,
+        print_pages = :printPages, series = :series, rating = :rating, ratings_count = :ratingsCount WHERE id = :id"""
     )
     @Suppress("LongParameterList") // one column each, as the query reads
     suspend fun updateDetails(
@@ -50,7 +55,12 @@ interface BookDao {
         released: String?,
         authorRole: String?,
         authorBio: String?,
-        bookType: String?
+        bookType: String?,
+        subjects: String? = null,
+        printPages: Int? = null,
+        series: String? = null,
+        rating: Float? = null,
+        ratingsCount: Int? = null
     )
 
     /** A page position; an EPUB's locator is cleared, so it opens at this page (measurement scripts set it). */

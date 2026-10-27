@@ -1,5 +1,6 @@
 package com.flowfolio.feature.library
 
+import com.flowfolio.core.data.FolderFile
 import com.flowfolio.core.data.ImportResult
 import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.data.RelinkResult
@@ -47,10 +48,28 @@ class FakeLibrary : LibraryRepository {
 
     override fun observeBook(bookId: String): Flow<Book?> = books.map { list -> list.firstOrNull { it.id == bookId } }
 
-    override suspend fun import(uri: String, mode: StorageMode, fromShare: Boolean): ImportResult {
+    /** The folder each import was given, by URI. */
+    val importFolders = mutableMapOf<String, String?>()
+    val folders = mutableMapOf<String, List<FolderFile>>()
+    val heldFolders = mutableSetOf<String>()
+
+    override suspend fun import(
+        uri: String,
+        mode: StorageMode,
+        fromShare: Boolean,
+        folder: String?,
+        accessHeld: Boolean
+    ): ImportResult {
         imports += Triple(uri, mode, fromShare)
-        return nextResult(uri).also { r -> if (r is ImportResult.Imported) books.update { it + r.book } }
+        importFolders[uri] = folder
+        return nextResult(uri).also { r ->
+            if (r is ImportResult.Imported) books.update { it + r.book.copy(folder = folder) }
+        }
     }
+
+    override suspend fun listFolder(treeUri: String): List<FolderFile>? = folders[treeUri]
+
+    override suspend fun persistFolderAccess(treeUri: String): Boolean = heldFolders.add(treeUri) || true
 
     override suspend fun availability(book: Book) = if (book.id in
         missing

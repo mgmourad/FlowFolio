@@ -27,10 +27,17 @@ class OpenLibraryLookupTest {
         "https://openlibrary.org/works/OL1W.json" to
             """{"description":{"type":"/type/text","value":"Calculus-based physics."}}""",
         "https://openlibrary.org/authors/OL2A.json" to """{"name":"Samuel J. Ling","bio":"Physicist."}""",
-        "https://openlibrary.org/search.json?limit=1&title=University+Physics&language=eng" to
-            """{"docs":[{"key":"/works/OL1W","author_name":["Ling"],"first_publish_year":2016,"language":["eng"]}]}"""
+        "https://openlibrary.org/search.json?limit=1&title=University+Physics&fields=$FIELDS&language=eng" to
+            """{"docs":[{"key":"/works/OL1W","author_name":["Ling"],"first_publish_year":2016,"language":["eng"],
+             "number_of_pages_median":584,"ratings_average":4.5,"ratings_count":12,
+             "subject":["Physics","Accessible book","great_books_of_the_western_world","Mechanics"]}]}"""
     )
     private val asked = mutableListOf<String>()
+
+    private companion object {
+        const val FIELDS = "key,title,subtitle,author_name,author_key,publisher,isbn,language,first_publish_year," +
+            "subject,number_of_pages_median,ratings_average,ratings_count"
+    }
     private val lookup = OpenLibraryLookup({ url ->
         asked += url
         responses[url]
@@ -52,6 +59,11 @@ class OpenLibraryLookupTest {
         val found = lookup.find(book)!!
         assertEquals("Ling", found.author)
         assertEquals("2016", found.details.released)
+        assertEquals(584, found.details.printPages)
+        assertEquals(4.5f, found.details.rating)
+        assertEquals(12, found.details.ratingsCount)
+        // Catalogue terms and tags are left out.
+        assertEquals(listOf("Physics", "Mechanics"), found.details.subjects)
         assertTrue(asked.all { it.startsWith("https://openlibrary.org/") })
         assertTrue(asked.none { "/x" in it })
     }

@@ -36,4 +36,9 @@ internal object Routes {
     private const val DETAILS_FADE = 0.45f
 
     fun shelf(id: Long) = "shelf/$id"
+
+    const val FOLDER = "folder/{${ShelfPageViewModel.ARG_FOLDER}}"
+
+    /** An imported folder's page; the path is encoded, since it holds slashes. */
+    fun folder(path: String) = "folder/" + android.net.Uri.encode(path)
 }

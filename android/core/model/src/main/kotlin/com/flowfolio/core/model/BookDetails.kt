@@ -15,7 +15,15 @@ data class BookDetails(
     /** The author's role or field ("Professor of Molecular Biology"). */
     val authorRole: String? = null,
     val authorBio: String? = null,
-    val type: BookType? = null
+    val type: BookType? = null,
+    /** Subjects or categories, most telling first (from the online lookup). */
+    val subjects: List<String> = emptyList(),
+    /** Pages in the printed edition (the file's page count can differ). */
+    val printPages: Int? = null,
+    val series: String? = null,
+    /** Average reader rating out of 5, and how many ratings it averages. */
+    val rating: Float? = null,
+    val ratingsCount: Int? = null
 )
 
 /** What kind of book it is (the mock's library chips: Textbooks, Novels). Null until the reader says. */

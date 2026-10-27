@@ -53,7 +53,10 @@ private val PDF_TYPES = arrayOf("application/pdf", "application/epub+zip")
 
 /** What the library screen can ask for. [onOpen] gets the row the book was tapped in, for the cover flight. */
 data class LibraryActions(
+    /** Picks files to import (one or several). */
     val onImport: () -> Unit = {},
+    /** Picks a folder to import, with every folder inside it. */
+    val onImportFolder: () -> Unit = {},
     val onOpen: (LibraryItem, String) -> Unit = { _, _ -> },
     val onResume: (LibraryItem) -> Unit = {},
     val onDelete: (Book) -> Unit = {},
@@ -64,6 +67,10 @@ data class LibraryActions(
     val onBookmarks: ((Book) -> Unit)? = null,
     /** The book's highlights and notes; null hides the Continue Reading shortcut. */
     val onAnnotations: ((Book) -> Unit)? = null,
+    /** Opens an imported folder's page, by its path. */
+    val onOpenFolder: (String) -> Unit = {},
+    /** Asks to remove a folder's books from the library. */
+    val onRemoveFolder: (FolderEntry) -> Unit = {},
     /** Opens a whole shelf ([ShelfPageViewModel.LOOSE] for the books on no shelf). */
     val onOpenShelf: (Long) -> Unit = {},
     val onSort: (LibrarySort) -> Unit = {},
@@ -83,6 +90,7 @@ fun LibraryScreen(
     onOpenDetails: (Book, String) -> Unit,
     onRead: (Book) -> Unit,
     onOpenShelf: (Long) -> Unit = {},
+    onOpenFolder: (String) -> Unit = {},
     onBookmarks: (Book) -> Unit = {},
     onAnnotations: (Book) -> Unit = {},
     scrollToShelf: Long? = null,
@@ -96,8 +104,12 @@ fun LibraryScreen(
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     var shelving by remember { mutableStateOf<Book?>(null) }
-    val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        uri?.let { viewModel.onFilePicked(it.toString()) }
+    val removeFolder = rememberRemoveFolder(viewModel)
+    val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        viewModel.onFilesPicked(uris.map { it.toString() })
+    }
+    val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        uri?.let { viewModel.onFolderPicked(it.toString()) }
     }
     val locate = rememberLocate(viewModel)
     LaunchedEffect(viewModel) {
@@ -113,6 +125,7 @@ fun LibraryScreen(
         onScrolledToShelf = onScrolledToShelf,
         actions = LibraryActions(
             onImport = { importPicker.launch(PDF_TYPES) },
+            onImportFolder = { folderPicker.launch(null) },
             onOpen = { item, origin ->
                 if (item.availability == Availability.MISSING) locate(item.book) else onOpenDetails(item.book, origin)
             },
@@ -129,6 +142,8 @@ fun LibraryScreen(
             onLocate = locate,
             onAddToShelf = { shelving = it },
             onOpenShelf = onOpenShelf,
+            onOpenFolder = onOpenFolder,
+            onRemoveFolder = removeFolder,
             onBookmarks = onBookmarks,
             onAnnotations = onAnnotations,
             onSort = viewModel::onSortChange,
@@ -139,6 +154,16 @@ fun LibraryScreen(
     )
     LibraryDialogs(state.dialog, viewModel)
     shelving?.let { ShelveBookFlow(it, state.shelves, shelves) { shelving = null } }
+}
+
+/** Remove from library on a folder: asks first, then removes every book in it. */
+@Composable
+private fun rememberRemoveFolder(viewModel: LibraryViewModel): (FolderEntry) -> Unit {
+    var removing by remember { mutableStateOf<FolderEntry?>(null) }
+    removing?.let { folder ->
+        RemoveFolderDialog(folder, onConfirm = { viewModel.onRemoveFolder(folder.path) }) { removing = null }
+    }
+    return { removing = it }
 }
 
 /** Locate for a moved or missing book: the system picker, then the book is pointed at the file chosen. */
@@ -201,15 +226,7 @@ fun LibraryContent(
                 )
             }
             if (searching) item(key = "search") { SearchField(state.query, actions.onQuery) }
-            if (state.importing) {
-                item(key = "importing") {
-                    LinearProgressIndicator(
-                        Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 6.dp),
-                        color = FlowFolio.palette.title,
-                        trackColor = FlowFolio.palette.edge
-                    )
-                }
-            }
+            if (state.importing) item(key = "importing") { ImportProgress(state.importProgress) }
             libraryBody(state, actions)
         }
         SnackbarHost(
@@ -235,10 +252,14 @@ private fun androidx.compose.foundation.lazy.LazyListScope.libraryBody(state: Li
     when {
         state.loading -> Unit
 
-        state.libraryEmpty -> item(key = "empty") { EmptyLibrary(actions.onImport) }
+        state.libraryEmpty -> item(key = "empty") { EmptyLibrary(actions) }
 
         else -> {
             item(key = "chips") { FilterChips(state.filters, state.filter, actions.onFilter, Modifier.reveal(1)) }
+            if (state.filter == LibraryFilter.FOLDERS) {
+                folderRoots(state, actions)
+                return
+            }
             val hero = state.continueReading
             if (hero != null && state.filter == LibraryFilter.ALL && state.query.isBlank()) {
                 // The shelf its shortcut opens: the first it is on, or the books on no shelf.
@@ -261,7 +282,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.libraryBody(state: Li
 }
 
 @Composable
-private fun EmptyLibrary(onImport: () -> Unit) {
+private fun EmptyLibrary(actions: LibraryActions) {
     androidx.compose.foundation.layout.Column(
         Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 96.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -273,9 +294,14 @@ private fun EmptyLibrary(onImport: () -> Unit) {
             modifier = Modifier.testTag(LibraryTestTags.EMPTY)
         )
         FlowFolioPrimaryButton(
-            text = stringResource(R.string.action_import),
-            onClick = onImport,
+            text = stringResource(R.string.import_files),
+            onClick = actions.onImport,
             modifier = Modifier.padding(top = 20.dp)
+        )
+        com.flowfolio.core.designsystem.FlowFolioGhostButton(
+            text = stringResource(R.string.import_folder),
+            onClick = actions.onImportFolder,
+            modifier = Modifier.padding(top = 12.dp)
         )
     }
 }
@@ -295,10 +321,19 @@ private val LIST_END = 24.dp
 /** Shelf rows reveal after the header, chips and hero card (orders 0 to 2). */
 private const val ROWS_REVEAL_ORDER = 3
 
+@Suppress("CyclomaticComplexMethod") // one branch per message
 internal fun LibraryMessage.text(context: android.content.Context): String = when (this) {
     is LibraryMessage.Imported -> context.getString(R.string.msg_imported, title)
 
     is LibraryMessage.Duplicate -> context.getString(R.string.msg_duplicate, title)
+
+    is LibraryMessage.ImportedMany -> listOfNotNull(
+        context.resources.getQuantityString(R.plurals.msg_added_books, imported, imported),
+        already.takeIf { it > 0 }?.let { context.getString(R.string.msg_already_count, it) },
+        failed.takeIf { it > 0 }?.let { context.getString(R.string.msg_failed_count, it) }
+    ).joinToString(" · ")
+
+    LibraryMessage.FolderEmpty -> context.getString(R.string.msg_folder_empty)
 
     LibraryMessage.NotABook -> context.getString(R.string.msg_not_a_pdf)
 

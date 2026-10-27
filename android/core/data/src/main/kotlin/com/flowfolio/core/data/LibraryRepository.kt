@@ -7,6 +7,7 @@ import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.StorageMode
 import kotlinx.coroutines.flow.Flow
 
+@Suppress("TooManyFunctions") // one call per thing the library does
 interface LibraryRepository {
     fun observeBooks(sort: LibrarySort): Flow<List<Book>>
 
@@ -15,9 +16,23 @@ interface LibraryRepository {
 
     /**
      * Imports the PDF at [uri]. [fromShare] marks files handed over by another app (share sheet, "Open with"):
-     * Android does not let FlowFolio keep access to those, so they are always copied regardless of [mode].
+     * Android does not let FlowFolio keep access to those, so they are always copied regardless of [mode]. [folder]
+     * is where the file sits in an imported folder ("Books/Physics"); [accessHeld] says FlowFolio already keeps access
+     * to it through that folder, so read-in-place needs no permission of its own.
      */
-    suspend fun import(uri: String, mode: StorageMode, fromShare: Boolean = false): ImportResult
+    suspend fun import(
+        uri: String,
+        mode: StorageMode,
+        fromShare: Boolean = false,
+        folder: String? = null,
+        accessHeld: Boolean = false
+    ): ImportResult
+
+    /** The PDFs and EPUBs anywhere under a picked folder, with where each sits; null when it cannot be read. */
+    suspend fun listFolder(treeUri: String): List<FolderFile>?
+
+    /** Keeps access to a picked folder for reading its books in place; false when the provider does not allow it. */
+    suspend fun persistFolderAccess(treeUri: String): Boolean
 
     suspend fun availability(book: Book): Availability
 

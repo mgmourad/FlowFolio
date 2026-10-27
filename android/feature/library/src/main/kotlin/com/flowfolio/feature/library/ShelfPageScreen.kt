@@ -49,7 +49,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -97,7 +96,9 @@ internal data class BookRowActions(
     val onBookmarks: (Book) -> Unit = {},
     /** Select mode (owner, 2026-10-22); null where books cannot be selected. */
     val selection: Selection? = null,
-    val onDeleteChosen: () -> Unit = {}
+    val onDeleteChosen: () -> Unit = {},
+    /** On a folder's page: opening a folder inside it, and asking to remove one. */
+    val folders: FolderActions = FolderActions(onOpen = {}, onRemove = {})
 )
 
 /**
@@ -109,6 +110,7 @@ fun ShelfPageScreen(
     onBack: () -> Unit,
     onOpenDetails: (Book, String) -> Unit,
     onBookmarks: (Book) -> Unit = {},
+    onOpenFolder: (String) -> Unit = {},
     viewModel: ShelfPageViewModel = hiltViewModel(),
     shelvesVm: ShelvesViewModel = hiltViewModel()
 ) {
@@ -116,6 +118,7 @@ fun ShelfPageScreen(
     var prompt by remember { mutableStateOf<BookPrompt?>(null) }
     val selection = rememberSelection()
     var confirmBulk by remember { mutableStateOf(false) }
+    var removing by remember { mutableStateOf<FolderEntry?>(null) }
     var relinkId by rememberSaveable { mutableStateOf<String?>(null) }
     val relink = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         val id = relinkId
@@ -140,23 +143,31 @@ fun ShelfPageScreen(
         },
         onBookmarks = onBookmarks,
         selection = selection,
-        onDeleteChosen = { confirmBulk = true }
+        onDeleteChosen = { confirmBulk = true },
+        folders = FolderActions(onOpen = onOpenFolder, onRemove = { removing = it }, selection = selection)
     )
     ShelfPageContent(state, onBack, actions)
-    if (confirmBulk) ConfirmShelfBooksDelete(selection, viewModel) { confirmBulk = false }
+    if (confirmBulk) ConfirmShelfBooksDelete(selection, state, viewModel) { confirmBulk = false }
+    removing?.let { folder -> RemoveFolderDialog(folder, { viewModel.removeFolder(folder.path) }) { removing = null } }
     BackHandler(selection.active) { selection.done() }
     BookPromptDialogs(prompt, state, viewModel, shelvesVm) { prompt = null }
 }
 
 /** Asks before select mode removes the chosen books from the library. */
 @Composable
-private fun ConfirmShelfBooksDelete(selection: Selection, viewModel: ShelfPageViewModel, onClose: () -> Unit) {
-    val n = selection.chosen.size
+private fun ConfirmShelfBooksDelete(
+    selection: Selection,
+    state: ShelfPageUiState,
+    viewModel: ShelfPageViewModel,
+    onClose: () -> Unit
+) {
+    // A chosen folder counts every book in it.
+    val n = selection.chosen.sumOf { key -> state.subfolders.firstOrNull { it.selectionId == key }?.bookCount ?: 1 }
     BulkDeleteDialog(
         pluralStringResource(R.plurals.delete_books_title, n, n),
         stringResource(R.string.delete_books_body),
         onConfirm = {
-            selection.chosen.forEach(viewModel::delete)
+            viewModel.deleteChosen(selection.chosen.toSet())
             selection.done()
             onClose()
         },
@@ -222,18 +233,19 @@ internal fun ShelfPageContent(state: ShelfPageUiState, onBack: () -> Unit, actio
         top = insets.calculateTopPadding(),
         bottom = insets.calculateBottomPadding() + 24.dp
     )
+    // Select mode chooses folders as well as books on a folder's page.
+    val keys = state.subfolders.map { it.selectionId } + state.items.map { item -> item.book.id }
     val header: @Composable () -> Unit = {
         ShelfPageHeader(state, view, { view = it }, onBack, selectionRow = {
-            actions.selection?.let {
-                SelectionRow(it, state.items.map { item -> item.book.id }, actions.onDeleteChosen)
-            }
+            actions.selection?.let { SelectionRow(it, keys, actions.onDeleteChosen) }
         }) {
-            actions.selection?.let { SelectControls(it, state.items.map { item -> item.book.id }) }
+            actions.selection?.let { SelectControls(it, keys) }
         }
     }
+    val folders = state.subfolders.size
     if (view == 0) {
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(TILE_MIN),
+            columns = GridCells.Adaptive(TILE_CELL),
             modifier = Modifier.fillMaxSize().testTag(LibraryTestTags.SHELF_TILES),
             contentPadding = padding,
             // Rows well apart, so each title clearly belongs to the book above it (owner, 2026-10-23).
@@ -241,8 +253,15 @@ internal fun ShelfPageContent(state: ShelfPageUiState, onBack: () -> Unit, actio
             verticalArrangement = Arrangement.spacedBy(TILE_ROW_GAP)
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) { Box(Modifier.reveal(0)) { header() } }
+            itemsIndexed(state.subfolders, key = { _, f -> f.selectionId }) { i, folder ->
+                Box(Modifier.animateItem().reveal(1 + i).fillMaxWidth(), Alignment.TopCenter) {
+                    FolderTile(folder, actions.folders)
+                }
+            }
             itemsIndexed(state.items, key = { _, entry -> entry.book.id }) { i, item ->
-                Box(Modifier.animateItem().reveal(1 + i).fillMaxWidth()) { BookTile(item, actions) }
+                Box(Modifier.animateItem().reveal(1 + folders + i).fillMaxWidth(), Alignment.TopCenter) {
+                    BookTile(item, actions)
+                }
             }
         }
     } else {
@@ -252,8 +271,11 @@ internal fun ShelfPageContent(state: ShelfPageUiState, onBack: () -> Unit, actio
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item { Box(Modifier.reveal(0)) { header() } }
+            itemsIndexed(state.subfolders, key = { _, f -> f.selectionId }) { i, folder ->
+                Box(Modifier.animateItem().reveal(1 + i)) { FolderRow(folder, actions.folders) }
+            }
             itemsIndexed(state.items, key = { _, entry -> entry.book.id }) { i, item ->
-                Box(Modifier.animateItem().reveal(1 + i)) { BookListRow(item, actions) }
+                Box(Modifier.animateItem().reveal(1 + folders + i)) { BookListRow(item, actions) }
             }
         }
     }
@@ -268,7 +290,7 @@ private fun ShelfPageHeader(
     selectionRow: @Composable () -> Unit,
     select: @Composable () -> Unit
 ) {
-    val name = state.shelf?.name
+    val name = state.folder?.substringAfterLast('/') ?: state.shelf?.name
         ?: stringResource(if (state.noShelves) R.string.shelf_all_books else R.string.shelf_loose)
     Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -290,7 +312,14 @@ private fun ShelfPageHeader(
         )
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
-                pluralStringResource(R.plurals.book_count, state.items.size, state.items.size),
+                listOfNotNull(
+                    state.subfolders.size.takeIf { it > 0 }?.let {
+                        pluralStringResource(R.plurals.folder_count, it, it)
+                    },
+                    // A folder holding only folders says just that.
+                    pluralStringResource(R.plurals.book_count, state.items.size, state.items.size)
+                        .takeIf { state.items.isNotEmpty() || state.subfolders.isEmpty() }
+                ).joinToString(" · "),
                 style = FlowFolioType.sub.merge(FlowFolio.hint),
                 modifier = Modifier.weight(1f)
             )
@@ -305,14 +334,16 @@ private fun ShelfPageHeader(
     }
 }
 
-/** A tile: the 3D book with its title; press and hold for the book's menu. */
+/**
+ * A tile: the 3D book, no shadow under it, then its title (two lines at most) and author, left-aligned and no wider
+ * than the book (owner, 2026-10-26); press and hold for the book's menu.
+ */
 @Composable
-private fun BookTile(item: LibraryItem, actions: BookRowActions) {
-    // The tile fills its cell, so every book and title is centred on the same column line.
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+internal fun BookTile(item: LibraryItem, actions: BookRowActions, origin: String = SHELF_PAGE_ORIGIN) {
+    Column(Modifier.width(TILE_BOOK_WIDTH + BOOK_SPINE_ROOM)) {
         ShelfBook(
             item,
-            SHELF_PAGE_ORIGIN,
+            origin,
             LibraryActions(
                 onOpen = { tapped, _ -> actions.onOpen(tapped) },
                 onDelete = actions.onDelete,
@@ -323,19 +354,26 @@ private fun BookTile(item: LibraryItem, actions: BookRowActions) {
                 selection = actions.selection
             ),
             width = TILE_BOOK_WIDTH,
-            height = TILE_BOOK_HEIGHT
+            height = TILE_BOOK_HEIGHT,
+            shadow = false
         )
-        // In the shelf title's own face, bold and centred under the book (owner, 2026-10-22).
         Text(
             item.book.title,
             style = FlowFolioType.sectionTitle.copy(fontSize = TILE_TITLE_SP, lineHeight = TILE_TITLE_LINE)
                 .merge(FlowFolio.title),
-            textAlign = TextAlign.Center,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
-            // Clear of the book's soft shadow, which spreads about 26 dp under it.
-            modifier = Modifier.fillMaxWidth().padding(top = TILE_TITLE_GAP, start = 4.dp, end = 4.dp)
+            modifier = Modifier.width(TILE_BOOK_WIDTH).padding(top = TILE_TITLE_GAP)
         )
+        item.book.author?.let {
+            Text(
+                it,
+                style = FlowFolioType.rowDetail.merge(FlowFolio.hint),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.width(TILE_BOOK_WIDTH).padding(top = 2.dp)
+            )
+        }
     }
 }
 
@@ -489,15 +527,19 @@ internal fun SwipeAction(label: Int, glyph: Glyph, color: androidx.compose.ui.gr
 }
 
 internal const val SHELF_PAGE_ORIGIN = "shelfpage"
-private val TILE_MIN = 132.dp
-private val TILE_BOOK_WIDTH = 96.dp
-private val TILE_BOOK_HEIGHT = 136.dp
+
+/** 30% bigger than the shelf page's first tiles (96 x 136 dp; owner, 2026-10-26). */
+internal val TILE_BOOK_WIDTH = 125.dp
+internal val TILE_BOOK_HEIGHT = 177.dp
+
+/** A cell just holds a book and its spine, so a row takes as many books as fit (five on the open Fold). */
+internal val TILE_CELL = TILE_BOOK_WIDTH + BOOK_SPINE_ROOM
 private val ACTION_WIDTH: Dp = 84.dp
 private val ROW_COVER_WIDTH = 48.dp
 private val ROW_COVER_HEIGHT = 66.dp
 
-private val TILE_TITLE_SP = 15.sp
-private val TILE_TITLE_LINE = 19.sp
-private val TILE_TITLE_GAP = 34.dp
-private val TILE_COLUMN_GAP = 20.dp
-private val TILE_ROW_GAP = 44.dp
+private val TILE_TITLE_SP = 13.sp
+private val TILE_TITLE_LINE = 16.sp
+private val TILE_TITLE_GAP = 10.dp
+internal val TILE_COLUMN_GAP = 12.dp
+internal val TILE_ROW_GAP = 28.dp

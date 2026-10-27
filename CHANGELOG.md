@@ -169,6 +169,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   Details: the top fade's blur eases out in bands and is lighter over the cover's backdrop; "Add to shelf" shows a
   shelf; a sideways swipe moves between the tabs; bigger play triangles on Continue and Resume. Folded, the reader's
   top bar puts the whole book title on its own centred row above Back and the tools.
+- Owner's library batch (2026-10-26, ADR-0037, ADR-0038).
+  - Import several files at once, or a whole folder with every folder inside it (the + button's "Import files…" and
+    "Import a folder…"). A batch shows "Importing n of N" and ends with one message (added, already there, couldn't be
+    opened). A folder read in place keeps one grant for the whole folder.
+  - A "Folders" chip lists the imported folders; each opens a page like a shelf's (folders first, then books, as tiles
+    or a list), with press-and-hold menus and select mode for folders and books alike (Room v12 `books.folder`).
+  - The library's shelf rows keep one height, so the plank no longer moves while a row of books of different sizes
+    scrolls, and books stand half as far apart.
+  - Grid tiles: books 30% bigger with no shadow under them, a smaller left-aligned title (two lines, no wider than the
+    book) and the author under it; rows take as many books as fit (five on the open Fold, two on the cover screen).
+  - Book details from Open Library and Google Books together (`CombinedLookup`): subjects, printed pages, series and
+    rating join the details page; failed calls are retried once; Open Library searches ask for every field.
+- Fixed: EPUBs read in place from shared storage could not be imported or opened ("not a book"): Android refuses to
+  re-open `/proc/self/fd/N` by path under scoped storage, so `EpubArchive` now reads the zip through the descriptor
+  itself (`ChannelZip`).
 - M2 carry-overs (Phase 2, 2026-10-26). Paragraphs inside lists, and paragraphs broken into several lines with `<br>`
   (lists and verse written by hand), are set ragged, not justified, so their short lines no longer gape. A book that
   can't open (file missing, damaged PDF or EPUB) shows a card in the app's theme instead of black text on blank paper.

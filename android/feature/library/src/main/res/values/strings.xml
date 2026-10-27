@@ -1,7 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="library_title">Library</string>
-    <string name="library_empty">Your library is empty.\nTap Import to add a PDF.</string>
+    <string name="library_empty">Your library is empty.\nAdd PDFs and EPUBs, or a whole folder of them.</string>
+    <string name="import_files">Import files…</string>
+    <string name="import_folder">Import a folder…</string>
+    <string name="import_progress">Importing %1$d of %2$d</string>
+    <string name="msg_already_count">%1$d already in your library</string>
+    <string name="msg_failed_count">%1$d couldn\'t be opened</string>
+    <string name="msg_folder_empty">No PDFs or EPUBs in that folder</string>
+    <string name="filter_folders">Folders</string>
+    <string name="info_series">Series</string>
+    <string name="info_print_pages">Printed pages</string>
+    <string name="info_subjects">Subjects</string>
+    <string name="info_rating">Rating</string>
+    <string name="info_rating_value">%1$s of 5 · %2$d ratings</string>
+    <string name="info_rating_alone">%1$s of 5</string>
+    <string name="info_folder">Folder</string>
+    <string name="folders_empty">Folders you import show here, with every folder inside them.</string>
+    <string name="action_open">Open</string>
+    <string name="action_remove_folder">Remove from library</string>
+    <string name="remove_folder_body">“%1$s” and every folder in it leave the library. FlowFolio’s copies of their books, ribbons and annotations are deleted; original files you read in place are not affected.</string>
+    <plurals name="folder_count">
+        <item quantity="one">%d folder</item>
+        <item quantity="other">%d folders</item>
+    </plurals>
     <string name="action_import">Import</string>
     <string name="action_sort">Sort</string>
     <string name="action_settings">Settings</string>
@@ -52,6 +74,10 @@
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
     <!-- Library (milestone 5, slice 3) -->
+    <plurals name="msg_added_books">
+        <item quantity="one">Added %d book</item>
+        <item quantity="other">Added %d books</item>
+    </plurals>
     <plurals name="book_count">
         <item quantity="one">%d book</item>
         <item quantity="other">%d books</item>
@@ -282,16 +308,16 @@
     <string name="annotation_where">p. %1$s · %2$s</string>
     <string name="action_share">Share</string>
     <string name="action_note">Note</string>
-    <!-- Slice 7: online lookup (ADR-0017) -->
+    <!-- Slice 7: online lookup (ADR-0017, ADR-0037) -->
     <string name="settings_lookup">Look up book details online</string>
-    <string name="settings_lookup_detail">From Open Library. Only the ISBN, or the title and author, are sent. Fills empty fields only.</string>
+    <string name="settings_lookup_detail">From Open Library and Google Books. Only the ISBN, or the title and author, are sent. Fills empty fields only.</string>
     <string name="lookup_ask_title">Find book details online?</string>
-    <string name="lookup_ask_body">FlowFolio can fill in a book\'s description, publisher, edition and author bio from Open Library. Only the book\'s ISBN, or its title and author, are sent. You can change this in Settings.</string>
+    <string name="lookup_ask_body">FlowFolio can fill in a book\'s description, publisher, subjects, rating, author bio and more from Open Library and Google Books. Only the book\'s ISBN, or its title and author, are sent. You can change this in Settings.</string>
     <string name="lookup_ask_yes">Look up details</string>
     <string name="lookup_ask_no">Not now</string>
     <string name="edit_lookup">Look up online</string>
-    <string name="edit_lookup_found">Filled in what Open Library knows. Check it, then save.</string>
-    <string name="edit_lookup_none">Open Library has nothing more for this book.</string>
+    <string name="edit_lookup_found">Filled in what Open Library and Google Books know. Check it, then save.</string>
+    <string name="edit_lookup_none">Open Library and Google Books have nothing more for this book.</string>
     <!-- Select mode (owner, 2026-10-22). -->
     <string name="action_select">Select</string>
     <string name="action_select_all">Select all</string>

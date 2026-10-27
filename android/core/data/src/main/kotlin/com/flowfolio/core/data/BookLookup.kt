@@ -31,19 +31,40 @@ fun interface HttpGet {
     fun get(url: String): String?
 }
 
-/** Plain HTTPS GET with timeouts, no cookies; null for anything but 200. */
+/**
+ * Plain HTTPS GET with timeouts, no cookies; null for anything but 200. A dropped connection, a busy server (5xx) or
+ * "too many requests" (429) is tried once more after a short pause before it counts as a failure.
+ */
 class UrlConnectionGet @Inject constructor() : HttpGet {
     override fun get(url: String): String? {
+        var failure: IOException? = null
+        repeat(ATTEMPTS) { attempt ->
+            if (attempt > 0) Thread.sleep(RETRY_PAUSE_MS)
+            try {
+                return once(url)
+            } catch (e: IOException) {
+                failure = e
+            }
+        }
+        throw failure ?: IOException("no response")
+    }
+
+    private fun once(url: String): String? {
         val connection = URL(url).openConnection() as HttpURLConnection
         return try {
             connection.connectTimeout = TIMEOUT_MS
             connection.readTimeout = TIMEOUT_MS
             connection.setRequestProperty("User-Agent", USER_AGENT)
             connection.setRequestProperty("Accept", "application/json")
-            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                connection.inputStream.bufferedReader().use { it.readText().take(MAX_BYTES) }
-            } else {
-                null
+            val code = connection.responseCode
+            when {
+                code == HttpURLConnection.HTTP_OK ->
+                    connection.inputStream.bufferedReader().use { it.readText().take(MAX_BYTES) }
+
+                code == TOO_MANY_REQUESTS || code >= HttpURLConnection.HTTP_INTERNAL_ERROR ->
+                    throw IOException("HTTP $code")
+
+                else -> null
             }
         } finally {
             connection.disconnect()
@@ -53,6 +74,9 @@ class UrlConnectionGet @Inject constructor() : HttpGet {
     private companion object {
         const val TIMEOUT_MS = 10_000
         const val MAX_BYTES = 2_000_000
+        const val ATTEMPTS = 2
+        const val RETRY_PAUSE_MS = 800L
+        const val TOO_MANY_REQUESTS = 429
         const val USER_AGENT = "FlowFolio (Android; https://github.com/mgmourad/FlowFolio)"
     }
 }
@@ -80,11 +104,13 @@ class OpenLibraryLookup(
     }
 
     private fun fromEdition(edition: JSONObject, isbn: String): Found {
-        val work = edition.optJSONArray("works")?.optJSONObject(0)?.optString("key")?.let { json("$BASE$it.json") }
+        val workKey = edition.optJSONArray("works")?.optJSONObject(0)?.optString("key")?.takeIf { it.isNotEmpty() }
+        val work = workKey?.let { json("$BASE$it.json") }
         val authorKey = edition.optJSONArray("authors")?.optJSONObject(0)?.optString("key")
             ?: work?.optJSONArray("authors")?.optJSONObject(0)?.optJSONObject("author")?.optString("key")
         val author = authorKey?.let { json("$BASE$it.json") }
-        return OpenLibraryParse.found(edition, work, author, isbn, language)
+        val ratings = workKey?.let { json("$BASE$it/ratings.json") }
+        return OpenLibraryParse.found(edition, work, author, isbn, language, ratings)
     }
 
     /**
@@ -95,6 +121,8 @@ class OpenLibraryLookup(
         val query = buildString {
             append("$BASE/search.json?limit=1&title=").append(encode(book.title))
             book.author?.let { append("&author=").append(encode(it)) }
+            // Search answers carry only a few fields unless asked for the rest by name.
+            append("&fields=").append(SEARCH_FIELDS)
         }
         val doc = (json("$query&language=$language")?.firstDoc() ?: json(query)?.firstDoc()) ?: return null
         val work = doc.optString("key").takeIf { it.startsWith("/works/") }?.let { json("$BASE$it.json") }
@@ -114,27 +142,42 @@ class OpenLibraryLookup(
 
         /** ISBN-10 and ISBN-13. */
         val ISBN_LENGTHS = setOf(10, 13)
+
+        const val SEARCH_FIELDS = "key,title,subtitle,author_name,author_key,publisher,isbn,language," +
+            "first_publish_year,subject,number_of_pages_median,ratings_average,ratings_count"
     }
 }
 
 /** Reading Open Library's JSON, kept apart from the network so it can be tested. */
 object OpenLibraryParse {
-    fun found(edition: JSONObject, work: JSONObject?, author: JSONObject?, isbn: String?, phone: String = "eng") =
-        Found(
-            author = author?.text("name"),
-            details = BookDetails(
-                subtitle = edition.text("subtitle"),
-                edition = edition.text("edition_name"),
-                publisher = edition.optJSONArray("publishers")?.firstText(),
-                isbn = isbn,
-                description = (work?.longText("description") ?: edition.longText("description"))?.takeIf {
-                    readable(it, phone)
-                },
-                language = edition.optJSONArray("languages")?.optJSONObject(0)?.optString("key")?.let(::language),
-                released = edition.text("publish_date"),
-                authorBio = author?.longText("bio")
-            )
+    @Suppress("LongParameterList") // one JSON document each, as Open Library splits a book
+    fun found(
+        edition: JSONObject,
+        work: JSONObject?,
+        author: JSONObject?,
+        isbn: String?,
+        phone: String = "eng",
+        ratings: JSONObject? = null
+    ) = Found(
+        author = author?.text("name"),
+        details = BookDetails(
+            subtitle = edition.text("subtitle"),
+            edition = edition.text("edition_name"),
+            publisher = edition.optJSONArray("publishers")?.firstText(),
+            isbn = isbn,
+            description = (work?.longText("description") ?: edition.longText("description"))?.takeIf {
+                readable(it, phone)
+            },
+            language = edition.optJSONArray("languages")?.optJSONObject(0)?.optString("key")?.let(::language),
+            released = edition.text("publish_date"),
+            authorBio = author?.longText("bio"),
+            subjects = subjects(work?.optJSONArray("subjects")),
+            printPages = edition.optInt("number_of_pages").takeIf { it > 0 },
+            series = edition.optJSONArray("series")?.firstText(),
+            rating = ratings?.optJSONObject("summary")?.optDouble("average")?.takeIf { !it.isNaN() }?.toFloat(),
+            ratingsCount = ratings?.optJSONObject("summary")?.optInt("count")?.takeIf { it > 0 }
         )
+    )
 
     fun fromSearch(doc: JSONObject, work: JSONObject?, author: JSONObject?, phone: String = "eng") = Found(
         author = author?.text("name") ?: doc.optJSONArray("author_name")?.firstText(),
@@ -149,9 +192,32 @@ object OpenLibraryParse {
                 (codes.firstOrNull { it == phone } ?: codes.firstOrNull())?.let { language("/languages/$it") }
             },
             released = doc.optInt("first_publish_year").takeIf { it > 0 }?.toString(),
-            authorBio = author?.longText("bio")
+            authorBio = author?.longText("bio"),
+            subjects = subjects(doc.optJSONArray("subject") ?: work?.optJSONArray("subjects")),
+            printPages = doc.optInt("number_of_pages_median").takeIf { it > 0 },
+            rating = doc.optDouble("ratings_average").takeIf { !it.isNaN() && it > 0 }?.toFloat(),
+            ratingsCount = doc.optInt("ratings_count").takeIf { it > 0 }
         )
     )
+
+    /**
+     * A work's subjects, most telling first: Open Library lists library catalogue terms too ("Accessible book",
+     * "In library"), which say nothing about the book and are left out.
+     */
+    fun subjects(list: JSONArray?): List<String> {
+        list ?: return emptyList()
+        return List(list.length()) { list.optString(it).trim() }
+            .filter {
+                it.isNotEmpty() && it.length <= MAX_SUBJECT && '_' !in it &&
+                    NOT_SUBJECTS.none { n -> it.contains(n, true) }
+            }
+            .distinctBy { it.lowercase() }
+            .take(MAX_SUBJECTS)
+    }
+
+    private val NOT_SUBJECTS = listOf("accessible book", "protected daisy", "in library", "lending library", "nyt:")
+    private const val MAX_SUBJECTS = 8
+    private const val MAX_SUBJECT = 60
 
     /**
      * Whether a description is in the phone's language. Open Library keeps one description per work, sometimes in a
@@ -190,6 +256,7 @@ object OpenLibraryParse {
 }
 
 /** [found] fills only what the reader has not filled in (never overwrites what they typed). */
+@Suppress("CyclomaticComplexMethod") // one fallback per field
 fun Book.mergedWith(found: Found): Pair<String?, BookDetails> {
     val d = details
     val f = found.details
@@ -203,7 +270,12 @@ fun Book.mergedWith(found: Found): Pair<String?, BookDetails> {
         released = d.released ?: f.released,
         authorRole = d.authorRole ?: f.authorRole,
         authorBio = d.authorBio ?: f.authorBio,
-        type = d.type ?: f.type
+        type = d.type ?: f.type,
+        subjects = d.subjects.ifEmpty { f.subjects },
+        printPages = d.printPages ?: f.printPages,
+        series = d.series ?: f.series,
+        rating = d.rating ?: f.rating,
+        ratingsCount = if (d.rating != null) d.ratingsCount else f.ratingsCount
     )
 }
 

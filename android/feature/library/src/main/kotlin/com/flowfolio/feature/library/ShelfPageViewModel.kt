@@ -17,12 +17,17 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ShelfPageUiState(
     val loading: Boolean = true,
+    /** The imported folder shown (its path), when this page is a folder's rather than a shelf's. */
+    val folder: String? = null,
+    /** The folders inside [folder]. */
+    val subfolders: List<FolderEntry> = emptyList(),
     /** The shelf shown, or null for the books on no shelf ("All books" when there are no shelves). */
     val shelf: Shelf? = null,
     val noShelves: Boolean = false,
@@ -38,6 +43,7 @@ class ShelfPageViewModel @Inject constructor(
     shelfRepo: ShelfRepository
 ) : ViewModel() {
     private val shelfId: Long = saved[ARG_SHELF_ID] ?: LOOSE
+    private val folder: String? = saved.get<String>(ARG_FOLDER)?.let(android.net.Uri::decode)
     private val availability = MutableStateFlow<Map<String, Availability>>(emptyMap())
 
     val uiState: StateFlow<ShelfPageUiState> =
@@ -49,6 +55,8 @@ class ShelfPageViewModel @Inject constructor(
             val shelf = shelves.firstOrNull { it.id == shelfId }
             val byId = books.associateBy { it.id }
             val list = when {
+                folder != null -> books.filter { it.folder == folder }.sortedBy { it.title.lowercase() }
+
                 shelf != null -> shelf.bookIds.mapNotNull(byId::get)
 
                 else -> {
@@ -58,7 +66,9 @@ class ShelfPageViewModel @Inject constructor(
             }
             ShelfPageUiState(
                 loading = false,
-                shelf = shelf,
+                folder = folder,
+                subfolders = folder?.let { subfolders(books, it) }.orEmpty(),
+                shelf = shelf.takeIf { folder == null },
                 noShelves = shelves.isEmpty(),
                 items = list.map { LibraryItem(it, a[it.id] ?: Availability.AVAILABLE) },
                 shelves = shelves
@@ -77,6 +87,26 @@ class ShelfPageViewModel @Inject constructor(
 
     fun delete(bookId: String) = viewModelScope.launch { library.delete(bookId) }
 
+    /**
+     * Removes what select mode chose: books by id, and for a chosen folder every book in it and in the folders inside
+     * it.
+     */
+    fun deleteChosen(keys: Set<String>) = viewModelScope.launch {
+        val paths = keys.filter {
+            it.startsWith(FolderEntry.FOLDER_PREFIX)
+        }.map { it.removePrefix(FolderEntry.FOLDER_PREFIX) }
+        val inFolders = library.observeBooks(LibrarySort.RECENT).first()
+            .filter { b -> paths.any { b.isUnder(it) } }.map { it.id }
+        (
+            keys.filterNot {
+                it.startsWith(FolderEntry.FOLDER_PREFIX)
+            } + inFolders
+            ).distinct().forEach { library.delete(it) }
+    }
+
+    /** Removes every book in the folder [path] and the folders inside it. */
+    fun removeFolder(path: String) = deleteChosen(setOf(FolderEntry.FOLDER_PREFIX + path))
+
     fun relink(bookId: String, uri: String) = viewModelScope.launch {
         if (library.relink(bookId, uri) == RelinkResult.Relinked) {
             availability.update { it + (bookId to Availability.AVAILABLE) }
@@ -93,6 +123,9 @@ class ShelfPageViewModel @Inject constructor(
 
     companion object {
         const val ARG_SHELF_ID = "shelfId"
+
+        /** An imported folder's path, URL-encoded; set on a folder's page instead of a shelf. */
+        const val ARG_FOLDER = "folder"
 
         /** The row of books on no shelf (all books when there are no shelves). */
         const val LOOSE = -1L

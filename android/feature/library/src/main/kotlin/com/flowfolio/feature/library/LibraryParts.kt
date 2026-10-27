@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
@@ -147,9 +148,7 @@ private fun HeaderButtons(state: LibraryUiState, searching: Boolean, onSearch: (
         }
         SortMenu(state.sort, actions.onSort)
     }
-    FlowFolioIconButton(onClick = actions.onImport, modifier = Modifier.testTag(LibraryTestTags.IMPORT)) {
-        FlowFolioGlyph(Glyph.Add, contentDescription = stringResource(R.string.action_import))
-    }
+    ImportMenu(actions)
 }
 
 @Composable
@@ -205,6 +204,7 @@ private val LibraryFilter.label: Int
         LibraryFilter.RECENT -> R.string.filter_recent
         LibraryFilter.TEXTBOOKS -> R.string.filter_textbooks
         LibraryFilter.NOVELS -> R.string.filter_novels
+        LibraryFilter.FOLDERS -> R.string.filter_folders
     }
 
 /** `.shelf`: the shelf's name and count, its books standing in a row, and the plank under them. */
@@ -255,12 +255,15 @@ internal fun ShelfRowView(
             )
         }
         // `.shelf-row` with `scroll-snap-type: x mandatory`: swipe sideways through the shelf; it settles on a book.
+        // As tall as the tallest book can be, whichever books are in view, so the plank never moves while the row
+        // scrolls (a lazy row is otherwise as tall as the books it shows; owner, 2026-10-26).
         val rowState = rememberLazyListState()
         LazyRow(
             state = rowState,
+            modifier = Modifier.height(SHELF_ROW_TOP + SHELF_BOOK_HEIGHT + SHELF_BOOK_EXTRA.dp + SHELF_ROW_BOTTOM),
             flingBehavior = rememberSnapFlingBehavior(rowState, SnapPosition.Start),
-            contentPadding = PaddingValues(start = 30.dp, end = 30.dp, top = 22.dp, bottom = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(22.dp),
+            contentPadding = PaddingValues(start = 30.dp, end = 30.dp, top = SHELF_ROW_TOP, bottom = SHELF_ROW_BOTTOM),
+            horizontalArrangement = Arrangement.spacedBy(SHELF_BOOK_GAP),
             verticalAlignment = Alignment.Bottom
         ) {
             itemsIndexed(row.items, key = { _, entry -> entry.book.id }) { i, item ->
@@ -285,7 +288,8 @@ internal fun ShelfBook(
     origin: String,
     actions: LibraryActions,
     width: androidx.compose.ui.unit.Dp,
-    height: androidx.compose.ui.unit.Dp
+    height: androidx.compose.ui.unit.Dp,
+    shadow: Boolean = true
 ) {
     val book = item.book
     val source = remember { MutableInteractionSource() }
@@ -323,7 +327,8 @@ internal fun ShelfBook(
                 width,
                 height,
                 modifier = Modifier.coverSpot(spot).coverLanding(shelfCoverKey(book.id, origin), SHELF_ANGLE),
-                lifted = pressed
+                lifted = pressed,
+                shadow = shadow
             )
             BookBadge(item, Modifier.align(Alignment.TopStart))
             selection?.let { SelectionMark(it, book.id) }
@@ -428,4 +433,9 @@ private const val PAGES_PER_DP = 70
 private val SHELF_BOOK_WIDTH = 90.dp
 private val SHELF_BOOK_HEIGHT = 124.dp
 private const val SHELF_BOOK_EXTRA = 18
-private val BOOK_SPINE_ROOM = 8.dp
+internal val BOOK_SPINE_ROOM = 8.dp
+
+/** Half the mock's 22 dp between books (owner, 2026-10-26). */
+private val SHELF_BOOK_GAP = 11.dp
+private val SHELF_ROW_TOP = 22.dp
+private val SHELF_ROW_BOTTOM = 6.dp
