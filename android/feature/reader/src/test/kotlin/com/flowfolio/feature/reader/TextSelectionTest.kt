@@ -4,7 +4,9 @@ import androidx.compose.ui.unit.IntSize
 import com.flowfolio.core.pdf.PageText
 import com.flowfolio.feature.reader.layout.ReaderLayout
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class TextSelectionTest {
@@ -69,5 +71,15 @@ class TextSelectionTest {
         // The spread's first page sits on the right when reading right to left.
         assertEquals(ltr.first().page, rtl.first().page)
         assertEquals(1000 - ltr.first().x - 400, rtl.first().x)
+    }
+
+    @Test
+    fun arabicAndHebrewSelectionsReadRightToLeft() {
+        val arabic = PageText("  الكتلة", FloatArray(7 * 4))
+        assertTrue(TextSelection.isRightToLeft(arabic, 0..6))
+        val hebrew = PageText("שלום", FloatArray(4 * 4))
+        assertTrue(TextSelection.isRightToLeft(hebrew, 0..3))
+        val latin = PageText("(whale)", FloatArray(7 * 4))
+        assertFalse(TextSelection.isRightToLeft(latin, 0..6))
     }
 }

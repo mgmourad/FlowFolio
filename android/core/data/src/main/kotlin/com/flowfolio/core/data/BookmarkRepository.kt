@@ -18,11 +18,15 @@ interface BookmarkRepository {
     /** Every bookmark, newest first. */
     fun observeAll(): Flow<List<Bookmark>>
 
-    suspend fun add(bookId: String, page: Int, color: BookmarkColor): Long
+    /** A ribbon on [page]; in an EPUB, [locator] is the text at its top (ADR-0040). */
+    suspend fun add(bookId: String, page: Int, color: BookmarkColor, locator: String? = null): Long
 
     suspend fun setColor(bookmarkId: Long, color: BookmarkColor)
 
     suspend fun remove(bookmarkId: Long)
+
+    /** Where EPUB ribbons now are after a re-layout, by id. */
+    suspend fun setPages(pages: Map<Long, Int>) = Unit
 }
 
 class DefaultBookmarkRepository @Inject constructor(
@@ -34,9 +38,21 @@ class DefaultBookmarkRepository @Inject constructor(
 
     override fun observeAll(): Flow<List<Bookmark>> = dao.observeAll().map { it.map(::toModel) }
 
-    override suspend fun add(bookId: String, page: Int, color: BookmarkColor): Long = withContext(io) {
-        dao.insert(BookmarkEntity(bookId = bookId, page = page, color = color.name, createdAt = clock.now()))
-    }
+    override suspend fun add(bookId: String, page: Int, color: BookmarkColor, locator: String?): Long =
+        withContext(io) {
+            dao.insert(
+                BookmarkEntity(
+                    bookId = bookId,
+                    page = page,
+                    color = color.name,
+                    createdAt = clock.now(),
+                    locator = locator
+                )
+            )
+        }
+
+    override suspend fun setPages(pages: Map<Long, Int>) =
+        withContext(io) { pages.forEach { (id, page) -> dao.setPage(id, page) } }
 
     override suspend fun setColor(bookmarkId: Long, color: BookmarkColor) =
         withContext(io) { dao.setColor(bookmarkId, color.name) }
@@ -49,7 +65,8 @@ class DefaultBookmarkRepository @Inject constructor(
         page = e.page,
         color = BookmarkColor.entries.firstOrNull { it.name == e.color.replace(OLD_GREY, BookmarkColor.GREEN.name) }
             ?: BookmarkColor.SUB_ITEM,
-        createdAtMillis = e.createdAt
+        createdAtMillis = e.createdAt,
+        locator = e.locator
     )
 }
 

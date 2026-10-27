@@ -65,6 +65,20 @@ fun ReflowBook.islandAreas(page: Page, paginator: Paginator): List<IslandArea> {
     }
 }
 
+/** Where a book image is drawn on a page, in pixels from the page box's top left; [path] is book-internal. */
+data class ImageArea(val path: String, val left: Float, val top: Float, val right: Float, val bottom: Float)
+
+/** Where [page]'s images are drawn (M4: tapped, they open zoomable). */
+fun ReflowBook.imageAreas(page: Page): List<ImageArea> {
+    val chapter = chapters.getOrNull(page.chapter) ?: return emptyList()
+    return page.slices.filterIsInstance<Slice.Box>().mapNotNull { slice ->
+        (chapter.blocks.getOrNull(slice.block) as? Block.Image)?.let {
+            val left = (spec.width - slice.w) / 2f
+            ImageArea(it.path, left, slice.y, left + slice.w, slice.y + slice.h)
+        }
+    }
+}
+
 /** The inline islands on this slice's lines; [indent] is where the block's text starts. */
 private fun Slice.Lines.islandAreas(indent: Float): List<IslandArea> {
     val text = layout.text as? Spanned ?: return emptyList()

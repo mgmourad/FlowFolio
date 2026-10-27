@@ -47,6 +47,15 @@ interface ReaderRepository {
 
     /** An EPUB's top-level contents (chapter titles in reading order); empty for PDFs or when it cannot be read. */
     suspend fun epubContents(bookId: String): List<String> = emptyList()
+
+    /** Makes an EPUB's [locator] (shown on [page] when last laid out) where it opens next (library jumps, ADR-0040). */
+    suspend fun saveEpubPosition(bookId: String, locator: String, page: Int) = Unit
+
+    /**
+     * An EPUB's chapter title for each chapter of its reading order (the contents entry it starts in, or null before
+     * the first), so locators can be named; empty for PDFs or when it cannot be read.
+     */
+    suspend fun epubChapterTitles(bookId: String): List<String?> = emptyList()
 }
 
 class OpenedBook(val book: Book, val document: PdfDocument)
@@ -114,6 +123,39 @@ class DefaultReaderRepository @Inject constructor(
         }
     }
 
+    override suspend fun saveEpubPosition(bookId: String, locator: String, page: Int) =
+        withContext(io) { reading.updateEpubPosition(bookId, locator, page) }
+
+    override suspend fun epubChapterTitles(bookId: String): List<String?> = withContext(io) {
+        val book = dao.get(bookId)?.toBook()?.takeIf { it.format == BookFormat.EPUB } ?: return@withContext emptyList()
+        val fd = descriptorOf(book) ?: return@withContext emptyList()
+        try {
+            fd.use { EpubArchive.open(it).use { archive -> chapterTitles(EpubParser.parse(archive)) } }
+        } catch (_: EpubException) {
+            emptyList()
+        }
+    }
+
     override suspend fun savePageLabels(bookId: String, labels: String) =
         withContext(io) { reading.setPageLabels(bookId, labels) }
+}
+
+/**
+ * Each chapter of [pkg]'s reading order (the linear XHTML spine items, as the reader lays them out) named by the
+ * contents entry it falls under: the last entry, in contents order, pointing at it or at a chapter before it.
+ */
+internal fun chapterTitles(pkg: EpubPackage): List<String?> {
+    val linear = pkg.spine.filter { it.linear && it.mediaType.contains("html") }.ifEmpty { pkg.spine }
+    val index = linear.withIndex().associate { (i, item) -> item.path to i }
+    val entries = ArrayList<Pair<Int, String>>()
+    fun walk(points: List<com.flowfolio.core.epub.NavPoint>) {
+        for (p in points) {
+            index[p.href.substringBefore('#')]?.let { entries += it to p.label }
+            walk(p.children)
+        }
+    }
+    walk(pkg.toc)
+    return linear.indices.map { i ->
+        entries.lastOrNull { it.first == i }?.second ?: entries.lastOrNull { it.first < i }?.second
+    }
 }

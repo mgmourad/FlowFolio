@@ -31,7 +31,7 @@ class FakeBookmarks(initial: List<Bookmark> = emptyList()) : BookmarkRepository 
 
     override fun observeAll(): Flow<List<Bookmark>> = marks.map { all -> all.sortedByDescending { it.createdAtMillis } }
 
-    override suspend fun add(bookId: String, page: Int, color: BookmarkColor): Long {
+    override suspend fun add(bookId: String, page: Int, color: BookmarkColor, locator: String?): Long {
         val id = (marks.value.maxOfOrNull { it.id } ?: 0) + 1
         marks.update { it + Bookmark(id, bookId, page, color, id) }
         return id

@@ -19,7 +19,12 @@ data class PageKey(
     val size: PixelSize,
     val tone: PageTone = PageTone.PRINTED,
     /** Raised when something drawn on the page changed (an EPUB's equations became ready), to draw it again. */
-    val revision: Int = 0
+    val revision: Int = 0,
+    /**
+     * The EPUB layout the page belongs to. An image of an earlier [revision] in the same layout shows the same text
+     * and may stand in until the new one is drawn; one from another layout may show other text.
+     */
+    val layout: Int = 0
 )
 
 /** Renders pages. The reader's implementation returns GPU-backed (HARDWARE) images to avoid a second CPU copy. */

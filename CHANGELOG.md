@@ -169,6 +169,36 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   Details: the top fade's blur eases out in bands and is lighter over the cover's backdrop; "Add to shelf" shows a
   shelf; a sideways swipe moves between the tabs; bigger play triangles on Continue and Resume. Folded, the reader's
   top bar puts the whole book title on its own centred row above Back and the tools.
+- Phase 2 (EPUB reading and the pagination engine) signed off by the owner, 2026-10-27 (`docs/plans/phase2-signoff.md`).
+- EPUB chapters start on their own spread (ADR-0041, owner, 2026-10-27). In two-page view every chapter after the first
+  starts on a left page, with a blank page before it when needed. A text change lays out only the reader's chapter
+  before the pages show, and the rest in the background: on the Fold, Moby-Dick at 41% shows its pages 18-45 ms after
+  a size change (was 414-617 ms). The equations of the pages in view are read on all cores before they are drawn
+  (about 180 ms a page before, 7-37 ms now). While a page is drawn again with new equations, its earlier drawing in
+  the same layout stays on screen (`PageKey.layout`).
+- M5, Phase 2 close-out (2026-10-27, `docs/plans/phase2-signoff.md`).
+  - `EpubPageTurnBenchmark` (Moby-Dick in a spread, release build): on the emulator EPUB turns cost no more than PDF
+    turns (frame CPU P50 9.2 ms against 10.7 ms).
+  - `RobustnessOnDeviceTest`: every corpus book, the IDPF samples and the hostile ones, is read through at two sizes
+    (text, boxes, links, pictures, islands, drawing) or refused cleanly; all 17 pass.
+  - Memory over 300 EPUB spread turns: 3.2% growth.
+  - After a text change the hourglass goes as soon as the pages in view are drawn, not all eight planned pages; page
+    renders go before thumbnails, links and highlight placement. Logcat `FlowFolioLayout` reports "pages in view
+    shown N ms after the change".
+- M4, Phase 1 features on EPUB (2026-10-27, `docs/plans/phase2-m4.md`, ADR-0040).
+  - Press and hold selects text on EPUB pages as on PDFs (handles, magnifier). The page's text and character boxes
+    come from the layout (`ReflowBook.pageGlyphs`), with the slack of justified lines shared over their spaces
+    (`getPrimaryHorizontal` leaves justification out).
+  - Highlights, notes, Share, Copy and Translate on EPUBs. A highlight is stored by its chapter and character offsets
+    (`annotations.locator`, Room v14) and placed again after any re-layout (text settings, fold or unfold), on each
+    page it runs onto, in Curl, Slide and Scroll.
+  - Ribbons on EPUB pages, stored by the text at the top of the page (`bookmarks.locator`). The reader's
+    Annotations and ribbon buttons show for EPUBs: six buttons for every book.
+  - The Annotations and Bookmarks tabs open an EPUB at the highlight's or ribbon's text and name its chapter from the
+    book's contents. Saved pages follow the reader's last layout.
+  - Tapping a picture in an EPUB opens it zoomable, like a shrunk equation (`FigureZoom`, formerly `IslandZoom`).
+  - Right to left: selection follows the script's reading order, with handles at its start and end.
+  - Fixed-layout EPUBs move to Phase 8 (a second, WebView-based renderer); until then they are reflowed.
 - M3 checks (2026-10-26, `docs/plans/phase2-m3-signoff.md`). Pagination is exact in every reading font at five sizes
   and with the other text settings at their extremes (415 layouts on the corpus, `PaginationOnDeviceTest`); a sheet
   of every font on every paper (`docs/plans/assets/phase2-m3-fonts-papers.jpg`). Re-layout lays the chapters up to the

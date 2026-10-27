@@ -22,7 +22,9 @@ data class BookmarkEntity(
     val page: Int,
     /** A BookmarkColor name; unknown names read as the default colour. */
     val color: String,
-    @ColumnInfo(name = "created_at") val createdAt: Long
+    @ColumnInfo(name = "created_at") val createdAt: Long,
+    /** An EPUB ribbon's `chapter:offset`, the text at the top of its page (ADR-0040). Added in v14. */
+    val locator: String? = null
 )
 
 @Dao
@@ -42,4 +44,8 @@ interface BookmarkDao {
 
     @Query("DELETE FROM bookmarks WHERE id = :id")
     suspend fun delete(id: Long)
+
+    /** Where an EPUB ribbon's text now is, after a re-layout. */
+    @Query("UPDATE bookmarks SET page = :page WHERE id = :id")
+    suspend fun setPage(id: Long, page: Int)
 }

@@ -201,11 +201,19 @@ internal fun BoxScope.SelectionMarks(
             if (f != null && text != null) charNear(p, f, text)?.let { pick.moveEnd(start, it) }
         }
     }
+    // Right-to-left text (Arabic, Hebrew) starts at the right of its first line and ends at the left of its last.
+    val rtl = remember(pick) {
+        derivedStateOf {
+            val text = pick.text
+            val range = pick.range
+            text != null && range != null && TextSelection.isRightToLeft(text, range)
+        }
+    }
     Handle({
-        rects.value.firstOrNull()?.let { Offset(it.left, it.bottom) }
+        rects.value.firstOrNull()?.let { Offset(if (rtl.value) it.right else it.left, it.bottom) }
     }, tint, { onLens(Offset.Unspecified) }, end(true))
     Handle({
-        rects.value.lastOrNull()?.let { Offset(it.right, it.bottom) }
+        rects.value.lastOrNull()?.let { Offset(if (rtl.value) it.left else it.right, it.bottom) }
     }, tint, { onLens(Offset.Unspecified) }, end(false))
 }
 

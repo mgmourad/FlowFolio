@@ -1,12 +1,16 @@
 package com.flowfolio.core.model
 
-/** A ribbon bookmark on [page] (0-based) of a book, in one of the app's colours. */
+/**
+ * A ribbon bookmark on [page] (0-based) of a book, in one of the app's colours. In an EPUB, [locator]
+ * (`chapter:offset`) is the text at the top of the marked page, and [page] where the reader last placed it (ADR-0040).
+ */
 data class Bookmark(
     val id: Long,
     val bookId: String,
     val page: Int,
     val color: BookmarkColor,
-    val createdAtMillis: Long
+    val createdAtMillis: Long,
+    val locator: String? = null
 )
 
 /**

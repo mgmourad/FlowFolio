@@ -4,6 +4,9 @@ package com.flowfolio.core.model
  * A highlight on a page, with an optional [note]. [text] is the selected text; [rects] are where it lies on the page,
  * as fractions of the page (0..1 from the top left), one per line; [start] and [end] are its first and last character
  * on the page (PDFium's text order), which sort a page's highlights.
+ *
+ * An EPUB's highlight (ADR-0040) has a [locator], `chapter:offset` of its first character; [start] and [end] are then
+ * chapter offsets, and [page] and [rects] are where the reader last placed it (a re-layout moves the text).
  */
 data class Annotation(
     val id: Long,
@@ -18,14 +21,26 @@ data class Annotation(
     val color: HighlightColor,
     val note: String?,
     val createdAtMillis: Long,
-    val updatedAtMillis: Long
+    val updatedAtMillis: Long,
+    val locator: String? = null
 )
 
 /**
  * The passage a new highlight covers: on [page] (printed [label], if any), characters [range] of the page's text,
- * reading [text], lying in [rects] (fractions of the page).
+ * reading [text], lying in [rects] (fractions of the page). In an EPUB, [range] is in chapter offsets and [locator]
+ * names the chapter and first character (ADR-0040).
  */
-data class Passage(val page: Int, val label: String?, val range: IntRange, val text: String, val rects: List<PageRect>)
+data class Passage(
+    val page: Int,
+    val label: String?,
+    val range: IntRange,
+    val text: String,
+    val rects: List<PageRect>,
+    val locator: String? = null
+)
+
+/** The chapter (spine index in reading order) of an EPUB locator `chapter:offset`, or null. */
+fun chapterOfLocator(locator: String?): Int? = locator?.substringBefore(':')?.toIntOrNull()
 
 /** A rectangle on a page, as fractions of the page's width and height (0..1, top left origin). */
 data class PageRect(val left: Float, val top: Float, val right: Float, val bottom: Float)

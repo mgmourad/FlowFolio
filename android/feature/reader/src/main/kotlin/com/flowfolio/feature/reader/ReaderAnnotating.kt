@@ -36,6 +36,7 @@ import com.flowfolio.core.model.HighlightColor
 import com.flowfolio.core.model.PageRect
 import com.flowfolio.core.model.Passage
 import com.flowfolio.core.model.shareQuote
+import com.flowfolio.core.pdf.PageText
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -72,17 +73,25 @@ internal class Annotating(
     private val vm: ReaderAnnotationsViewModel,
     private val texts: PageTexts,
     private val scope: CoroutineScope,
-    private val labelOf: (Int) -> String?
+    private val labelOf: (Int) -> String?,
+    /** An EPUB selection as its locator and chapter offsets (ADR-0040); null for a PDF's. */
+    private val bookRange: (PageText, IntRange) -> Pair<String, IntRange>? = { _, _ -> null }
 ) {
     val pick = TextPick()
     var size by mutableStateOf(IntSize.Zero)
     var frames: (IntSize) -> List<PageFrames.Frame> = { emptyList() }
 
-    /** The book's highlights; observable, so the page and the zoomed view redraw as soon as one is saved. */
+    /**
+     * The book's highlights, each on its first page; observable, so the page and the zoomed view redraw as soon as one
+     * is saved. An EPUB's are placed in the current layout (ADR-0040).
+     */
     var all by mutableStateOf<List<Annotation>>(emptyList())
 
-    /** Highlights by page, recomputed only when [all] changes. */
-    val byPage: Map<Int, List<Annotation>> by derivedStateOf { all.groupBy { it.page } }
+    /** Copies of EPUB highlights on the further pages they run onto, for drawing and tapping only. */
+    var extra by mutableStateOf<List<Annotation>>(emptyList())
+
+    /** Highlights by page, recomputed only when [all] or [extra] change. */
+    val byPage: Map<Int, List<Annotation>> by derivedStateOf { (all + extra).groupBy { it.page } }
 
     /** Where the magnifier looks (the finger while selecting or moving a handle); unspecified hides it. */
     var lens by mutableStateOf(Offset.Unspecified)
@@ -122,7 +131,7 @@ internal class Annotating(
     /** A tap on a highlight opens its menu (and is not a page turn). */
     fun tap(point: Offset, area: IntSize): Boolean {
         val hit = frames(area).firstNotNullOfOrNull { f ->
-            all.firstOrNull { a -> a.page == f.page && a.rects.any { it.on(f).contains(point) } }
+            byPage[f.page]?.firstOrNull { a -> a.rects.any { it.on(f).contains(point) } }
         } ?: return false
         pick.clear()
         pick.editing = hit
@@ -149,7 +158,15 @@ internal class Annotating(
         return if (text == null || range == null || rects.isEmpty()) {
             null
         } else {
-            Passage(pick.page, labelOf(pick.page), range, TextSelection.quote(text, range), rects)
+            val book = bookRange(text, range)
+            Passage(
+                pick.page,
+                labelOf(pick.page),
+                book?.second ?: range,
+                TextSelection.quote(text, range),
+                rects,
+                book?.first
+            )
         }
     }
 
@@ -199,13 +216,13 @@ internal fun rememberAnnotating(
     val scope = rememberCoroutineScope()
     val labels by rememberUpdatedState(navigation.labels)
     val annotating = remember(vm) {
-        val texts = PageTexts { page -> runCatching { viewModel.document?.pageText(page) }.getOrNull() }
-        Annotating(vm, texts, scope) { page -> labels.getOrNull(page) }
+        val texts = PageTexts { page -> viewModel.pageText(page) }
+        Annotating(vm, texts, scope, { page -> labels.getOrNull(page) }, viewModel::bookRange)
     }
     val all by vm.all.collectAsStateWithLifecycle()
     val book by vm.book.collectAsStateWithLifecycle()
     annotating.frames = frames
-    annotating.all = all
+    if (s.reflowable) PlaceHighlights(annotating, all, s, viewModel, vm) else annotating.all = all
     annotating.title = book?.title ?: s.title
     annotating.author = book?.author
     // A turn, a jump or a new layout ends a selection on the old page. Once the turn has settled, the text of the pages

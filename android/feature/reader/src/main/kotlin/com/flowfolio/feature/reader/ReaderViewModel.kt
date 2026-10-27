@@ -14,7 +14,9 @@ import com.flowfolio.core.data.SettingsRepository
 import com.flowfolio.core.designsystem.R as DesignR
 import com.flowfolio.core.designsystem.fontRes
 import com.flowfolio.core.epub.EpubException
+import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.AppStyle
+import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.PageLabels
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PixelSize
@@ -74,10 +76,7 @@ sealed interface ReaderState {
         val turn: PageTurn = PageTurn.CURL,
         /** Width / height of the page in view, for sizing pages not rendered yet (Scroll). */
         val pageAspect: Float = ReaderViewModel.LETTER_ASPECT,
-        /**
-         * The pages are laid out by FlowFolio (an EPUB): selection, highlights, ribbons and zoom are PDF-only until
-         * Phase 2 milestone 4.
-         */
+        /** The pages are laid out by FlowFolio (an EPUB): a pinch sets the text size instead of zooming the page. */
         val reflowable: Boolean = false,
         /** An EPUB's pages as Scroll shows them, one continuous column of text; null for PDFs. */
         val scrollBands: ScrollBands? = null,
@@ -174,6 +173,52 @@ class ReaderViewModel @Inject constructor(
 
     /** The open document (for page text when selecting); null until the book is open. */
     internal val document: PdfDocument? get() = opened?.document
+
+    private val _layoutRevision = MutableStateFlow(0)
+
+    /**
+     * Raised whenever an EPUB's pages change (a layout, its later chapters settling, a chapter laid out again for its
+     * islands): highlights and ribbons are placed again (ADR-0040).
+     */
+    internal val layoutRevision: StateFlow<Int> = _layoutRevision.asStateFlow()
+
+    /** Where each EPUB page text handed out came from, so a selection on it finds its chapter offsets. */
+    private val glyphsOf = java.util.WeakHashMap<com.flowfolio.core.pdf.PageText, EpubPageText>()
+
+    /** [page]'s text and character boxes for selecting: PDFium's for a PDF, the layout's for an EPUB. */
+    internal suspend fun pageText(page: Int): com.flowfolio.core.pdf.PageText? {
+        val session = epub ?: return runCatching { document?.pageText(page) }.getOrNull()
+        val text = session.pageText(page)
+        if (text != null) synchronized(glyphsOf) { glyphsOf[text.text] = text }
+        return text?.text
+    }
+
+    /**
+     * A selection of [range] on an EPUB page's [text] as the book's locator (`chapter:offset` of its first character)
+     * and its chapter offsets; null for a PDF (its highlights stay by page).
+     */
+    internal fun bookRange(text: com.flowfolio.core.pdf.PageText, range: IntRange): Pair<String, IntRange>? {
+        val glyphs = synchronized(glyphsOf) { glyphsOf[text] }?.glyphs ?: return null
+        val first = glyphs.offsets.getOrNull(range.first)
+        val last = glyphs.offsets.getOrNull(range.last)
+        return if (first == null || last == null) null else Locator(glyphs.chapter, first).encode() to first..last
+    }
+
+    /** The book's highlights placed in the current layout near [pages] (EPUBs); a PDF's stay as they are. */
+    internal suspend fun place(all: List<Annotation>, pages: Set<Int>): Placement =
+        epub?.place(all, pages) ?: Placement(all, emptyList(), exact = true)
+
+    /** Ribbons on the pages now showing their text (EPUBs); a PDF's stay as they are. */
+    internal suspend fun placeRibbons(marks: List<Bookmark>): List<Bookmark> = epub?.placeRibbons(marks) ?: marks
+
+    /** The text at the top of [page] as a locator, for an EPUB ribbon; null for a PDF. */
+    internal fun locatorOfPage(page: Int): String? = epub?.locatorOf(page)?.encode()
+
+    /** The EPUB's pages are final for this layout (no chapters estimated), so placed pages may be saved. */
+    internal val pagesFinal: Boolean get() = epub?.exact ?: true
+
+    /** The EPUB picture [path] for the image viewer, decoded for a screen [maxSide] pixels on its longer side. */
+    internal suspend fun picture(path: String, maxSide: Int): ImageBitmap? = epub?.picture(path, maxSide)
     private var source: PdfPageSource? = null
     private var cache: PageCache? = null
     private var tileCache: TileCache? = null
@@ -191,8 +236,16 @@ class ReaderViewModel @Inject constructor(
 
     /** Page index -> image at the current layout's size, for pages that are ready. */
     val pageImages: StateFlow<Map<Int, ImageBitmap>> = combine(cacheImages, currentKeys) { images, current ->
-        current.mapNotNull { (page, key) -> images[key]?.let { page to it } }.toMap()
+        current.mapNotNull { (page, key) -> (images[key] ?: earlierDrawing(images, key))?.let { page to it } }.toMap()
     }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
+
+    /**
+     * The page as last drawn in the same layout, while it is drawn again with newly ready equations (ADR-0041): the
+     * same text, so it shows instead of blank paper, and the hourglass need not wait for every equation.
+     */
+    private fun earlierDrawing(images: Map<PageKey, ImageBitmap>, key: PageKey): ImageBitmap? = images.entries
+        .filter { (k, _) -> k.page == key.page && k.size == key.size && k.tone == key.tone && k.layout == key.layout }
+        .maxByOrNull { it.key.revision }?.value
 
     private var anchorPage: Int
         get() = saved[KEY_ANCHOR] ?: 0
@@ -313,7 +366,8 @@ class ReaderViewModel @Inject constructor(
                 it.heightPx
             )
         }
-        val wanted = pane?.let { EpubLayout(it, settings.text) }
+        val shift = if (layoutFor(v) == ReaderLayout.SPREAD) (if (settings.spreadCoverAlone) 1 else 0) else null
+        val wanted = pane?.let { EpubLayout(it, settings.text, shift) }
         return when {
             session == null -> false
 
@@ -336,8 +390,8 @@ class ReaderViewModel @Inject constructor(
         if (session.laidOut != null) _relayingOut.value = true
         layoutJob = viewModelScope.launch {
             val started = android.os.SystemClock.elapsedRealtime()
-            // Up to the reader's chapter first when re-laying out an open book; the first layout (and a start page) is
-            // whole.
+            // The reader's chapter first when re-laying out an open book (ADR-0041); the first layout (and a
+            // start page) is whole.
             val chapterFirst = session.laidOut != null && startPage == null
             anchorPage = session.layOut(layout, v.widthPx / v.widthDp, locator, chapterFirst)
             android.util.Log.i(
@@ -350,14 +404,22 @@ class ReaderViewModel @Inject constructor(
                 startPage = null
             }
             pendingLayout = null
+            _layoutRevision.update { it + 1 }
             _navigation.value = session.navigation()
             publishReady()
+            // The equations of the pages in view, read on all cores before they are drawn (ADR-0041).
+            (_state.value as? ReaderState.Ready)?.let { session.preloadIslands(pagesInView(it)) }
             replan()
             nextIslandWork()
-            // The pages in view drawn (or a moment passed): the hourglass may go.
-            withTimeoutOrNull(DRAWN_WAIT_MS) {
-                pageImages.first { images -> currentKeys.value.keys.all { it in images } }
-            }
+            // The pages in view drawn (or a moment passed): the hourglass goes and the reader sees the new pages. The
+            // pages about to be shown are drawn after them (M5: waiting for those too kept the hourglass up twice as
+            // long). Logged for the phase exit criterion: the reader's page within 300 ms of a text change.
+            val inView = (_state.value as? ReaderState.Ready)?.let(::pagesInView) ?: listOf(anchorPage)
+            withTimeoutOrNull(DRAWN_WAIT_MS) { pageImages.first { images -> inView.all { it in images } } }
+            android.util.Log.i(
+                LAYOUT_TAG,
+                "pages in view shown ${android.os.SystemClock.elapsedRealtime() - started} ms after the change"
+            )
             _relayingOut.value = false
             finishLayout(session)
             session.trimIslands()
@@ -373,6 +435,7 @@ class ReaderViewModel @Inject constructor(
         val moves = session.finishLayout() ?: return
         cache?.rekey { key -> moves(key.page)?.let { key.copy(page = it) } }
         anchorPage = session.pageOf(locator ?: session.locatorOf(anchorPage))
+        _layoutRevision.update { it + 1 }
         _links.value = emptyMap()
         linksRevision = -1
         thumbnails?.clear()
@@ -559,7 +622,7 @@ class ReaderViewModel @Inject constructor(
             listOf(ready.unit, ready.unit + 1, ready.unit - 1, ready.unit + 2).filter { it in 0 until ready.unitCount }
         val pages =
             units.flatMap { u -> if (spread) Spreads.pagesOf(u, ready.pageCount, ready.coverAlone) else listOf(u) }
-        val keys = pages.map { PageKey(it, pane, ready.tone, session.revision) }
+        val keys = pages.map { PageKey(it, pane, ready.tone, session.islandRevision, session.layout) }
         wanted = keys
         currentKeys.value = keys.associateBy { it.page }
         cache?.request(keys, newBudgetBytes = minOf(keys.sumOf { it.size.argbBytes }, MAX_CACHE_BYTES))
@@ -627,6 +690,7 @@ class ReaderViewModel @Inject constructor(
             }
             layoutJob = viewModelScope.launch {
                 anchorPage = session.relayOut(work.chapter, locator)
+                _layoutRevision.update { it + 1 }
                 _navigation.value = session.navigation()
                 publishReady()
                 replan()

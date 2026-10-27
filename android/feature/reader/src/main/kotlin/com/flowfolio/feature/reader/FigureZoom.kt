@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -22,6 +23,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -37,16 +39,19 @@ import kotlin.math.max
 import kotlin.math.roundToInt
 
 /**
- * An EPUB equation or table that the column shows too small (a wide matrix on the cover screen), on its own over the
- * paper: fitted to the screen first, then pinched up to [MAX_ZOOM] times that and panned. A tap or Back closes it.
+ * An EPUB equation or table that the column shows too small (a wide matrix on the cover screen), or a picture, on its
+ * own over the paper: fitted to the screen first, then pinched up to [MAX_ZOOM] times that and panned. A tap or Back
+ * closes it.
  */
 @Composable
-internal fun IslandZoom(id: Int, load: suspend (Int) -> ImageBitmap?, onDismiss: () -> Unit) {
-    val image by produceState<ImageBitmap?>(null, id) { value = load(id) }
-    var zoom by remember(id) { mutableFloatStateOf(1f) }
-    var pan by remember(id) { mutableStateOf(Offset.Zero) }
+internal fun FigureZoom(figure: Figure, book: ReaderViewModel, onDismiss: () -> Unit) {
+    val image by rememberFigure(figure, book)
+    var zoom by remember(figure) { mutableFloatStateOf(1f) }
+    var pan by remember(figure) { mutableStateOf(Offset.Zero) }
     val paper = PAPER
-    val title = stringResource(R.string.reader_island_zoom)
+    val title = stringResource(
+        if (figure is Figure.Picture) R.string.reader_picture_zoom else R.string.reader_island_zoom
+    )
     BackHandler(onBack = onDismiss)
     Box(
         Modifier
@@ -56,8 +61,8 @@ internal fun IslandZoom(id: Int, load: suspend (Int) -> ImageBitmap?, onDismiss:
                 contentDescription = title
             }
             .testTag(ReaderTestTags.ISLAND_ZOOM)
-            .pointerInput(id) { detectTapGestures { onDismiss() } }
-            .pointerInput(id) {
+            .pointerInput(figure) { detectTapGestures { onDismiss() } }
+            .pointerInput(figure) {
                 detectTransformGestures { centroid, move, factor, _ ->
                     val img = image ?: return@detectTransformGestures
                     val next = (zoom * factor).coerceIn(1f, MAX_ZOOM)
@@ -94,6 +99,18 @@ internal fun IslandZoom(id: Int, load: suspend (Int) -> ImageBitmap?, onDismiss:
                 style = FlowFolioType.sub.merge(FlowFolio.hint),
                 modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 24.dp)
             )
+        }
+    }
+}
+
+/** The figure's image: an island at its own size, or the picture decoded for this screen; null until loaded. */
+@Composable
+private fun rememberFigure(figure: Figure, book: ReaderViewModel): State<ImageBitmap?> {
+    val side = with(LocalWindowInfo.current.containerSize) { maxOf(width, height) }
+    return produceState(null, figure) {
+        value = when (figure) {
+            is Figure.Island -> book.islandImage(figure.id)
+            is Figure.Picture -> book.picture(figure.path, side)
         }
     }
 }

@@ -17,6 +17,16 @@ internal sealed interface LinkTarget {
 
     /** Show island [id] (an equation or table drawn smaller than its size to fit the column) zoomable (EPUBs). */
     data class Island(val id: Int) : LinkTarget
+
+    /** Show the book's picture [path] zoomable (EPUBs, M4). */
+    data class Picture(val path: String) : LinkTarget
+}
+
+/** What the zoomed view shows: an EPUB island drawn too small for its size, or a picture from the book (M4). */
+internal sealed interface Figure {
+    data class Island(val id: Int) : Figure
+
+    data class Picture(val path: String) : Figure
 }
 
 /** A link on a page, its box as fractions of the page image (0 to 1), from a PDF's links or an EPUB's text. */

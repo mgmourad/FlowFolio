@@ -91,7 +91,7 @@ class ReflowBookTest {
     fun layingOutOneChapterAgainKeepsTheOthers() {
         val book = book()
         var islandSize: Pair<Int, Int>? = null
-        val paginator = book.paginate(SPEC, DENSITY) { islandSize }
+        val paginator = book.paginate(SPEC, DENSITY, islandSize = { islandSize })
         val before = book.pages.toList()
         val firstOfTwo = book.pageOf(Locator(1, 0))
         val inTwo = book.locatorOf(before.lastIndex)
@@ -111,19 +111,43 @@ class ReflowBookTest {
     }
 
     @Test
-    fun upToTheReadersChapterFirstThenTheRestKeepsEveryPageItHad() {
+    fun theReadersChapterFirstThenTheRestKeepsEveryPageItHad() {
         val whole = book().also { it.paginate(SPEC, DENSITY) }.pages.map { it.chapter to it.start }
         val book = book()
-        val paginator = book.paginate(SPEC, DENSITY, first = 0)
-        assertTrue("chapter two waits", !book.complete)
-        val shown = book.pages.filter { it.chapter == 0 }
-        // Up to the reader's chapter, the pages are the real ones, with their real numbers.
-        assertEquals(whole.filter { it.first == 0 }, shown.map { it.chapter to it.start })
+        val paginator = book.paginate(SPEC, DENSITY, first = 1)
+        assertTrue("chapter one waits", !book.complete)
+        val shown = book.pages.filter { it.chapter == 1 }
+        // The reader's chapter has its real pages at once; the chapter before it is estimated.
+        assertEquals(whole.filter { it.first == 1 }, shown.map { it.chapter to it.start })
+        assertTrue(book.pages.filter { it.chapter == 0 }.all { it.slices.isEmpty() })
         book.applyRest(book.layOutRest(paginator))
         assertTrue(book.complete)
         assertEquals(whole, book.pages.map { it.chapter to it.start })
         // Pages laid out first are the same objects afterwards: their images can move with them.
-        shown.forEachIndexed { i, page -> assertSame(page, book.pages[i]) }
+        shown.forEach { page -> assertTrue(book.pages.any { it === page }) }
+    }
+
+    @Test
+    fun inASpreadEveryChapterAfterTheFirstStartsOnALeftPage() {
+        for (shift in listOf(0, 1)) {
+            val book = book()
+            val paginator = book.paginate(SPEC, DENSITY, first = 1, spreadShift = shift)
+            val startEstimated = book.pageOf(Locator(1, 0))
+            assertEquals("shift $shift, estimated", 0, (startEstimated + shift) % 2)
+            book.applyRest(book.layOutRest(paginator))
+            val start = book.pageOf(Locator(1, 0))
+            // Laid out exactly, chapter two still starts on a left page: the spread shown never re-pairs.
+            assertEquals("shift $shift", 0, (start + shift) % 2)
+            // A blank page comes before it when needed; it has no text and leads back to the chapter's start.
+            if (start > 0 && book.pages[start - 1].chapter == 1) {
+                val blank = book.pages[start - 1]
+                assertTrue(blank.slices.isEmpty())
+                assertEquals(Locator(1, 0), book.locatorOf(start - 1))
+            }
+        }
+        // Single-page layout has no blanks.
+        val single = book().also { it.paginate(SPEC, DENSITY) }
+        assertTrue(single.pages.all { it.slices.isNotEmpty() })
     }
 
     /** Two chapters: a heading with an anchor, a block and an inline equation, and plain text. */
