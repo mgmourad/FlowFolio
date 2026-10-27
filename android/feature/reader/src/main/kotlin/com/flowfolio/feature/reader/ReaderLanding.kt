@@ -1,5 +1,6 @@
 package com.flowfolio.feature.reader
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -15,6 +16,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
@@ -24,6 +26,7 @@ import com.flowfolio.core.model.PageTurn
 import com.flowfolio.feature.reader.layout.ReaderLayout
 import com.flowfolio.feature.reader.riffle.LandingTurn
 import com.flowfolio.feature.reader.riffle.reducedMotion
+import kotlin.math.roundToInt
 
 /** A landing under way (spec 5.4): the reader already shows [to]; the turn plays over it from [from]. */
 internal data class ReaderLanding(val from: Int, val to: Int)
@@ -121,7 +124,15 @@ private fun LandingPage(page: Int?, modifier: Modifier, images: Map<Int, ImageBi
     val image by produceState(page?.let { images[it] ?: thumbnails?.cached(it) }, page) {
         if (value == null && page != null) value = thumbnails?.load(page)
     }
-    Box(modifier.background(PAPER)) {
-        image?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds) }
+    val paper = PAPER
+    Canvas(modifier) {
+        drawRect(paper)
+        // Checked as it draws: a thumbnail freed by a paper change is left out (blank paper); drawn, it would throw.
+        val bmp = image?.takeIf { !it.asAndroidBitmap().isRecycled } ?: return@Canvas
+        drawImage(
+            bmp,
+            srcSize = IntSize(bmp.width, bmp.height),
+            dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt())
+        )
     }
 }

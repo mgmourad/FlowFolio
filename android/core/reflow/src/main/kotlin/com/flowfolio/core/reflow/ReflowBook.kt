@@ -10,6 +10,7 @@ import java.util.Locale
  * An EPUB ready to paginate: its chapters parsed once, then laid out into pages for a [PageSpec] (pane size and text
  * size). Locators (chapter and character offset) map to pages after any re-layout.
  */
+@Suppress("TooManyFunctions") // laying out, mapping locators and pages, and the book's contents, notes and islands
 class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
     val locale: Locale = pkg.metadata.language?.let { Locale.forLanguageTag(it) } ?: Locale.getDefault()
 
@@ -85,15 +86,16 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
         }
         val last = if (first in chapters.indices) first else chapters.lastIndex
         exact = BooleanArray(chapters.size) { it <= last }
+        val laidOut = layOutAll(paginator, (0..last).toList())
         val all = ArrayList<Page>()
         val starts = IntArray(chapters.size)
         var charsPerPage = 1f
         chapters.forEachIndexed { i, c ->
             starts[i] = all.size
-            if (i <= last) {
-                val laidOut = paginator.paginate(i, c)
-                if (laidOut.isNotEmpty() && c.length > 0) charsPerPage = c.length.toFloat() / laidOut.size
-                all += laidOut
+            val pages = laidOut[i]
+            if (pages != null) {
+                if (pages.isNotEmpty() && c.length > 0) charsPerPage = c.length.toFloat() / pages.size
+                all += pages
             } else {
                 all += estimate(i, c, charsPerPage)
             }
@@ -113,10 +115,17 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
      * The chapters still estimated, laid out with [paginator]. Reads only the parsed chapters, so it can run while
      * pages are drawn; the result goes to [applyRest].
      */
-    fun layOutRest(paginator: Paginator): Map<Int, List<Page>> {
-        val todo = exact.indices.filter { !exact[it] }
-        return todo.associateWith { paginator.paginate(it, chapters[it]) }
-    }
+    fun layOutRest(paginator: Paginator): Map<Int, List<Page>> =
+        layOutAll(paginator, exact.indices.filter { !exact[it] })
+
+    /**
+     * [indices]' chapters laid out at once on the device's cores: chapters are independent (each builds its own text
+     * layouts and paints; image sizes are a concurrent map), so a re-layout late in a long book no longer waits for
+     * every chapter before it one by one (M3's 300 ms to the reader's page).
+     */
+    private fun layOutAll(paginator: Paginator, indices: List<Int>): Map<Int, List<Page>> = indices.parallelStream()
+        .map { it to paginator.paginate(it, chapters[it]) }
+        .collect(java.util.stream.Collectors.toMap({ it.first }, { it.second }))
 
     /**
      * Puts [rest] in place of the estimates. Chapters laid out exactly in the meantime ([repaginate]) keep their pages;

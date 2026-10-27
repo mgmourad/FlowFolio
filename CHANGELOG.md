@@ -169,6 +169,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   Details: the top fade's blur eases out in bands and is lighter over the cover's backdrop; "Add to shelf" shows a
   shelf; a sideways swipe moves between the tabs; bigger play triangles on Continue and Resume. Folded, the reader's
   top bar puts the whole book title on its own centred row above Back and the tools.
+- M3 checks (2026-10-26, `docs/plans/phase2-m3-signoff.md`). Pagination is exact in every reading font at five sizes
+  and with the other text settings at their extremes (415 layouts on the corpus, `PaginationOnDeviceTest`); a sheet
+  of every font on every paper (`docs/plans/assets/phase2-m3-fonts-papers.jpg`). Re-layout lays the chapters up to the
+  reader's out on all cores at once (Moby-Dick at 41% on the emulator: 489-984 ms before, 419-679 ms after, debuggable).
+- Fixed: changing the paper colour while reading could crash the app: the riffle scrubber's loupe drew a page
+  thumbnail the cache had already recycled for the old colour. Thumbnails are checked as they are drawn and fetched
+  again in the new colour (the landing preview too).
+- Fixed: folded, a PDF's six reader buttons overflowed the cover screen and the row squeezed the last one, the
+  bookmark; the buttons now share the row's width equally.
 - Owner's shelf batch (2026-10-26).
   - Press and hold a shelf on the Shelves tab: Select, Add books, Edit, Remove. "Add books" lists every book in the
     library (with a search once there are more than eight), ticks the ones already on the shelf, and adds the newly

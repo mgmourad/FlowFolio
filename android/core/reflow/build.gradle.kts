@@ -16,4 +16,7 @@ dependencies {
 
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.androidx.test.runner)
+    // The reading fonts (M3's check: pagination is exact in every font).
+    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(projects.core.designsystem)
 }

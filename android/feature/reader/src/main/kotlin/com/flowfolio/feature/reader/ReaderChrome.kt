@@ -140,9 +140,15 @@ private fun TopBar(
     reflowable: Boolean,
     modifier: Modifier = Modifier
 ) {
-    val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
-    // A third larger than the app's usual 42 dp for easy reach (owner, 2026-10-22); folded, a little less.
-    val button = if (wide) BIG_BUTTON else FOLDED_BUTTON
+    val width = LocalWindowInfo.current.containerDpSize.width
+    val wide = width >= TITLE_BESIDE_BACK
+    // A third larger than the app's usual 42 dp for easy reach (owner, 2026-10-22); folded, a little less, and never
+    // more than the row holds: a PDF's six buttons overflowed the cover screen and the row squeezed the last one, the
+    // ribbon, smaller than the rest (owner, 2026-10-26). Every button shares the width equally instead.
+    val buttons = if (reflowable) EPUB_BUTTONS else PDF_BUTTONS
+    // The row's gaps: one between each button and around the spacer that pushes the tools right.
+    val fits = (width - BAR_INSET * 2 - TOOL_GAP * buttons) / buttons
+    val button = if (wide) BIG_BUTTON else minOf(FOLDED_BUTTON, fits)
     Column(
         modifier
             .fillMaxWidth()
@@ -154,7 +160,7 @@ private fun TopBar(
         Row(
             Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(TOOL_GAP)
         ) {
             FlowFolioIconButton(onClick = actions.onBack, Modifier.reveal(1), glass = true, size = button) {
                 FlowFolioGlyph(
@@ -301,6 +307,11 @@ private val TITLE_BESIDE_BACK = 600.dp
 private val BASE_BUTTON = 42.dp
 private val BIG_BUTTON = 56.dp
 private val FOLDED_BUTTON = 50.dp
+private val TOOL_GAP = 10.dp
+
+/** Back, Contents, Go to page and Aa; a PDF adds annotations and the ribbon. */
+private const val EPUB_BUTTONS = 4
+private const val PDF_BUTTONS = 6
 private const val SETTINGS_TEXT_SP = 16f
 
 /** A glyph's share of its round button (24 dp in 42 dp). */

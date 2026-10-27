@@ -179,17 +179,19 @@ private fun FlipSheet(book: BookGeometry, flip: MiniFlip, thumbnails: PageThumbn
 private fun MiniPage(book: BookGeometry, page: Int?, thumbnails: PageThumbnailProvider?, modifier: Modifier) {
     val palette = FlowFolio.palette
     var image by remember(page) { mutableStateOf(page?.let { thumbnails?.cached(it) }) }
-    if (image == null && page != null && thumbnails != null) {
-        LaunchedEffect(page) { image = thumbnails.load(page) }
+    // A thumbnail freed by a paper change is fetched again, in the new paper.
+    val usable = image?.takeIf { !it.isRecycled() }
+    if (usable == null && page != null && thumbnails != null) {
+        LaunchedEffect(page, image) { image = thumbnails.load(page)?.takeIf { !it.isRecycled() } }
     }
     val paper = palette.paper
     val ink = palette.paperInk
     val accent = palette.title
     Canvas(modifier.background(if (page == null) palette.backgroundDeep else paper)) {
-        val bmp = image
+        val bmp = usable
         when {
             page == null -> Unit
-            bmp != null -> drawThumbnail(bmp)
+            bmp != null && drawThumbnail(bmp) -> Unit
             else -> drawSkeleton(page, ink, accent, isRecto = page % 2 == 0)
         }
         if (page != null) {
