@@ -3,6 +3,7 @@ package com.flowfolio.feature.library
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -126,13 +128,32 @@ fun AnnotationsContent(
                 item(span = { GridItemSpan(maxLineSpan) }) { NoAnnotations(Modifier.reveal(1)) }
             }
             itemsIndexed(state.books, key = { _, entry -> entry.book.id }) { i, item ->
-                val key = item.book.id
                 Box(Modifier.animateItem().reveal(1 + i)) {
-                    AnnotatedBookCard(item, state.chapters[item.latest.id]) {
-                        if (selection.active) selection.toggle(key) else onOpenBook(item.book)
-                    }
-                    SelectionMark(selection, key)
+                    AnnotatedBookItem(item, state.chapters[item.latest.id], selection, onOpenBook)
                 }
+            }
+        }
+    }
+}
+
+/** A book's card in the Annotations tab: a tap opens it (or chooses it); press and hold offers Select and Open. */
+@Composable
+private fun AnnotatedBookItem(item: AnnotatedBook, chapter: String?, selection: Selection, onOpenBook: (Book) -> Unit) {
+    val key = item.book.id
+    var menu by remember { mutableStateOf(false) }
+    Box {
+        AnnotatedBookCard(item, chapter, onHold = { if (!selection.active) menu = true }) {
+            if (selection.active) selection.toggle(key) else onOpenBook(item.book)
+        }
+        SelectionMark(selection, key)
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            HoldEntry(R.string.action_select) {
+                menu = false
+                selection.startWith(key)
+            }
+            HoldEntry(R.string.action_open) {
+                menu = false
+                onOpenBook(item.book)
             }
         }
     }
@@ -143,10 +164,16 @@ fun AnnotationsContent(
  * chapter it is in.
  */
 @Composable
-private fun AnnotatedBookCard(item: AnnotatedBook, chapter: String?, onClick: () -> Unit) {
+private fun AnnotatedBookCard(
+    item: AnnotatedBook,
+    chapter: String?,
+    onHold: (() -> Unit)? = null,
+    onClick: () -> Unit
+) {
     val cover by rememberCover(item.book)
     FlowFolioCard(
-        Modifier.fillMaxWidth().clickable(onClick = onClick).testTag(LibraryTestTags.annotatedBook(item.book.id)),
+        Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onHold)
+            .testTag(LibraryTestTags.annotatedBook(item.book.id)),
         radius = 22.dp,
         padding = PaddingValues(14.dp)
     ) {

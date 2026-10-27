@@ -169,6 +169,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   Details: the top fade's blur eases out in bands and is lighter over the cover's backdrop; "Add to shelf" shows a
   shelf; a sideways swipe moves between the tabs; bigger play triangles on Continue and Resume. Folded, the reader's
   top bar puts the whole book title on its own centred row above Back and the tools.
+- Owner's shelf batch (2026-10-26).
+  - Press and hold a shelf on the Shelves tab: Select, Add books, Edit, Remove. "Add books" lists every book in the
+    library (with a search once there are more than eight), ticks the ones already on the shelf, and adds the newly
+    ticked ones first. A shelf's page has a + that does the same, beside Select.
+  - Press and hold now offers "Select" everywhere items can be chosen (books, folders, shelves, ribbons, annotations
+    and annotated books): select mode starts with that item chosen. List rows on shelf pages respond to press and hold.
+  - Select mode on a shelf or folder page has "Add to shelf": tick shelves (or make one) to put every chosen book on;
+    nothing is taken off a shelf. A chosen folder brings all its books.
+  - Drag and drop to reorder a shelf's books, on the library's shelf rows (when no filter or search is on) and on the
+    shelf's page in tiles or list: press and hold, then drag; holding still and letting go opens the menu as before.
+    The order is kept (Room v13 `shelf_books.position`); books added to a shelf go first.
+- Fixed: switching the reader's paper between a light and a dark one rebuilt the reader's bars and panels mid-reveal
+  (the Aa panel jumped back to its first tab and the bars' entrance replayed), because `FlowFolioPalette` composed its
+  content in a different place for each case. The reveal also starts from a closed circle every time.
 - Owner's library batch (2026-10-26, ADR-0037, ADR-0038).
   - Import several files at once, or a whole folder with every folder inside it (the + button's "Import files…" and
     "Import a folder…"). A batch shows "Importing n of N" and ends with one message (added, already there, couldn't be

@@ -27,6 +27,12 @@ interface ShelfRepository {
 
     /** Puts [bookId] on exactly [shelfIds], taking it off any others. */
     suspend fun setShelves(bookId: String, shelfIds: Set<Long>)
+
+    /** Puts [bookIds] on [shelfId], in front of what is there; books already on it stay where they are. */
+    suspend fun addBooks(shelfId: Long, bookIds: List<String>)
+
+    /** Stands [bookIds] on [shelfId] in this order (drag and drop). */
+    suspend fun setOrder(shelfId: Long, bookIds: List<String>)
 }
 
 class DefaultShelfRepository @Inject constructor(
@@ -60,4 +66,10 @@ class DefaultShelfRepository @Inject constructor(
 
     override suspend fun setShelves(bookId: String, shelfIds: Set<Long>) =
         withContext(io) { dao.setShelves(bookId, shelfIds, clock.now()) }
+
+    override suspend fun addBooks(shelfId: Long, bookIds: List<String>) =
+        withContext(io) { dao.addBooks(shelfId, bookIds, clock.now()) }
+
+    override suspend fun setOrder(shelfId: Long, bookIds: List<String>) =
+        withContext(io) { dao.setOrder(shelfId, bookIds) }
 }

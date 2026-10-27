@@ -66,7 +66,9 @@ internal fun SelectionRow(
     selection: Selection,
     allKeys: List<String>,
     onDelete: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Select mode's "Add to shelf" for the chosen books; null where it does not apply. */
+    onAddToShelf: (() -> Unit)? = null
 ) {
     // Items removed elsewhere leave the choice.
     LaunchedEffect(allKeys) { selection.keepOnly(allKeys) }
@@ -90,7 +92,21 @@ internal fun SelectionRow(
             allChosen = allKeys.isNotEmpty() && allKeys.all(selection::isChosen),
             onSelectAll = { selection.setAll(allKeys) },
             onDelete = onDelete,
-            modifier = Modifier.padding(top = 8.dp).testTag(LibraryTestTags.SELECTION_BAR)
+            modifier = Modifier.padding(top = 8.dp).testTag(LibraryTestTags.SELECTION_BAR),
+            actions = {
+                onAddToShelf?.let { add ->
+                    com.flowfolio.core.designsystem.FlowFolioIconButton(
+                        onClick = { if (selection.chosen.isNotEmpty()) add() },
+                        modifier = Modifier.testTag(LibraryTestTags.SELECTION_ADD_TO_SHELF)
+                    ) {
+                        com.flowfolio.core.designsystem.FlowFolioGlyph(
+                            com.flowfolio.core.designsystem.Glyph.Shelves,
+                            stringResource(R.string.action_add_to_shelf_short),
+                            color = if (selection.chosen.isEmpty()) FlowFolio.palette.hint else FlowFolio.palette.item
+                        )
+                    }
+                }
+            }
         )
     }
 }

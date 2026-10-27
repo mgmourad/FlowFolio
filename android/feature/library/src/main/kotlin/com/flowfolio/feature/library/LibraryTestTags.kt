@@ -3,6 +3,11 @@ package com.flowfolio.feature.library
 /** Semantic tags used by UI tests to find library, shelves and details elements. */
 object LibraryTestTags {
     const val IMPORT_PROGRESS = "library_import_progress"
+    const val ADD_BOOKS_LIST = "library_add_books_list"
+    const val ADD_BOOKS_DONE = "library_add_books_done"
+    const val SHELVE_BOOKS_DONE = "library_shelve_books_done"
+    const val ADD_BOOKS = "library_add_books"
+    const val SELECTION_ADD_TO_SHELF = "library_selection_add_to_shelf"
     const val EMPTY = "library_empty"
     const val GRID = "library_grid"
     const val IMPORT = "library_import"

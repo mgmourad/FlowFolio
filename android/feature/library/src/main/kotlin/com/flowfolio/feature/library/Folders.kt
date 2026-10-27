@@ -197,6 +197,12 @@ private fun FolderPress(folder: FolderEntry, actions: FolderActions, content: @C
         content()
         selection?.let { SelectionMark(it, folder.selectionId) }
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            selection?.let {
+                HoldEntry(R.string.action_select) {
+                    menu = false
+                    it.startWith(folder.selectionId)
+                }
+            }
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_open), style = FlowFolio.title) },
                 onClick = {

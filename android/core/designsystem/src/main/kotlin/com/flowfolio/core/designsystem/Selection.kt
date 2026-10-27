@@ -60,6 +60,12 @@ class Selection(active: Boolean = false, chosen: Set<String> = emptySet()) {
         chosen = emptySet()
     }
 
+    /** Press and hold → Select (owner, 2026-10-26): select mode starts with [key] chosen. */
+    fun startWith(key: String) {
+        active = true
+        chosen = chosen + key
+    }
+
     fun toggle(key: String) {
         chosen = if (key in chosen) chosen - key else chosen + key
     }
@@ -142,7 +148,9 @@ fun SelectionBar(
     allChosen: Boolean,
     onSelectAll: () -> Unit,
     onDelete: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** More actions on the chosen items, before delete (the shelf pages' Add to shelf). */
+    actions: @Composable () -> Unit = {}
 ) {
     val p = FlowFolio.palette
     Row(
@@ -166,6 +174,7 @@ fun SelectionBar(
                 .clickable(role = Role.Button) { if (allChosen) selection.setAll(emptyList()) else onSelectAll() }
                 .padding(horizontal = 8.dp, vertical = 12.dp)
         )
+        actions()
         FlowFolioIconButton(onClick = { if (selection.chosen.isNotEmpty()) onDelete() }) {
             FlowFolioGlyph(
                 Glyph.Trash,

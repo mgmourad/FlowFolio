@@ -5,6 +5,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,6 +32,7 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -299,7 +301,24 @@ private fun BookmarkRow(item: BookmarkItem, actions: BookmarkActions, uniform: B
                 clipRect(0f, -size.height, size.width, size.height * 2) { this@drawWithContent.drawContent() }
             }
             .testTag(LibraryTestTags.bookmark(item.bookmark.id))
-    ) { BookmarkCard(item, uniform) { spot -> actions.onOpen(item, spot) } }
+    ) {
+        var menu by remember { mutableStateOf(false) }
+        Box {
+            BookmarkCard(item, uniform, onHold = { menu = true }) { spot -> actions.onOpen(item, spot) }
+            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                selection?.let {
+                    HoldEntry(R.string.action_select) {
+                        menu = false
+                        it.startWith(item.bookmark.id.toString())
+                    }
+                }
+                HoldEntry(R.string.action_remove, warn = true) {
+                    menu = false
+                    actions.onRemove(item)
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -326,13 +345,18 @@ private fun Swatch(colour: BookmarkColor, current: Boolean, onClick: () -> Unit)
  * columns) gives every card the same height: two lines of title, one of chapter.
  */
 @Composable
-private fun BookmarkCard(item: BookmarkItem, uniform: Boolean, onOpen: (CoverSpot) -> Unit) {
+private fun BookmarkCard(
+    item: BookmarkItem,
+    uniform: Boolean,
+    onHold: (() -> Unit)? = null,
+    onOpen: (CoverSpot) -> Unit
+) {
     val spot = remember { CoverSpot().apply { angle = 0f } }
     val cover by rememberCover(item.book)
     spot.face = item.book.face(cover)
     val tag = item.bookmark.color.color
     FlowFolioCard(
-        Modifier.fillMaxWidth().clickable { onOpen(spot) },
+        Modifier.fillMaxWidth().combinedClickable(onClick = { onOpen(spot) }, onLongClick = onHold),
         radius = 22.dp,
         padding = PaddingValues(14.dp)
     ) {

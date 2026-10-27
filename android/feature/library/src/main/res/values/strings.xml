@@ -9,6 +9,17 @@
     <string name="msg_failed_count">%1$d couldn\'t be opened</string>
     <string name="msg_folder_empty">No PDFs or EPUBs in that folder</string>
     <string name="filter_folders">Folders</string>
+    <string name="add_books_title">Add books to “%1$s”</string>
+    <string name="action_add_books">Add books</string>
+    <string name="action_add_to_shelf_short">Add to shelf</string>
+    <plurals name="add_books_confirm">
+        <item quantity="one">Add %d book</item>
+        <item quantity="other">Add %d books</item>
+    </plurals>
+    <plurals name="shelve_books_title">
+        <item quantity="one">Put %d book on shelves</item>
+        <item quantity="other">Put %d books on shelves</item>
+    </plurals>
     <string name="info_series">Series</string>
     <string name="info_print_pages">Printed pages</string>
     <string name="info_subjects">Subjects</string>

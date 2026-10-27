@@ -72,6 +72,9 @@ internal class PaperReveal(
             return
         }
         scope.launch {
+            // The circle starts closed before the snapshot shows: left full from the last change, it hid the snapshot
+            // while the new pages were drawn, so the new colour (or blank paper) flashed before the reveal began.
+            progress.snapTo(0f)
             fromTone = currentTone()
             old = runCatching { layer.toImageBitmap() }.getOrNull()
             apply(style)
@@ -79,7 +82,6 @@ internal class PaperReveal(
                 withTimeoutOrNull(MAX_WAIT_MS) {
                     snapshotFlow { currentTone() == target && pagesReady() }.first { it }
                 }
-                progress.snapTo(0f)
                 if (old != null) progress.animateTo(1f, tween(REVEAL_MS, easing = Motion.EaseInOut))
             } finally {
                 old = null

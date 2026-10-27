@@ -29,5 +29,10 @@ data class ShelfEntity(
 data class ShelfBookEntity(
     @ColumnInfo(name = "shelf_id") val shelfId: Long,
     @ColumnInfo(name = "book_id") val bookId: String,
-    @ColumnInfo(name = "added_at") val addedAt: Long
+    @ColumnInfo(name = "added_at") val addedAt: Long,
+    /**
+     * Where the book stands on the shelf, smallest first; ties (every row before schema v13) fall back to newest first.
+     * Added in schema v13, for drag-and-drop reordering.
+     */
+    @ColumnInfo(defaultValue = "0") val position: Int = 0
 )

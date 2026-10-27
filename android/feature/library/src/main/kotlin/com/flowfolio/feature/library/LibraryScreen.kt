@@ -71,6 +71,8 @@ data class LibraryActions(
     val onOpenFolder: (String) -> Unit = {},
     /** Asks to remove a folder's books from the library. */
     val onRemoveFolder: (FolderEntry) -> Unit = {},
+    /** Saves a shelf's new order after a drag and drop; null where books cannot be reordered (a filtered view). */
+    val onReorder: ((Long, List<String>) -> Unit)? = null,
     /** Opens a whole shelf ([ShelfPageViewModel.LOOSE] for the books on no shelf). */
     val onOpenShelf: (Long) -> Unit = {},
     val onSort: (LibrarySort) -> Unit = {},
@@ -144,6 +146,7 @@ fun LibraryScreen(
             onOpenShelf = onOpenShelf,
             onOpenFolder = onOpenFolder,
             onRemoveFolder = removeFolder,
+            onReorder = reorderFor(state, shelves),
             onBookmarks = onBookmarks,
             onAnnotations = onAnnotations,
             onSort = viewModel::onSortChange,
@@ -165,6 +168,10 @@ private fun rememberRemoveFolder(viewModel: LibraryViewModel): (FolderEntry) -> 
     }
     return { removing = it }
 }
+
+/** Saving a shelf row's new order; null when the rows are filtered or searched (a drag would move hidden books). */
+private fun reorderFor(state: LibraryUiState, shelves: ShelvesViewModel): ((Long, List<String>) -> Unit)? =
+    if (state.filter == LibraryFilter.ALL && state.query.isBlank()) { id, ids -> shelves.setOrder(id, ids) } else null
 
 /** Locate for a moved or missing book: the system picker, then the book is pointed at the file chosen. */
 @Composable

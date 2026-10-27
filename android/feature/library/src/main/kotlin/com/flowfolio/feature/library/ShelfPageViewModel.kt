@@ -32,8 +32,19 @@ data class ShelfPageUiState(
     val shelf: Shelf? = null,
     val noShelves: Boolean = false,
     val items: List<LibraryItem> = emptyList(),
-    val shelves: List<Shelf> = emptyList()
-)
+    val shelves: List<Shelf> = emptyList(),
+    /** Every book in the library, for "Add books" and for what a chosen folder holds. */
+    val allBooks: List<Book> = emptyList()
+) {
+    /** The books select mode's [keys] stand for: books by id, and every book in a chosen folder. */
+    fun booksChosen(keys: Set<String>): List<String> {
+        val paths = keys.filter {
+            it.startsWith(FolderEntry.FOLDER_PREFIX)
+        }.map { it.removePrefix(FolderEntry.FOLDER_PREFIX) }
+        val inFolders = allBooks.filter { b -> paths.any { b.isUnder(it) } }.map { it.id }
+        return (keys.filterNot { it.startsWith(FolderEntry.FOLDER_PREFIX) } + inFolders).distinct()
+    }
+}
 
 /** One shelf's books, as tiles or a list, with renaming, removing and locating books. */
 @HiltViewModel
@@ -71,7 +82,8 @@ class ShelfPageViewModel @Inject constructor(
                 shelf = shelf.takeIf { folder == null },
                 noShelves = shelves.isEmpty(),
                 items = list.map { LibraryItem(it, a[it.id] ?: Availability.AVAILABLE) },
-                shelves = shelves
+                shelves = shelves,
+                allBooks = books
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ShelfPageUiState())
 

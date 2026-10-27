@@ -6,6 +6,7 @@ import android.text.format.DateFormat
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -81,7 +83,8 @@ fun BookAnnotationsScreen(
             onOpen = { a -> book?.let { b -> viewModel.open(a) { onRead(b) } } },
             onShare = { a -> book?.let { shareAnnotation(context, a, it) } },
             onNote = { editing = it },
-            onDelete = viewModel::remove
+            onDelete = viewModel::remove,
+            onSelect = { selection.startWith(it.id.toString()) }
         ),
         selection
     ) { confirmBulk = true }
@@ -185,16 +188,35 @@ private fun AnnotationRow(a: Annotation, chapter: String?, actions: AnnotationAc
         },
         modifier = Modifier.testTag(LibraryTestTags.annotation(a.id))
     ) {
-        AnnotationCard(a, chapter) { actions.onOpen(a) }
+        var menu by remember { mutableStateOf(false) }
+        Box {
+            AnnotationCard(a, chapter, onHold = { menu = true }) { actions.onOpen(a) }
+            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                actions.onSelect?.let { select ->
+                    HoldEntry(R.string.action_select) {
+                        menu = false
+                        select(a)
+                    }
+                }
+                HoldEntry(R.string.action_delete, warn = true) {
+                    menu = false
+                    actions.onDelete(a)
+                }
+            }
+        }
     }
 }
 
 /** The chapter, then the passage with its colour bar, the note under it, and its page and date. */
 @Composable
-private fun AnnotationCard(a: Annotation, chapter: String?, onOpen: () -> Unit) {
+private fun AnnotationCard(a: Annotation, chapter: String?, onHold: (() -> Unit)? = null, onOpen: () -> Unit) {
     val context = LocalContext.current
     val bar = a.color.marker
-    FlowFolioCard(Modifier.fillMaxWidth().clickable(onClick = onOpen), radius = 22.dp, padding = PaddingValues(16.dp)) {
+    FlowFolioCard(
+        Modifier.fillMaxWidth().combinedClickable(onClick = onOpen, onLongClick = onHold),
+        radius = 22.dp,
+        padding = PaddingValues(16.dp)
+    ) {
         Row {
             Canvas(Modifier.size(4.dp, 56.dp)) { drawRect(bar) }
             Column(Modifier.weight(1f).padding(start = 14.dp)) {

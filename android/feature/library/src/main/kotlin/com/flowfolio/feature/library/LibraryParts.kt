@@ -52,6 +52,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.flowfolio.core.designsystem.Book3D
 import com.flowfolio.core.designsystem.CoverSpot
 import com.flowfolio.core.designsystem.FlowFolio
@@ -254,26 +255,46 @@ internal fun ShelfRowView(
                     .testTag(LibraryTestTags.shelfCount(row.shelf?.id ?: ShelfPageViewModel.LOOSE))
             )
         }
-        // `.shelf-row` with `scroll-snap-type: x mandatory`: swipe sideways through the shelf; it settles on a book.
-        // As tall as the tallest book can be, whichever books are in view, so the plank never moves while the row
-        // scrolls (a lazy row is otherwise as tall as the books it shows; owner, 2026-10-26).
-        val rowState = rememberLazyListState()
-        LazyRow(
-            state = rowState,
-            modifier = Modifier.height(SHELF_ROW_TOP + SHELF_BOOK_HEIGHT + SHELF_BOOK_EXTRA.dp + SHELF_ROW_BOTTOM),
-            flingBehavior = rememberSnapFlingBehavior(rowState, SnapPosition.Start),
-            contentPadding = PaddingValues(start = 30.dp, end = 30.dp, top = SHELF_ROW_TOP, bottom = SHELF_ROW_BOTTOM),
-            horizontalArrangement = Arrangement.spacedBy(SHELF_BOOK_GAP),
-            verticalAlignment = Alignment.Bottom
-        ) {
-            itemsIndexed(row.items, key = { _, entry -> entry.book.id }) { i, item ->
-                val h = SHELF_BOOK_HEIGHT + minOf(SHELF_BOOK_EXTRA, item.book.pageCount / PAGES_PER_DP).dp
-                Box(Modifier.animateItem().reveal(order + 1 + i)) {
-                    ShelfBook(item, origin, actions, width = SHELF_BOOK_WIDTH, height = h)
-                }
+        ShelfBooks(row, origin, actions, order)
+        ShelfPlank(Modifier.padding(horizontal = 14.dp).reveal(order), accent)
+    }
+}
+
+/** A shelf's books standing in a row that swipes sideways; a real shelf's can be dragged into a new order. */
+@Composable
+private fun ShelfBooks(row: ShelfRow, origin: String, actions: LibraryActions, order: Int) {
+    // `.shelf-row` with `scroll-snap-type: x mandatory`: swipe sideways through the shelf; it settles on a book.
+    // As tall as the tallest book can be, whichever books are in view, so the plank never moves while the row
+    // scrolls (a lazy row is otherwise as tall as the books it shows; owner, 2026-10-26).
+    val rowState = rememberLazyListState()
+    // A shelf's books can be dragged into a new order (owner, 2026-10-26); the books on no shelf cannot.
+    val shelfId = row.shelf?.id
+    val reorder = if (shelfId != null && actions.onReorder != null) {
+        rememberRowReorder(row.items.map { it.book.id }, rowState) { actions.onReorder.invoke(shelfId, it) }
+    } else {
+        null
+    }
+    val byId = row.items.associateBy { it.book.id }
+    val shown = reorder?.order?.mapNotNull(byId::get) ?: row.items
+    LazyRow(
+        state = rowState,
+        modifier = Modifier.height(SHELF_ROW_TOP + SHELF_BOOK_HEIGHT + SHELF_BOOK_EXTRA.dp + SHELF_ROW_BOTTOM),
+        flingBehavior = rememberSnapFlingBehavior(rowState, SnapPosition.Start),
+        contentPadding = PaddingValues(start = 30.dp, end = 30.dp, top = SHELF_ROW_TOP, bottom = SHELF_ROW_BOTTOM),
+        horizontalArrangement = Arrangement.spacedBy(SHELF_BOOK_GAP),
+        verticalAlignment = Alignment.Bottom
+    ) {
+        itemsIndexed(shown, key = { _, entry -> entry.book.id }) { i, item ->
+            val h = SHELF_BOOK_HEIGHT + minOf(SHELF_BOOK_EXTRA, item.book.pageCount / PAGES_PER_DP).dp
+            val dragged = reorder?.dragging == item.book.id
+            Box(
+                Modifier.zIndex(if (dragged) 1f else 0f)
+                    .then(if (dragged) Modifier else Modifier.animateItem())
+                    .reveal(order + 1 + i)
+            ) {
+                ShelfBook(item, origin, actions, width = SHELF_BOOK_WIDTH, height = h, reorder = reorder)
             }
         }
-        ShelfPlank(Modifier.padding(horizontal = 14.dp).reveal(order), accent)
     }
 }
 
@@ -289,7 +310,9 @@ internal fun ShelfBook(
     actions: LibraryActions,
     width: androidx.compose.ui.unit.Dp,
     height: androidx.compose.ui.unit.Dp,
-    shadow: Boolean = true
+    shadow: Boolean = true,
+    /** Drag and drop on a shelf; null where books keep their order. */
+    reorder: ReorderState? = null
 ) {
     val book = item.book
     val source = remember { MutableInteractionSource() }
@@ -301,33 +324,39 @@ internal fun ShelfBook(
     spot.face = book.face(cover)
     val selection = actions.selection
     val selecting = selection?.active == true
+    val open = {
+        if (selection != null && selecting) {
+            selection.toggle(book.id)
+        } else {
+            // The cover flies to the details page; a missing book goes to Locate instead.
+            if (item.availability != Availability.MISSING) flights?.launch(spot, detailsCoverKey(book.id))
+            actions.onOpen(item, origin)
+        }
+    }
+    val gestures = if (reorder != null && !selecting) {
+        Modifier.reorderable(reorder, book.id, onTap = open, onHold = { menu = true })
+    } else {
+        Modifier.combinedClickable(
+            interactionSource = source,
+            indication = null,
+            onClick = open,
+            onLongClick = { if (!selecting) menu = true }
+        )
+    }
     Column(Modifier.width(width + BOOK_SPINE_ROOM)) {
         Box(
             Modifier
                 .jiggle(selecting, book.id)
                 .semantics { contentDescription = book.title }
                 .testTag(LibraryTestTags.book(book.id))
-                .combinedClickable(
-                    interactionSource = source,
-                    indication = null,
-                    onClick = {
-                        if (selection != null && selecting) {
-                            selection.toggle(book.id)
-                            return@combinedClickable
-                        }
-                        // The cover flies to the details page; a missing book goes to Locate instead.
-                        if (item.availability != Availability.MISSING) flights?.launch(spot, detailsCoverKey(book.id))
-                        actions.onOpen(item, origin)
-                    },
-                    onLongClick = { if (!selecting) menu = true }
-                )
+                .then(gestures)
         ) {
             Book3D(
                 book.face(cover),
                 width,
                 height,
                 modifier = Modifier.coverSpot(spot).coverLanding(shelfCoverKey(book.id, origin), SHELF_ANGLE),
-                lifted = pressed,
+                lifted = pressed || reorder?.dragging == book.id,
                 shadow = shadow
             )
             BookBadge(item, Modifier.align(Alignment.TopStart))
@@ -350,6 +379,12 @@ private fun BookBadge(item: LibraryItem, modifier: Modifier) {
 @Composable
 private fun BookMenu(item: LibraryItem, open: Boolean, actions: LibraryActions, onClose: () -> Unit) {
     DropdownMenu(expanded = open, onDismissRequest = onClose) {
+        actions.selection?.let { selection ->
+            MenuEntry(R.string.action_select) {
+                onClose()
+                selection.startWith(item.book.id)
+            }
+        }
         MenuEntry(R.string.action_add_to_shelf) {
             onClose()
             actions.onAddToShelf(item.book)
@@ -385,41 +420,6 @@ private fun MenuEntry(label: Int, warn: Boolean = false, onClick: () -> Unit) {
         text = { Text(stringResource(label), style = if (warn) FlowFolio.subItem else FlowFolio.title) },
         onClick = onClick
     )
-}
-
-@Composable
-internal fun SortMenu(current: LibrarySort, onSort: (LibrarySort) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        FlowFolioIconButton(onClick = { open = true }) {
-            FlowFolioGlyph(Glyph.Sort, contentDescription = stringResource(R.string.action_sort))
-        }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            listOf(
-                LibrarySort.RECENT to R.string.sort_recent,
-                LibrarySort.TITLE to R.string.sort_title
-            ).forEach { (sort, label) ->
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            stringResource(label),
-                            style = if (sort ==
-                                current
-                            ) {
-                                FlowFolio.title
-                            } else {
-                                FlowFolio.item
-                            }
-                        )
-                    },
-                    onClick = {
-                        open = false
-                        onSort(sort)
-                    }
-                )
-            }
-        }
-    }
 }
 
 internal const val HERO_ORIGIN = "hero"
