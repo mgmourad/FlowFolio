@@ -46,7 +46,7 @@ abstract class DataBindings {
     abstract fun annotations(impl: DefaultAnnotationRepository): AnnotationRepository
 
     @Binds
-    abstract fun lookup(impl: CombinedLookup): BookLookup
+    abstract fun lookup(impl: OpenLibraryLookup): BookLookup
 
     @Binds
     abstract fun http(impl: UrlConnectionGet): HttpGet

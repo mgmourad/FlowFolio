@@ -1,7 +1,7 @@
 # ADR-0037: Add Google Books as a second source for book details
 
 - **Status:** Accepted (product owner, 2026-10-26: "make sure we get all the possible details with a robust api calls";
-  chose "Open Library + Google Books")
+  chose "Open Library + Google Books"); the Google Books part is superseded by ADR-0039 (keyless requests were refused)
 - **Date:** 2026-10-26
 - **Deciders:** product owner, lead engineer
 - **Phase:** 2 (between M3 and M4)

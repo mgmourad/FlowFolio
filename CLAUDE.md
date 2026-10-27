@@ -23,7 +23,7 @@ islands per layout and EPUB memory (ADR-0031, `docs/plans/phase2-m3-memory.md`) 
 2026-10-22 (shelf colours, select mode `Selection.kt`, hero shortcuts, chapters on annotations, sounds ADR-0032) built;
 the M2 carry-overs (ragged lists, themed notice `ReaderNotice`, continuous EPUB Scroll `ScrollBand`, island zoom
 `IslandZoom`) built 2026-10-26; the owner's library batch of 2026-10-26 (multi-file and folder import `BatchImport`, the Folders
-chip and folder pages, shelf row height and gaps, bigger grid tiles with author, Open Library + Google Books details;
+chip and folder pages, shelf row height and gaps, bigger grid tiles with author, fuller Open Library details, Google Books tried and removed, ADR-0039;
 EPUBs read in place through their descriptor, `ChannelZip`) built and checked on `fold8_api37`, checked on the emulator and the unfolded Fold (island zoom on the cover screen not yet); next M3's checks. Between M2 and M3 (owner,
 2026-10-22): app themes FlowFolio / Rustic / Material You (ADR-0028, `RusticPalette.kt`, `MaterialPalette.kt`,
 `ThemePicker.kt`), a Rustic paper, and a redesigned details page (approved; Rustic without texture, ADR-0029); riffle arrows at the strip's ends** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
@@ -265,8 +265,8 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
 ## Decision log
 
-ADRs 0001–0038 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0039 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
-Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026), reading fonts (0027), app themes (0028), Rustic without texture (0029), the book's own fonts (0030), EPUB memory and island stand-ins (0031), page sounds on the media stream (0032), the motion system (0033), element entrances and edge fades (0034), edge fades blurring behind the bars only (0035), the fixed signing key for sideloaded dev builds (0036), Google Books as a second details source (0037), multi-file and folder imports with folders as book paths (0038).
+Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026), reading fonts (0027), app themes (0028), Rustic without texture (0029), the book's own fonts (0030), EPUB memory and island stand-ins (0031), page sounds on the media stream (0032), the motion system (0033), element entrances and edge fades (0034), edge fades blurring behind the bars only (0035), the fixed signing key for sideloaded dev builds (0036), Google Books as a second details source (0037, its Google part superseded by 0039), multi-file and folder imports with folders as book paths (0038), book details from Open Library only (0039).
