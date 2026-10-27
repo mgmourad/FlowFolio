@@ -179,8 +179,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     scrolls, and books stand half as far apart.
   - Grid tiles: books 30% bigger with no shadow under them, a smaller left-aligned title (two lines, no wider than the
     book) and the author under it; rows take as many books as fit (five on the open Fold, two on the cover screen).
-  - Book details from Open Library and Google Books together (`CombinedLookup`): subjects, printed pages, series and
-    rating join the details page; failed calls are retried once; Open Library searches ask for every field.
+  - Fuller book details from Open Library: subjects, printed pages, series and rating join the details page; failed
+    calls are retried once; searches ask for every field. Google Books was tried as a second source and removed the
+    same day: without an API key its shared daily quota refuses requests (ADR-0039).
 - Fixed: EPUBs read in place from shared storage could not be imported or opened ("not a book"): Android refuses to
   re-open `/proc/self/fd/N` by path under scoped storage, so `EpubArchive` now reads the zip through the descriptor
   itself (`ChannelZip`).
