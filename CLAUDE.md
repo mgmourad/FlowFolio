@@ -26,7 +26,9 @@ the M2 carry-overs (ragged lists, themed notice `ReaderNotice`, continuous EPUB 
 chip and folder pages, shelf row height and gaps, bigger grid tiles with author, fuller Open Library details, Google Books tried and removed, ADR-0039;
 EPUBs read in place through their descriptor, `ChannelZip`) built and checked on `fold8_api37`; the owner's shelf batch of
 2026-10-26 (Add books `ShelfAdding.kt`, Select in every press-and-hold menu, batch Add to shelf, drag-and-drop shelf
-order `ReorderState.kt`, paper switch keeping the reader's panels, `FlowFolioPalette`) built and checked there too, checked on the emulator and the unfolded Fold (island zoom on the cover screen not yet); next M3's checks. Between M2 and M3 (owner,
+order `ReorderState.kt`, paper switch keeping the reader's panels, `FlowFolioPalette`) built and checked there too, checked on the emulator and the unfolded Fold (island zoom on the cover screen not yet); M3's checks done 2026-10-26
+(`docs/plans/phase2-m3-signoff.md`: 415 exact layouts in every font, the fonts × papers sheet, chapters laid out in
+parallel), waiting for the owner's sign-off and a re-pagination timing on the Fold; next M4. Between M2 and M3 (owner,
 2026-10-22): app themes FlowFolio / Rustic / Material You (ADR-0028, `RusticPalette.kt`, `MaterialPalette.kt`,
 `ThemePicker.kt`), a Rustic paper, and a redesigned details page (approved; Rustic without texture, ADR-0029); riffle arrows at the strip's ends** (started 2026-10-20; plan: `docs/plans/phase2-plan.md`;
 spike: `docs/spikes/2026-10-epub-pagination.md`; ADR-0019 hybrid native pagination and ADR-0020 own EPUB parser, accepted 2026-10-20).

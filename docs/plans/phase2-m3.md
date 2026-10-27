@@ -49,5 +49,7 @@ original design, four styles) or XCharter or Charis SIL.
    screen (needs the phone folded) and the pinch inside the zoom (adb can't pinch).
 7. **Checks:** the pagination test (pages joined reproduce the chapter exactly) at five sizes and in every font;
    re-pagination time on the Fold; memory before and after; screenshots of each font in each paper; CI green.
+   **Done 2026-10-26**, see [`phase2-m3-signoff.md`](phase2-m3-signoff.md); the re-pagination time still needs
+   confirming on the Fold, and CI runs when the commits are pushed.
 
 Order: 1 (fonts and settings), 2, 3, then 4 to 6; 7 throughout. The owner checks on the Fold after 1 and 2.

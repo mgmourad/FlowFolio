@@ -6,18 +6,25 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.unit.IntSize
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
-internal fun DrawScope.drawThumbnail(bmp: ImageBitmap) {
+/** False when [bmp] was recycled meanwhile (the paper changed and its thumbnails went): nothing is drawn then. */
+internal fun DrawScope.drawThumbnail(bmp: ImageBitmap): Boolean {
+    if (bmp.isRecycled()) return false
     drawImage(
         bmp,
         srcSize = IntSize(bmp.width, bmp.height),
         dstSize = IntSize(size.width.roundToInt(), size.height.roundToInt())
     )
+    return true
 }
+
+/** A thumbnail recycled by its cache (a paper change frees them) must not be drawn: the canvas would throw. */
+internal fun ImageBitmap.isRecycled(): Boolean = asAndroidBitmap().isRecycled
 
 /** A stand-in page while the thumbnail loads: a running head, paragraphs of lines, now and then a heading. */
 internal fun DrawScope.drawSkeleton(page: Int, ink: Color, accent: Color, isRecto: Boolean) {

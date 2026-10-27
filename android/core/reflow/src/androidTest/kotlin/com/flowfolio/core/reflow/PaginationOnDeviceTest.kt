@@ -3,8 +3,11 @@ package com.flowfolio.core.reflow
 import android.util.Log
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import com.flowfolio.core.designsystem.fontRes
 import com.flowfolio.core.epub.EpubArchive
 import com.flowfolio.core.epub.EpubParser
+import com.flowfolio.core.model.LineSpacing
+import com.flowfolio.core.model.ReadingFont
 import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -51,10 +54,14 @@ class PaginationOnDeviceTest {
         return null
     }
 
-    private fun checkAtSizes(book: ReflowBook, name: String) {
+    private fun checkAtSizes(
+        book: ReflowBook,
+        name: String,
+        spec: (Float) -> PageSpec = { PageSpec(WIDTH, HEIGHT, it, book.locale) }
+    ) {
         for (percent in listOf(80, 100, 130, 170, 220)) {
             val t0 = System.nanoTime()
-            book.paginate(PageSpec(WIDTH, HEIGHT, BODY_PX * percent / 100f, book.locale), DENSITY)
+            book.paginate(spec(BODY_PX * percent / 100f), DENSITY)
             val ms = (System.nanoTime() - t0) / 1_000_000
             Log.i("FlowFolioReflowTest", "FF_PAGINATE $name $percent% pages=${book.pages.size} ms=$ms")
             assertNull("$name at $percent%", check(book))
@@ -74,6 +81,33 @@ class PaginationOnDeviceTest {
         assertEquals("1", printed.first())
         assertEquals(listOf("One", "Two"), book.contents().map { it.second })
     }
+
+    /**
+     * M3's check: exact in every reading font (with its bold and italic) at five sizes, and with the other text
+     * settings at their extremes: tight and loose line spacing, justification and hyphenation off.
+     */
+    @Test
+    fun everyFontAndTextSettingPaginatesExactly() {
+        val books = listOf(open(sample()) to "sample") + corpus().map { open(it) to it.name }
+        for (font in ReadingFont.entries.filter { it != ReadingFont.BOOK }) {
+            val face = context.resources.getFont(font.fontRes)
+            for ((book, name) in books) {
+                checkAtSizes(book, "$name/$font") { PageSpec(WIDTH, HEIGHT, it, book.locale, body = face) }
+            }
+        }
+        val (book, name) = books.last()
+        for (spacing in listOf(LineSpacing.TIGHT, LineSpacing.LOOSE)) {
+            checkAtSizes(book, "$name/$spacing") {
+                PageSpec(WIDTH, HEIGHT, it, book.locale, lineSpacing = spacing.factor)
+            }
+        }
+        checkAtSizes(book, "$name/ragged") {
+            PageSpec(WIDTH, HEIGHT, it, book.locale, justify = false, hyphenate = false)
+        }
+    }
+
+    private fun corpus() = File("/data/local/tmp/flowfolio")
+        .listFiles { f -> f.name.endsWith(".epub") && !f.name.startsWith("hostile") }.orEmpty().toList()
 
     @Test
     fun corpusBooksPaginateExactlyAtFiveSizes() {
