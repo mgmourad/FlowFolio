@@ -97,6 +97,8 @@ jobs:
           name: flowfolio-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+          # Kept a week, not GitHub's 90 days: 90 days of APKs filled the account's artifact storage (2026-10-27).
+          retention-days: 7
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -106,6 +108,7 @@ jobs:
             android/app/build/reports/
             android/app/build/test-results/
           if-no-files-found: ignore
+          retention-days: 7
 
   converter:
     name: Converter
