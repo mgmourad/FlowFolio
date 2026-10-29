@@ -9,6 +9,7 @@ import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.data.ReadingRepository
 import com.flowfolio.core.data.RelinkResult
 import com.flowfolio.core.data.ShelfRepository
+import com.flowfolio.core.data.flow.ReadingViews
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookDetails
@@ -52,6 +53,7 @@ data class DetailsUiState(
 }
 
 /** A book's details page: the book itself, the shelves it is on and its contents. */
+@Suppress("LongParameterList") // one injected source per part of the page
 @HiltViewModel
 class DetailsViewModel @Inject constructor(
     saved: SavedStateHandle,
@@ -59,7 +61,8 @@ class DetailsViewModel @Inject constructor(
     private val reader: ReaderRepository,
     shelves: ShelfRepository,
     reading: ReadingRepository,
-    bookmarks: BookmarkRepository
+    bookmarks: BookmarkRepository,
+    private val views: ReadingViews
 ) : ViewModel() {
     val bookId: String = checkNotNull(saved[ARG_BOOK_ID]) { "details needs a book id" }
 
@@ -108,7 +111,7 @@ class DetailsViewModel @Inject constructor(
 
     private fun extras(reading: ReadingRepository, bookmarks: BookmarkRepository) = combine(
         reading.observeReadMillis(bookId),
-        bookmarks.observe(bookId),
+        views.bookmarks(bookmarks.observe(bookId)),
         library.observeBooks(LibrarySort.RECENT)
     ) { ms, marks, books -> Extras(ms, marks.size, books) }
 

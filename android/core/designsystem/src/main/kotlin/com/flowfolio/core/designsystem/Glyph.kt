@@ -77,6 +77,12 @@ enum class Glyph(internal val pathData: String, internal val stroke: Float = 2f,
             "M16.5 3v2.5c0 3-4.5 4.5-4.5 6.5s4.5 3.5 4.5 6.5V21"
     ),
 
+    /** A page whose lines flow into waves: Dynamic Flow, the book reflowed to fit the screen (ADR-0045). */
+    DynamicFlow(
+        "M6 3h8.5L19 7.5V21H6z M14.5 3v4.5H19 M8.5 7.5h3.5 " +
+            "M8.5 11.5c1.3-1 2.7-1 4 0s2.7 1 4 0 M8.5 15.5c1.3-1 2.7-1 4 0s2.7 1 4 0"
+    ),
+
     /** A stopwatch: time spent reading. */
     Stopwatch("M19 14a7 7 0 1 1-14 0a7 7 0 1 1 14 0z M12 14v-4 M10 2.5h4 M12 2.5V7 M17.5 7.5l1.5-1.5")
 }

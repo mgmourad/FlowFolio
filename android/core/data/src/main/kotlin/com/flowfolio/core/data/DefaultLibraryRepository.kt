@@ -22,14 +22,16 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
-@Suppress("TooManyFunctions") // the repository's calls and the import steps behind them
+// The repository's calls and the import steps behind them; one injected collaborator per job, Dynamic Flow's last.
+@Suppress("TooManyFunctions", "LongParameterList")
 class DefaultLibraryRepository @Inject constructor(
     private val dao: BookDao,
     private val source: DocumentSource,
     private val inspectors: BookInspectors,
     private val files: BookFiles,
     private val clock: Clock,
-    @IoDispatcher private val io: CoroutineDispatcher
+    @IoDispatcher private val io: CoroutineDispatcher,
+    private val flow: com.flowfolio.core.data.flow.DynamicFlow = com.flowfolio.core.data.flow.DynamicFlow.None
 ) : LibraryRepository {
 
     override fun observeBooks(sort: LibrarySort): Flow<List<Book>> {
@@ -218,6 +220,7 @@ class DefaultLibraryRepository @Inject constructor(
             StorageMode.LINK.name -> source.releaseReadAccess(book.location)
         }
         files.cover(bookId).delete()
+        flow.delete(bookId)
         Unit
     }
 
@@ -298,7 +301,9 @@ internal fun BookEntity.toBook() = Book(
     pageLabels = pageLabels,
     format = BookFormat.entries.firstOrNull { it.name == format } ?: BookFormat.PDF,
     lastLocator = lastLocator,
-    folder = folder
+    folder = folder,
+    flowMode = flowMode,
+    flowLocator = flowLocator
 )
 
 private const val SUBJECT_SEPARATOR = "; "

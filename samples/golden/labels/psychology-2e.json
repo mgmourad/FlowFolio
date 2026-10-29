@@ -1,0 +1,44 @@
+[
+  {
+    "page": 19,
+    "headings": [
+      {
+        "text": "Introduction to Psychology",
+        "level": 1
+      }
+    ],
+    "order": [
+      "Psychology is the scientific study of mind",
+      "History of Psychology",
+      "Clive Wearing is an accomplished musician"
+    ]
+  },
+  {
+    "page": 22,
+    "headings": [
+      {
+        "text": "Functionalism",
+        "level": 3
+      }
+    ],
+    "order": [
+      "subject, sometimes in a room isolated",
+      "Wilhelm Wundt is credited",
+      "However, despite his efforts to train",
+      "William James, John Dewey, and Charles",
+      "William James, shown here in a self-portrait"
+    ]
+  },
+  {
+    "page": 263,
+    "order": [
+      "memory takes information from sensory memory",
+      "moves information from short-term",
+      "You may find yourself asking",
+      "Work through this series of numbers",
+      "Note the longest string at which",
+      "Memory trace decay and interference",
+      "is the continuous storage of information"
+    ]
+  }
+]

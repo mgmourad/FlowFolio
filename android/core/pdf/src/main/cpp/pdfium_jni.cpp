@@ -443,6 +443,137 @@ JNIEXPORT jobjectArray JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_n
     return result;
 }
 
+// What the converter reads from a page (Phase 3, `PdfSource.page`), mirroring `JnaPdfSource` on the desktop JVM field
+// for field: {float[] size, String text, float[] boxes, float[] fontSizes, int[] weights, int[] fontIds, int[] colors,
+// boolean[] generated, String[] fontNames, int[] fontFlags, float[] images, float[] paths, boolean[] pathFilled}.
+// Boxes are points from the top left of the page as displayed (-1s for characters without one). Null when the page
+// cannot be read.
+JNIEXPORT jobjectArray JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_nativeConversionPage(JNIEnv* env, jobject, jlong handle, jint index) {
+    constexpr int kSub = 100;  // device units per point
+    constexpr int kMaxChars = 200000;
+    constexpr int kMaxObjects = 100000;
+    FS_SIZEF size{0, 0};
+    std::vector<unsigned short> text;
+    std::vector<jfloat> boxes, fontSizes, images, paths;
+    std::vector<jint> weights, fontIds, colors, fontFlags;
+    std::vector<jboolean> generated, pathFilled;
+    std::vector<std::string> fontNames;
+    bool ok = false;
+    {
+        std::lock_guard<std::mutex> guard(g_lock);
+        FPDF_DOCUMENT doc = asDoc(handle)->doc;
+        FPDF_GetPageSizeByIndexF(doc, index, &size);
+        FPDF_PAGE page = FPDF_LoadPage(doc, index);
+        if (page != nullptr) {
+            ok = true;
+            const int w = static_cast<int>(size.width * kSub), h = static_cast<int>(size.height * kSub);
+            auto toTop = [&](float l, float t, float r, float b, std::vector<jfloat>& out) {
+                int x1, y1, x2, y2;
+                FPDF_PageToDevice(page, 0, 0, w, h, 0, l, t, &x1, &y1);
+                FPDF_PageToDevice(page, 0, 0, w, h, 0, r, b, &x2, &y2);
+                out.push_back(static_cast<jfloat>(std::min(x1, x2)) / kSub);
+                out.push_back(static_cast<jfloat>(std::min(y1, y2)) / kSub);
+                out.push_back(static_cast<jfloat>(std::max(x1, x2)) / kSub);
+                out.push_back(static_cast<jfloat>(std::max(y1, y2)) / kSub);
+            };
+            int objects = std::min(FPDFPage_CountObjects(page), kMaxObjects);
+            for (int i = 0; i < objects; i++) {
+                FPDF_PAGEOBJECT obj = FPDFPage_GetObject(page, i);
+                int type = FPDFPageObj_GetType(obj);
+                if (type != FPDF_PAGEOBJ_IMAGE && type != FPDF_PAGEOBJ_PATH && type != FPDF_PAGEOBJ_FORM) continue;
+                float l, b, r, t;
+                if (!FPDFPageObj_GetBounds(obj, &l, &b, &r, &t)) continue;
+                if (type == FPDF_PAGEOBJ_IMAGE || (type == FPDF_PAGEOBJ_FORM && containsImage(obj, 0))) {
+                    toTop(l, t, r, b, images);
+                } else if (type == FPDF_PAGEOBJ_PATH) {
+                    int fill = 0;
+                    FPDF_BOOL stroke = 0;
+                    FPDFPath_GetDrawMode(obj, &fill, &stroke);
+                    toTop(l, t, r, b, paths);
+                    pathFilled.push_back(fill != 0 ? JNI_TRUE : JNI_FALSE);
+                }
+            }
+            FPDF_TEXTPAGE textPage = FPDFText_LoadPage(page);
+            if (textPage != nullptr) {
+                int n = std::max(0, std::min(FPDFText_CountChars(textPage), kMaxChars));
+                char nameBuf[256];
+                for (int i = 0; i < n; i++) {
+                    text.push_back(static_cast<unsigned short>(FPDFText_GetUnicode(textPage, i)));
+                    generated.push_back(FPDFText_IsGenerated(textPage, i) == 1 ? JNI_TRUE : JNI_FALSE);
+                    FS_RECTF box{};
+                    if (FPDFText_GetLooseCharBox(textPage, i, &box)) {
+                        toTop(box.left, box.top, box.right, box.bottom, boxes);
+                    } else {
+                        for (int k = 0; k < 4; k++) boxes.push_back(-1.0f);
+                    }
+                    fontSizes.push_back(static_cast<jfloat>(FPDFText_GetFontSize(textPage, i)));
+                    weights.push_back(FPDFText_GetFontWeight(textPage, i));
+                    int flags = 0;
+                    unsigned long len = FPDFText_GetFontInfo(textPage, i, nameBuf, sizeof(nameBuf), &flags);
+                    int id = -1;
+                    if (len > 1) {
+                        std::string name(nameBuf, std::min<unsigned long>(len, sizeof(nameBuf)) - 1);
+                        for (size_t f = 0; f < fontNames.size(); f++) {
+                            if (fontNames[f] == name && fontFlags[f] == flags) { id = static_cast<int>(f); break; }
+                        }
+                        if (id < 0) {
+                            id = static_cast<int>(fontNames.size());
+                            fontNames.push_back(name);
+                            fontFlags.push_back(flags);
+                        }
+                    }
+                    fontIds.push_back(id);
+                    unsigned int cr = 0, cg = 0, cb = 0, ca = 0;
+                    colors.push_back(FPDFText_GetFillColor(textPage, i, &cr, &cg, &cb, &ca)
+                                         ? static_cast<jint>((ca << 24) | (cr << 16) | (cg << 8) | cb)
+                                         : static_cast<jint>(0xFF000000));
+                }
+                FPDFText_ClosePage(textPage);
+            }
+            FPDF_ClosePage(page);
+        }
+    }
+    if (!ok) return nullptr;
+    auto floats = [&](const std::vector<jfloat>& v) {
+        jfloatArray a = env->NewFloatArray(static_cast<jsize>(v.size()));
+        if (!v.empty()) env->SetFloatArrayRegion(a, 0, static_cast<jsize>(v.size()), v.data());
+        return a;
+    };
+    auto ints = [&](const std::vector<jint>& v) {
+        jintArray a = env->NewIntArray(static_cast<jsize>(v.size()));
+        if (!v.empty()) env->SetIntArrayRegion(a, 0, static_cast<jsize>(v.size()), v.data());
+        return a;
+    };
+    auto bools = [&](const std::vector<jboolean>& v) {
+        jbooleanArray a = env->NewBooleanArray(static_cast<jsize>(v.size()));
+        if (!v.empty()) env->SetBooleanArrayRegion(a, 0, static_cast<jsize>(v.size()), v.data());
+        return a;
+    };
+    jclass stringClass = env->FindClass("java/lang/String");
+    jobjectArray names = env->NewObjectArray(static_cast<jsize>(fontNames.size()), stringClass, nullptr);
+    for (size_t f = 0; f < fontNames.size(); f++) {
+        jstring s = env->NewStringUTF(fontNames[f].c_str());
+        env->SetObjectArrayElement(names, static_cast<jsize>(f), s);
+        env->DeleteLocalRef(s);
+    }
+    std::vector<jfloat> sizeOut{size.width, size.height};
+    jobjectArray result = env->NewObjectArray(13, env->FindClass("java/lang/Object"), nullptr);
+    env->SetObjectArrayElement(result, 0, floats(sizeOut));
+    env->SetObjectArrayElement(result, 1, env->NewString(reinterpret_cast<const jchar*>(text.data()), static_cast<jsize>(text.size())));
+    env->SetObjectArrayElement(result, 2, floats(boxes));
+    env->SetObjectArrayElement(result, 3, floats(fontSizes));
+    env->SetObjectArrayElement(result, 4, ints(weights));
+    env->SetObjectArrayElement(result, 5, ints(fontIds));
+    env->SetObjectArrayElement(result, 6, ints(colors));
+    env->SetObjectArrayElement(result, 7, bools(generated));
+    env->SetObjectArrayElement(result, 8, names);
+    env->SetObjectArrayElement(result, 9, ints(fontFlags));
+    env->SetObjectArrayElement(result, 10, floats(images));
+    env->SetObjectArrayElement(result, 11, floats(paths));
+    env->SetObjectArrayElement(result, 12, bools(pathFilled));
+    return result;
+}
+
 // Document information entry such as "Title" or "Author"; null when absent or empty.
 JNIEXPORT jstring JNICALL Java_com_flowfolio_core_pdf_pdfium_PdfiumNative_nativeMetaText(JNIEnv* env, jobject, jlong handle, jstring jtag) {
     const char* tag = env->GetStringUTFChars(jtag, nullptr);

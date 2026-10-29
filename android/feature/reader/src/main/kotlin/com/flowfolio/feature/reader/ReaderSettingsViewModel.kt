@@ -81,6 +81,11 @@ class ReaderSettingsViewModel @Inject constructor(
         viewModelScope.launch { repository.setRiffleVolume(volume) }
     }
 
+    /** What switching to or from Dynamic Flow does with annotations, once "don't show this again" was chosen. */
+    fun setFlowCarry(carry: com.flowfolio.core.model.FlowCarry) {
+        viewModelScope.launch { repository.setFlowCarry(carry) }
+    }
+
     fun setScrubHaptics(on: Boolean) {
         viewModelScope.launch { repository.setScrubHaptics(on) }
     }

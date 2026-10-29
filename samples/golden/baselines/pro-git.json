@@ -1,0 +1,24 @@
+{
+    "id": "pro-git",
+    "pages": 501,
+    "textPages": 500,
+    "meanCoverage": 1.0,
+    "coveredShare": 1.0,
+    "fallbackPages": [
+        1
+    ],
+    "scannedPages": 1,
+    "chapters": 23,
+    "chaptersFrom": "outline",
+    "headings": 529,
+    "outlineEntries": 123,
+    "outlineMatched": 1.0,
+    "figures": 193,
+    "tables": 0,
+    "equations": 0,
+    "inlineDrawings": 87,
+    "epubcheckErrors": 0,
+    "epubcheckWarnings": 0,
+    "secondsPerPage": 0.016676202,
+    "epubMegabytes": 15.500231
+}

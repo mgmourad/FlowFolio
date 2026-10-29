@@ -2,6 +2,9 @@ package com.flowfolio.feature.reader
 
 /** Semantic tags used by UI tests and benchmarks to find reader elements. */
 object ReaderTestTags {
+    const val FLOW_SWITCH = "reader_flow_switch"
+    const val FLOW_PROGRESS = "reader_flow_progress"
+
     const val PAGE = "reader_page"
     const val NOTICE = "reader_notice"
     const val ISLAND_ZOOM = "reader_island_zoom"

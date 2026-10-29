@@ -7,4 +7,15 @@
     <string name="tab_annotations">Annotations</string>
     <string name="tab_settings">Settings</string>
     <string name="splash_tagline">Every textbook, reflowed. Every page, kept.</string>
+    <!-- Dynamic Flow notices in the app (ADR-0045). -->
+    <string name="flow_notice_started">Preparing Dynamic Flow</string>
+    <string name="flow_notice_started_text">%1$s keeps converting while you read.</string>
+    <string name="flow_notice_done">Dynamic Flow is ready</string>
+    <string name="flow_notice_done_text">%1$s now flows to fit your screen. Tap to read.</string>
+    <string name="flow_notice_failed">Dynamic Flow couldn\'t prepare this book</string>
+    <string name="flow_notice_failed_text">%1$s stays a PDF.</string>
+    <string name="flow_notice_carrying">Bringing your notes across</string>
+    <string name="flow_notice_carrying_text">Highlights, notes and bookmarks in %1$s</string>
+    <string name="flow_notice_carried">Your notes came across</string>
+    <string name="flow_notice_carried_text">%1$d of %2$d found their place.</string>
 </resources>

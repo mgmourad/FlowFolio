@@ -1,0 +1,22 @@
+{
+    "id": "introduction-computer-science",
+    "pages": 939,
+    "textPages": 937,
+    "meanCoverage": 1.0,
+    "coveredShare": 1.0,
+    "fallbackPages": [],
+    "scannedPages": 0,
+    "chapters": 19,
+    "chaptersFrom": "outline",
+    "headings": 1543,
+    "outlineEntries": 129,
+    "outlineMatched": 1.0,
+    "figures": 492,
+    "tables": 61,
+    "equations": 344,
+    "inlineDrawings": 1085,
+    "epubcheckErrors": 0,
+    "epubcheckWarnings": 0,
+    "secondsPerPage": 0.021320172,
+    "epubMegabytes": 70.898636
+}

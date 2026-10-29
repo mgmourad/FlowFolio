@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
@@ -57,6 +58,19 @@ class SettingsDataSourceTest {
 
     @Test
     fun sort() = check({ setLibrarySort(LibrarySort.TITLE) }, UserSettings(librarySort = LibrarySort.TITLE))
+
+    @Test
+    fun dynamicFlowOnOpen() = check({ setDynamicFlowOnOpen(true) }, UserSettings(dynamicFlowOnOpen = true))
+
+    @Test
+    fun flowCarry() = check({ setFlowCarry(FlowCarry.SKIP) }, UserSettings(flowCarry = FlowCarry.SKIP))
+
+    @Test
+    fun dynamicFlowIsOffAndAsksByDefault() = runTest {
+        val settings = fresh().first.settings.first()
+        assertEquals(false, settings.dynamicFlowOnOpen)
+        assertEquals(FlowCarry.ASK, settings.flowCarry)
+    }
 
     @Test
     fun unknownStoredValueFallsBackToDefault() = runTest {

@@ -1,0 +1,51 @@
+[
+  {
+    "page": 17,
+    "headings": [
+      {
+        "text": "Sampling and Data",
+        "level": 1
+      },
+      {
+        "text": "Introduction",
+        "level": 2
+      },
+      {
+        "text": "1.1 Definitions of Statistics, Probability, and Key Terms",
+        "level": 2
+      },
+      {
+        "text": "Probability",
+        "level": 3
+      }
+    ],
+    "order": [
+      "We encounter statistics in our daily lives",
+      "You are probably asking yourself",
+      "Since you will undoubtedly be given",
+      "Included in this chapter are the basic ideas",
+      "deals with the collection, analysis",
+      "In this course, you will learn how to organize",
+      "Effective interpretation of data",
+      "is a mathematical tool used to study randomness"
+    ]
+  },
+  {
+    "page": 20,
+    "order": [
+      "Determine what key terms refer to",
+      "A survey of athletes in a university",
+      "the average height of athletes in the university",
+      "Determine what the key terms refer to",
+      "As part of a study designed to test",
+      "Cars with dummies in the front seats",
+      "is all cars containing dummies"
+    ]
+  },
+  {
+    "page": 319,
+    "order": [
+      "is a uniform distribution which"
+    ]
+  }
+]

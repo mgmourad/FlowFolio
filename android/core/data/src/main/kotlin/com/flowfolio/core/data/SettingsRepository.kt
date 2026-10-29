@@ -3,6 +3,7 @@ package com.flowfolio.core.data
 import com.flowfolio.core.datastore.SettingsDataSource
 import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.ControlsAutoHide
+import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.MaterialSeed
 import com.flowfolio.core.model.PageTurn
@@ -62,6 +63,11 @@ interface SettingsRepository {
     suspend fun setAppStyle(style: AppStyle) = Unit
 
     suspend fun setMaterialSeed(seed: MaterialSeed) = Unit
+
+    /** Dynamic Flow (ADR-0045): open PDFs in it, and what switching views does with annotations. */
+    suspend fun setDynamicFlowOnOpen(on: Boolean) = Unit
+
+    suspend fun setFlowCarry(carry: FlowCarry) = Unit
 }
 
 @Suppress("TooManyFunctions") // one setter per setting
@@ -150,5 +156,13 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setTranslateTo(language: String) {
         source.setTranslateTo(language)
+    }
+
+    override suspend fun setDynamicFlowOnOpen(on: Boolean) {
+        source.setDynamicFlowOnOpen(on)
+    }
+
+    override suspend fun setFlowCarry(carry: FlowCarry) {
+        source.setFlowCarry(carry)
     }
 }

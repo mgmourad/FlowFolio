@@ -9,10 +9,12 @@ import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.data.RelinkResult
 import com.flowfolio.core.data.SettingsRepository
 import com.flowfolio.core.data.ShelfRepository
+import com.flowfolio.core.data.flow.DynamicFlow
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.BookType
+import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.Shelf
 import com.flowfolio.core.model.StorageMode
@@ -169,8 +171,19 @@ class LibraryViewModel @Inject constructor(
     private val library: LibraryRepository,
     private val settingsRepo: SettingsRepository,
     shelfRepo: ShelfRepository,
-    private val lookup: BookLookup
+    private val lookup: BookLookup,
+    private val flow: DynamicFlow = DynamicFlow.None
 ) : ViewModel() {
+    /** Whether switching a book's view asks first, or what was answered for good (ADR-0045). */
+    val flowCarry: StateFlow<FlowCarry> =
+        settingsRepo.settings.map { it.flowCarry }.stateIn(viewModelScope, SharingStarted.Eagerly, FlowCarry.ASK)
+
+    /** Turns a PDF's Dynamic Flow on (converting it in the background) or off, bringing the changes across or not. */
+    fun setFlow(book: Book, on: Boolean, carry: Boolean) =
+        viewModelScope.launch { flow.setFlowMode(book.id, on, carry) }
+
+    fun setFlowCarry(carry: FlowCarry) = viewModelScope.launch { settingsRepo.setFlowCarry(carry) }
+
     private val view = MutableStateFlow(View())
     private val transient = MutableStateFlow(Transient())
     private val availability = MutableStateFlow<Map<String, Availability>>(emptyMap())

@@ -364,7 +364,7 @@ private fun BookmarkCard(
             MiniCover(item.book, cover, Modifier.coverSpot(spot))
             Column(Modifier.weight(1f).padding(end = 20.dp)) {
                 Text(
-                    stringResource(R.string.bookmarks_kind, item.label),
+                    ribbonKind(item),
                     style = FlowFolioType.pill.copy(fontSize = 11.5.sp).merge(FlowFolio.subItem)
                 )
                 Text(

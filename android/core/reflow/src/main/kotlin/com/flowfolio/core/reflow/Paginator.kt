@@ -9,6 +9,7 @@ import android.text.SpannableString
 import android.text.Spanned
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.text.style.LeadingMarginSpan
 import android.text.style.LineHeightSpan
 import java.util.Locale
 
@@ -80,6 +81,7 @@ class Paginator(private val spec: PageSpec, private val boxSize: (Block) -> Pair
     )
 
     fun layout(block: Block.Text): StaticLayout {
+        if (block.style.preformatted) return codeLayout(block)
         val p = TextPaint(paint).apply {
             textSize = spec.bodyPx * block.style.scale
             if (block.style.bold) typeface = bold
@@ -109,9 +111,51 @@ class Paginator(private val spec: PageSpec, private val boxSize: (Block) -> Pair
             .build()
     }
 
+    /**
+     * Code: a monospaced face a little smaller than the text, its lines as written, never hyphenated or justified. A
+     * line wider than the column scales the whole listing down to fit (so a chart drawn with characters keeps its
+     * shape), down to [MIN_CODE_SCALE]; past that, long lines wrap.
+     */
+    private fun codeLayout(block: Block.Text): StaticLayout {
+        val p = TextPaint(paint).apply {
+            typeface = CodeFace.typeface
+            textSize = spec.bodyPx * CODE_SCALE * block.style.scale
+        }
+        val width = (spec.width - indentPx(block) - codePadPx()).coerceAtLeast(1)
+        val widest = block.text.split('\n').maxOf { p.measureText(it) }
+        // A little to spare: the laid-out line can measure a pixel or two wider than the plain string did.
+        if (widest > width) p.textSize = maxOf(p.textSize * width / widest * FIT_MARGIN, spec.bodyPx * MIN_CODE_SCALE)
+        val text = SpannableString(block.text).apply {
+            setSpan(
+                LineHeightSpan.Standard((p.textSize * CODE_LINE_SPACING).toInt().coerceAtLeast(1)),
+                0,
+                length,
+                Spanned.SPAN_INCLUSIVE_INCLUSIVE
+            )
+            // A line too long even at the smallest size wraps: its continuation is set in, as editors show a soft
+            // wrap, so it doesn't read as a row of its own.
+            if (block.text.split('\n').any { p.measureText(it) > width }) {
+                val hang = (p.measureText("m") * WRAP_INDENT_CHARS).toInt()
+                setSpan(LeadingMarginSpan.Standard(0, hang), 0, length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
+            }
+        }
+        return StaticLayout.Builder.obtain(text, 0, text.length, p, width)
+            .setBreakStrategy(LineBreaker.BREAK_STRATEGY_SIMPLE)
+            .setHyphenationFrequency(Layout.HYPHENATION_FREQUENCY_NONE)
+            .setJustificationMode(LineBreaker.JUSTIFICATION_MODE_NONE)
+            .setLineSpacing(0f, 1f)
+            .setIncludePad(false)
+            .build()
+    }
+
     private fun lineHeightPx(textSize: Float): Int = (textSize * spec.lineSpacing).toInt().coerceAtLeast(1)
 
-    fun indentPx(block: Block.Text) = (spec.bodyPx * block.style.indentEm).toInt()
+    /** Where a block's text starts: its indent, and inside a code panel its padding. */
+    fun indentPx(block: Block.Text) =
+        (spec.bodyPx * block.style.indentEm).toInt() + if (block.style.preformatted) codePadPx() else 0
+
+    /** A code panel's padding, each side of its text. */
+    fun codePadPx() = (spec.bodyPx * CODE_PAD_EM).toInt()
 
     fun paginate(chapterIndex: Int, chapter: Chapter): List<Page> = PageBuilder(chapterIndex, chapter).build()
 
@@ -144,6 +188,8 @@ class Paginator(private val spec: PageSpec, private val boxSize: (Block) -> Pair
             val layout = layout(block)
             if (y > 0f) y += spec.bodyPx * block.style.spaceBeforeEm
             if (block.style.heading && y > 0f && y + headingNeeds(layout, block) > spec.height) close(block.start)
+            // A short listing (a diagram drawn with characters) moves whole to the next page rather than break.
+            if (keptWhole(block, layout)) close(block.start)
             var line = 0
             while (line < layout.lineCount) {
                 val take = linesThatFit(layout, line)
@@ -158,6 +204,10 @@ class Paginator(private val spec: PageSpec, private val boxSize: (Block) -> Pair
             }
             y += spec.bodyPx * block.style.spaceAfterEm
         }
+
+        /** A short listing (a diagram drawn with characters) that won't fit the page moves whole to the next. */
+        private fun keptWhole(block: Block.Text, layout: StaticLayout) = block.style.preformatted && y > 0f &&
+            y + layout.height > spec.height && layout.height <= spec.height * KEEP_CODE_SHARE
 
         /** A heading needs its own lines plus two lines of what follows. */
         private fun headingNeeds(layout: StaticLayout, block: Block.Text) =
@@ -201,5 +251,16 @@ class Paginator(private val spec: PageSpec, private val boxSize: (Block) -> Pair
         const val MIN_LINES = 2
         const val BOX_SPACE_EM = 0.8f
         const val PLACEHOLDER_EMS = 4f
+        const val CODE_SCALE = 0.85f
+        const val MIN_CODE_SCALE = 0.55f
+
+        /** A wrapped code line goes on this many characters in. */
+        const val WRAP_INDENT_CHARS = 2
+        const val CODE_LINE_SPACING = 1.3f
+        const val CODE_PAD_EM = 0.6f
+        private const val FIT_MARGIN = 0.98f
+
+        /** Listings up to this share of a page are kept together; longer ones break where the page ends. */
+        private const val KEEP_CODE_SHARE = 0.4f
     }
 }

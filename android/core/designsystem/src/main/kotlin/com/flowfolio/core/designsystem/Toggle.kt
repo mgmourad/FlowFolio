@@ -2,9 +2,14 @@ package com.flowfolio.core.designsystem
 
 import android.graphics.BlurMaskFilter
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.runtime.Composable
@@ -18,8 +23,10 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathFillType
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -32,14 +39,64 @@ import androidx.compose.ui.unit.dp
  * with a drop shadow, a top highlight and a bottom shade. Off: grey track, knob in the off colour on the left. On:
  * the on track colour, an orange knob on the right, glowing in dark mode. The knob travels on the mock's spring.
  * Pass [onCheckedChange] = null when a parent row handles the toggle (it then only draws).
+ *
+ * [progress] (0 to 1, or [INDETERMINATE]) rings the knob while what the toggle turned on is being prepared (Dynamic
+ * Flow converting a book). The ring has a canvas of its own, so its updates never redraw the toggle's blurred shadows.
  */
 @Composable
 fun FlowFolioToggle(
     checked: Boolean,
     onCheckedChange: ((Boolean) -> Unit)?,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    progress: Float? = null
 ) {
+    if (progress == null) {
+        ToggleBody(checked, onCheckedChange, modifier, enabled)
+        return
+    }
+    Box(modifier) {
+        ToggleBody(checked, onCheckedChange, Modifier, enabled)
+        KnobRing(checked, progress, Modifier.matchParentSize())
+    }
+}
+
+/** The ring round the knob: a faint full circle and the part done, or a turning arc when it can't say how far. */
+@Composable
+private fun KnobRing(checked: Boolean, progress: Float, modifier: Modifier) {
+    val p = FlowFolio.palette
+    val spin = rememberInfiniteTransition(label = "ring")
+    val turn by spin.animateFloat(
+        0f,
+        FULL_TURN,
+        infiniteRepeatable(tween(SPIN_MS, easing = LinearEasing)),
+        label = "turn"
+    )
+    val shown by animateFloatAsState(progress.coerceAtLeast(0f), tween(Motion.MEDIUM_MS), label = "progress")
+    val position by animateFloatAsState(
+        if (checked) 1f else 0f,
+        tween(Motion.SPRING_MS, easing = Motion.Spring),
+        label = "ringKnob"
+    )
+    Canvas(modifier) {
+        val unit = size.height / TRACK_H
+        val r = (KNOB / 2f + RING_GAP) * unit
+        val centre = Offset((INSET + KNOB / 2f + position * TRAVEL) * unit, size.height / 2f)
+        val stroke = Stroke(RING_WIDTH * unit, cap = StrokeCap.Round)
+        val box = androidx.compose.ui.geometry.Rect(centre, r)
+        // In the text colour: it reads against the orange knob and the track in every theme.
+        drawCircle(p.item.copy(alpha = RING_TRACK_ALPHA), r, centre, style = stroke)
+        if (progress < 0f) {
+            drawArc(p.item, turn - QUARTER, SPIN_SWEEP, false, box.topLeft, box.size, style = stroke)
+        } else {
+            drawArc(p.item, -QUARTER, FULL_TURN * shown, false, box.topLeft, box.size, style = stroke)
+        }
+    }
+}
+
+/** The toggle itself (the mock's `.tgl`). */
+@Composable
+private fun ToggleBody(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, modifier: Modifier, enabled: Boolean) {
     val p = FlowFolio.palette
     val spring = tween<Float>(Motion.SPRING_MS, easing = Motion.Spring)
     val position by animateFloatAsState(if (checked) 1f else 0f, spring, label = "knob")
@@ -140,6 +197,16 @@ internal fun DrawScope.drawSoft(
     draw: android.graphics.Canvas.(android.graphics.Paint) -> Unit
 ) = blurred(if (glow) color.copy(alpha = GLYPH_GLOW_ALPHA) else SHADOW, size.height * GLYPH_BLUR, draw)
 
+/** Pass as a toggle's progress when how far can't be told yet (waiting its turn). */
+const val INDETERMINATE = -1f
+
+private const val FULL_TURN = 360f
+private const val QUARTER = 90f
+private const val SPIN_SWEEP = 100f
+private const val SPIN_MS = 1_100
+private const val RING_GAP = 2.5f
+private const val RING_WIDTH = 2.2f
+private const val RING_TRACK_ALPHA = 0.18f
 private const val TRACK_H = 34f
 private const val TRACK_RADIUS = 20f
 private const val KNOB = 28f

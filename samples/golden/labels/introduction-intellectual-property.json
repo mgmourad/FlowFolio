@@ -1,0 +1,42 @@
+[
+  {
+    "page": 17,
+    "headings": [
+      {
+        "text": "Patent Basics",
+        "level": 1
+      }
+    ],
+    "order": [
+      "Float Glass Unloading",
+      "The Foundations of Patent Protection",
+      "The Patenting Process"
+    ]
+  },
+  {
+    "page": 20,
+    "headings": [
+      {
+        "text": "Natural Rights Theory",
+        "level": 3
+      }
+    ],
+    "order": [
+      "Patent for an electrode lead",
+      "There is something so simple",
+      "theory, meanwhile, invokes",
+      "This right is not absolute"
+    ]
+  },
+  {
+    "page": 105,
+    "order": [
+      "It is important to realize, however",
+      "Indeed, this was most glaringly revealed",
+      "Not exactly your starving artist",
+      "Early copyright systems also quickly evolved",
+      "The Marble Court",
+      "Interestingly, a decree in 1777"
+    ]
+  }
+]

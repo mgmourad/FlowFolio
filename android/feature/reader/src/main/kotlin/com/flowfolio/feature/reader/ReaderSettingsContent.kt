@@ -57,6 +57,8 @@ import com.flowfolio.core.model.UserSettings
 internal fun ColumnScope.ReaderSettingsContent(
     reflowable: Boolean,
     bookFont: android.graphics.Typeface? = null,
+    flow: FlowState? = null,
+    onFlow: ((Boolean, Boolean) -> Unit)? = null,
     viewModel: ReaderSettingsViewModel = hiltViewModel()
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
@@ -66,6 +68,12 @@ internal fun ColumnScope.ReaderSettingsContent(
         add(SheetTab(stringResource(R.string.reader_tab_controls), Glyph.Sliders, ReaderTestTags.TAB_CONTROLS))
     }
     var selected by rememberSaveable(reflowable) { mutableIntStateOf(0) }
+    // A PDF's Dynamic Flow (ADR-0045) heads the sheet: it changes the whole book, not one tab's setting.
+    if (flow != null && flow.available && onFlow != null) {
+        Box(Modifier.padding(bottom = 12.dp)) {
+            DynamicFlowCard(flow, settings.flowCarry, FlowActions(onFlow, viewModel::setFlowCarry))
+        }
+    }
     Column(Modifier.testTag(ReaderTestTags.SETTINGS_SHEET)) {
         SheetTabs(tabs, selected.coerceIn(0, tabs.lastIndex)) { selected = it }
     }

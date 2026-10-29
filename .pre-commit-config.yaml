@@ -37,24 +37,17 @@ repos:
   - repo: local
     hooks:
       - id: ruff-check
-        name: ruff check (converter)
-        entry: uv run --project converter ruff check --fix
+        name: ruff check (tools)
+        entry: uvx ruff@0.17.1 check --fix --line-length 120
         language: system
         types: [python]
-        files: ^converter/
+        files: ^tools/
       - id: ruff-format
-        name: ruff format (converter)
-        entry: uv run --project converter ruff format
+        name: ruff format (tools)
+        entry: uvx ruff@0.17.1 format --line-length 120
         language: system
         types: [python]
-        files: ^converter/
-      - id: mypy
-        name: mypy (converter)
-        entry: uv run --project converter mypy --config-file converter/pyproject.toml converter/src converter/tests
-        language: system
-        types: [python]
-        files: ^converter/
-        pass_filenames: false
+        files: ^tools/
       - id: ktlint
         name: ktlint via spotless (android)
         entry: python infra/ci/gradle.py spotlessCheck --quiet

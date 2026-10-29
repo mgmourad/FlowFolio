@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.AnnotationRepository
 import com.flowfolio.core.data.BookmarkRepository
 import com.flowfolio.core.data.ReadingRepository
+import com.flowfolio.core.data.flow.ReadingViews
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,11 +20,13 @@ data class LibraryStats(val bookmarks: Int = 0, val annotations: Int = 0, val re
 class LibraryStatsViewModel @Inject constructor(
     bookmarks: BookmarkRepository,
     annotations: AnnotationRepository,
-    reading: ReadingRepository
+    reading: ReadingRepository,
+    views: ReadingViews
 ) : ViewModel() {
+    // Each book's current view only (ADR-0045), as the Annotations and Bookmarks tabs count them.
     val stats: StateFlow<LibraryStats> = combine(
-        bookmarks.observeAll(),
-        annotations.observeAll(),
+        views.bookmarks(bookmarks.observeAll()),
+        views.annotations(annotations.observeAll()),
         reading.observeLibraryReadMillis()
     ) { ribbons, notes, millis -> LibraryStats(ribbons.size, notes.size, millis) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), LibraryStats())

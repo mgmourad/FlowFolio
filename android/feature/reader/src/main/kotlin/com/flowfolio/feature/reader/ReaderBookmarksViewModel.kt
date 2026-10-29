@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.BookmarkRepository
+import com.flowfolio.core.data.flow.ReadingViews
 import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.BookmarkColor
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,11 +18,13 @@ import kotlinx.coroutines.launch
 @HiltViewModel
 class ReaderBookmarksViewModel @Inject constructor(
     saved: SavedStateHandle,
-    private val repository: BookmarkRepository
+    private val repository: BookmarkRepository,
+    views: ReadingViews
 ) : ViewModel() {
     private val bookId: String = checkNotNull(saved[ReaderViewModel.ARG_BOOK_ID]) { "reader needs a bookId" }
 
-    val bookmarks: StateFlow<List<Bookmark>> = repository.observe(bookId)
+    /** The ribbons of the view the book is read in (ADR-0045). */
+    val bookmarks: StateFlow<List<Bookmark>> = views.bookmarks(repository.observe(bookId))
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), emptyList())
 
     /**

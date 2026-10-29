@@ -1,0 +1,26 @@
+{
+    "id": "university-physics-volume-1",
+    "pages": 959,
+    "textPages": 957,
+    "meanCoverage": 0.9999663,
+    "coveredShare": 0.9989551,
+    "fallbackPages": [
+        379
+    ],
+    "scannedPages": 0,
+    "chapters": 29,
+    "chaptersFrom": "outline",
+    "headings": 2366,
+    "outlineEntries": 197,
+    "outlineMatched": 0.9898477,
+    "figures": 999,
+    "tables": 76,
+    "equations": 2677,
+    "inlineDrawings": 11366,
+    "epubcheckErrors": 0,
+    "epubcheckWarnings": 0,
+    "labelledHeadings": 1.0,
+    "labelledOrder": 1.0,
+    "secondsPerPage": 0.03365521,
+    "epubMegabytes": 123.50871
+}

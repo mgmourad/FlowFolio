@@ -1,6 +1,10 @@
 package com.flowfolio.feature.reader
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -18,6 +22,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
@@ -60,6 +65,7 @@ import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.ScreenEntrance
 import com.flowfolio.core.designsystem.glass
 import com.flowfolio.core.designsystem.reveal
+import com.flowfolio.core.model.FlowStatus
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.feature.reader.layout.ReaderLayout
 import com.flowfolio.feature.reader.layout.Spreads
@@ -75,6 +81,7 @@ import kotlin.math.abs
 internal fun BoxScope.ReaderChrome(
     state: ReaderState.Ready,
     navigation: BookNavigation,
+    flow: FlowState,
     controlsVisible: Boolean,
     mark: ChromeMark,
     actions: ChromeActions,
@@ -123,7 +130,7 @@ internal fun BoxScope.ReaderChrome(
         ScreenEntrance(holdForLandings = false) { Box(Modifier.reveal(DOCK_ORDER)) { bottomBar() } }
     }
     // In Scroll the number would float over the text; the bars show the page there.
-    if (!controlsVisible && state.turn != PageTurn.SCROLL) PageNumber(state, navigation.labels)
+    if (!controlsVisible && state.turn != PageTurn.SCROLL) PageNumber(state, navigation.labels, flow)
 }
 
 /**
@@ -221,23 +228,76 @@ private fun TitlePill(title: String, wide: Boolean, modifier: Modifier) {
 
 /** The print-style page number at the foot of the page while the bars are hidden. */
 @Composable
-private fun BoxScope.PageNumber(state: ReaderState.Ready, labels: List<String?>) {
+private fun BoxScope.PageNumber(state: ReaderState.Ready, labels: List<String?>, flow: FlowState) {
     val spread = state.layout == ReaderLayout.SPREAD
     val pages = if (spread) Spreads.pagesOf(state.unit, state.pageCount, state.coverAlone) else listOf(state.anchorPage)
     // Two screen pages of one printed page (a reflowed book's page list) show its number once.
     val shown = pages.map { PageLookup.labelOf(it, labels) }.distinct().joinToString("–")
     // The book's own numbers stand alone ("48–49"); counting from the cover, "62–63 of 959".
     val printed = pages.any { labels.getOrNull(it) != null }
-    Text(
-        if (printed) shown else stringResource(R.string.reader_page_of, shown, state.pageCount),
-        style = PrintStyle.copy(color = LocalTone.current.folioInk),
-        modifier = Modifier
+    Row(
+        Modifier
             .align(if (spread) Alignment.BottomStart else Alignment.BottomCenter)
             .navigationBarsPadding()
-            .padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN)
-            .testTag(ReaderTestTags.INDICATOR)
-    )
+            .padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            if (printed) shown else stringResource(R.string.reader_page_of, shown, state.pageCount),
+            style = PrintStyle.copy(color = LocalTone.current.folioInk),
+            modifier = Modifier.testTag(ReaderTestTags.INDICATOR)
+        )
+        FlowProgressBar(flow)
+    }
 }
+
+/**
+ * Beside the page number while the book's Dynamic Flow is being prepared (ADR-0045): a small glyph and a short bar
+ * filling as the conversion goes, a moving glint while it waits. Folio-ink coloured, so it sits quietly on any paper.
+ */
+@Composable
+private fun FlowProgressBar(flow: FlowState) {
+    val status = flow.status
+    val busy = flow.wanted && !flow.reading && (status is FlowStatus.Converting || status == FlowStatus.Queued)
+    AnimatedVisibility(busy, enter = fadeIn(tween(Motion.MEDIUM_MS)), exit = fadeOut(tween(Motion.MEDIUM_MS))) {
+        val ink = LocalTone.current.folioInk
+        val accent = FlowFolio.palette.title
+        val fraction = (status as? FlowStatus.Converting)?.fraction ?: 0f
+        val shown by animateFloatAsState(fraction, tween(Motion.MEDIUM_MS), label = "flowBar")
+        val glint = rememberInfiniteTransition(label = "flowGlint")
+        val sweep by glint.animateFloat(0f, 1f, infiniteRepeatable(tween(GLINT_MS)), label = "sweep")
+        Row(
+            Modifier.padding(start = 10.dp).testTag(ReaderTestTags.FLOW_PROGRESS),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            FlowFolioGlyph(Glyph.DynamicFlow, contentDescription = null, color = ink, size = 13.dp)
+            androidx.compose.foundation.Canvas(Modifier.padding(start = 6.dp).size(BAR_WIDTH, BAR_HEIGHT)) {
+                val r = androidx.compose.ui.geometry.CornerRadius(size.height / 2f)
+                drawRoundRect(ink.copy(alpha = BAR_TRACK_ALPHA), cornerRadius = r)
+                if (shown > 0f) {
+                    drawRoundRect(accent, size = size.copy(width = size.width * shown), cornerRadius = r)
+                } else {
+                    // Waiting its turn or just starting: a short glint travels along the track.
+                    val w = size.width * GLINT_SHARE
+                    val x = (size.width + w) * sweep - w
+                    drawRoundRect(
+                        accent.copy(alpha = GLINT_ALPHA),
+                        topLeft = androidx.compose.ui.geometry.Offset(x.coerceAtLeast(0f), 0f),
+                        size = size.copy(width = (w + minOf(0f, x)).coerceIn(0f, size.width - x.coerceAtLeast(0f))),
+                        cornerRadius = r
+                    )
+                }
+            }
+        }
+    }
+}
+
+private val BAR_WIDTH = 34.dp
+private val BAR_HEIGHT = 4.dp
+private const val BAR_TRACK_ALPHA = 0.22f
+private const val GLINT_MS = 1_400
+private const val GLINT_SHARE = 0.35f
+private const val GLINT_ALPHA = 0.85f
 
 /**
  * Offers each tap (a press released without moving, before long-press time) to [onTap] with its position and the

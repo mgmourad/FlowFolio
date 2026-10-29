@@ -56,5 +56,9 @@ data class BookEntity(
     val series: String? = null,
     /** Average reader rating out of 5, and how many ratings it averages. */
     val rating: Float? = null,
-    @ColumnInfo(name = "ratings_count") val ratingsCount: Int? = null
+    @ColumnInfo(name = "ratings_count") val ratingsCount: Int? = null,
+    /** A PDF's view (ADR-0045): 1 Dynamic Flow, 0 PDF, null never chosen. Added in schema v15. */
+    @ColumnInfo(name = "flow_mode") val flowMode: Boolean? = null,
+    /** Where the reader is in the book's Dynamic Flow, a reflow locator. Added in schema v15. */
+    @ColumnInfo(name = "flow_locator") val flowLocator: String? = null
 )

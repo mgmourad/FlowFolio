@@ -98,6 +98,8 @@ internal data class BookRowActions(
     val onLocate: (Book) -> Unit,
     /** The book's ribbons (its Bookmarks page). */
     val onBookmarks: (Book) -> Unit = {},
+    /** Turns a PDF's Dynamic Flow on or off (ADR-0045); null hides it. */
+    val onFlow: ((Book) -> Unit)? = null,
     /** Select mode (owner, 2026-10-22); null where books cannot be selected. */
     val selection: Selection? = null,
     val onDeleteChosen: () -> Unit = {},
@@ -134,6 +136,7 @@ fun ShelfPageScreen(
     var adding by remember { mutableStateOf(false) }
     var shelving by remember { mutableStateOf<List<String>?>(null) }
     var relinkId by rememberSaveable { mutableStateOf<String?>(null) }
+
     val relink = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         val id = relinkId
         if (uri != null && id != null) viewModel.relink(id, uri.toString())
@@ -156,6 +159,7 @@ fun ShelfPageScreen(
             relink.launch(arrayOf("application/pdf", "application/epub+zip"))
         },
         onBookmarks = onBookmarks,
+        onFlow = rememberDynamicFlowSwitch(viewModel.flowCarry, viewModel::setFlow, viewModel::setFlowCarry),
         selection = selection,
         onDeleteChosen = { confirmBulk = true },
         folders = FolderActions(onOpen = onOpenFolder, onRemove = { removing = it }, selection = selection),

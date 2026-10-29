@@ -9,37 +9,39 @@ coverage score.
 Designed for phones and tablets, with first-class support for foldables: a single page when
 folded and a two-page spread when unfolded.
 
-**Status:** Phase 0 (foundation). Nothing user-facing yet. See [CLAUDE.md](CLAUDE.md) for the
-current phase and [CHANGELOG.md](CHANGELOG.md) for progress.
+**Status:** Phase 3 (the converter, on the phone). PDF and EPUB reading are done (Phases 1 and 2). See
+[CLAUDE.md](CLAUDE.md) for the current phase and [CHANGELOG.md](CHANGELOG.md) for progress.
 
 ## Repository
 
 | Path | What |
 |---|---|
-| `android/` | Kotlin + Jetpack Compose app |
-| `converter/` | Python FastAPI conversion service |
+| `android/` | Kotlin + Jetpack Compose app, including the on-device converter (`:core:conversion`) |
 | `docs/` | Architecture, ADRs, conversion spec, license matrix |
-| `samples/` | Golden corpus manifest and metric baselines |
-| `infra/` | Docker compose, CI helpers |
+| `samples/` | Corpus manifest, metric baselines, hand labels |
+| `tools/` | Corpus fetch, test-file generators and other standard-library scripts |
+| `infra/` | CI helpers |
 
 ## Quick start
 
-Prerequisites: JDK 21, Android SDK (API 37), [uv](https://docs.astral.sh/uv/), Docker.
+Prerequisites: JDK 21, Android SDK (API 37); Python 3.13 and [uv](https://docs.astral.sh/uv/) for the tools and hooks.
 
 ```bash
 # Android: build, test, install the debug app on a running emulator/device
 cd android && ./gradlew assembleDebug testDebugUnitTest installDebug
 
-# Converter
-cd converter && uv sync && uv run pytest && uv run flowfolio-convert serve
+# Converter: download the corpus, then run its tests on the JVM (EPUBCheck, metrics against baselines)
+python -I tools/corpus/fetch_corpus.py
+cd android && ./gradlew :core:conversion:test :tools:convert:test
 ```
 
 Full command reference: [CLAUDE.md](CLAUDE.md#commands).
 
 ## Privacy
 
-Books stay on your device. Files are uploaded only when you convert a book, and only to the
-converter endpoint you configure, which can be self-hosted.
+Books stay on your device: conversion runs on the phone. The only network use is the opt-in book details lookup
+(Open Library) and the on-device translator (ML Kit downloads its language models and sends Google anonymous
+usage data).
 
 ## License
 

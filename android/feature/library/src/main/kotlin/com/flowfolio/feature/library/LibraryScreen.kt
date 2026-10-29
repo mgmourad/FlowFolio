@@ -63,6 +63,8 @@ data class LibraryActions(
     val onLocate: (Book) -> Unit = {},
     val onAddToShelf: (Book) -> Unit = {},
     val onRename: ((Book) -> Unit)? = null,
+    /** Turns a PDF's Dynamic Flow on or off (ADR-0045); null hides the menu entry. */
+    val onFlow: ((Book) -> Unit)? = null,
     /** The book's ribbons; null hides the menu entry. */
     val onBookmarks: ((Book) -> Unit)? = null,
     /** The book's highlights and notes; null hides the Continue Reading shortcut. */
@@ -143,6 +145,7 @@ fun LibraryScreen(
             onDelete = viewModel::onRequestDelete,
             onLocate = locate,
             onAddToShelf = { shelving = it },
+            onFlow = rememberDynamicFlowSwitch(viewModel.flowCarry, viewModel::setFlow, viewModel::setFlowCarry),
             onOpenShelf = onOpenShelf,
             onOpenFolder = onOpenFolder,
             onRemoveFolder = removeFolder,
