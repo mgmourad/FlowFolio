@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dynamic Flow notifications (ADR-0045). -->
+    <string name="flow_channel">Dynamic Flow</string>
+    <string name="flow_channel_detail">Books being prepared for Dynamic Flow, and when they are ready</string>
+    <string name="flow_converting_title">Preparing Dynamic Flow</string>
+    <string name="flow_converting_text">%1$s · %2$d%%</string>
+    <string name="flow_paused_hot">Paused while your phone cools down</string>
+    <string name="flow_paused_battery">Paused: the battery is low. Plug in to go on.</string>
+    <string name="flow_done_title">Dynamic Flow is ready</string>
+    <string name="flow_done_text">%1$s now flows to fit your screen. Tap to read.</string>
+    <string name="flow_failed_title">Dynamic Flow couldn\'t prepare this book</string>
+    <string name="flow_failed_text">%1$s stays as a PDF.</string>
+    <string name="flow_carry_title">Bringing your notes across</string>
+    <string name="flow_carry_text">Highlights, notes and bookmarks in %1$s</string>
+    <string name="flow_carried_title">Your notes came across</string>
+    <string name="flow_carried_text">%1$d of %2$d found their place in %3$s</string>
+</resources>

@@ -258,15 +258,26 @@ private fun BoxScope.Controls(
     FlowFolioPalette(dark = s.tone.dark) {
         CompositionLocalProvider(LocalGlassStyle provides glassOver(s.tone)) {
             PanelDismiss(overlay.panel) { overlay.panel = Panel.NONE }
+            val flowNow by parts.book.flow.collectAsStateWithLifecycle()
             ReaderChrome(
                 s,
                 navigation,
+                flowNow,
                 controlsVisible = overlay.chrome.shown,
                 mark = mark,
                 actions = ChromeActions(parts.onBack, onPanel = overlay::open),
                 bottomBar = parts.bar
             )
-            ReaderPanels(overlay.panel, s, navigation, mark, parts.jump, onDismiss = { overlay.panel = Panel.NONE })
+            ReaderPanels(
+                overlay.panel,
+                s,
+                navigation,
+                mark,
+                parts.jump,
+                onDismiss = { overlay.panel = Panel.NONE },
+                flow = flowNow,
+                onFlow = parts.book::setFlow
+            )
             FootnotePopover(overlay.note, parts.book::footnote, onDismiss = { overlay.note = null })
             overlay.figure?.let { FigureZoom(it, parts.book, onDismiss = { overlay.figure = null }) }
         }

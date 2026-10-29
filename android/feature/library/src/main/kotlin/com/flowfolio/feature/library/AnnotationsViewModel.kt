@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.AnnotationRepository
 import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.data.ReaderRepository
+import com.flowfolio.core.data.flow.ReadingViews
 import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.HighlightColor
@@ -67,7 +68,8 @@ class AnnotationsViewModel @Inject constructor(
     saved: SavedStateHandle,
     private val repository: AnnotationRepository,
     library: LibraryRepository,
-    private val reader: ReaderRepository
+    private val reader: ReaderRepository,
+    views: ReadingViews = ReadingViews.ShowAll
 ) : ViewModel() {
     private val onlyBook: String? = saved[ARG_BOOK_ID]
 
@@ -82,7 +84,8 @@ class AnnotationsViewModel @Inject constructor(
             repository.observeAll().map { all -> all.map { it.bookId }.toSet() }.distinctUntilChanged().collect { ids ->
                 ids.filterNot { it in outlines.value }.forEach { id ->
                     val outline = outlineOf(id)
-                    if (outline.isEmpty()) titles.update { it + (id to reader.epubChapterTitles(id)) }
+                    // An EPUB's chapters, or a PDF's Dynamic Flow's: its highlights there are named by locator.
+                    titles.update { it + (id to reader.epubChapterTitles(id)) }
                     outlines.update { it + (id to outline) }
                 }
             }
@@ -95,7 +98,7 @@ class AnnotationsViewModel @Inject constructor(
     }
 
     val uiState: StateFlow<AnnotationsUiState> = combine(
-        repository.observeAll(),
+        views.annotations(repository.observeAll()),
         library.observeBooks(LibrarySort.RECENT),
         outlines,
         titles

@@ -19,6 +19,8 @@ dependencies {
     implementation(projects.core.datastore)
     api(projects.core.pdf)
     implementation(libs.kotlinx.coroutines.android)
+    // The Dynamic Flow bundle's flowfolio.json (ADR-0045); its serializers come with :core:conversion.
+    implementation(libs.kotlinx.serialization.json)
     implementation(libs.mlkit.translate)
     implementation(libs.mlkit.language.id)
 

@@ -22,7 +22,7 @@ import javax.inject.Singleton
         AnnotationEntity::class,
         TranslationEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = true,
     // v2: books.last_page (reading position, Phase 1 milestone 4).
     // v3: books.author, shelves and shelf_books (milestone 5, slice 3).
@@ -36,6 +36,8 @@ import javax.inject.Singleton
     // v11: shelves.color (a shelf's colour).
     // v12: books.folder (folder imports) and more looked-up details (subjects, print pages, series, rating).
     // v13: shelf_books.position (books reordered on a shelf by drag and drop).
+    // v14: annotations.locator and bookmarks.locator (EPUB highlights and ribbons by locator, ADR-0040).
+    // v15: books.flow_mode and books.flow_locator (Dynamic Flow, ADR-0045).
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -49,7 +51,8 @@ import javax.inject.Singleton
         AutoMigration(from = 10, to = 11),
         AutoMigration(from = 11, to = 12),
         AutoMigration(from = 12, to = 13),
-        AutoMigration(from = 13, to = 14)
+        AutoMigration(from = 13, to = 14),
+        AutoMigration(from = 14, to = 15)
     ]
 )
 abstract class FlowFolioDatabase : RoomDatabase() {

@@ -46,4 +46,7 @@ object PdfiumNative {
 
     /** {String text, FloatArray boxes} for page [index] (see pdfium_jni.cpp), or null when unreadable. */
     external fun nativePageText(handle: Long, index: Int): Array<Any>?
+
+    /** What the converter reads from page [index] (see pdfium_jni.cpp), or null when unreadable. */
+    external fun nativeConversionPage(handle: Long, index: Int): Array<Any>?
 }

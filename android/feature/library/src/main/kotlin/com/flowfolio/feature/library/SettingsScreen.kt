@@ -40,6 +40,7 @@ import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.ControlsAutoHide
+import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
@@ -67,7 +68,9 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             onRiffleSound = viewModel::setRiffleSound,
             onRiffleVolume = viewModel::setRiffleVolume,
             onScrubHaptics = viewModel::setScrubHaptics,
-            onReaderText = viewModel::setReaderText
+            onReaderText = viewModel::setReaderText,
+            onFlowOnOpen = viewModel::setFlowOnOpen,
+            onFlowAsk = viewModel::setFlowAsk
         )
     )
 }
@@ -107,7 +110,7 @@ fun SettingsContent(settings: UserSettings, actions: SettingsActions) {
                     Column(Modifier.weight(1f)) {
                         TextGroup(settings.text, 2, actions.onReaderText)
                         LibraryGroup(settings, actions)
-                        ConversionGroup()
+                        ConversionGroup(settings, actions)
                     }
                 }
             } else {
@@ -115,7 +118,7 @@ fun SettingsContent(settings: UserSettings, actions: SettingsActions) {
                 TextGroup(settings.text, 2, actions.onReaderText)
                 ReadingGroup(settings, actions)
                 LibraryGroup(settings, actions)
-                ConversionGroup()
+                ConversionGroup(settings, actions)
             }
             Spacer(Modifier.height(insets.calculateBottomPadding() + chrome.calculateBottomPadding() + 24.dp))
         }
@@ -234,18 +237,31 @@ private fun LibraryGroup(settings: UserSettings, actions: SettingsActions) {
     }
 }
 
-/** Conversion runs on the phone (ADR-0009); nothing to choose yet, so it says where. */
+/**
+ * Dynamic Flow (ADR-0045): whether PDFs open in it, with a hint saying what that does; and whether switching views asks
+ * about the highlights, notes and bookmarks made in the other view.
+ */
 @Composable
-private fun ConversionGroup() {
+private fun ConversionGroup(settings: UserSettings, actions: SettingsActions) {
     Group(R.string.settings_conversion, 4) {
-        Row(Modifier.padding(horizontal = 16.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
-            Label(R.string.settings_conversion_where, R.string.settings_conversion_detail, Modifier.weight(1f))
-            Text(
-                stringResource(R.string.settings_conversion_value),
-                style = FlowFolioType.rowDetail.merge(FlowFolio.subItem),
-                modifier = Modifier.padding(start = 12.dp)
-            )
-        }
+        SwitchRow(
+            R.string.settings_flow_on_open,
+            R.string.settings_flow_on_open_detail,
+            settings.dynamicFlowOnOpen,
+            actions.onFlowOnOpen
+        )
+        Divider()
+        SwitchRow(
+            R.string.settings_flow_ask,
+            // Off has two meanings: the reader chose "Don't show this again" with either answer.
+            when (settings.flowCarry) {
+                FlowCarry.ASK -> R.string.settings_flow_ask_detail
+                FlowCarry.CONVERT -> R.string.settings_flow_ask_detail_convert
+                FlowCarry.SKIP -> R.string.settings_flow_ask_detail_skip
+            },
+            settings.flowCarry == FlowCarry.ASK,
+            actions.onFlowAsk
+        )
     }
 }
 

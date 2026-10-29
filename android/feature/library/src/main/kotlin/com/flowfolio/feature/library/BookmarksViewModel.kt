@@ -6,8 +6,10 @@ import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.BookmarkRepository
 import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.data.ReaderRepository
+import com.flowfolio.core.data.flow.ReadingViews
 import com.flowfolio.core.designsystem.CoverSpot
 import com.flowfolio.core.model.Book
+import com.flowfolio.core.model.BookFormat
 import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.BookmarkColor
 import com.flowfolio.core.model.LibrarySort
@@ -71,7 +73,8 @@ class BookmarksViewModel @Inject constructor(
     saved: SavedStateHandle,
     private val bookmarks: BookmarkRepository,
     library: LibraryRepository,
-    private val reader: ReaderRepository
+    private val reader: ReaderRepository,
+    private val views: ReadingViews = ReadingViews.ShowAll
 ) : ViewModel() {
     private val onlyBook: String? = saved[ARG_BOOK_ID]
     private val filter = MutableStateFlow<BookmarkColor?>(null)
@@ -81,7 +84,7 @@ class BookmarksViewModel @Inject constructor(
     private val indexedPages = mutableMapOf<String, Set<Int>>()
 
     val uiState: StateFlow<BookmarksUiState> = combine(
-        bookmarks.observeAll(),
+        views.bookmarks(bookmarks.observeAll()),
         library.observeBooks(LibrarySort.RECENT),
         indexes,
         filter
@@ -131,7 +134,10 @@ class BookmarksViewModel @Inject constructor(
             ?: index?.outline?.let { outline ->
                 outline.filter { it.pageIndex in 0..mark.page }.maxByOrNull { it.pageIndex }?.title
             }
-        return BookmarkItem(mark, book, chapter, index?.labels?.get(mark.page) ?: book.pageLabel(mark.page))
+        // A Dynamic Flow ribbon's page is a page of the flow as last laid out, not a printed one: it shows none.
+        val flow = mark.locator != null && book.format == BookFormat.PDF
+        val label = if (flow) "" else index?.labels?.get(mark.page) ?: book.pageLabel(mark.page)
+        return BookmarkItem(mark, book, chapter, label)
     }
 
     /** Reads a book's outline and the labels of its marked [pages], off the main thread; the cards fill in after. */
@@ -140,8 +146,16 @@ class BookmarksViewModel @Inject constructor(
         indexedPages[bookId] = pages + indexedPages[bookId].orEmpty()
         viewModelScope.launch {
             val index = runCatching {
+                // A PDF's Dynamic Flow ribbons are named by its chapters (ADR-0045).
+                val flowTitles = reader.epubChapterTitles(bookId)
                 reader.open(bookId).document.use { doc ->
-                    BookIndex(doc.outline(), pages.mapNotNull { p -> doc.pageLabel(p)?.let { p to it } }.toMap())
+                    BookIndex(
+                        doc.outline(),
+                        pages.mapNotNull { p ->
+                            doc.pageLabel(p)?.let { p to it }
+                        }.toMap(),
+                        flowTitles
+                    )
                 }
             }.getOrElse { BookIndex(emptyList(), emptyMap(), reader.epubChapterTitles(bookId)) }
             indexes.update { all ->

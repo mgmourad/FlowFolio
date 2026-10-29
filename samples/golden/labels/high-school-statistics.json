@@ -1,0 +1,53 @@
+[
+  {
+    "page": 17,
+    "headings": [
+      {
+        "text": "Sampling and Data",
+        "level": 1
+      },
+      {
+        "text": "Introduction",
+        "level": 2
+      },
+      {
+        "text": "1.1 Definitions of Statistics, Probability, and Key Terms",
+        "level": 2
+      }
+    ],
+    "order": [
+      "We encounter statistics in our daily lives",
+      "By the end of this chapter, the student",
+      "Recognize and differentiate between key terms",
+      "You are probably asking yourself",
+      "Since you will undoubtedly be given",
+      "Included in this chapter are the basic ideas",
+      "deals with the collection, analysis",
+      "In your classroom, try this exercise"
+    ]
+  },
+  {
+    "page": 20,
+    "order": [
+      "Determine what the population, sample",
+      "We want to know the mean amount",
+      "is all high school students",
+      "Find an article online",
+      "Determine what the key terms refer to",
+      "A study was conducted at a local high school",
+      "As part of a study designed to test"
+    ]
+  },
+  {
+    "page": 549,
+    "order": [
+      "two means",
+      "Are the populations standard deviations",
+      "Which distribution do you use",
+      "What is the random variable",
+      "What are the null and alternate hypotheses",
+      "Is this test right",
+      "What is the"
+    ]
+  }
+]

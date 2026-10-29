@@ -5,7 +5,118 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [0.3.0-alpha.1] - 2026-10-28
+
+Phase 3 (the converter on the phone and Dynamic Flow), the first published build (ADR-0042); it also
+holds Phases 0 to 2.
+
 ### Added
+- Phase 3 milestones 1 and 2, converter v1 (`docs/plans/phase3-plan.md`, `docs/plans/phase3-m1m2-signoff.md`).
+  - `:core:conversion`: a plain JVM module (ADR-0044) that turns a born-digital PDF into EPUB 3 plus `flowfolio.json`
+    on the phone. Stages: extraction (lines, spans with per-character positions, fragments of one row joined),
+    design system (running heads and folios as artifacts, printed page numbers, styles and heading levels), regions
+    (figures, sidebars, tables), shapes (text and maths drawn as vector shapes become inline images in the line or
+    display equations with their numbers), reading order (columns), blocks (paragraphs, lists, captions, code,
+    superscripts and subscripts), headings and chapters from the PDF outline, and the EPUB writer (page list, contents
+    in reading order, page breaks, WebP images on the phone). Pages under 98% text coverage go out as page images.
+  - `:core:pdf`: `PdfiumConversionSource` reads glyph runs, fonts, images and paths through our JNI bridge
+    (`nativeConversionPage`) and encodes crops as WebP. A 959-page textbook converts in about 58 s on the emulator.
+  - The reader: converted books' inline drawings sit in the line, sized in ems (`InlineImageSpan`); equations are
+    drawn in the text colour on any paper (`inkFilter`); `<sup>`/`<sub>` are set smaller as well as raised or lowered
+    (`ScriptSpan`).
+  - `android/tools/convert`: the same pipeline on the desktop through JNA and PDFium's own builds (development only):
+    `convert`, `page`, `probe`, `render`, `unmatched` commands; `ConversionTest` (robustness PDFs, device-made EPUBs)
+    and `CorpusTest` (EPUBCheck 5.4.0, the sidecar schema, metrics against `samples/golden/baselines/`, hand-labelled
+    headings and reading order on 30 pages).
+  - The corpus: `tools/corpus/fetch_corpus.py` (standard library) downloads 9 OpenStax PDFs and 7 Project Gutenberg
+    EPUBs, pinned by SHA-256 in `samples/corpus/manifest.yaml`.
+  - `docs/conversion-spec.md` v1.0.0 (normative) and `docs/schemas/flowfolio.schema.json`.
+  - Release channels and versioning (ADR-0042): `0.<phase>.<patch>-<channel>.<n>`, a release signing key outside the
+    repo, `flowfolio.versionName`/`versionCode` in `android/gradle.properties`.
+- Phase 3 milestone 3, Dynamic Flow (the owner's design, ADR-0045): a PDF read as reflowed text, converted on the phone.
+  - One book, two views: the EPUB is a hidden bundle (`files/flow/<book>/`), never a second book in the library, and
+    is deleted with the book. Room v15: `books.flow_mode` (never chosen, PDF, Dynamic Flow) and `books.flow_locator`.
+  - Settings > Dynamic Flow: "Turn on Dynamic Flow upon opening" (off by default) and "Ask before switching views".
+  - The reader's "Aa" sheet: a Dynamic Flow card (its own glyph) with a switch, available whatever the setting; a
+    progress ring on the switch and a small bar beside the page number while the book converts; the reader switches
+    to Dynamic Flow at the same place when it is ready, and back to the PDF at the same page.
+  - Conversion runs in a foreground service in its own process (`FlowService`, `:convert`), one book at a time, and
+    waits while the phone is too hot or the battery is low. In-app banners and phone notifications when a conversion
+    starts and ends (tapping "ready" opens the book); notification permission is asked at the first conversion.
+  - Highlights, notes and bookmarks stay with the view they were made in, and each view, the Annotations and Bookmarks
+    tabs and the library's counts show only the current view's. Switching asks whether to "convert the changes"
+    (with "Don't show this again"); converting finds each highlight's words near the same page in the other view
+    (`FlowCarrier`) and tells how many came across.
+  - "Turn on/off Dynamic Flow" in a PDF's press-and-hold menu and the list's swipe actions.
+  - `FlowServiceOnDeviceTest`; the CC BY books of the corpus are checked in CI (`corpus` job, cached by the manifest).
+
+- Conversion quality round (the owner's findings, 2026-10-28; conversion spec 1.1.0, engine 1.1.0):
+  - Code: monospaced fonts are recognised by measuring the glyphs (TeX's `SFTT`, `M+ 1mn` and others aren't flagged);
+    a listing keeps its lines, indentation and blank lines, each character at its column, so diagrams drawn with
+    characters keep their shape; shaded code boxes are listings, not sidebars; a listing over a page turn stays one;
+    code in running text is `<code>`. The reader sets code in a monospaced face on a faint panel, never hyphenated or
+    justified, scaled down to fit the column, and keeps short listings whole on one page.
+  - Lists: an item's lines that hang under its text stay in it; consecutive items make one list, nested by depth,
+    numbered (`<ol>`, its start and style) or bulleted, with bullets set in symbol fonts or drawn as shapes; the reader
+    draws each item's bullet or number beside it (not part of the text, so highlights don't move).
+  - Headings: decorative shapes behind a heading's text (a band, a number's tab) are no longer images in it; a running
+    header beside the page number is removed even over a one-page section; a chapter's label ("Chapter 5") is the first
+    line of its title, not the end of the previous chapter; a table's header row is not a heading.
+  - Tables without rules (three or more aligned columns of short cells) go out as tables (an image of the table, its
+    text as alt), drawn in the page's ink like equations; a word hyphenated at a line's end (PDFium's 0x02) is joined.
+  - Dynamic Flow bundles made by an older converter are converted again when the book is next opened, and their
+    highlights found again by their words.
+  - Tests: `technical.pdf` (made by `tools/testpdfs`) and `TechnicalBookTest`, `CodeLayoutTest`, parser tests for list
+    markers and code; five technical books in the local corpus (OpenStax computing titles, *Think Python*, *Pro Git*).
+
+- Conversion round on the owner's own books (2026-10-28; conversion spec 1.2.0, engine 1.2.2; notes exported from Word,
+  a book of notes typed in a code font, an O'Reilly title):
+  - Paragraphs: a new paragraph is found by the step from line to line, wider than the page's usual one, rather than
+    by the gap between line boxes (Word's boxes are as tall as the leading, or tight to the glyphs, so every line was a
+    paragraph or none was); a sentence ending well short of a full next line ends its paragraph; a line mostly in bold
+    at the body's size that runs across the column is prose, not a heading.
+  - Inline style: words in bold or italics are `<strong>` and `<em>`; a line with a few bold words is no longer a
+    heading.
+  - Code: a book set throughout in a monospaced face (with its code in another) reads as prose; when the most used
+    style sits mostly on shaded panels, the body is the next one that doesn't.
+  - Lists: symbol and emoji bullets (✅ 🔹 📌 ❶) are kept as each item's marker (`list-style-type`, drawn by the
+    reader); Word's second-level "o" in Courier New is a bullet, not code; bullets drawn as small pictures may touch
+    their text.
+  - Words broken over a line or a page turn with Unicode's hyphen or a soft hyphen are joined ("Java‐ Script"); a name
+    in code broken over two lines without a hyphen is one name ("Deployment").
+  - Tables: Word's cell borders (drawn column by column) make one table, grown over its full-width outer rules, a
+    header row shaded instead of ruled, and a last row drawn without borders; two tables one above the other stay two;
+    two columns of short cells under a bold header row are a table.
+  - A logo or band repeated at the same place in the margins of several pages is page furniture, like a running header.
+  - Table pictures keep their own colours when they have any (coloured icons or cells, a shaded header row; `Ink`,
+    from the drawn pixels); only plain black-and-white tables are drawn in the reader's ink (the owner's choice).
+  - A highlight drawn behind a line of text (a marker band under a title) is no longer a figure showing the text
+    again; rules of the same length down a column with no side borders (fraction bars, section separators) are cut
+    where no row could span the gap, so they are no longer a table hiding the text between them.
+  - A list item whose text runs to the margin keeps the indented sub-item under it as an item of its own (the
+    hanging-indent rule had joined them); an emoji in a code listing ("Result: ✅ PASS") no longer cuts it in two; a
+    heading with a word in code ("The `in` operator") is still a heading.
+  - Reader: code (panels and inline `code`) is set in JetBrains Mono 2.211 (SIL OFL 1.1, 187 KB, bundled in
+    `core:designsystem`; the owner's choice), so it looks the same on every phone. `Typeface.MONOSPACE` is not used:
+    a phone's font style (Samsung's) can swap it for a proportional face and break code's columns. Without the bundled
+    face (`CodeFace`), a system font file that really is monospaced is used. A code line too long even at the
+    smallest size wraps with its continuation set in two characters, like an editor's soft wrap.
+  - Dynamic Flow: after a book is converted again (a newer engine), the reading place is found again from the PDF
+    page it was on; the old place, a character offset in the old text, could open the book dozens of pages away.
+  - Engine 1.2.2. Tests: `OwnBooksTest`, a parser test for an item's own glyph; the desktop tool's `probe` lists a
+    page's paths and `page` the book's styles.
+
+### Fixed
+- Recording reading time for a book that is no longer in the library no longer crashes the reader.
+- Turning Dynamic Flow on or off from a book's press-and-hold menu or the list's swipe now asks the same questions as
+  the reader ("convert the changes"), and carries the notes.
+- A bookmark or highlight made in Dynamic Flow, opened from the Bookmarks or Annotations tab, opens Dynamic Flow at it
+  (the jump set the EPUB place, which Dynamic Flow doesn't read).
+
+### Removed
+- The Python `converter/` server, its Docker image, its CI jobs and Dependabot entries (ADR-0043). The ruff hooks now
+  check the `tools/` scripts.
+
 - Phase 1 milestone 3 (reader, in progress): `:core:pagecurl` (vendored pagecurl with book-spread back pages),
   `:feature:reader` with page curl in single-page and two-page spread layouts (cover alone, print pairing),
   layout chosen from the window (fold/unfold/rotation keep the position), byte-budgeted page cache of GPU-backed

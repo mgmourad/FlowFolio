@@ -77,6 +77,51 @@ abstract class FetchPdfiumTask : DefaultTask() {
     }
 }
 
+/**
+ * PDFium for the desktop JVM (`:tools:convert`, development only): the same release built for this machine's OS, its
+ * library alone (pdfium.dll or libpdfium.so) in [outputDir], for JNA.
+ */
+@CacheableTask
+abstract class FetchHostPdfiumTask : DefaultTask() {
+    @get:Inject abstract val archives: ArchiveOperations
+
+    @get:Inject abstract val fs: FileSystemOperations
+
+    @get:Input abstract val release: Property<String>
+
+    /** "assetName|sha256" for this OS. */
+    @get:Input abstract val asset: Property<String>
+
+    @get:OutputDirectory abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun fetch() {
+        val (name, sha) = asset.get().split('|')
+        val tgz = File(temporaryDir, name)
+        val url = "https://github.com/bblanchon/pdfium-binaries/releases/download/${release.get()}/$name"
+        URI(url).toURL().openStream().use { input -> tgz.outputStream().use { input.copyTo(it) } }
+        val actual = MessageDigest.getInstance("SHA-256").digest(tgz.readBytes()).joinToString("") { "%02x".format(it) }
+        check(actual == sha) { "SHA-256 mismatch for $name: expected $sha, got $actual" }
+        fs.sync {
+            from(archives.tarTree(archives.gzip(tgz))) { include("bin/*.dll", "lib/*.so") }
+            into(outputDir)
+            eachFile { path = this.name }
+            includeEmptyDirs = false
+        }
+    }
+
+    companion object {
+        /** Desktop builds of [Pdfium.RELEASE]: Windows (development) and Linux (CI). */
+        val HOST_ASSETS = mapOf(
+            "windows" to "pdfium-win-x64.tgz|51621bcc1d9be9ea448f4b84b0516862b928e3968d3fca899af1a6d6e2848d6d",
+            "linux" to "pdfium-linux-x64.tgz|1c1894a12d4d96ee01400c3874444126254180c5c7d2ab628576b67f8120320a",
+        )
+
+        fun hostAsset(): String =
+            HOST_ASSETS.getValue(if (System.getProperty("os.name").startsWith("Windows")) "windows" else "linux")
+    }
+}
+
 /** Applies to `:core:pdf`: fetches PDFium, wires CMake, packages libpdfium.so and its licenses. */
 class PdfiumConventionPlugin : Plugin<Project> {
     override fun apply(target: Project) = with(target) {

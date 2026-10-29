@@ -1,12 +1,16 @@
 package com.flowfolio
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -17,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.IntentCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.data.flow.FlowNotifications
 import com.flowfolio.core.designsystem.BookOpeningHost
 import com.flowfolio.core.designsystem.CoverFlightHost
 import com.flowfolio.core.designsystem.DesignCatalog
@@ -79,9 +84,32 @@ class MainActivity : ComponentActivity() {
                             ).paper,
                             spread = { w, h -> reading.opensAsSpread(w, h) }
                         ) { CoverFlightHost { FlowFolioApp(appViewModel) } }
+                        FlowNoticeHost(appViewModel.flowNotices, appViewModel::onNotificationOpen)
+                        AskNotificationsOnce()
                         if (splash) FlowFolioSplash(stringResource(R.string.splash_tagline)) { splash = false }
                     }
                 }
+            }
+        }
+    }
+
+    private val notificationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { appViewModel.notificationsAsked() }
+
+    /** Android 13+: asks to post Dynamic Flow's notifications when the first book starts converting (ADR-0045). */
+    @androidx.compose.runtime.Composable
+    private fun AskNotificationsOnce() {
+        val ask by appViewModel.askNotifications.collectAsStateWithLifecycle()
+        androidx.compose.runtime.LaunchedEffect(ask) {
+            if (!ask || Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return@LaunchedEffect
+            val granted =
+                checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+            if (granted) {
+                appViewModel.notificationsAsked()
+            } else {
+                notificationPermission.launch(
+                    Manifest.permission.POST_NOTIFICATIONS
+                )
             }
         }
     }
@@ -99,6 +127,8 @@ class MainActivity : ComponentActivity() {
             else -> null
         }
         uri?.let { appViewModel.onSharedFile(it.toString()) }
+        // A Dynamic Flow notification (ours, so not only in debug builds) opens its book.
+        intent.getStringExtra(FlowNotifications.EXTRA_OPEN_BOOK)?.let(appViewModel::onNotificationOpen)
         // Debug builds: `am start ... --es openBookId <sha256> [--es layout single|spread]` (measurement scripts).
         val debuggable = isDebuggable()
         val bookId = intent.getStringExtra(EXTRA_OPEN_BOOK)

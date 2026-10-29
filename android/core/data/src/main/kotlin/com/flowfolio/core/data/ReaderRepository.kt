@@ -42,6 +42,15 @@ interface ReaderRepository {
      */
     suspend fun openEpub(bookId: String): OpenedEpub = throw FileNotFoundException("no EPUB support")
 
+    /**
+     * Opens a PDF's Dynamic Flow bundle (ADR-0045) as an EPUB; the book's [com.flowfolio.core.model.Book.lastLocator]
+     * is its place in Dynamic Flow. Throws FileNotFoundException when the book has no bundle.
+     */
+    suspend fun openFlow(bookId: String): OpenedEpub = throw FileNotFoundException("no Dynamic Flow")
+
+    /** The book as stored, without opening its file; null when it isn't in the library. */
+    suspend fun book(bookId: String): Book? = null
+
     /** Remembers where an EPUB was left: its [locator], and the [page] and [pageCount] at the size it was read. */
     suspend fun saveEpubProgress(bookId: String, locator: String, page: Int, pageCount: Int) = Unit
 
@@ -53,7 +62,7 @@ interface ReaderRepository {
 
     /**
      * An EPUB's chapter title for each chapter of its reading order (the contents entry it starts in, or null before
-     * the first), so locators can be named; empty for PDFs or when it cannot be read.
+     * the first), so locators can be named; a PDF's are its Dynamic Flow's (ADR-0045). Empty when there is none.
      */
     suspend fun epubChapterTitles(bookId: String): List<String?> = emptyList()
 }
@@ -71,7 +80,8 @@ class DefaultReaderRepository @Inject constructor(
     private val reading: BookReadingDao,
     private val source: DocumentSource,
     private val engine: PdfEngine,
-    @IoDispatcher private val io: CoroutineDispatcher
+    @IoDispatcher private val io: CoroutineDispatcher,
+    private val flow: com.flowfolio.core.data.flow.DynamicFlow = com.flowfolio.core.data.flow.DynamicFlow.None
 ) : ReaderRepository {
     override suspend fun open(bookId: String, password: String?): OpenedBook {
         val book = withContext(io) { dao.get(bookId)?.toBook() } ?: throw FileNotFoundException("no book $bookId")
@@ -103,6 +113,20 @@ class DefaultReaderRepository @Inject constructor(
         }
     }
 
+    override suspend fun openFlow(bookId: String): OpenedEpub = withContext(io) {
+        val book = dao.get(bookId)?.toBook() ?: throw FileNotFoundException("no book $bookId")
+        val file = flow.bundle(bookId) ?: throw FileNotFoundException("no Dynamic Flow for $bookId")
+        val archive = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { EpubArchive.open(it) }
+        try {
+            OpenedEpub(book.copy(lastLocator = book.flowLocator), archive, EpubParser.parse(archive))
+        } catch (e: EpubException) {
+            archive.close()
+            throw e
+        }
+    }
+
+    override suspend fun book(bookId: String): Book? = withContext(io) { dao.get(bookId)?.toBook() }
+
     override suspend fun saveEpubProgress(bookId: String, locator: String, page: Int, pageCount: Int) =
         withContext(io) { reading.updateEpubProgress(bookId, locator, page, pageCount) }
 
@@ -123,12 +147,25 @@ class DefaultReaderRepository @Inject constructor(
         }
     }
 
-    override suspend fun saveEpubPosition(bookId: String, locator: String, page: Int) =
-        withContext(io) { reading.updateEpubPosition(bookId, locator, page) }
+    override suspend fun saveEpubPosition(bookId: String, locator: String, page: Int) = withContext(io) {
+        // A locator of a PDF book is a place in its Dynamic Flow (ADR-0045): that view's own place; the PDF's page is
+        // left as it is (the flow's page numbers are not the PDF's).
+        if (dao.get(bookId)?.toBook()?.format == BookFormat.PDF) {
+            reading.setFlowLocator(bookId, locator)
+        } else {
+            reading.updateEpubPosition(bookId, locator, page)
+        }
+    }
 
     override suspend fun epubChapterTitles(bookId: String): List<String?> = withContext(io) {
-        val book = dao.get(bookId)?.toBook()?.takeIf { it.format == BookFormat.EPUB } ?: return@withContext emptyList()
-        val fd = descriptorOf(book) ?: return@withContext emptyList()
+        val book = dao.get(bookId)?.toBook() ?: return@withContext emptyList()
+        val fd = when (book.format) {
+            BookFormat.EPUB -> descriptorOf(book)
+
+            BookFormat.PDF -> flow.bundle(bookId)?.let {
+                ParcelFileDescriptor.open(it, ParcelFileDescriptor.MODE_READ_ONLY)
+            }
+        } ?: return@withContext emptyList()
         try {
             fd.use { EpubArchive.open(it).use { archive -> chapterTitles(EpubParser.parse(archive)) } }
         } catch (_: EpubException) {

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.AnnotationRepository
 import com.flowfolio.core.data.LibraryRepository
+import com.flowfolio.core.data.flow.ReadingViews
 import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.HighlightColor
@@ -21,12 +22,15 @@ import kotlinx.coroutines.launch
 class ReaderAnnotationsViewModel @Inject constructor(
     saved: SavedStateHandle,
     private val annotations: AnnotationRepository,
-    library: LibraryRepository
+    library: LibraryRepository,
+    views: ReadingViews
 ) : ViewModel() {
     private val bookId: String = checkNotNull(saved[ReaderViewModel.ARG_BOOK_ID]) { "reader needs a bookId" }
 
-    val all: StateFlow<List<Annotation>> =
-        annotations.observe(bookId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), emptyList())
+    /** The highlights of the view the book is read in (ADR-0045: the PDF's and its Dynamic Flow's are kept apart). */
+    val all: StateFlow<List<Annotation>> = views.annotations(
+        annotations.observe(bookId)
+    ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), emptyList())
 
     val book: StateFlow<Book?> =
         library.observeBook(bookId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), null)

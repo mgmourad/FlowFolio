@@ -1,6 +1,7 @@
 # ADR-0009: On-device conversion engine in Kotlin Multiplatform
 
-- **Status:** Accepted (feasibility to be confirmed by the Phase 1 spike probe)
+- **Status:** Accepted (feasibility to be confirmed by the Phase 1 spike probe); to be superseded in part by ADR-0044 if accepted
+  (proposed 2026-10-27: the engine as a plain JVM module, not Kotlin Multiplatform)
 - **Date:** 2026-10-16
 - **Phase:** 1
 - **Supersedes:** ADR-0002 (in part), ADR-0004; amends ADR-0003

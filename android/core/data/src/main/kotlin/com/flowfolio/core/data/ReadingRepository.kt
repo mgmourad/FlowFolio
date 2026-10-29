@@ -25,7 +25,14 @@ class DefaultReadingRepository @Inject constructor(
 ) : ReadingRepository {
     override suspend fun record(bookId: String, startedAt: Long, endedAt: Long) {
         if (endedAt <= startedAt) return
-        withContext(io) { dao.insert(ReadingSessionEntity(bookId = bookId, startedAt = startedAt, endedAt = endedAt)) }
+        withContext(io) {
+            // A book no longer in the library (deleted while open, or an id that was never in it) keeps no time.
+            try {
+                dao.insert(ReadingSessionEntity(bookId = bookId, startedAt = startedAt, endedAt = endedAt))
+            } catch (_: android.database.sqlite.SQLiteConstraintException) {
+                Unit
+            }
+        }
     }
 
     override fun observeReadMillis(bookId: String): Flow<Long> = dao.observeTotal(bookId)

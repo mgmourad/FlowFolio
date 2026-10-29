@@ -63,7 +63,9 @@ internal fun BoxScope.ReaderPanels(
     navigation: BookNavigation,
     mark: ChromeMark,
     jump: (Int) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    flow: FlowState? = null,
+    onFlow: ((Boolean, Boolean) -> Unit)? = null
 ) {
     DropPanel(panel == Panel.CONTENTS, CONTENTS_WIDTH, fillDown = true) {
         ContentsList(navigation.outline, navigation.labels, s.anchorPage, jump)
@@ -81,7 +83,7 @@ internal fun BoxScope.ReaderPanels(
         }
         RibbonList(mark.all, navigation, jump)
     }
-    SheetPanel(panel == Panel.SETTINGS) { ReaderSettingsContent(s.reflowable, s.bookFont) }
+    SheetPanel(panel == Panel.SETTINGS) { ReaderSettingsContent(s.reflowable, s.bookFont, flow, onFlow) }
 }
 
 /**

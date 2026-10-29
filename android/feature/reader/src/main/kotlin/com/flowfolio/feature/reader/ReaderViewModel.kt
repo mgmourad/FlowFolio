@@ -11,12 +11,14 @@ import com.flowfolio.core.data.NotYetReadableException
 import com.flowfolio.core.data.OpenedBook
 import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.data.flow.DynamicFlow
 import com.flowfolio.core.designsystem.R as DesignR
 import com.flowfolio.core.designsystem.fontRes
 import com.flowfolio.core.epub.EpubException
 import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.Bookmark
+import com.flowfolio.core.model.FlowStatus
 import com.flowfolio.core.model.PageLabels
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PixelSize
@@ -25,6 +27,7 @@ import com.flowfolio.core.model.ReadingFont
 import com.flowfolio.core.model.UserSettings
 import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfException
+import com.flowfolio.core.reflow.CodeFace
 import com.flowfolio.core.reflow.Locator
 import com.flowfolio.feature.reader.cache.PageCache
 import com.flowfolio.feature.reader.cache.PageKey
@@ -85,6 +88,17 @@ sealed interface ReaderState {
     ) : ReaderState
 }
 
+/**
+ * Dynamic Flow for the open book (ADR-0045): [available] for PDFs; [reading] while the reader shows its Dynamic Flow;
+ * [wanted] once the reader chose it (the PDF shows until the book is converted); [status] its conversion.
+ */
+data class FlowState(
+    val available: Boolean = false,
+    val reading: Boolean = false,
+    val wanted: Boolean = false,
+    val status: FlowStatus = FlowStatus.None
+)
+
 /** Window in pixels and dp, as measured by the reader's root layout, and whether the app is showing dark mode. */
 data class Viewport(
     val widthPx: Int,
@@ -101,12 +115,36 @@ class ReaderViewModel @Inject constructor(
     private val repository: ReaderRepository,
     private val settingsRepository: SettingsRepository,
     private val saved: SavedStateHandle,
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    dynamicFlow: DynamicFlow
 ) : ViewModel() {
     private val bookId: String = checkNotNull(saved[ARG_BOOK_ID]) { "reader needs a bookId" }
     private val forcedLayout: ReaderLayout? = saved.get<String>(ARG_LAYOUT)?.let {
         runCatching { ReaderLayout.valueOf(it.uppercase()) }.getOrNull()
     }
+
+    private val dynamic = ReaderFlow(
+        bookId,
+        viewModelScope,
+        repository,
+        dynamicFlow,
+        object : ReaderFlow.Host {
+            override val anchorPage get() = this@ReaderViewModel.anchorPage
+            override val showing get() = _state.value is ReaderState.Ready
+
+            override fun reopen(view: Boolean) = this@ReaderViewModel.reopen(view)
+
+            override suspend fun flowOnOpen() = settingsRepository.settings.first().dynamicFlowOnOpen
+
+            override suspend fun savePlace() = saveFlowPlace()
+        }
+    )
+
+    /** The book's Dynamic Flow: the "Aa" sheet's switch and its progress ring, the bar by the page number. */
+    internal val flow: StateFlow<FlowState> = dynamic.state
+
+    /** Collectors of the open book's caches, cancelled when the book is closed for a switch of view. */
+    private val bookJobs = ArrayList<Job>()
 
     private val _state = MutableStateFlow<ReaderState>(ReaderState.Loading)
     val state: StateFlow<ReaderState> = _state.asStateFlow()
@@ -275,9 +313,13 @@ class ReaderViewModel @Inject constructor(
 
     fun submitPassword(password: String) = open(password)
 
-    private fun open(password: String?) {
+    private fun open(password: String?, view: Boolean? = null) {
         viewModelScope.launch {
             _state.value = ReaderState.Loading
+            if (dynamic.opensFlow(view)) {
+                openEpub(flow = true)
+                return@launch
+            }
             val book = try {
                 repository.open(bookId, password)
             } catch (_: PdfException.PasswordRequired) {
@@ -301,10 +343,10 @@ class ReaderViewModel @Inject constructor(
             loadCover(book.book.coverPath)
             source = pageSource
             cache = PageCache(pageSource, viewModelScope, budgetBytes = 0, onEvicted = ::releaseLater).also { c ->
-                viewModelScope.launch { c.images.collect { cacheImages.value = it } }
+                bookJobs += viewModelScope.launch { c.images.collect { cacheImages.value = it } }
             }
             tileCache = TileCache(pageSource, viewModelScope, MAX_TILES, onEvicted = ::releaseLater).also { c ->
-                viewModelScope.launch { c.tiles.collect { _tiles.value = it } }
+                bookJobs += viewModelScope.launch { c.tiles.collect { _tiles.value = it } }
             }
             // A recreated reader (rotation, process death) keeps its own position; a fresh open resumes where the
             // book was left (milestone 4).
@@ -316,13 +358,69 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    /** An EPUB: parse it, then lay it out once the reader knows its pane ([ensureEpubLayout]). */
-    private suspend fun openEpub() {
+    /** Switches the book's view, bringing the changes or not (the "Aa" sheet's Dynamic Flow switch; ADR-0045). */
+    fun setFlow(on: Boolean, carry: Boolean) = dynamic.switch(on, carry)
+
+    /** Dynamic Flow keeps the PDF's page up to date as it is read; makes sure the latest is saved before leaving it. */
+    private suspend fun saveFlowPlace() {
+        progressJob?.join()
+        epub?.let { session ->
+            val at = locator ?: session.locatorOf(anchorPage)
+            dynamic.savePlace(at.encode(), session.sourcePageOf(at))
+        }
+    }
+
+    /** Closes the open book and opens it again in the other view. */
+    private fun reopen(view: Boolean) {
+        closeBook()
+        open(password = null, view = view)
+    }
+
+    /** Lets go of everything the open book holds, so it can open again (in the other view). */
+    private fun closeBook() {
+        layoutJob?.cancel()
+        planJob?.cancel()
+        bookJobs.forEach { it.cancel() }
+        bookJobs.clear()
+        thumbnails?.clear()
+        thumbnails = null
+        cache?.clear()
+        cache = null
+        tileCache?.clear()
+        tileCache = null
+        source?.release()
+        source = null
+        opened?.document?.close()
+        opened = null
+        epub?.close()
+        epub = null
+        sizes.clear()
+        wanted = emptyList()
+        currentKeys.value = emptyMap()
+        cacheImages.value = emptyMap()
+        _tiles.value = emptyMap()
+        _links.value = emptyMap()
+        linksRevision = -1
+        _navigation.value = BookNavigation()
+        _islandWork.value = null
+        pendingLayout = null
+        startPage = null
+        _relayingOut.value = false
+        saved.remove<Int>(KEY_ANCHOR)
+        saved.remove<String>(KEY_LOCATOR)
+        _layoutRevision.update { it + 1 }
+        dynamic.shown(reading = false)
+    }
+
+    /** An EPUB (or a PDF's Dynamic Flow, [flow]): parse it, then lay it out once the reader knows its pane. */
+    private suspend fun openEpub(flow: Boolean = false) {
         val session = try {
             // Headings in the app's display face (Fraunces), as on the library's covers.
             val heading = runCatching { context.resources.getFont(DesignR.font.fraunces) }.getOrNull()
+            // Code in the app's own monospaced face (JetBrains Mono): the phone's may not be monospaced.
+            runCatching { context.resources.getFont(DesignR.font.code_jetbrains_mono) }.getOrNull()?.let(CodeFace::use)
             EpubSession.open(
-                repository.openEpub(bookId),
+                if (flow) repository.openFlow(bookId) else repository.openEpub(bookId),
                 heading,
                 ::readingFont,
                 java.io.File(context.cacheDir, ISLAND_DIR)
@@ -337,11 +435,23 @@ class ReaderViewModel @Inject constructor(
         epub = session
         thumbnails = ReaderThumbnails(viewModelScope) { page, size, tone -> session.thumbnail(page, size, tone) }
         loadCover(session.opened.book.coverPath)
-        if (locator == null) locator = Locator.decode(session.opened.book.lastLocator)
-        // No locator but a saved page (set by the measurement scripts): open there once laid out.
-        if (locator == null) startPage = session.opened.book.lastPage
+        val book = session.opened.book
+        if (flow) {
+            // From the PDF's page when switching; else where Dynamic Flow was left; else the PDF's page.
+            val fromPdf = dynamic.takeSourcePage()
+            locator = when {
+                fromPdf != null -> session.locatorOfSourcePage(fromPdf)
+                locator != null -> locator
+                else -> Locator.decode(book.lastLocator) ?: book.lastPage?.let(session::locatorOfSourcePage)
+            }
+            dynamic.shown(reading = true)
+        } else {
+            if (locator == null) locator = Locator.decode(book.lastLocator)
+            // No locator but a saved page (set by the measurement scripts): open there once laid out.
+            if (locator == null) startPage = book.lastPage
+        }
         cache = PageCache(session, viewModelScope, budgetBytes = 0, onEvicted = ::releaseLater).also { c ->
-            viewModelScope.launch { c.images.collect { cacheImages.value = it } }
+            bookJobs += viewModelScope.launch { c.images.collect { cacheImages.value = it } }
         }
         ensureEpubLayout()
     }
@@ -509,7 +619,12 @@ class ReaderViewModel @Inject constructor(
             val at = session.locatorOf(page).also { locator = it }
             progressJob?.cancel()
             progressJob = viewModelScope.launch {
-                repository.saveEpubProgress(bookId, at.encode(), page, session.pageCount)
+                if (dynamic.reading) {
+                    // A PDF's Dynamic Flow: its own place, and the PDF page it is in (the library's progress).
+                    dynamic.savePlace(at.encode(), session.sourcePageOf(at))
+                } else {
+                    repository.saveEpubProgress(bookId, at.encode(), page, session.pageCount)
+                }
             }
             return
         }

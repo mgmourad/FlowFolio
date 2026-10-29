@@ -244,6 +244,25 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
         }
     }
 
+    /**
+     * A converted PDF's pages (ADR-0045): the converter's page markers (`#page-N`) as their place in this book and the
+     * 0-based PDF page, in reading order; empty for any other EPUB.
+     */
+    val sourcePages: List<Pair<Locator, Int>> by lazy {
+        pkg.pageList.mapNotNull { p ->
+            val n = p.href.substringAfter(SOURCE_PAGE, "").toIntOrNull() ?: return@mapNotNull null
+            locatorOf(p.href)?.let { it to n - 1 }
+        }.sortedBy { it.first }
+    }
+
+    /** Where PDF page [page] (0-based) starts in this book, or the nearest page before it; null without markers. */
+    fun locatorOfSourcePage(page: Int): Locator? =
+        (sourcePages.firstOrNull { it.second == page } ?: sourcePages.lastOrNull { it.second < page })?.first
+
+    /** The PDF page (0-based) [locator] is in; null without markers. */
+    fun sourcePageOf(locator: Locator): Int? =
+        (sourcePages.lastOrNull { it.first <= locator } ?: sourcePages.firstOrNull())?.second
+
     /** A footnote's text for a link [href] that points at one, else null. */
     fun footnote(href: String): CharSequence? {
         val chapter = chapterByPath[href.substringBefore('#')] ?: return null
@@ -284,6 +303,9 @@ private fun markupOf(b: Block): List<PackedText> = when (b) {
     is Block.Text -> b.text.getSpans(0, b.text.length, IslandSpan::class.java).map { it.packed }
     is Block.Image -> emptyList()
 }
+
+/** The converter's page marker id (docs/conversion-spec.md, section 2). */
+private const val SOURCE_PAGE = "#page-"
 
 /** A chapter with less text than this is too small to estimate the others' pages from. */
 private const val MIN_SAMPLE_CHARS = 2_000

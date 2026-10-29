@@ -1,5 +1,5 @@
 # Golden corpus manifest. PDFs are NEVER committed (see .gitignore).
-# Openly licensed entries are downloaded by scripts/fetch_corpus.py (Phase 3) and verified by sha256.
+# Openly licensed entries are downloaded by tools/corpus/fetch_corpus.py and verified by sha256 (empty: pinned on first fetch).
 # Private/copyrighted entries are listed with `source: local` and stay on the developer's machine.
 #
 # Fields:
@@ -13,12 +13,34 @@
 #   features    which hard cases it exercises: two-column, math, tables-wide, tables-multipage,
 #               vector-figures, sidebars, footnotes, margin-notes, index, glossary, scanned
 schema_version: 1
-books: []
-# Candidates to verify and add in Phase 3 (OpenStax, CC BY 4.0 per title page; confirm each):
-#   - University Physics Volume 1 (math, vector-figures, sidebars, index; ~1,000 pages, doubles as the 900+ page perf test)
-#   - Calculus Volume 1 (math-heavy)
-#   - Principles of Economics (charts, tables, glossary)
-#   - Biology 2e (figures with captions, sidebars, glossary)
+# Downloaded by tools/corpus/fetch_corpus.py into samples/corpus/cache/ (owner-approved, 2026-10-27). Licences checked
+# against the OpenStax CMS API (license_name) on 2026-10-27. CC BY-NC-SA titles are for local testing only: nothing
+# derived from them (outputs, page images) is ever committed; golden baselines hold metrics only.
+books:
+  - { id: university-physics-volume-1, kind: pdf, license: CC-BY-NC-SA-4.0, features: [math, vector-figures, sidebars, index], url: "https://assets.openstax.org/oscms-prodcms/media/documents/university-physics-volume-1_-_WEB.pdf", sha256: "93652b69c43197d10dc83438b813b5f7515e61e7ea4336da8636ff902cb4aba8" }
+  - { id: physics, kind: pdf, license: CC-BY-4.0, features: [math, vector-figures, sidebars], url: "https://assets.openstax.org/oscms-prodcms/media/documents/Physics_-_WEB.pdf", sha256: "a3f75487411ef13d0270c65fc801ceff2b28e6b339afed9b407fe477f7e8453e" }
+  - { id: high-school-statistics, kind: pdf, license: CC-BY-4.0, features: [tables, charts, math], url: "https://assets.openstax.org/oscms-prodcms/media/documents/high-school-statistics_-_WEB.pdf", sha256: "6aef489acbf932c6d94e8b6bf5339f0eeb60835f928a72e34ad8f937551e8def" }
+  - { id: introduction-intellectual-property, kind: pdf, license: CC-BY-4.0, features: [prose, footnotes], url: "https://assets.openstax.org/oscms-prodcms/media/documents/introduction-intellectual-property_-_WEB.pdf", sha256: "1498509864d37cb63a6ccc11bab7c783f3d30b2ed37d808ef80c56fdb676378a" }
+  - { id: calculus-volume-1, kind: pdf, license: CC-BY-NC-SA-4.0, features: [math, vector-figures], url: "https://assets.openstax.org/oscms-prodcms/media/documents/calculus-volume-1_-_WEB.pdf", sha256: "7303513c1927b9b6d04d150502e769cc1821638a24c774e2f6bba82bf9875990" }
+  - { id: principles-economics-3e, kind: pdf, license: CC-BY-NC-SA-4.0, features: [charts, tables, glossary], url: "https://assets.openstax.org/oscms-prodcms/media/documents/principles-economics-3e_-_WEB.pdf", sha256: "2d2e7549e13a1975965bfb14a577a3d7935173ff10ca2e1d953815560590a4eb" }
+  - { id: psychology-2e, kind: pdf, license: CC-BY-NC-SA-4.0, features: [figures, sidebars, glossary], url: "https://assets.openstax.org/oscms-prodcms/media/documents/Psychology2e_WEB.pdf", sha256: "2f08113c78127bc684922ad6a819db22bd4705ce9fcf28a07f36a2041b1474e2" }
+  - { id: us-history, kind: pdf, license: CC-BY-NC-SA-4.0, features: [prose, photos, sidebars], url: "https://assets.openstax.org/oscms-prodcms/media/documents/US_History_-_WEB.pdf", sha256: "b1330275566d9847623394ad29173f9a6f1c9f9270279e00cd5da2ac366ea5c8" }
+  - { id: introductory-business-statistics-2e, kind: pdf, license: CC-BY-NC-SA-4.0, features: [tables, math], url: "https://assets.openstax.org/oscms-prodcms/media/documents/introductory-business-statistics-2e_-_WEB.pdf", sha256: "05749a9e925884c34716050b6478bb37d44a5a63d97bbbe1d59db6e36b8e63e2" }
+  # Technical books (added 2026-10-28 after the owner found code, lists and headings converting badly): code blocks,
+  # text diagrams, nested lists. Licences checked on the publishers' pages; all non-commercial, so local testing only.
+  - { id: introduction-python-programming, kind: pdf, license: CC-BY-NC-SA-4.0, features: [code, lists, sidebars], url: "https://assets.openstax.org/oscms-prodcms/media/documents/Introduction_to_Python_Programming-WEB.pdf", sha256: "e1298e4fcfe541a8fc3bb786c5756d3d2be8e6ffc07997f1bc1e0ac270be383d" }
+  - { id: introduction-computer-science, kind: pdf, license: CC-BY-NC-SA-4.0, features: [code, lists, diagrams], url: "https://assets.openstax.org/oscms-prodcms/media/documents/Introduction_To_Computer_Science_-_WEB.pdf", sha256: "fd56aaf80c851e9f3b417745785ea5c832fc2911acfd2094a86f4c517fdf435a" }
+  - { id: principles-data-science, kind: pdf, license: CC-BY-NC-SA-4.0, features: [code, tables, charts], url: "https://assets.openstax.org/oscms-prodcms/media/documents/Principles-of-Data-Science-WEB.pdf", sha256: "6b47205459a2f4e25a2b2a86369e674a26a5ae566a4cc428dd31047670692398" }
+  - { id: think-python-2e, kind: pdf, license: CC-BY-NC-3.0, features: [code, latex, lists], url: "https://greenteapress.com/thinkpython2/thinkpython2.pdf", sha256: "6033000bac3f9268ad75ee041bf8e5d9a3bc8a33bb156399cbd014918cb59f94" }
+  - { id: pro-git, kind: pdf, license: CC-BY-NC-SA-3.0, features: [code, shaded-code, lists], url: "https://github.com/progit/progit2/releases/download/2.1.449/progit.pdf", sha256: "763ecf202d5cc71895597012d5f5aa2cdd8c147485c3eed87bd299a8ddb11ceb" }
+  # Project Gutenberg EPUB 3 editions (public domain in the US; the Project Gutenberg licence covers the trademark).
+  - { id: pride-and-prejudice, kind: epub, license: LicenseRef-PG, features: [novel], url: "https://www.gutenberg.org/ebooks/1342.epub3.images", sha256: "fd519471687295a8b2492d9e413bc24bee21ade9808d8af29899a16e8599064e" }
+  - { id: alice-in-wonderland, kind: epub, license: LicenseRef-PG, features: [novel, images], url: "https://www.gutenberg.org/ebooks/11.epub3.images", sha256: "4f81245d31380ac1d6eafb9a321e3691369bc70985736ae4bccf849a4f784036" }
+  - { id: frankenstein, kind: epub, license: LicenseRef-PG, features: [novel], url: "https://www.gutenberg.org/ebooks/84.epub3.images", sha256: "0bfcc8cacdc72e132272844ed465c6198f1049a8d2b9e3f16806d02beee452e3" }
+  - { id: sherlock-holmes, kind: epub, license: LicenseRef-PG, features: [short-stories], url: "https://www.gutenberg.org/ebooks/1661.epub3.images", sha256: "310ddf29f2b98b870b0e970061d236c9ce7c65163e0e172c254a1db3d070d3f4" }
+  - { id: great-expectations, kind: epub, license: LicenseRef-PG, features: [long-novel], url: "https://www.gutenberg.org/ebooks/1400.epub3.images", sha256: "2ac6c51a892286f58ac4b636beb4c6968a7fdcd89850c083c62dcda03076b07e" }
+  - { id: dracula, kind: epub, license: LicenseRef-PG, features: [novel, letters], url: "https://www.gutenberg.org/ebooks/345.epub3.images", sha256: "be5b12d762ceaacab5bfd0c1e510c8d36a0498cdde43790d6575d198fa9cd94d" }
+  - { id: origin-of-species, kind: epub, license: LicenseRef-PG, features: [non-fiction, index], url: "https://www.gutenberg.org/ebooks/1228.epub3.images", sha256: "49bb913c0d267c786846805ce8b90a2e92bc4b2ee7cc0ab9492821bd85c6819b" }
 
 # EPUB samples for the Phase 2 pagination spike (owner-approved download, 2026-10-20). Never committed; kept in
 # samples/corpus/cache/epub-idpf/. Source: https://github.com/IDPF/epub3-samples/releases/tag/20230704

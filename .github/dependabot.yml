@@ -14,17 +14,3 @@ updates:
     groups:
       androidx: { patterns: ["androidx.*"] }
       kotlin: { patterns: ["org.jetbrains.kotlin*", "com.google.devtools.ksp*"] }
-
-  - package-ecosystem: uv
-    directory: /converter
-    schedule: { interval: weekly }
-    commit-message: { prefix: "build(converter)" }
-
-  - package-ecosystem: docker
-    directory: /converter
-    schedule: { interval: weekly }
-    commit-message: { prefix: "build(converter)" }
-    ignore:
-      # Python version is pinned by ADR-0004 together with .python-version; change it via ADR, not a bot.
-      - dependency-name: python
-        update-types: ["version-update:semver-major", "version-update:semver-minor"]

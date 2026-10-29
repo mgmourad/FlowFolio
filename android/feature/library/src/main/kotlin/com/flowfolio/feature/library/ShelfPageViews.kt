@@ -74,6 +74,7 @@ import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
+import com.flowfolio.core.model.BookFormat
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.pageLabel
 import com.flowfolio.core.model.printedPages
@@ -177,6 +178,7 @@ internal fun BookTile(item: LibraryItem, actions: BookRowActions, origin: String
                 onLocate = actions.onLocate,
                 onAddToShelf = actions.onShelves,
                 onRename = actions.onRename,
+                onFlow = actions.onFlow,
                 onBookmarks = actions.onBookmarks,
                 selection = actions.selection
             ),
@@ -222,8 +224,10 @@ private fun BookListRow(item: LibraryItem, actions: BookRowActions) {
         return
     }
     val linked = book.storage is BookStorage.Linked
+    // A PDF's swipe also turns its Dynamic Flow on or off (ADR-0045).
+    val flow = actions.onFlow?.takeIf { book.format == BookFormat.PDF }
     SwipeRow(
-        startWidth = if (linked) ACTION_WIDTH * 3 else ACTION_WIDTH * 2,
+        startWidth = ACTION_WIDTH * (2 + (if (linked) 1 else 0) + (if (flow != null) 1 else 0)),
         endWidth = ACTION_WIDTH * 2,
         start = { close ->
             SwipeAction(R.string.action_add_to_shelf, Glyph.Shelves, FlowFolio.palette.item) {
@@ -233,6 +237,17 @@ private fun BookListRow(item: LibraryItem, actions: BookRowActions) {
             SwipeAction(R.string.action_bookmarks, Glyph.Bookmark, FlowFolio.palette.subItem) {
                 close()
                 actions.onBookmarks(book)
+            }
+            if (flow != null) {
+                val on = book.flowMode == true
+                SwipeAction(
+                    if (on) R.string.action_flow_off_short else R.string.action_flow_short,
+                    Glyph.DynamicFlow,
+                    FlowFolio.palette.title
+                ) {
+                    close()
+                    flow(book)
+                }
             }
             if (linked) {
                 SwipeAction(R.string.action_locate, Glyph.Search, FlowFolio.palette.title) {
@@ -331,6 +346,18 @@ private fun BookRowMenu(book: Book, open: Boolean, actions: BookRowActions, onCl
         }
         actions.selection?.let { selection -> entry(R.string.action_select, false) { selection.startWith(book.id) } }
         entry(R.string.action_add_to_shelf, false) { actions.onShelves(book) }
+        actions.onFlow?.takeIf { book.format == BookFormat.PDF }?.let { flow ->
+            entry(
+                if (book.flowMode ==
+                    true
+                ) {
+                    R.string.action_flow_off
+                } else {
+                    R.string.action_flow_on
+                },
+                false
+            ) { flow(book) }
+        }
         entry(R.string.action_rename, false) { actions.onRename(book) }
         if (book.storage is BookStorage.Linked) entry(R.string.action_locate, false) { actions.onLocate(book) }
         entry(R.string.action_delete, true) { actions.onDelete(book) }

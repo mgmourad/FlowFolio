@@ -28,8 +28,18 @@ data class Book(
     /** An EPUB's reading position as a reflow locator; [lastPage] and [pageCount] are at the size it was last read. */
     val lastLocator: String? = null,
     /** The folder it was imported with ("Books/Physics"), or null when it was imported on its own. */
-    val folder: String? = null
+    val folder: String? = null,
+    /**
+     * A PDF's view (ADR-0045): true for Dynamic Flow, false for the PDF, null when the reader never chose (then the
+     * "Turn on Dynamic Flow upon opening" setting decides).
+     */
+    val flowMode: Boolean? = null,
+    /** Where the reader is in the book's Dynamic Flow (a reflow locator); [lastPage] stays at the PDF page. */
+    val flowLocator: String? = null
 ) {
+    /** Whether this PDF is to be read in Dynamic Flow, given the "upon opening" setting [onOpen]. */
+    fun wantsFlow(onOpen: Boolean): Boolean = format == BookFormat.PDF && (flowMode ?: onOpen)
+
     /** How far through the book the reader is, 0..1 (0 when not started). */
     val progress: Float
         get() = lastPage?.let { if (pageCount > 1) it.toFloat() / (pageCount - 1) else 1f }?.coerceIn(0f, 1f) ?: 0f
@@ -101,8 +111,15 @@ data class UserSettings(
     /** Haptic ticks while riffling (ADR-0023). */
     val scrubHaptics: Boolean = true,
     /** How EPUB text is set: font, size, spacing, margins (M3). */
-    val text: ReaderText = ReaderText()
+    val text: ReaderText = ReaderText(),
+    /** "Turn on Dynamic Flow upon opening" (ADR-0045): PDFs whose view was never chosen open in Dynamic Flow. */
+    val dynamicFlowOnOpen: Boolean = false,
+    /** What switching views does with the highlights, notes and bookmarks made in the view being left. */
+    val flowCarry: FlowCarry = FlowCarry.ASK
 )
+
+/** Switching between a PDF and its Dynamic Flow: ask, or (once "don't show again" was chosen) the remembered answer. */
+enum class FlowCarry { ASK, CONVERT, SKIP }
 
 /** The paper sounds' loudness until the reader moves the sliders. */
 const val DEFAULT_SOUND_VOLUME = 0.7f

@@ -1,0 +1,22 @@
+{
+    "id": "principles-data-science",
+    "pages": 569,
+    "textPages": 567,
+    "meanCoverage": 1.0,
+    "coveredShare": 1.0,
+    "fallbackPages": [],
+    "scannedPages": 0,
+    "chapters": 19,
+    "chaptersFrom": "outline",
+    "headings": 781,
+    "outlineEntries": 142,
+    "outlineMatched": 1.0,
+    "figures": 332,
+    "tables": 92,
+    "equations": 432,
+    "inlineDrawings": 2192,
+    "epubcheckErrors": 0,
+    "epubcheckWarnings": 0,
+    "secondsPerPage": 0.027197028,
+    "epubMegabytes": 47.434185
+}

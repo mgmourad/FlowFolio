@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.SettingsRepository
 import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.ControlsAutoHide
+import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.MaterialSeed
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.ReaderText
@@ -36,7 +37,9 @@ data class SettingsActions(
     val onRiffleSound: (Boolean) -> Unit = {},
     val onRiffleVolume: (Float) -> Unit = {},
     val onScrubHaptics: (Boolean) -> Unit = {},
-    val onReaderText: (ReaderText) -> Unit = {}
+    val onReaderText: (ReaderText) -> Unit = {},
+    val onFlowOnOpen: (Boolean) -> Unit = {},
+    val onFlowAsk: (Boolean) -> Unit = {}
 )
 
 // One setter per setting, each a line: splitting the class would only scatter them.
@@ -65,6 +68,13 @@ class SettingsViewModel @Inject constructor(private val repo: SettingsRepository
     fun setGlow(on: Boolean) = viewModelScope.launch { repo.setNeonGlow(on) }
 
     fun setLookup(on: Boolean) = viewModelScope.launch { repo.setOnlineLookup(on) }
+
+    fun setFlowOnOpen(on: Boolean) = viewModelScope.launch { repo.setDynamicFlowOnOpen(on) }
+
+    /** Ask again when switching views; off keeps converting the changes without asking (the safe answer). */
+    fun setFlowAsk(on: Boolean) = viewModelScope.launch {
+        repo.setFlowCarry(if (on) FlowCarry.ASK else FlowCarry.CONVERT)
+    }
 
     fun setPageTurn(turn: PageTurn) = viewModelScope.launch { repo.setPageTurn(turn) }
 

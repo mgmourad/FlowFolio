@@ -12,6 +12,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.ControlsAutoHide
+import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.MaterialSeed
 import com.flowfolio.core.model.PageTurn
@@ -58,6 +59,8 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             scrubHaptics = p[SCRUB_HAPTICS] ?: defaults.scrubHaptics,
             text = readerText(p),
             appStyle = p[APP_STYLE].toEnum(defaults.appStyle),
+            dynamicFlowOnOpen = p[FLOW_ON_OPEN] ?: defaults.dynamicFlowOnOpen,
+            flowCarry = p[FLOW_CARRY].toEnum(defaults.flowCarry),
             materialSeed = p[MATERIAL_SEED].toEnum(defaults.materialSeed)
         )
     }
@@ -162,6 +165,14 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         store.edit { it[TRANSLATE_TO] = language }
     }
 
+    suspend fun setDynamicFlowOnOpen(on: Boolean) {
+        store.edit { it[FLOW_ON_OPEN] = on }
+    }
+
+    suspend fun setFlowCarry(carry: FlowCarry) {
+        store.edit { it[FLOW_CARRY] = carry.name }
+    }
+
     /** Turning the lookup on or off also counts as having been asked. */
     suspend fun setOnlineLookup(on: Boolean) {
         store.edit {
@@ -196,6 +207,8 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val TURN_VOLUME = floatPreferencesKey("turn_volume")
         val SCRUB_HAPTICS = booleanPreferencesKey("scrub_haptics")
         val APP_STYLE = stringPreferencesKey("app_style")
+        val FLOW_ON_OPEN = booleanPreferencesKey("dynamic_flow_on_open")
+        val FLOW_CARRY = stringPreferencesKey("flow_carry")
         val MATERIAL_SEED = stringPreferencesKey("material_seed")
         val TEXT_FONT = stringPreferencesKey("text_font")
         val TEXT_SIZE = intPreferencesKey("text_size_sp")

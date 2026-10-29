@@ -5,8 +5,35 @@ Read this first. Keep it current: update at the end of every phase.
 ## Current phase
 
 **Phase 2 (EPUB reading and the pagination engine) signed off by the owner 2026-10-27**
-(`docs/plans/phase2-signoff.md`). Next: Phase 3 (the converter and FlowFolio mode for PDFs; plan before code, and
-the plan decides the Python `converter/`'s fate).
+(`docs/plans/phase2-signoff.md`). Next: Phase 3, converter v1 on the phone: plan drafted 2026-10-27
+(`docs/plans/phase3-plan.md`, three milestones: M1 engine and extraction, M2 from structure to EPUB, M3 on the phone
+and the quality gate), approved 2026-10-27. M1 and M2 are built together and signed off together. Approved with it:
+kotlinx.serialization 1.12.0, EPUBCheck 5.4.0 (tests only), a release signing key, retiring the Python server (ADR-0043
+to write), the OpenStax corpus, a 5-minute target for a 1,000-page textbook, and at least 20 test books loaded in the
+app on the emulator, some on shelves.
+
+**Phase 3 signed off by the owner 2026-10-28 and released as FlowFolio 0.3.0-alpha.1 (build 300001)**
+(`docs/plans/phase3-m1m2-signoff.md`). Next: the owner's tweaks to M3 in three milestones, M3T1 (polish and
+navigation), M3T2 (finished, favourites, search), M3T3 (Reading Goal, Dictionary from English Wiktionary): plan approved
+2026-10-28 (`docs/plans/phase3-m3-tweaks-plan.md`). ADR-0044 is still proposed until the owner accepts it.
+
+**M1 and M2 built 2026-10-27.** The engine is a plain JVM module (ADR-0044), the Python server is retired (ADR-0043). On the
+`fold8_api37` emulator *University Physics* (959 pages) converts in about 58 s into a 40 MB EPUB and opens in the reader;
+all 9 corpus PDFs give EPUBs with no EPUBCheck errors and sidecars that follow the schema; baselines and 30 hand-labelled
+pages in `samples/golden/`. 27 test books are in the emulator's library, on shelves Textbooks and Classics.
+
+**M3 built 2026-10-28 as the owner's Dynamic Flow design (ADR-0045).** The "Convert"
+entry point became Dynamic Flow: one book, two views (PDF and reflowed EPUB), switched in the reader's "Aa" sheet, the
+library's press-and-hold menu and the list's swipe, or on open (Settings). A foreground service in its own process
+replaced the planned WorkManager job. CI now checks the CC BY corpus books (`corpus` job). Left: the Fold timing.
+
+**Releases (ADR-0042, owner 2026-10-27):** from Phase 3, every signed-off phase is committed, pushed, tagged and
+published as a GitHub pre-release: Phases 3-5 alpha, 6-8 canary, 9 beta. Version `0.<phase>.<patch>-<channel>.<n>`
+(tag `v0.3.0-alpha.1`), `versionCode` = MAJOR×10,000,000 + MINOR×100,000 + PATCH×1,000 + n (300001), title
+"FlowFolio 0.3.0-alpha.1 (build 300001)", APK `flowfolio-0.3.0-alpha.1-300001.apk` plus its SHA-256, signed with the
+release key in `~/.flowfolio` (never in the repo). Checklist: set `flowfolio.versionName`/`versionCode` in
+`android/gradle.properties`, add the CHANGELOG version heading, commit, push, wait for green CI, build the release APK,
+tag, `gh release create --prerelease`.
 
 Phase 2 in brief (details in the milestone sign-offs and the CHANGELOG):
 - M1 EPUB in the library (ADR-0020); M2 the paginated reader (ADR-0019, islands ADR-0021); M2b the riffle scrubber
@@ -53,17 +80,24 @@ Conventional Commits; keep `CHANGELOG.md`; no secrets in the repo; propose a spi
 
 - Android modules (ADR-0012): `:app`, `:core:model` (JVM), `:core:pdf` (PDFium JNI, NDK), `:core:database` (Room),
   `:core:datastore`, `:core:epub` (EPUB parsing, ADR-0020), `:core:reflow` (EPUB pagination and page drawing, ADR-0019), `:feature:reader:riffle` (the riffle scrubber, ADR-0022), `:core:data` (repositories, import, reader access), `:core:designsystem`, `:core:pagecurl`
-  (vendored), `:feature:library` (library + settings), `:feature:reader` (curl, spreads, page cache).
-- Monorepo: `android/` app (including, from Phase 3, the on-device conversion engine). The Python
-  `converter/` is no longer the product path (ADR-0009); its fate is decided in the Phase 3 plan.
-  Output contract: `docs/conversion-spec.md`.
-- Conversion engine (ADR-0009, planned): Kotlin Multiplatform `:core:conversion` (Android + JVM),
-  PDFium via our own JNI bridge, ONNX Runtime for models, WorkManager foreground job; corpus quality
-  gate runs on the JVM target in CI.
+  (vendored), `:feature:library` (library + settings), `:feature:reader` (curl, spreads, page cache),
+  `:core:conversion` (the PDF to EPUB converter, plain JVM, ADR-0044), `:tools:convert` (the converter on the desktop
+  through JNA, the corpus harness; development only, never in the app).
+- Monorepo: `android/` holds the app and the conversion engine; the Python server is retired (ADR-0043).
+  Output contract: `docs/conversion-spec.md` v1.0.0 and `docs/schemas/flowfolio.schema.json`.
+- Conversion (ADR-0009, ADR-0044): runs on the phone. `Converter` (`:core:conversion`) reads a `PdfSource`:
+  `PdfiumConversionSource` in `:core:pdf` (JNI, WebP images) on the phone, `JnaPdfSource` (PNG) on the desktop.
+  Stages over the `Document` IR: `Extraction`, `DesignSystem`, `Regions`, `Shapes`, `ReadingOrder`, `Blocks`,
+  `Headings`/`Linking`, then `EpubWriter`/`ChapterXhtml` and `SidecarBuilder`. Superscripts are marked in the text with
+  private-use characters (`Line.marked`, `SUP_OPEN`...) and written as `<sup>`/`<sub>`; `plain()` strips them.
+- Dynamic Flow (ADR-0045): `core/data/flow/` holds the bundle (`FlowFiles`, `files/flow/<book>/book.epub`), the
+  service (`FlowService`, process `:convert`, broadcasts in `FlowProtocol`), `DynamicFlow` (statuses and notices for
+  the app) and `ReadingViews` (each book shows only its current view's highlights and ribbons: locator != null is the
+  reflowed view). The reader: `ReaderViewModel.FlowState`, `DynamicFlowSwitch.kt`, `FlowCarrier` ("convert the
+  changes"); the converter's `#page-N` page-list markers map PDF pages to places (`ReflowBook.sourcePages`).
 - Android: Kotlin 2.4, AGP 9 (built-in Kotlin), Compose + Material 3, single activity, MVVM +
   unidirectional data flow, Hilt (ADR-0007), minSdk 29 / target 37 (ADR-0006). Build config lives
   in `android/build-logic` convention plugins; versions only in `android/gradle/libs.versions.toml` (ADR-0005).
-- Python converter skeleton (Phase 0, legacy): Python 3.13, uv, FastAPI, Docker.
 - Licensing (ADR-0003 as amended by ADR-0009): MIT project. No GPL/LGPL/AGPL code or model weights
   anywhere, since everything ships in the app. Matrix: `docs/licenses.md`.
 
@@ -98,10 +132,10 @@ wrap in `ScreenEntrance` and mark elements with `Modifier.reveal(order)` (ADR-00
 - Kotlin: ktlint `android_studio` style via Spotless (no trailing commas), detekt with
   `android/config/detekt/detekt.yml`. Packages: `com.flowfolio.<layer>.<feature>`
   (namespace to be confirmed before any release build).
-- Python: ruff (lint + format, line length 100), mypy `--strict`, pytest. Config only via
-  `FLOWFOLIO_*` env vars (`converter/.env.example`).
+- Python: standard-library scripts in `tools/` only, run with `python -I`; ruff 0.17.1 (line length 120) through
+  `uvx` in the pre-commit hooks.
 - Commits: Conventional Commits, enforced by the commit-msg hook and CI.
-  Scopes in use: `android`, `converter`, `ci`, `docs`.
+  Scopes in use: `android`, `ci`, `docs`, `tools`.
 - ADRs: `docs/adr/NNNN-title.md` from `0000-template.md`; accepted ADRs are never edited, only superseded.
 - Corpus PDFs are never committed; only manifest, hashes, baselines.
 
@@ -142,13 +176,18 @@ uv tool install pre-commit; pre-commit install          # hooks: pre-commit + co
 #   python -I tools/testpdfs/make_test_pdfs.py android/core/pdf/src/androidTest/assets/pdfs
 & "$env:ANDROID_HOME\emulator\emulator.exe" -avd flowfolio_api37   # start the local emulator
 
-# Converter (from converter/)
-uv sync
-uv run flowfolio-convert serve --reload                  # http://127.0.0.1:8000/docs
-uv run pytest; uv run ruff check .; uv run ruff format --check .; uv run mypy
-
-# Docker (from repo root)
-docker compose -f infra/docker/compose.dev.yml up --build   # converter on :8000
+# Converter corpus (Phase 3). Download the books (stdlib; hashes pinned in samples/corpus/manifest.yaml):
+python -I tools/corpus/fetch_corpus.py
+# From android/: the converter's JVM tests (robustness PDFs, the 9-book corpus against samples/golden/, ~6 min)
+.\gradlew.bat :core:conversion:test :tools:convert:test
+.\gradlew.bat :tools:convert:test --tests "*CorpusTest*" "-Pflowfolio.recordBaselines"   # after a deliberate change
+# The converter on the desktop (development only): installDist once, then
+#   $env:JAVA_OPTS="-Djna.library.path=D:/Projects/FlowFolio/android/tools/convert/build/pdfium"
+#   tools\convert\build\install\convert\bin\convert.bat convert|page|probe|unmatched|render <file.pdf> ...
+.\gradlew.bat :tools:convert:installDist
+# On the device: ConversionOnDeviceTest converts the pushed textbook through JNI (install the :core:pdf test APK with
+#   adb install -r -t, then am instrument -w -e class com.flowfolio.core.pdf.ConversionOnDeviceTest
+#   com.flowfolio.core.pdf.test/androidx.test.runner.AndroidJUnitRunner); the EPUB is in the test app's cache/.
 
 # All hooks on all files
 pre-commit run --all-files
@@ -160,8 +199,10 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 
 ## CI
 
-`.github/workflows/ci.yml` (ADR-0008): `changes` → `commits`, `android`, `converter`, `docker`
-→ `ci-gate` (the single required check). Actions are SHA-pinned; Dependabot updates weekly.
+`.github/workflows/ci.yml` (ADR-0008): `changes` → `commits`, `android`, `corpus` → `ci-gate` (the single required
+check). The android job's `testDebugUnitTest` also runs the converter's JVM tests (PDFium's Linux build is fetched);
+the `corpus` job fetches the three CC BY corpus PDFs (cached on the manifest's hash) and runs `CorpusTest` on them.
+Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. only those three books). Actions are SHA-pinned; Dependabot updates weekly.
 
 ## Known issues
 
@@ -170,8 +211,9 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
 2. **Robolectric on JDK 21 needs `--add-opens/--add-exports`** for `java.base` internals; set in
    `AndroidApplicationConventionPlugin`.
 3. **detekt 1.23.8 is 20 months old**; 2.0 is alpha. Works today; re-evaluate (licenses.md).
-4. **Starlette warns that `httpx` is deprecated** for `TestClient` (suggests `httpx2`). Harmless now;
-   decide in Phase 3.
+4. The debug `importPath` hook is ignored while the reader is open, and the emulator sleeps when folded over adb:
+   go back to the library and wake the device (`input keyevent KEYCODE_WAKEUP; wm dismiss-keyguard`) before
+   importing, or `openBookId` shows "File not found".
 5. Gradle prints "deprecated features ... incompatible with Gradle 10", coming from plugins. Track it.
 6. Branch protection needs a paid plan while the repo is private; `ci-gate` is advisory until then.
 7. Local git identity is the machine's global config (owner chose to keep it).
@@ -264,13 +306,37 @@ Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Andr
     still (1.5 s after the last turn). While that runs the WebView keeps the window busy, so `uiautomator dump` fails
     ("could not get idle state"): tap by coordinates, or wait until the book is cached. Bump `IslandStore.VERSION`
     whenever the parser could number islands differently.
+34. Room is at schema v15 (`books.flow_mode`: null never chosen, 0 PDF, 1 Dynamic Flow; `books.flow_locator`, the
+    place in the reflowed view, while `last_page` keeps the PDF page). A Dynamic Flow book's highlights and ribbons
+    with a locator belong to the reflowed view, those without to the PDF. Seeding test rows by hand: bookmark colours
+    are `BookmarkColor` names (`SUB_ITEM`, `TITLE`, ...); an unknown name reads back as `SUB_ITEM`. The service logs
+    `FF_FLOW <book> ok|<failure> in <ms>`; `dumpsys notification --noredact` shows its progress notification.
+36. Conversion spec 1.1.0 / engine 1.1.0 (2026-10-28): `Monospace` measures code fonts; `Blocks` sets code by column
+    (`codeText`), lists by marker and depth (`ListItem`), unruled tables (`withTables`, only when the reading order goes
+    across), hanging indents; `Line.marked(isCode)` marks inline code (`CODE_OPEN`/`CODE_CLOSE`, paired by
+    `ChapterXhtml.balanced`). Bump `SidecarBuilder.ENGINE_VERSION` whenever output changes: `FlowFiles.outdated` then
+    makes Dynamic Flow bundles convert again on next open, and `FlowCarrier.reanchor` finds their highlights again. The
+    reader draws list markers (`TextStyle.marker`, outside the text) and code panels (`TextStyle.preformatted`). The
+    local corpus has five technical books; `technical.pdf` (made by `tools/testpdfs`) is checked by
+    `TechnicalBookTest` in CI. Shell heredocs in Git Bash drop backslashes: write edit scripts to files.
+    Spec 1.2.0 / engine 1.2.2 (the owner's own books, 2026-10-28): `Line.marked` takes `Mark`s (code, bold, italic);
+    paragraphs break on the line step (`Blocks.pitches`), not box gaps; symbol and emoji bullets are kept
+    (`<li style="list-style-type: '✅ '">`, read by `ChapterParser`); the body style is the most used one not on shaded
+    panels (`DesignSystem.proseBody`); ruled tables are built from rule stacks cut where side borders stop
+    (`Regions.bordered`), grown by `withEdges`/`withRowsBelow`. `OwnBooksTest` covers these. The reader sets code in
+    `CodeFace`: JetBrains Mono (bundled, `DesignR.font.code_jetbrains_mono`, installed by `ReaderViewModel`), else a
+    monospaced system font file; never `Typeface.MONOSPACE`, which is proportional under Samsung font styles.
+    Desktop debugging: `convert.bat probe <pdf> <index>` lists paths, `page` lists the book's styles.
+35. The converter reads printed page numbers only from folios its `DesignSystem` finds; some books (OpenStax
+    *Physics*) have folios it misses, so their Dynamic Flow page labels fall back to the PDF page number, while the PDF
+    view's labels come from the app's `FolioScanner`.
 25. The reader's panels (Contents, Go to page, ribbon colours, "Aa") are drawn in the reader's window (`ReaderPanels`),
     not as sheets or dialogs, so glass can blur the page; their tags are resource ids. The bars and panels use
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
 ## Decision log
 
-ADRs 0001–0041 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0045 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
-Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026), reading fonts (0027), app themes (0028), Rustic without texture (0029), the book's own fonts (0030), EPUB memory and island stand-ins (0031), page sounds on the media stream (0032), the motion system (0033), element entrances and edge fades (0034), edge fades blurring behind the bars only (0035), the fixed signing key for sideloaded dev builds (0036), Google Books as a second details source (0037, its Google part superseded by 0039), multi-file and folder imports with folders as book paths (0038), book details from Open Library only (0039), EPUB highlights and ribbons stored by locator (0040), chapters on their own spread and the reader's chapter laid out first (0041).
+Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026), reading fonts (0027), app themes (0028), Rustic without texture (0029), the book's own fonts (0030), EPUB memory and island stand-ins (0031), page sounds on the media stream (0032), the motion system (0033), element entrances and edge fades (0034), edge fades blurring behind the bars only (0035), the fixed signing key for sideloaded dev builds (0036), Google Books as a second details source (0037, its Google part superseded by 0039), multi-file and folder imports with folders as book paths (0038), book details from Open Library only (0039), EPUB highlights and ribbons stored by locator (0040), chapters on their own spread and the reader's chapter laid out first (0041), release channels and versioning (0042), retiring the Python converter (0043), the conversion engine as a plain JVM module with JNA in desktop tooling only (0044, proposed for the M1+M2 sign-off; would supersede the KMP part of 0009), Dynamic Flow (0045, the owner's design).

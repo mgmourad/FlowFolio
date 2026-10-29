@@ -5,9 +5,6 @@ import android.text.SpannableStringBuilder
 import android.text.Spanned
 import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
-import android.text.style.SubscriptSpan
-import android.text.style.SuperscriptSpan
-import android.text.style.TypefaceSpan
 import android.util.Xml
 import com.flowfolio.core.epub.EpubArchive
 import java.util.Locale
@@ -34,6 +31,14 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
 
     /** Lists open around the text: their items' paragraphs are set ragged, since short justified lines gape. */
     private var lists = 0
+
+    /** The `ul` and `ol` open around the text, innermost last: how their items are marked and counted. */
+    private val listFrames = ArrayList<ListFrame>()
+
+    /** The marker of a list item just opened, for the item's first block of text (its own, or a `<p>` inside it). */
+    private var pendingMarker: String? = null
+
+    private class ListFrame(val ordered: Boolean, val type: String, var next: Int)
     private var skipDepth = 0
     private var depth = 0
     private var pre = 0
@@ -110,9 +115,9 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
         when (name) {
             "br" -> text.append('\n')
 
-            in BLOCKS -> startBlock(name)
+            in BLOCKS -> startBlock(p, name)
 
-            in INDENTED -> startIndented(name)
+            in INDENTED -> startIndented(p, name)
 
             "a" -> p.getAttributeValue(null, "href")?.let {
                 open += OpenSpan(name, LinkSpan(resolved(it)), text.length)
@@ -131,13 +136,15 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
             in BLOCKS -> {
                 flush()
                 if (name == "pre") pre--
+                if (name == "li") pendingMarker = null
                 style = TextStyle(indentEm = indent)
             }
 
             in INDENTED -> {
                 flush()
                 if (name in LISTS) lists--
-                indent = (indent - INDENT_EM).coerceAtLeast(0f)
+                if (name == "ul" || name == "ol") listFrames.removeLastOrNull()
+                indent = (indent - indentOf(name)).coerceAtLeast(0f)
                 style = TextStyle(indentEm = indent)
             }
 
@@ -157,27 +164,54 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
         text.append(s)
     }
 
-    private fun startBlock(name: String) {
+    private fun startBlock(p: XmlPullParser, name: String) {
         flush()
         if (name == "pre") pre++
+        if (name == "li") {
+            // An item drawn with its own glyph (`list-style-type: '✅ '`) keeps it.
+            val own = p.getAttributeValue(null, "style")?.let { OWN_MARKER.find(it)?.groupValues?.get(1)?.trim() }
+            pendingMarker = nextMarker().let { own?.ifEmpty { null } ?: it }
+        }
+        style = blockStyle(name)
+    }
+
+    /** How a block element's text sits: headings, captions, code and list items each their own way. */
+    private fun blockStyle(name: String): TextStyle {
         val heading = HEADING_SCALE[name]
-        style = TextStyle(
-            scale = heading ?: if (name == "figcaption" || name == "caption") CAPTION_SCALE else 1f,
+        val caption = name == "figcaption" || name == "caption"
+        return TextStyle(
+            scale = heading ?: if (caption) CAPTION_SCALE else 1f,
             bold = heading != null,
             heading = heading != null,
             indentEm = indent,
-            spaceBeforeEm = if (heading != null) HEADING_SPACE_BEFORE_EM else 0f,
-            spaceAfterEm = if (heading != null) HEADING_SPACE_AFTER_EM else TextStyle.BODY_SPACE_AFTER_EM,
+            spaceBeforeEm = if (heading != null) {
+                HEADING_SPACE_BEFORE_EM
+            } else if (name == "pre") {
+                CODE_SPACE_EM
+            } else {
+                0f
+            },
+            spaceAfterEm = when {
+                heading != null -> HEADING_SPACE_AFTER_EM
+                name == "pre" -> CODE_SPACE_EM
+                name == "li" -> ITEM_SPACE_AFTER_EM
+                else -> TextStyle.BODY_SPACE_AFTER_EM
+            },
             justify = (name == "p" || name == "dd") && lists == 0,
-            centered = name == "figcaption" || name == "caption",
+            centered = caption,
             preformatted = name == "pre"
         )
     }
 
-    private fun startIndented(name: String) {
+    private fun startIndented(p: XmlPullParser, name: String) {
         flush()
         if (name in LISTS) lists++
-        indent += INDENT_EM
+        if (name == "ul" || name == "ol") {
+            val type = p.getAttributeValue(null, "type").orEmpty()
+            val start = p.getAttributeValue(null, "start")?.trim()?.toIntOrNull() ?: 1
+            listFrames += ListFrame(name == "ol", type, start)
+        }
+        indent += indentOf(name)
         style = TextStyle(indentEm = indent)
     }
 
@@ -238,13 +272,40 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
         depth--
     }
 
+// Each return skips one kind of image the reader can't place.
+    @Suppress("ReturnCount")
     private fun image(p: XmlPullParser) {
         val src = p.getAttributeValue(null, "src") ?: p.getAttributeValue(null, "xlink:href") ?: return
         val target = EpubArchive.resolve(path, src)?.substringBefore('#') ?: return
+        inlineSpan(p, target)?.let { span ->
+            val at = text.length
+            text.append(OBJECT)
+            text.setSpan(span, at, at + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            return
+        }
         flush()
-        val block = Block.Image(here, target, p.getAttributeValue(null, "alt"))
+        val ink = "ff-equation" in p.getAttributeValue(null, "class").orEmpty().split(' ')
+        val block = Block.Image(here, target, p.getAttributeValue(null, "alt"), ink)
         blocks += block
         flushed += block.length
+    }
+
+    /**
+     * An image set in the line of text, for `<img class="ff-inline">` sized in ems (FlowFolio's converted books: an
+     * equation drawn inline); null for any other image, which stands as a block.
+     */
+// Each return is one attribute an inline image can't do without.
+    @Suppress("ReturnCount")
+    private fun inlineSpan(p: XmlPullParser, target: String): InlineImageSpan? {
+        val cls = p.getAttributeValue(null, "class").orEmpty()
+        if ("ff-inline" !in cls.split(' ')) return null
+        val style = p.getAttributeValue(null, "style").orEmpty()
+        fun ems(name: String) =
+            Regex("(?:^|;)\\s*$name\\s*:\\s*(-?[0-9.]+)em").find(style)?.groupValues?.get(1)?.toFloatOrNull()
+        val height = ems("height") ?: return null
+        val width = ems("width") ?: return null
+        val drop = -(ems("vertical-align") ?: 0f)
+        return InlineImageSpan(target, height, width, drop)
     }
 
     /** Ends the text collected so far as a block (trailing spaces trimmed). Spans still open continue in the next. */
@@ -257,11 +318,35 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
         if (text.isNotEmpty()) {
             // Lines broken by hand (a list or verse written with <br>) are short: justified, they would gape.
             val broken = text.count { it == '\n' } >= HAND_BROKEN_LINES
-            val block = Block.Text(flushed, text, if (broken) style.copy(justify = false) else style)
+            val shown = if (broken) style.copy(justify = false) else style
+            val block = Block.Text(flushed, text, pendingMarker?.let { shown.copy(marker = it) } ?: shown)
+            pendingMarker = null
             blocks += block
             flushed += block.length
         }
         text = SpannableStringBuilder()
+    }
+
+    /**
+     * The next item's marker in the innermost list: a bullet that changes with depth (•, ◦, ▪), or the next number in
+     * the list's style (1., a., A., i., I.); null outside a `ul` or `ol` (a definition list's items have none).
+     */
+    private fun nextMarker(): String? {
+        val frame = listFrames.lastOrNull()
+        return when {
+            frame == null -> null
+            !frame.ordered -> BULLETS[(listFrames.count { !it.ordered } - 1).coerceAtLeast(0) % BULLETS.size]
+            else -> numbered(frame.next++, frame.type) + "."
+        }
+    }
+
+    /** [n] in a list's numbering style (`type`: 1, a, A, i, I). */
+    private fun numbered(n: Int, type: String): String = when (type) {
+        "a" -> letters(n).lowercase(Locale.ROOT)
+        "A" -> letters(n)
+        "i" -> roman(n).lowercase(Locale.ROOT)
+        "I" -> roman(n)
+        else -> n.toString()
     }
 
     private fun closeSpan(tag: String) {
@@ -304,6 +389,46 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
     private companion object {
         const val OBJECT = '￼'
         const val INDENT_EM = 1.2f
+
+        /** A `ul` or `ol` indents a little more: its markers stand in the indent. */
+        const val LIST_INDENT_EM = 1.6f
+
+        fun indentOf(name: String) = if (name == "ul" || name == "ol") LIST_INDENT_EM else INDENT_EM
+        const val CODE_SPACE_EM = 0.9f
+        const val ITEM_SPACE_AFTER_EM = 0.3f
+        val BULLETS = listOf("•", "◦", "▪")
+        private val OWN_MARKER = Regex("list-style-type\\s*:\\s*['\"]([^'\"]*)['\"]")
+
+        /** 1 is A, 26 Z, 27 AA (as lists count past z). */
+        fun letters(n: Int): String {
+            var k = n.coerceAtLeast(1)
+            val sb = StringBuilder()
+            while (k > 0) {
+                k--
+                sb.insert(0, 'A' + k % LETTERS)
+                k /= LETTERS
+            }
+            return sb.toString()
+        }
+
+        fun roman(n: Int): String {
+            var k = n.coerceIn(1, MAX_ROMAN)
+            val sb = StringBuilder()
+            for ((value, digits) in ROMAN) {
+                while (k >= value) {
+                    sb.append(digits)
+                    k -= value
+                }
+            }
+            return sb.toString()
+        }
+
+        private const val LETTERS = 26
+        private const val MAX_ROMAN = 3999
+        private val ROMAN = listOf(
+            1000 to "M", 900 to "CM", 500 to "D", 400 to "CD", 100 to "C", 90 to "XC", 50 to "L", 40 to "XL",
+            10 to "X", 9 to "IX", 5 to "V", 4 to "IV", 1 to "I"
+        )
         const val CAPTION_SCALE = 0.85f
         const val SMALL_SCALE = 0.85f
         const val HEADING_SPACE_BEFORE_EM = 1f
@@ -332,9 +457,9 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
         fun spanFor(name: String): Any? = when (name) {
             "b", "strong", "th" -> StyleSpan(Typeface.BOLD)
             "i", "em", "cite", "var", "dfn" -> StyleSpan(Typeface.ITALIC)
-            "sup" -> SuperscriptSpan()
-            "sub" -> SubscriptSpan()
-            "code", "kbd", "samp", "tt" -> TypefaceSpan("monospace")
+            "sup" -> ScriptSpan(raised = true)
+            "sub" -> ScriptSpan(raised = false)
+            "code", "kbd", "samp", "tt" -> CodeSpan()
             "small" -> RelativeSizeSpan(SMALL_SCALE)
             else -> null
         }

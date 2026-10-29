@@ -27,8 +27,11 @@ sealed interface Block {
         override val length get() = text.length
     }
 
-    /** An image from the book; [path] is book-internal. */
-    class Image(override val start: Int, val path: String, val alt: String?) : Block {
+    /**
+     * An image from the book; [path] is book-internal. [ink] marks line art drawn in ink on paper (a converted book's
+     * equations, `class="ff-equation"`): it is drawn in the page's text colour, its paper left clear.
+     */
+    class Image(override val start: Int, val path: String, val alt: String?, val ink: Boolean = false) : Block {
         override val length get() = 1
     }
 
@@ -50,8 +53,16 @@ data class TextStyle(
     val spaceAfterEm: Float = BODY_SPACE_AFTER_EM,
     val justify: Boolean = false,
     val centered: Boolean = false,
-    /** Keep line breaks and spaces as written (`<pre>`). */
-    val preformatted: Boolean = false
+    /**
+     * Keep line breaks and spaces as written (`<pre>`): code, set in a monospaced face on a faint panel, never wrapped
+     * where it can be scaled down to fit.
+     */
+    val preformatted: Boolean = false,
+    /**
+     * A list item's bullet or number ("•", "3.", "b."), drawn in the indent beside its first line. It is not part of
+     * the text, so the book's character offsets (and the highlights placed by them) don't move.
+     */
+    val marker: String? = null
 ) {
     companion object {
         const val BODY_SPACE_AFTER_EM = 0.6f

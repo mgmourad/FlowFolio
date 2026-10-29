@@ -77,6 +77,7 @@ import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.designsystem.shelfCoverKey
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
+import com.flowfolio.core.model.BookFormat
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.pageLabel
@@ -388,6 +389,12 @@ private fun BookMenu(item: LibraryItem, open: Boolean, actions: LibraryActions, 
         MenuEntry(R.string.action_add_to_shelf) {
             onClose()
             actions.onAddToShelf(item.book)
+        }
+        actions.onFlow?.takeIf { item.book.format == BookFormat.PDF }?.let { flow ->
+            MenuEntry(if (item.book.flowMode == true) R.string.action_flow_off else R.string.action_flow_on) {
+                onClose()
+                flow(item.book)
+            }
         }
         actions.onBookmarks?.let { bookmarks ->
             MenuEntry(R.string.action_bookmarks) {

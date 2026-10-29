@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Switching a PDF book between the PDF and Dynamic Flow (ADR-0045): asked in the reader and the library. -->
+    <string name="flow_notice_title">Your notes stay with each view</string>
+    <string name="flow_notice_to_flow">Highlights, notes and bookmarks you made in the PDF won\'t show in Dynamic Flow, and you could lose track of them unless you convert the changes.</string>
+    <string name="flow_notice_to_pdf">Highlights, notes and bookmarks you made in Dynamic Flow won\'t show in the PDF, and you could lose track of them unless you convert the changes.</string>
+    <string name="flow_notice_convert">Convert the changes</string>
+    <string name="flow_notice_skip">Switch without them</string>
+    <string name="flow_notice_cancel">Cancel</string>
+    <string name="flow_notice_dont_ask">Don\'t show this again</string>
+    <string name="flow_carry_title">Converting your changes</string>
+    <string name="flow_carry_body">This takes a little while and happens in the background, so you can keep reading. You\'ll get a notification when your highlights, notes and bookmarks are across.</string>
+    <string name="flow_carry_ok">Got it</string>
+</resources>

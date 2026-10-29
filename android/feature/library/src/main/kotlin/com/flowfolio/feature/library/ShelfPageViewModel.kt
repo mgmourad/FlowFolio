@@ -5,10 +5,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.data.RelinkResult
+import com.flowfolio.core.data.SettingsRepository
 import com.flowfolio.core.data.ShelfRepository
+import com.flowfolio.core.data.flow.DynamicFlow
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
+import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.Shelf
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,6 +21,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -51,8 +55,20 @@ data class ShelfPageUiState(
 class ShelfPageViewModel @Inject constructor(
     saved: SavedStateHandle,
     private val library: LibraryRepository,
-    shelfRepo: ShelfRepository
+    shelfRepo: ShelfRepository,
+    private val settingsRepo: SettingsRepository,
+    private val flow: DynamicFlow = DynamicFlow.None
 ) : ViewModel() {
+    /** Whether switching a book's view asks first, or what was answered for good (ADR-0045). */
+    val flowCarry: StateFlow<FlowCarry> =
+        settingsRepo.settings.map { it.flowCarry }.stateIn(viewModelScope, SharingStarted.Eagerly, FlowCarry.ASK)
+
+    /** Turns a PDF's Dynamic Flow on (converting it in the background) or off, bringing the changes across or not. */
+    fun setFlow(book: Book, on: Boolean, carry: Boolean) =
+        viewModelScope.launch { flow.setFlowMode(book.id, on, carry) }
+
+    fun setFlowCarry(carry: FlowCarry) = viewModelScope.launch { settingsRepo.setFlowCarry(carry) }
+
     private val shelfId: Long = saved[ARG_SHELF_ID] ?: LOOSE
     private val folder: String? = saved.get<String>(ARG_FOLDER)?.let(android.net.Uri::decode)
     private val availability = MutableStateFlow<Map<String, Availability>>(emptyMap())

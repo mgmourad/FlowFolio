@@ -57,6 +57,9 @@ internal class EpubSession private constructor(
     private var paginator: Paginator? = null
     private var drawer = PageDrawer(book, ::image) { null }
 
+    /** Images set in lines of text (a converted book's inline equations), read for the pages drawn. */
+    private val inlineImages = com.flowfolio.core.reflow.InlineImages(book)
+
     /** Equations, SVG and complex tables, laid out and drawn by the island WebView. */
     val islands = EpubIslands(book)
 
@@ -220,6 +223,12 @@ internal class EpubSession private constructor(
 
     fun locatorOf(page: Int): Locator = book.locatorOf(page)
 
+    /** A converted PDF's place for PDF page [page] (ADR-0045); null for other EPUBs. */
+    fun locatorOfSourcePage(page: Int): Locator? = book.locatorOfSourcePage(page)
+
+    /** The PDF page (0-based) [locator] is in, for a converted PDF; null for other EPUBs. */
+    fun sourcePageOf(locator: Locator): Int? = book.sourcePageOf(locator)
+
     /** The chapter [page] is in. */
     fun chapterOf(page: Int): Int = book.pages.getOrNull(page)?.chapter ?: 0
 
@@ -269,6 +278,7 @@ internal class EpubSession private constructor(
             // The page's equations and tables, from memory or the disk cache, before it is drawn.
             islands.useInk(colors.ink)
             islands.loadFor(page)
+            inlineImages.loadFor(page)
             // Drawn straight into one reused 16-bit page (the paper is opaque), then uploaded to the GPU (ADR-0013).
             val bmp = scratch(key.size.width, key.size.height)
             bmp.eraseColor(colors.paper)
@@ -293,6 +303,7 @@ internal class EpubSession private constructor(
             bmp.eraseColor(colors.paper)
             val canvas = Canvas(bmp)
             canvas.scale(size.width.toFloat() / pane.width, size.height.toFloat() / pane.height)
+            inlineImages.loadFor(laidOut)
             drawer.draw(PageDrawer.Target(canvas, margins.left.toFloat(), margins.top.toFloat(), p), laidOut, colors)
             val small = bmp.copy(Bitmap.Config.RGB_565, false) ?: bmp
             if (small !== bmp) bmp.recycle()
@@ -482,6 +493,7 @@ internal class EpubSession private constructor(
 
     fun close() {
         images.evictAll()
+        inlineImages.clear()
         scratchPage = null // a render may still hold the lock; the collector frees it
         opened.archive.close()
     }

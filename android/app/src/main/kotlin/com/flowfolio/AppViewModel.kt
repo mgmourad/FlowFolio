@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.data.flow.DynamicFlow
 import com.flowfolio.core.model.AppStyle
+import com.flowfolio.core.model.FlowNotice
 import com.flowfolio.core.model.MaterialSeed
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
@@ -28,8 +30,24 @@ data class AppLook(
 
 /** Activity-scoped state: app theme, and files shared into the app waiting for the library to import them. */
 @HiltViewModel
-class AppViewModel @Inject constructor(settings: SettingsRepository, private val reader: ReaderRepository) :
-    ViewModel() {
+class AppViewModel @Inject constructor(
+    settings: SettingsRepository,
+    private val reader: ReaderRepository,
+    private val flow: DynamicFlow
+) : ViewModel() {
+    /** Dynamic Flow's notices for the app's banner (ADR-0045). */
+    val flowNotices: Flow<FlowNotice> = flow.notices
+
+    /** Whether to ask for Android 13's notification permission now (the first conversion). */
+    val askNotifications: StateFlow<Boolean> = flow.wantsNotificationPermission
+
+    fun notificationsAsked() = flow.notificationPermissionAsked()
+
+    /** A Dynamic Flow notification was tapped: open its book. */
+    fun onNotificationOpen(bookId: String) {
+        directOpen.trySend(bookId to null)
+    }
+
     /** The app's look: light or dark, the theme (ADR-0028) and Material You's colours. */
     val theme: StateFlow<AppLook> =
         settings.settings.map { AppLook(it.theme, it.appStyle, it.materialSeed) }

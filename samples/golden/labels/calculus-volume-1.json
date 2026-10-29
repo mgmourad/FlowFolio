@@ -1,0 +1,74 @@
+[
+  {
+    "page": 15,
+    "headings": [
+      {
+        "text": "Functions and Graphs",
+        "level": 1
+      },
+      {
+        "text": "Introduction",
+        "level": 2
+      }
+    ],
+    "order": [
+      "A portion of the San Andreas Fault",
+      "Review of Functions",
+      "In the past few years, major earthquakes",
+      "Calculus is the mathematics that describes"
+    ]
+  },
+  {
+    "page": 18,
+    "order": [
+      "We read this as the set of real numbers",
+      "A set such as this, which contains",
+      "The numbers 1 and 5 are called the",
+      "We can use similar notation",
+      "The smallest number in this set is zero",
+      "It is important to note that",
+      "refers to the set of all real numbers",
+      "Some functions are defined using different",
+      "Substitute the given value"
+    ]
+  },
+  {
+    "page": 449,
+    "headings": [
+      {
+        "text": "Approximating Area",
+        "level": 3
+      }
+    ],
+    "order": [
+      "Use sigma notation property",
+      "Finding the Sum of the Function Values",
+      "Using the formula, we have",
+      "Evaluate the sum indicated",
+      "Now that we have the necessary notation"
+    ]
+  },
+  {
+    "page": 767,
+    "headings": [
+      {
+        "text": "Index",
+        "level": 1
+      }
+    ],
+    "order": [
+      "absolute extremum",
+      "bald eagle",
+      "carbon dating",
+      "deceleration",
+      "definite integral",
+      "earthquake",
+      "federal income tax",
+      "graph of a function",
+      "half-life",
+      "iceboat",
+      "joule",
+      "lamina"
+    ]
+  }
+]

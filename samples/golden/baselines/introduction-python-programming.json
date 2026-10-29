@@ -1,0 +1,22 @@
+{
+    "id": "introduction-python-programming",
+    "pages": 397,
+    "textPages": 395,
+    "meanCoverage": 1.0,
+    "coveredShare": 1.0,
+    "fallbackPages": [],
+    "scannedPages": 0,
+    "chapters": 20,
+    "chaptersFrom": "outline",
+    "headings": 1286,
+    "outlineEntries": 164,
+    "outlineMatched": 1.0,
+    "figures": 37,
+    "tables": 81,
+    "equations": 54,
+    "inlineDrawings": 233,
+    "epubcheckErrors": 0,
+    "epubcheckWarnings": 0,
+    "secondsPerPage": 0.014876958,
+    "epubMegabytes": 23.953156
+}

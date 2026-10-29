@@ -32,6 +32,11 @@ turbine = "1.2.1"
 spotless = "8.10.4"
 ktlint = "1.8.0"
 detekt = "1.23.8"
+# Phase 3 converter (owner-approved 2026-10-27): JSON for the IR and flowfolio.json; JNA and EPUBCheck for the
+# desktop JVM only (tests and the corpus harness), never in the app.
+serialization = "1.12.0"
+jna = "5.19.1"
+epubcheck = "5.4.0"
 
 
 # SDK levels (ADR-0006)
@@ -83,6 +88,9 @@ androidx-benchmark-macro-junit4 = { module = "androidx.benchmark:benchmark-macro
 kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 kotlinx-coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
+epubcheck = { module = "org.w3c:epubcheck", version.ref = "epubcheck" }
 
 
 # Gradle plugins as libraries, for build-logic convention plugins
@@ -100,6 +108,7 @@ android-library = { id = "com.android.library", version.ref = "agp" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 androidx-room = { id = "androidx.room", version.ref = "room" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 hilt = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

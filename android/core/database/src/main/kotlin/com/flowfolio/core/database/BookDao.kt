@@ -63,8 +63,11 @@ interface BookDao {
         ratingsCount: Int? = null
     )
 
-    /** A page position; an EPUB's locator is cleared, so it opens at this page (measurement scripts set it). */
-    @Query("UPDATE books SET last_page = :page, last_locator = NULL WHERE id = :id")
+    /**
+     * A page position; an EPUB's locator is cleared, so it opens at this page (measurement scripts set it), and so is a
+     * PDF's place in Dynamic Flow, which then opens at this PDF page too (ADR-0045).
+     */
+    @Query("UPDATE books SET last_page = :page, last_locator = NULL, flow_locator = NULL WHERE id = :id")
     suspend fun updateLastPage(id: String, page: Int)
 
     @Query("DELETE FROM books WHERE id = :id")

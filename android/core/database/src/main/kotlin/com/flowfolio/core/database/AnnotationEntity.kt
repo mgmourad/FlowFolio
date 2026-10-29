@@ -60,6 +60,10 @@ interface AnnotationDao {
     /** Where an EPUB highlight now starts, after a re-layout (not a change by the reader: updated_at stays). */
     @Query("UPDATE annotations SET page = :page WHERE id = :id")
     suspend fun setPage(id: Long, page: Int)
+
+    /** An EPUB highlight found again in a new edition of its text (a re-converted Dynamic Flow, ADR-0045). */
+    @Query("UPDATE annotations SET locator = :locator, char_start = :start, char_end = :end WHERE id = :id")
+    suspend fun relocate(id: Long, locator: String, start: Int, end: Int)
 }
 
 /** Per-book reading choices that are not part of a book's details. */
@@ -80,4 +84,16 @@ interface BookReadingDao {
     /** An EPUB's position set from outside the reader (a highlight or ribbon opened from the library). */
     @Query("UPDATE books SET last_locator = :locator, last_page = :page WHERE id = :id")
     suspend fun updateEpubPosition(id: String, locator: String, page: Int)
+
+    /** A PDF's view: true Dynamic Flow, false the PDF (ADR-0045). */
+    @Query("UPDATE books SET flow_mode = :on WHERE id = :id")
+    suspend fun setFlowMode(id: String, on: Boolean)
+
+    /** Where the reader is in a PDF's Dynamic Flow, and the PDF page that is ([page], 0-based). */
+    @Query("UPDATE books SET flow_locator = :locator, last_page = :page WHERE id = :id")
+    suspend fun updateFlowProgress(id: String, locator: String, page: Int)
+
+    /** Where the reader is in a PDF's Dynamic Flow, without touching the PDF's page (a switch about to happen). */
+    @Query("UPDATE books SET flow_locator = :locator WHERE id = :id")
+    suspend fun setFlowLocator(id: String, locator: String)
 }

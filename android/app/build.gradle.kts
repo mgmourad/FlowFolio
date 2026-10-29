@@ -12,8 +12,9 @@ android {
 
     defaultConfig {
         applicationId = "com.flowfolio"
-        versionCode = 1
-        versionName = "0.1.0"
+        // ADR-0042: the release version lives in gradle.properties, so a release changes one file.
+        versionCode = providers.gradleProperty("flowfolio.versionCode").get().toInt()
+        versionName = providers.gradleProperty("flowfolio.versionName").get()
         // The adb hooks the measurement tools use (openBookId, importPath, startPage, gcNow): debug builds always
         // have them; of the release-like builds only the baseline-profile plugin's benchmark build types do.
         buildConfigField("boolean", "MEASUREMENT_HOOKS", "false")
@@ -34,6 +35,18 @@ android {
         }
     }
 
+    // ADR-0042: the release key, also outside the repo (`flowfolio.releaseSigning.*`). Without it release builds are
+    // unsigned and can't be published.
+    val releaseStore = providers.gradleProperty("flowfolio.releaseSigning.storeFile").orNull
+    val releaseSigning = releaseStore?.let {
+        signingConfigs.create("release") {
+            storeFile = file(it)
+            storePassword = providers.gradleProperty("flowfolio.releaseSigning.storePassword").get()
+            keyAlias = providers.gradleProperty("flowfolio.releaseSigning.keyAlias").get()
+            keyPassword = providers.gradleProperty("flowfolio.releaseSigning.keyPassword").get()
+        }
+    }
+
     buildTypes {
         debug {
             // Lets a debug build sit next to a future release build on the same device.
@@ -42,6 +55,7 @@ android {
             devSigning?.let { signingConfig = it }
         }
         release {
+            releaseSigning?.let { signingConfig = it }
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }

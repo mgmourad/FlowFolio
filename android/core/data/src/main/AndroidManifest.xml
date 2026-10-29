@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Dynamic Flow (ADR-0045): conversion runs as a foreground service with a progress notification. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application>
+        <!-- Its own process, so PDFium parsing an untrusted PDF can't take the app down. -->
+        <service
+            android:name=".flow.FlowService"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+            android:process=":convert" />
+    </application>
+
+</manifest>

@@ -150,18 +150,53 @@ class ReflowBookTest {
         assertTrue(single.pages.all { it.slices.isNotEmpty() })
     }
 
-    /** Two chapters: a heading with an anchor, a block and an inline equation, and plain text. */
-    private fun book(): ReflowBook {
+    @Test
+    fun aConvertedBooksPdfPagesMapToPlacesAndBack() {
+        val book = book(pdfPages = true)
+        val section = Locator(0, book.chapters[0].anchors.getValue("page-2"))
+        // 0-based PDF pages, whatever the printed labels say.
+        assertEquals(listOf(0, 1, 2), book.sourcePages.map { it.second })
+        assertEquals(section, book.locatorOfSourcePage(1))
+        assertEquals(Locator(1, book.chapters[1].anchors.getValue("page-3")), book.locatorOfSourcePage(2))
+        // A page without a marker of its own (a page of only a figure) goes to the last marked page before it.
+        assertEquals(book.locatorOfSourcePage(2), book.locatorOfSourcePage(7))
+        // A place is on the last page that starts at or before it.
+        assertEquals(1, book.sourcePageOf(Locator(section.chapter, section.offset + 5)))
+        assertEquals(0, book.sourcePageOf(Locator(0, 0)))
+        assertEquals(2, book.sourcePageOf(Locator(1, 40)))
+    }
+
+    @Test
+    fun aBookWithoutPdfMarkersHasNoSourcePages() {
+        val book = book()
+        assertTrue(book.sourcePages.isEmpty())
+        assertNull(book.locatorOfSourcePage(0))
+        assertNull(book.sourcePageOf(Locator(0, 0)))
+    }
+
+    /**
+     * Two chapters: a heading with an anchor, a block and an inline equation, and plain text. With [pdfPages], the
+     * converter's markers of the PDF pages: page 1 starts chapter one, page 2 its section, page 3 chapter two.
+     */
+    private fun book(pdfPages: Boolean = false): ReflowBook {
         val words = (1..120).joinToString(" ") { "word$it" }
         val math = """<math xmlns="http://www.w3.org/1998/Math/MathML"><mi>x</mi></math>"""
-        val c1 = """<html xmlns="http://www.w3.org/1999/xhtml"><body><h1>One</h1><p>$words</p>
+        fun mark(n: Int) = if (pdfPages) """<span id="page-$n"></span>""" else ""
+        val c1 = """<html xmlns="http://www.w3.org/1999/xhtml"><body>${mark(1)}<h1>One</h1><p>$words</p>
             <math xmlns="http://www.w3.org/1998/Math/MathML" display="block"><mi>y</mi></math>
-            <h2 id="s1">Section</h2><p>Inline $math in a sentence. $words</p></body></html>"""
-        val c2 = """<html xmlns="http://www.w3.org/1999/xhtml"><body><h1>Two</h1><p>$words</p><p>$words</p>
+            ${mark(2)}<h2 id="s1">Section</h2><p>Inline $math in a sentence. $words</p></body></html>"""
+        val c2 = """<html xmlns="http://www.w3.org/1999/xhtml"><body>${mark(3)}<h1>Two</h1><p>$words</p><p>$words</p>
             </body></html>"""
+        val pageList = if (!pdfPages) {
+            ""
+        } else {
+            """<nav epub:type="page-list"><ol>
+            <li><a href="c1.xhtml#page-1">i</a></li><li><a href="c1.xhtml#page-2">ii</a></li>
+            <li><a href="c2.xhtml#page-3">1</a></li></ol></nav>"""
+        }
         val nav = """<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><body>
             <nav epub:type="toc"><ol><li><a href="c1.xhtml">One</a></li><li><a href="c2.xhtml">Two</a></li></ol></nav>
-            </body></html>"""
+            $pageList</body></html>"""
         val opf = """<package xmlns="http://www.idpf.org/2007/opf" version="3.0"><metadata
             xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>Test</dc:title><dc:language>en</dc:language>
             </metadata><manifest><item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>

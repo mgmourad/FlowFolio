@@ -1,0 +1,42 @@
+[
+  {
+    "page": 17,
+    "headings": [
+      {
+        "text": "Units and Measurement",
+        "level": 1
+      }
+    ],
+    "order": [
+      "This image might be showing any number",
+      "The Scope and Scale of Physics",
+      "As noted in the figure caption"
+    ]
+  },
+  {
+    "page": 20,
+    "headings": [
+      {
+        "text": "The Scale of Physics",
+        "level": 3
+      }
+    ],
+    "order": [
+      "since it deals with the interactions",
+      "Physics has many applications in the biological",
+      "It is not necessary to study all applications",
+      "From the discussion so far",
+      "Using a scanning tunneling microscope",
+      "of a number is the power of 10"
+    ]
+  },
+  {
+    "page": 569,
+    "order": [
+      "balance it. The magnitude of the gravitational",
+      "The distribution of mass affects",
+      "If you tilt a box so that one edge",
+      "A passenger car with a 2.5"
+    ]
+  }
+]

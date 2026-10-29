@@ -125,4 +125,14 @@
     <string name="reader_translate_choose">This passage is already in that language. Choose the language to translate into above.</string>
     <string name="reader_font_book">Book’s font</string>
     <string name="reader_font_book_none">Book’s (none)</string>
+    <!-- Dynamic Flow (ADR-0045): the "Aa" sheet's card and the notices when switching views. -->
+    <string name="flow_title">Dynamic Flow</string>
+    <string name="flow_status_off">Reflow this book to fit your screen</string>
+    <string name="flow_status_converting">Preparing… %1$d%%</string>
+    <string name="flow_status_queued">Waiting for another book to finish</string>
+    <string name="flow_status_hot">Paused while your phone cools down</string>
+    <string name="flow_status_battery">Paused: the battery is low</string>
+    <string name="flow_status_failed">This book can\'t be reflowed. It stays a PDF.</string>
+    <string name="flow_status_on">On: the text flows to fit your screen</string>
+    <string name="flow_status_ready">Ready whenever you want it</string>
 </resources>

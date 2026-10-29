@@ -1,0 +1,22 @@
+{
+    "id": "think-python-2e",
+    "pages": 244,
+    "textPages": 243,
+    "meanCoverage": 1.0,
+    "coveredShare": 1.0,
+    "fallbackPages": [],
+    "scannedPages": 0,
+    "chapters": 23,
+    "chaptersFrom": "outline",
+    "headings": 286,
+    "outlineEntries": 240,
+    "outlineMatched": 0.9875,
+    "figures": 0,
+    "tables": 0,
+    "equations": 14,
+    "inlineDrawings": 3,
+    "epubcheckErrors": 0,
+    "epubcheckWarnings": 0,
+    "secondsPerPage": 0.0060670828,
+    "epubMegabytes": 0.21556473
+}

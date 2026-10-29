@@ -43,13 +43,90 @@ aside.footnote { font-size: 0.85em; }
 math[display="block"] { display: block; margin: 0.8em 0; }
 """
 
-WORDS = (
-    "force mass acceleration velocity momentum energy work power field charge current potential wave frequency "
-    "period amplitude displacement vector scalar component friction tension gravity orbit torque inertia rotation "
-    "equilibrium pressure density volume temperature heat entropy system particle collision impulse spring "
-    "oscillation resonance the a of and to in is that for as with by on this are be from at which an it can we "
-    "these their its when where then thus therefore however because so each two three both between into through"
-).split()
+WORDS = [
+    "force",
+    "mass",
+    "acceleration",
+    "velocity",
+    "momentum",
+    "energy",
+    "work",
+    "power",
+    "field",
+    "charge",
+    "current",
+    "potential",
+    "wave",
+    "frequency",
+    "period",
+    "amplitude",
+    "displacement",
+    "vector",
+    "scalar",
+    "component",
+    "friction",
+    "tension",
+    "gravity",
+    "orbit",
+    "torque",
+    "inertia",
+    "rotation",
+    "equilibrium",
+    "pressure",
+    "density",
+    "volume",
+    "temperature",
+    "heat",
+    "entropy",
+    "system",
+    "particle",
+    "collision",
+    "impulse",
+    "spring",
+    "oscillation",
+    "resonance",
+    "the",
+    "a",
+    "of",
+    "and",
+    "to",
+    "in",
+    "is",
+    "that",
+    "for",
+    "as",
+    "with",
+    "by",
+    "on",
+    "this",
+    "are",
+    "be",
+    "from",
+    "at",
+    "which",
+    "an",
+    "it",
+    "can",
+    "we",
+    "these",
+    "their",
+    "its",
+    "when",
+    "where",
+    "then",
+    "thus",
+    "therefore",
+    "however",
+    "because",
+    "so",
+    "each",
+    "two",
+    "three",
+    "both",
+    "between",
+    "into",
+    "through",
+]
 
 
 def sentence(rng: random.Random) -> str:
@@ -141,7 +218,9 @@ def textbook_chapter(ch: int, rng: random.Random, page: list[int], pages: list[t
                 out.append(mathml_display(ch * 100 + sec))
             if k == 4:
                 n = ch * 10 + sec
-                out.append(f'<figure id="{bid()}">{svg_figure(n)}<figcaption>Figure {ch}.{sec}: {sentence(rng)}</figcaption></figure>')
+                out.append(
+                    f'<figure id="{bid()}">{svg_figure(n)}<figcaption>Figure {ch}.{sec}: {sentence(rng)}</figcaption></figure>'
+                )
             if k == 6:
                 out.append(f'<ul id="{bid()}">' + "".join(f"<li>{sentence(rng)}</li>" for _ in range(4)) + "</ul>")
             if k == 7:
@@ -161,11 +240,17 @@ def textbook_chapter(ch: int, rng: random.Random, page: list[int], pages: list[t
     return xhtml(f"Chapter {ch}", "".join(out))
 
 
-def opf(title: str, ident: str, items: list[tuple[str, str, str]], spine: list[str], direction: str = "ltr",
-        lang: str = "en") -> str:
+def opf(
+    title: str,
+    ident: str,
+    items: list[tuple[str, str, str]],
+    spine: list[str],
+    direction: str = "ltr",
+    lang: str = "en",
+) -> str:
     manifest = "".join(
-        f'<item id="{i}" href="{h}" media-type="{m}"{" properties=\"nav\"" if i == "nav" else ""}'
-        f'{" properties=\"svg mathml\"" if i.startswith("ch") else ""}/>'
+        f'<item id="{i}" href="{h}" media-type="{m}"{' properties="nav"' if i == "nav" else ""}'
+        f"{' properties="svg mathml"' if i.startswith('ch') else ''}/>"
         for i, h, m in items
     )
     refs = "".join(f'<itemref idref="{s}"/>' for s in spine)
@@ -219,7 +304,22 @@ def textbook(out: Path, chapters: int = 60) -> None:
     write_epub(out / "synthetic-textbook.epub", files)
 
 
-ARABIC = "القوة تساوي الكتلة في التسارع وهذا هو القانون الثاني لنيوتن الذي يصف حركة الأجسام".split()
+ARABIC = [
+    "القوة",
+    "تساوي",
+    "الكتلة",
+    "في",
+    "التسارع",
+    "وهذا",
+    "هو",
+    "القانون",
+    "الثاني",
+    "لنيوتن",
+    "الذي",
+    "يصف",
+    "حركة",
+    "الأجسام",
+]
 
 
 def rtl(out: Path) -> None:
@@ -267,12 +367,14 @@ def hostile(out: Path) -> None:
     write_epub(out / "hostile-path-traversal.epub", files)
 
     # 3. XML entity expansion ("billion laughs") in the package document.
-    lol = '<!DOCTYPE package [<!ENTITY a "aaaaaaaaaa">' + "".join(
-        f'<!ENTITY {chr(98 + i)} "{("&" + chr(97 + i) + ";") * 10}">' for i in range(9)
-    ) + "]>"
+    lol = (
+        '<!DOCTYPE package [<!ENTITY a "aaaaaaaaaa">'
+        + "".join(f'<!ENTITY {chr(98 + i)} "{("&" + chr(97 + i) + ";") * 10}">' for i in range(9))
+        + "]>"
+    )
     files = minimal()
-    files["OEBPS/content.opf"] = files["OEBPS/content.opf"].replace("?>\n", "?>\n" + lol, 1).replace(
-        "<dc:title>Minimal", "<dc:title>&j;", 1
+    files["OEBPS/content.opf"] = (
+        files["OEBPS/content.opf"].replace("?>\n", "?>\n" + lol, 1).replace("<dc:title>Minimal", "<dc:title>&j;", 1)
     )
     write_epub(out / "hostile-entity-expansion.epub", files)
 
