@@ -33,16 +33,38 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioAlertDialog
+import com.flowfolio.core.designsystem.FlowFolioGlyph
+import com.flowfolio.core.designsystem.FlowFolioIconButton
+import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.ScreenEntrance
+import com.flowfolio.core.designsystem.cascade
 import com.flowfolio.core.model.OutlineEntry
 
-/** The book's table of contents; the current chapter is highlighted and scrolled into view. */
+/**
+ * The book's table of contents; the current chapter is highlighted and scrolled into view. Go to page ([onGoTo]) sits
+ * at the panel's top right (owner, M3T1).
+ */
 @Composable
-internal fun ContentsList(outline: List<OutlineEntry>, labels: List<String?>, currentPage: Int, onPick: (Int) -> Unit) {
-    Text(
-        stringResource(R.string.reader_contents),
-        style = MaterialTheme.typography.titleLarge.merge(FlowFolio.title),
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)
-    )
+internal fun ContentsList(
+    outline: List<OutlineEntry>,
+    labels: List<String?>,
+    currentPage: Int,
+    onPick: (Int) -> Unit,
+    onGoTo: () -> Unit
+) {
+    Row(
+        Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            stringResource(R.string.reader_contents),
+            style = MaterialTheme.typography.titleLarge.merge(FlowFolio.title),
+            modifier = Modifier.weight(1f).padding(vertical = 6.dp)
+        )
+        FlowFolioIconButton(onGoTo, Modifier.testTag(ReaderTestTags.GO_TO), glass = true) {
+            FlowFolioGlyph(Glyph.GoTo, stringResource(R.string.reader_go_to))
+        }
+    }
     if (outline.isEmpty()) {
         Text(
             stringResource(R.string.reader_contents_empty),
@@ -52,19 +74,29 @@ internal fun ContentsList(outline: List<OutlineEntry>, labels: List<String?>, cu
         return
     }
     val current = PageLookup.chapterAt(outline, currentPage)
-    val list = rememberLazyListState(initialFirstVisibleItemIndex = (current - CONTEXT_ROWS).coerceAtLeast(0))
-    LazyColumn(state = list, modifier = Modifier.testTag(ReaderTestTags.CONTENTS_LIST)) {
-        itemsIndexed(outline) { index, entry ->
-            ContentsRow(entry, labels, index == current, onPick)
+    val first = (current - CONTEXT_ROWS).coerceAtLeast(0)
+    val list = rememberLazyListState(initialFirstVisibleItemIndex = first)
+    // The rows on show when the panel opens pour in from the top, one after another.
+    ScreenEntrance(holdForLandings = false) {
+        LazyColumn(state = list, modifier = Modifier.testTag(ReaderTestTags.CONTENTS_LIST)) {
+            itemsIndexed(outline) { index, entry ->
+                ContentsRow(entry, labels, index == current, onPick, Modifier.cascade(index - first))
+            }
         }
     }
 }
 
 @Composable
-private fun ContentsRow(entry: OutlineEntry, labels: List<String?>, current: Boolean, onPick: (Int) -> Unit) {
+private fun ContentsRow(
+    entry: OutlineEntry,
+    labels: List<String?>,
+    current: Boolean,
+    onPick: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val target = entry.pageIndex
     Row(
-        Modifier
+        modifier
             .fillMaxWidth()
             .clickable(enabled = target >= 0) { onPick(target) }
             .padding(

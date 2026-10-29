@@ -2,6 +2,7 @@ package com.flowfolio.core.designsystem
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -23,3 +24,10 @@ fun Modifier.chromeStart(): Modifier =
 /** Keeps the end of a scrolling screen clear of the floating tab bar (folded); no-op on the rail layout. */
 @Composable
 fun Modifier.chromeBottom(): Modifier = padding(bottom = LocalChromePadding.current.calculateBottomPadding())
+
+/**
+ * A page under a tab (a book's details, a shelf) fills the screen clear of the bar or rail, which stays on it (owner,
+ * M3T1). The tab screens keep clear of it themselves, their lists scrolling under the glass.
+ */
+@Composable
+fun Modifier.clearOfChrome(): Modifier = fillMaxSize().chromeStart().chromeBottom()

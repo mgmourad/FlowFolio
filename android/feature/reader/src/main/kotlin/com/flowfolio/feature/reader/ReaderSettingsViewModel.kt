@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.AnnotationRepository
 import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.data.flow.DynamicFlow
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
@@ -25,7 +26,8 @@ class ReaderSettingsViewModel @Inject constructor(
     saved: SavedStateHandle,
     private val repository: SettingsRepository,
     library: LibraryRepository,
-    private val annotations: AnnotationRepository
+    private val annotations: AnnotationRepository,
+    private val flow: DynamicFlow
 ) : ViewModel() {
     private val bookId: String = checkNotNull(saved[ReaderViewModel.ARG_BOOK_ID]) { "reader needs a bookId" }
 
@@ -93,4 +95,7 @@ class ReaderSettingsViewModel @Inject constructor(
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
     }
+
+    /** Whether this book has highlights, notes or bookmarks in its Dynamic Flow ([inFlow]) or its PDF. */
+    suspend fun hasNotes(inFlow: Boolean): Boolean = flow.hasNotes(bookId, inFlow)
 }

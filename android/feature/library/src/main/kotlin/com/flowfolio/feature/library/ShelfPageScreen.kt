@@ -159,7 +159,7 @@ fun ShelfPageScreen(
             relink.launch(arrayOf("application/pdf", "application/epub+zip"))
         },
         onBookmarks = onBookmarks,
-        onFlow = rememberDynamicFlowSwitch(viewModel.flowCarry, viewModel::setFlow, viewModel::setFlowCarry),
+        onFlow = rememberDynamicFlowSwitch(viewModel),
         selection = selection,
         onDeleteChosen = { confirmBulk = true },
         folders = FolderActions(onOpen = onOpenFolder, onRemove = { removing = it }, selection = selection),
@@ -308,24 +308,25 @@ private fun ShelfPageHeader(
 ) {
     val name = state.folder?.substringAfterLast('/') ?: state.shelf?.name
         ?: stringResource(if (state.noShelves) R.string.shelf_all_books else R.string.shelf_loose)
+    // Back on its own; the title with + and Select level with it; Select's options under those two, above the
+    // count and the view switch (owner, M3T1).
     Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            FlowFolioIconButton(onClick = onBack) {
-                FlowFolioGlyph(Glyph.Back, contentDescription = stringResource(R.string.action_back))
-            }
-            Row(
-                Modifier.weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.End),
-                verticalAlignment = Alignment.CenterVertically
-            ) { select() }
+        FlowFolioIconButton(onClick = onBack) {
+            FlowFolioGlyph(Glyph.Back, contentDescription = stringResource(R.string.action_back))
         }
-        Text(
-            name,
-            style = FlowFolioType.screenTitle.merge(FlowFolio.title),
-            modifier = Modifier.padding(top = 14.dp),
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
+        Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                name,
+                style = FlowFolioType.screenTitle.merge(FlowFolio.title),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(end = 10.dp)
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                select()
+            }
+        }
+        selectionRow()
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 listOfNotNull(
@@ -346,7 +347,6 @@ private fun ShelfPageHeader(
                 modifier = Modifier.testTag(LibraryTestTags.SHELF_VIEW)
             )
         }
-        selectionRow()
     }
 }
 

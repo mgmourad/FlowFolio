@@ -19,6 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 
 /** The clock of one visit to a screen, in milliseconds since it appeared; [reveal] times its elements from it. */
 @Stable
@@ -78,6 +80,27 @@ fun Modifier.reveal(order: Int): Modifier = composed {
     }
 }
 
+/**
+ * Drops into place as a list appears, a cascade: starting [order] x 35 ms in, the row fades in while sliding down the
+ * last few dp to its place over 420 ms, so a panel's rows pour in from the top one after another. Like [reveal], it
+ * keys off the [ScreenEntrance] around it, rows composed after their turn simply appear, and the layer goes once the
+ * row has landed.
+ */
+fun Modifier.cascade(order: Int): Modifier = composed {
+    val clock = LocalEntrance.current ?: return@composed this
+    val start = order.coerceIn(0, MAX_ORDER) * CASCADE_STAGGER_MS
+    val falling by remember(clock, start) { derivedStateOf { clock.ms.value < start + CASCADE_MS } }
+    if (!falling) return@composed this
+    val drop = with(LocalDensity.current) { CASCADE_DROP.toPx() }
+    graphicsLayer {
+        val t = ((clock.ms.value - start) / CASCADE_MS).coerceIn(0f, 1f)
+        val settle = Fall.transform(t)
+        alpha = Fall.transform((t / FADE_SHARE).coerceAtMost(1f))
+        translationY = -drop * (1f - settle)
+        compositingStrategy = CompositingStrategy.ModulateAlpha
+    }
+}
+
 /** Material 3's emphasized decelerate curve. */
 private val Fall = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
 
@@ -87,3 +110,6 @@ private const val MAX_ORDER = 12
 private const val FALL_SCALE = 1.12f
 private const val FADE_SHARE = 0.6f
 private const val WAVE_END_MS = MAX_ORDER * STAGGER_MS + FALL_MS
+private const val CASCADE_STAGGER_MS = 35f
+private const val CASCADE_MS = 420f
+private val CASCADE_DROP = 14.dp

@@ -34,6 +34,7 @@ object LibraryTestTags {
     const val SHELF_COLOUR_PREFIX = "shelf_colour_"
     const val HERO_ANNOTATIONS = "hero_annotations"
     const val HERO_BOOKMARKS = "hero_bookmarks"
+    const val HERO_FLOW = "hero_flow"
     const val HERO_SHELF = "hero_shelf"
     const val SELECT = "select"
     const val SELECTION_BAR = "selection_bar"

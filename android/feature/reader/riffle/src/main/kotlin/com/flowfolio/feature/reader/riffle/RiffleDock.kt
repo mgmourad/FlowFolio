@@ -168,6 +168,9 @@ private fun RiffleHeader(state: RiffleScrubberState, events: RiffleEvents?) {
 @Composable
 fun RiffleStrip(state: RiffleScrubberState, boards: BoardColors, modifier: Modifier = Modifier) {
     val dark = FlowFolio.palette.dark
+    val glow = FlowFolio.palette.title
+    // The book's outline (owner, M3T1): the theme's darkest colour on its paper-white pages, or black on a light theme.
+    val ink = if (dark) FlowFolio.palette.backgroundDeep else androidx.compose.ui.graphics.Color.Black
     val density = LocalDensity.current.density
     val measurer = rememberTextMeasurer()
     val labels = stringResource(R.string.riffle_front) to stringResource(R.string.riffle_back)
@@ -188,7 +191,9 @@ fun RiffleStrip(state: RiffleScrubberState, boards: BoardColors, modifier: Modif
                 val g = state.geometry
                 state.flags // new flags make new stacks: build the parts again
                 val painter = g?.let { StripPainter(state, it, dark) }
-                val parts = g?.let { StripParts(state, it, dark, StripAssets(boards, measurer, labels, cloth)) }
+                val parts = g?.let {
+                    StripParts(state, it, dark, StripAssets(boards, measurer, labels, cloth, glow, ink))
+                }
                 onDrawBehind {
                     state.frame // redraw every frame the loop advances
                     if (painter != null && parts != null) {

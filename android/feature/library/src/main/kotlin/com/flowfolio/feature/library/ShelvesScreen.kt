@@ -63,6 +63,7 @@ import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.color
 import com.flowfolio.core.designsystem.jiggle
 import com.flowfolio.core.designsystem.rememberSelection
+import com.flowfolio.core.designsystem.rememberZoomSource
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.Shelf
@@ -200,13 +201,22 @@ internal fun ShelvesContent(
         if (!state.loading) {
             itemsIndexed(state.cards, key = { _, entry -> entry.shelf.id }) { i, card ->
                 val key = card.shelf.id.toString()
-                val open: (Long) -> Unit = { if (selection.active) selection.toggle(key) else onOpen(it) }
+                // The shelf's page zooms out of its card (owner, M3T1).
+                val zoom = rememberZoomSource()
+                val open: (Long) -> Unit = {
+                    if (selection.active) {
+                        selection.toggle(key)
+                    } else {
+                        zoom.mark()
+                        onOpen(it)
+                    }
+                }
                 Box(Modifier.animateItem().reveal(1 + i).jiggle(selection.active, key)) {
                     ShelfCardView(
                         card,
                         open,
                         ShelfMenu(onRename, onDelete, onAddBooks, onSelect = { selection.startWith(key) }),
-                        Modifier,
+                        zoom.modifier,
                         menuEnabled = !selection.active
                     )
                     SelectionMark(selection, key)

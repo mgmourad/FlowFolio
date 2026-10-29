@@ -58,16 +58,25 @@ class ShelfPageViewModel @Inject constructor(
     shelfRepo: ShelfRepository,
     private val settingsRepo: SettingsRepository,
     private val flow: DynamicFlow = DynamicFlow.None
-) : ViewModel() {
+) : ViewModel(),
+    FlowSwitching {
     /** Whether switching a book's view asks first, or what was answered for good (ADR-0045). */
-    val flowCarry: StateFlow<FlowCarry> =
+    override val flowCarry: StateFlow<FlowCarry> =
         settingsRepo.settings.map { it.flowCarry }.stateIn(viewModelScope, SharingStarted.Eagerly, FlowCarry.ASK)
 
     /** Turns a PDF's Dynamic Flow on (converting it in the background) or off, bringing the changes across or not. */
-    fun setFlow(book: Book, on: Boolean, carry: Boolean) =
-        viewModelScope.launch { flow.setFlowMode(book.id, on, carry) }
+    override fun setFlow(book: Book, on: Boolean, carry: Boolean) {
+        viewModelScope.launch {
+            flow.setFlowMode(book.id, on, carry)
+        }
+    }
 
-    fun setFlowCarry(carry: FlowCarry) = viewModelScope.launch { settingsRepo.setFlowCarry(carry) }
+    /** Whether [book] has highlights, notes or bookmarks in its Dynamic Flow ([inFlow]) or its PDF. */
+    override suspend fun hasNotes(book: Book, inFlow: Boolean): Boolean = flow.hasNotes(book.id, inFlow)
+
+    override fun setFlowCarry(carry: FlowCarry) {
+        viewModelScope.launch { settingsRepo.setFlowCarry(carry) }
+    }
 
     private val shelfId: Long = saved[ARG_SHELF_ID] ?: LOOSE
     private val folder: String? = saved.get<String>(ARG_FOLDER)?.let(android.net.Uri::decode)

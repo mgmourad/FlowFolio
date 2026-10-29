@@ -38,6 +38,10 @@ data class AnnotationEntity(
 
 @Dao
 interface AnnotationDao {
+    /** How many of [bookId]'s highlights belong to its Dynamic Flow ([flow], those with a locator) or to its PDF. */
+    @Query("SELECT COUNT(*) FROM annotations WHERE book_id = :bookId AND (locator IS NOT NULL) = :flow")
+    suspend fun countInView(bookId: String, flow: Boolean): Int
+
     @Query("SELECT * FROM annotations WHERE book_id = :bookId ORDER BY page ASC, char_start ASC")
     fun observe(bookId: String): Flow<List<AnnotationEntity>>
 

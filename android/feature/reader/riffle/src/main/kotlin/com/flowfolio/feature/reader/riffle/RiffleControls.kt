@@ -25,9 +25,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -46,6 +49,8 @@ import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupPositionProvider
 import androidx.compose.ui.window.PopupProperties
 import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioGlyph
+import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.UiFamily
 
 /**
@@ -63,15 +68,20 @@ internal fun NudgeArrow(state: RiffleScrubberState, events: RiffleEvents, left: 
         val g = state.geometry
         IntOffset(0, if (g == null) 0 else ((g.top + g.bottom) / 2 - g.height / 2).toInt())
     }
-    Arrow(if (left) "‹" else "›", stringResource(label), level) {
+    Arrow(left, stringResource(label), level) {
         events.onInteraction()
         events.onGoTo((state.currentUnit + step).coerceIn(0, state.book.unitCount - 1))
     }
 }
 
+/**
+ * A slim capsule with a chevron drawn as a stroke (owner, M3T1): a text "‹" sat off the middle of its circle, as a
+ * font's glyph does; a drawn chevron is centred exactly. The capsule is lit along its edge in the theme's colour.
+ */
 @Composable
-private fun Arrow(glyph: String, label: String, modifier: Modifier, onClick: () -> Unit) {
+private fun Arrow(left: Boolean, label: String, modifier: Modifier, onClick: () -> Unit) {
     val palette = FlowFolio.palette
+    val shape = RoundedCornerShape(50)
     Box(
         modifier
             .size(ARROW_TOUCH)
@@ -79,18 +89,21 @@ private fun Arrow(glyph: String, label: String, modifier: Modifier, onClick: () 
             .semantics { contentDescription = label },
         contentAlignment = Alignment.Center
     ) {
-        // Larger than the first design's 30 dp, for easy reach (owner, 2026-10-22).
         Box(
             Modifier
-                .size(ARROW_DISC)
-                .background(palette.surface2, CircleShape)
-                .border(1.dp, palette.edge, CircleShape),
+                .size(ARROW_WIDTH, ARROW_HEIGHT)
+                .clip(shape)
+                .background(Brush.verticalGradient(listOf(palette.surface2, palette.surface)))
+                .border(1.dp, Brush.verticalGradient(listOf(palette.title.copy(alpha = 0.7f), palette.edge)), shape),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                glyph,
+            FlowFolioGlyph(
+                Glyph.Back,
+                contentDescription = null,
                 color = palette.item,
-                style = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight.Bold, fontSize = 26.sp)
+                size = 20.dp,
+                glow = false,
+                modifier = Modifier.graphicsLayer { scaleX = if (left) 1f else -1f }
             )
         }
     }
@@ -201,6 +214,7 @@ private fun numbersOnly(book: BookGeometry): Boolean =
 
 private const val MAX_LABEL = 12
 private val ARROW_TOUCH = 52.dp
-private val ARROW_DISC = 42.dp
+private val ARROW_WIDTH = 34.dp
+private val ARROW_HEIGHT = 46.dp
 private const val FIELD_HEIGHT_FRACTION = 0.22f
 private const val FRONT_MATTER_PAGES = 40

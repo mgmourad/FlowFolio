@@ -11,6 +11,11 @@ and sign it off before the next starts.
 
 ## M3T1: polish and navigation (no new data, no new dependencies)
 
+**Built 2026-10-29**, checked on `fold8_api37` folded and unfolded, installed on the owner's Fold. Two deliberate
+differences from the list below: the read-time bar on the Continue reading card comes with M3T3's goals (the card shows
+the read time with its glyph until then), and the star and check buttons come with M3T2's data. The riffle book is drawn
+in the strip's own canvas so it keeps the old handle's touch target, sway and wiggle.
+
 Reader:
 1. **Contents panel cascades in**: its rows come in one after another, on the motion system's timings (ADR-0033).
 2. **Riffle bar's side buttons redrawn**: the arrows are centred optically, in a new, quieter control style that

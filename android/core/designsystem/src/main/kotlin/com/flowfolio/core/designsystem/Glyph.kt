@@ -84,7 +84,62 @@ enum class Glyph(internal val pathData: String, internal val stroke: Float = 2f,
     ),
 
     /** A stopwatch: time spent reading. */
-    Stopwatch("M19 14a7 7 0 1 1-14 0a7 7 0 1 1 14 0z M12 14v-4 M10 2.5h4 M12 2.5V7 M17.5 7.5l1.5-1.5")
+    Stopwatch("M19 14a7 7 0 1 1-14 0a7 7 0 1 1 14 0z M12 14v-4 M10 2.5h4 M12 2.5V7 M17.5 7.5l1.5-1.5"),
+
+    /** A clock face: read time. */
+    Clock("M21 12a9 9 0 1 1-18 0a9 9 0 1 1 18 0z M12 7v5l3.2 2"),
+
+    /** An open book seen from the front, its pages fanned (the owner's "Progress" picture). */
+    OpenBook(
+        "M12 7.5c-2.8-2-6-2.3-9-1.2V18.5c3-1.1 6.2-.8 9 1.2 2.8-2 6-2.3 9-1.2V6.3c-3-1.1-6.2-.8-9 1.2z M12 7.5v12.2 " +
+            "M1.5 8.5v12c3.5-1.1 7.3-.6 10.5 1 3.2-1.6 7-2.1 10.5-1v-12"
+    ),
+
+    /** Lines with arrows between them: line spacing. */
+    LineSpacing("M10 6h10 M10 12h10 M10 18h10 M5 4v16 M3 6.5L5 4l2 2.5 M3 17.5L5 20l2-2.5"),
+
+    /** A page's edges with text inside: margins. */
+    Margins("M4 3v18 M20 3v18 M8 7h8 M8 11h8 M8 15h8 M8 19h5"),
+
+    /** Lines of the same length: justified text. */
+    Justify("M4 6h16 M4 10h16 M4 14h16 M4 18h16"),
+
+    /** A word broken by a hyphen at a line's end: hyphenation. */
+    Hyphenate("M3 6h18 M3 11h11 M17 11h3 M3 16h18 M3 21h9"),
+
+    /** A painter's palette: the paper. */
+    Paper(
+        "M12 3a9 9 0 1 0 0 18c1.4 0 2-1 2-2s-.6-1.4-.6-2.2c0-1 .8-1.8 1.8-1.8H17a4 4 0 0 0 4-4c0-4.4-4-8-9-8z " +
+            "M7.5 12h.01 M9.5 7.5h.01 M14.5 7.5h.01",
+        stroke = 2.2f
+    ),
+
+    /** A page with its corner turning: how pages turn. */
+    PageTurn("M5 3h9l5 5v13H5z M14 3c0 3 1 5 5 5 M9 17c2.5 0 4.5-1 5.5-3"),
+
+    /** Arrows each way: which way the pages run. */
+    Direction("M4 8.5h14 M15 5.5l3 3-3 3 M20 15.5H6 M9 12.5l-3 3 3 3"),
+
+    /** Two pages side by side: spreads. */
+    Spread("M3 5.5c3-1 6-1 9 .8v13c-3-1.8-6-1.8-9-.8z M21 5.5c-3-1-6-1-9 .8v13c3-1.8 6-1.8 9-.8z"),
+
+    /** A closed book: the cover on its own. */
+    Cover("M6 3h12a1 1 0 0 1 1 1v14H8a2 2 0 0 0-2 2V5a2 2 0 0 1 2-2 M6 20a2 2 0 0 0 2 2h11v-4 M10 7.5h5"),
+
+    /** An eye struck through: the controls hide. */
+    AutoHide("M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z M14.5 12a2.5 2.5 0 1 1-5 0a2.5 2.5 0 1 1 5 0z M4 4l16 16"),
+
+    /** A speaker: the page turn's sound. */
+    Sound("M4 9.5h3.5L12 5.5v13l-4.5-4H4z M15.5 9a4 4 0 0 1 0 6 M18 6.5a7.5 7.5 0 0 1 0 11"),
+
+    /** Pages fanning out: the riffle's sound. */
+    Riffle("M4 20h16 M12 20L6 6 M12 20L9.5 5 M12 20l1-15.5 M12 20l3.5-14.5 M12 20l6-12"),
+
+    /** A phone shaking: haptics. */
+    Haptics("M8.5 4h7v16h-7z M5 8v8 M19 8v8 M2 10v4 M22 10v4 M11 17h2"),
+
+    /** A star: a favourite. */
+    Star("M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z")
 }
 
 /**

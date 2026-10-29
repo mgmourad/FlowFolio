@@ -33,13 +33,17 @@ internal class StripAssets(
     val boards: BoardColors,
     val measurer: TextMeasurer,
     val labels: Pair<String, String>,
-    val cloth: ImageBitmap
+    val cloth: ImageBitmap,
+    /** The theme's colour, for the glass marker's glow. */
+    val glow: Color,
+    /** The riffle book's outline: the theme's darkest colour, or black on a light theme. */
+    val ink: Color
 )
 
 /**
  * The parts around the page block (the mock's draw order): the cover boards seen edge-on with their labels, the
- * bookmark flags on top, and the satin ribbon with its red pin rising from it into the
- * pages. Made once per size, theme, book and set of flags.
+ * bookmark flags on top, and the handle: a glass marker on the block and the riffle book under it (owner, M3T1).
+ * Made once per size, theme, book and set of flags.
  */
 internal class StripParts(
     private val state: RiffleScrubberState,
@@ -95,42 +99,35 @@ internal class StripParts(
             )
         )
     }
-    private val ribbon = Path()
-    private val chevrons = Path()
-    private val ribbonBrush = Brush.horizontalGradient(
-        0f to Color(0xFF6E0820),
-        0.38f to if (dark) Color(0xFFFF2D5A) else Color(0xFFD4163B),
-        0.5f to if (dark) Color(0xFFFF6D8A) else Color(0xFFEE4D6C),
-        0.62f to if (dark) Color(0xFFE81F4C) else Color(0xFFC8102E),
-        1f to Color(0xFF7A0A24),
-        startX = -7 * d,
-        endX = 7 * d
-    )
-
-    /** The pin at x = 0: a red shaft from inside the ribbon's top, through the edge into the pages, to a point. */
-    private val shaft = Path().apply {
-        val half = 1.3f * d
-        val tip = g.top + blockHeight * 0.2f
-        moveTo(-half, g.bottom + 8 * d)
-        lineTo(-half, tip + 5 * d)
-        lineTo(0f, tip)
-        lineTo(half, tip + 5 * d)
-        lineTo(half, g.bottom + 8 * d)
-        close()
-    }
-
-    // The ribbon's satin reds, so the pin reads as part of it (owner, 2026-10-21).
-    private val pinBrush = Brush.horizontalGradient(
-        0f to Color(0xFF6E0820),
-        0.35f to if (dark) Color(0xFFFF6D8A) else Color(0xFFEE4D6C),
-        0.6f to if (dark) Color(0xFFE81F4C) else Color(0xFFC8102E),
-        1f to Color(0xFF7A0A24),
-        startX = -1.3f * d,
-        endX = 1.3f * d
-    )
-    private val chevronStroke = Stroke(width = 1.3f * d, cap = StrokeCap.Round)
+    private val glow = assets.glow
+    private val ink = assets.ink
     private val ghostStroke = Stroke(width = 1.5f * d)
-    private val glowStroke = Stroke(width = 6 * d)
+
+    // The riffle book (owner, M3T1): an open book under the strip at the reader's place, its pages flipping while it
+    // moves. Its shapes are made once; a frame only rewinds the flipping pages.
+    private val bookWidth = BOOK_WIDTH_DP * d
+    private val bookHeight = BOOK_HEIGHT_DP * d
+    private val bookLine =
+        Stroke(width = 1.6f * d, cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
+    private val pageFill = if (dark) Color(0xFFD6CBB8) else Color(0xFFF3EBDB)
+    private val book = openBook()
+    private val flipping = Array(FLIP_PAGES) { Path() }
+    private var flipPhase = 0f
+    private var lastFrame = Float.NaN
+
+    // The glass marker (owner, M3T1): a vertical bar of glass on the page block at the reader's place, glowing in the
+    // theme's colour; never wider than the book.
+    private val markerWidth = minOf(MARKER_WIDTH_DP * d, bookWidth)
+    private val markerTop = g.top - 4 * d
+    private val markerBottom = g.bottom + 4 * d
+    private val glass = Brush.horizontalGradient(
+        0f to glow.copy(alpha = 0.55f),
+        0.3f to Color.White.copy(alpha = 0.85f),
+        0.45f to glow.copy(alpha = 0.7f),
+        1f to glow.copy(alpha = 0.95f),
+        startX = -markerWidth / 2,
+        endX = markerWidth / 2
+    )
 
     fun DrawScope.paintBoards() {
         drawPath(left, leftBrush)
@@ -179,50 +176,128 @@ internal class StripParts(
         }
     }
 
-    /** The pin at the reader's place and the satin ribbon hanging from it: the only riffle handle. */
+    /**
+     * The handle (owner, M3T1): the glass marker on the block at the reader's place and, under the strip, the riffle
+     * book that riffles. They move together; the book sways a little at rest and wiggles when the block is tapped.
+     */
     fun DrawScope.paintRibbon() {
         val grab = state.grab
         val sway =
             (sin(state.timeSeconds / 0.7f) * 1.4f * d * (1 - grab) - state.pinVelocity * 0.004f) * state.swayAmount
-        val width = (12 + grab * 2) * d
-        val top = g.bottom + 3 * d
-        val bottom = g.ribbonBottom
-        // A tap on the block wiggles the ribbon for 0.6 s (spec 5.3).
+        // A tap on the block wiggles the book for 0.6 s (spec 5.3).
         val sinceWiggle = state.timeSeconds - state.wiggleAt
         val wiggle = if (sinceWiggle in 0f..0.6f) (1 - sinceWiggle / 0.6f) * sin(sinceWiggle / 0.04f) * 3 * d else 0f
         val x = state.pinX + wiggle
-        val half = width / 2
-        ribbon.rewind()
-        ribbon.moveTo(-half + d, top)
-        ribbon.lineTo(half - d, top)
-        ribbon.quadraticTo(half + sway * 0.5f, (top + bottom) / 2, half + sway, bottom)
-        ribbon.lineTo(sway, bottom - 7 * d)
-        ribbon.lineTo(-half + sway, bottom)
-        ribbon.quadraticTo(-half + sway * 0.5f, (top + bottom) / 2, -half + d, top)
-        ribbon.close()
-        paintPin(x)
-        translate(left = x) {
-            if (dark) drawPath(ribbon, Color(0xFFFF2D5A), alpha = 0.18f + 0.12f * grab, style = glowStroke)
-            drawPath(ribbon, ribbonBrush)
-            chevrons.rewind()
-            val gy = (top + bottom) / 2 + 2 * d
-            val gx = sway * 0.5f
-            chevrons.moveTo(gx - 2 * d, gy - 3.5f * d)
-            chevrons.lineTo(gx - 4.5f * d, gy)
-            chevrons.lineTo(gx - 2 * d, gy + 3.5f * d)
-            chevrons.moveTo(gx + 2 * d, gy - 3.5f * d)
-            chevrons.lineTo(gx + 4.5f * d, gy)
-            chevrons.lineTo(gx + 2 * d, gy + 3.5f * d)
-            drawPath(chevrons, Color.White.copy(alpha = 0.75f), style = chevronStroke)
-        }
-        paintGhost(x, (top + bottom) / 2 + 2 * d)
+        paintMarker(state.pinX, grab)
+        val cy = (g.bottom + g.ribbonBottom) / 2 + 3 * d
+        translate(x + sway, cy) { paintBook(grab) }
+        paintGhost(x, cy)
     }
 
-    /** The pin's shaft with a soft shadow beside it; the ribbon, drawn next, covers its foot. */
-    private fun DrawScope.paintPin(x: Float) {
-        translate(x + d, d) { drawPath(shaft, Color.Black, alpha = 0.3f) }
-        translate(x) { drawPath(shaft, pinBrush) }
+    /** The glass bar: a glow of widening strokes in the theme's colour (no blur), the glass, and its bright edge. */
+    private fun DrawScope.paintMarker(x: Float, grab: Float) {
+        val half = markerWidth / 2
+        val radius = CornerRadius(half)
+        translate(x) {
+            for (k in GLOW_RINGS downTo 1) {
+                val spread = k * 2.2f * d
+                drawRoundRect(
+                    glow,
+                    Offset(-half - spread, markerTop - spread),
+                    Size(markerWidth + 2 * spread, markerBottom - markerTop + 2 * spread),
+                    CornerRadius(half + spread),
+                    alpha = (if (dark) 0.10f else 0.07f) * (1 + grab)
+                )
+            }
+            drawRoundRect(
+                Color.Black.copy(alpha = 0.35f),
+                Offset(-half + d, markerTop + d),
+                Size(
+                    markerWidth,
+                    markerBottom - markerTop
+                ),
+                radius
+            )
+            drawRoundRect(glass, Offset(-half, markerTop), Size(markerWidth, markerBottom - markerTop), radius)
+            drawRoundRect(
+                Color.White.copy(alpha = 0.7f),
+                Offset(-half, markerTop),
+                Size(markerWidth, markerBottom - markerTop),
+                radius,
+                style = Stroke(width = 0.8f * d)
+            )
+            drawRect(
+                Color.White.copy(alpha = 0.8f),
+                Offset(-half * 0.45f, markerTop + 3 * d),
+                Size(
+                    0.9f * d,
+                    (markerBottom - markerTop) * 0.4f
+                )
+            )
+        }
     }
+
+    /**
+     * The open book at (0, 0): its pages, and while it moves pages flipping over the spine in the direction of travel,
+     * faster the faster it goes (forward turns them right to left, as reading does).
+     */
+    private fun DrawScope.paintBook(grab: Float) {
+        drawPath(book.pages, pageFill)
+        drawPath(book.cover, ink, style = bookLine)
+        drawPath(book.pages, ink, style = bookLine)
+        val now = state.timeSeconds
+        val speed = (kotlin.math.abs(state.pinVelocity) / (FLIP_PX_PER_TURN_DP * d)).coerceAtMost(MAX_FLIPS)
+        if (!lastFrame.isNaN()) flipPhase += (now - lastFrame).coerceIn(0f, 0.1f) * speed
+        lastFrame = now
+        if (speed < MIN_FLIPS && grab < 0.05f) return
+        val forward = (state.pinVelocity >= 0f) != state.book.rightToLeft
+        val top = -bookHeight / 2 + 3 * d
+        val bottom = bookHeight / 2 - 1 * d
+        for (k in 0 until FLIP_PAGES) {
+            val raw = (flipPhase + k.toFloat() / FLIP_PAGES) % 1f
+            val p = if (forward) raw else 1f - raw
+            val angle = Math.PI.toFloat() * p
+            val outer = kotlin.math.cos(angle) * bookWidth / 2
+            val lift = sin(angle) * 6 * d
+            val page = flipping[k]
+            page.rewind()
+            page.moveTo(0f, top)
+            page.quadraticTo(outer * 0.5f, top - lift - 2 * d, outer, top - lift)
+            page.lineTo(outer, bottom - lift)
+            page.quadraticTo(outer * 0.5f, bottom - lift * 0.6f, 0f, bottom)
+            page.close()
+            drawPath(page, pageFill)
+            drawPath(page, ink, style = bookLine, alpha = 0.85f)
+        }
+    }
+
+    /** The book's still parts: its two pages bowing up from the spine, and the cover's edge under them. */
+    private fun openBook(): BookShape {
+        val w = bookWidth / 2
+        val h = bookHeight / 2
+        val pages = Path().apply {
+            moveTo(0f, -h + 3 * d)
+            quadraticTo(-w * 0.5f, -h - 1 * d, -w, -h + 1.5f * d)
+            lineTo(-w, h - 2 * d)
+            quadraticTo(-w * 0.5f, h - 5 * d, 0f, h - 1 * d)
+            quadraticTo(w * 0.5f, h - 5 * d, w, h - 2 * d)
+            lineTo(w, -h + 1.5f * d)
+            quadraticTo(w * 0.5f, -h - 1 * d, 0f, -h + 3 * d)
+            close()
+            moveTo(0f, -h + 3 * d)
+            lineTo(0f, h - 1 * d)
+        }
+        val cover = Path().apply {
+            moveTo(-w - 2.5f * d, -h + 4 * d)
+            lineTo(-w - 2.5f * d, h + 1 * d)
+            quadraticTo(-w * 0.5f, h - 2 * d, 0f, h + 2 * d)
+            quadraticTo(w * 0.5f, h - 2 * d, w + 2.5f * d, h + 1 * d)
+            lineTo(w + 2.5f * d, -h + 4 * d)
+        }
+        return BookShape(pages, cover)
+    }
+
+    private class BookShape(val pages: Path, val cover: Path)
 
     /** The demo's fingertip on the ribbon. */
     private fun DrawScope.paintGhost(x: Float, y: Float) {
@@ -259,6 +334,16 @@ internal class StripParts(
 
     companion object {
         private const val CLOTH_PX = 24
+        private const val BOOK_WIDTH_DP = 38f
+        private const val BOOK_HEIGHT_DP = 26f
+        private const val MARKER_WIDTH_DP = 8f
+        private const val GLOW_RINGS = 4
+        private const val FLIP_PAGES = 3
+
+        /** One page turns over for each this many dp the book travels per second; at most [MAX_FLIPS] a second. */
+        private const val FLIP_PX_PER_TURN_DP = 80f
+        private const val MAX_FLIPS = 10f
+        private const val MIN_FLIPS = 0.15f
         private const val THREAD = (13 shl 24) or 0xFFFFFF
 
         /** The boards' cloth: a few light and dark specks and faint threads (the mock's pattern), drawn once. */

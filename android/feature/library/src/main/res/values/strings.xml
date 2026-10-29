@@ -369,4 +369,8 @@
     <string name="action_flow_off">Turn off Dynamic Flow</string>
     <string name="action_flow_short">Flow</string>
     <string name="action_flow_off_short">PDF</string>
+    <string name="hero_progress">Progress</string>
+    <string name="hero_read_time">Read time</string>
+    <string name="hero_flow_on">Dynamic Flow is on</string>
+    <string name="hero_flow_off">Dynamic Flow is off</string>
 </resources>

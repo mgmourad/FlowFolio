@@ -65,10 +65,11 @@ internal fun BoxScope.ReaderPanels(
     jump: (Int) -> Unit,
     onDismiss: () -> Unit,
     flow: FlowState? = null,
-    onFlow: ((Boolean, Boolean) -> Unit)? = null
+    onFlow: ((Boolean, Boolean) -> Unit)? = null,
+    onPanel: (Panel) -> Unit = {}
 ) {
     DropPanel(panel == Panel.CONTENTS, CONTENTS_WIDTH, fillDown = true) {
-        ContentsList(navigation.outline, navigation.labels, s.anchorPage, jump)
+        ContentsList(navigation.outline, navigation.labels, s.anchorPage, jump) { onPanel(Panel.GO_TO) }
     }
     DropPanel(panel == Panel.ANNOTATIONS, CONTENTS_WIDTH, fillDown = true) {
         AnnotationList(mark.notes, navigation, jump)

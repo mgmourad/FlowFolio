@@ -22,7 +22,9 @@ import com.flowfolio.core.designsystem.Motion
  *   slides in from the side as the old one drifts back the other way, reversed on Back (and followed by the predictive
  *   back gesture);
  * - to and from the details and the reader, a **plain fade**: the cover flight and the book opening carry the motion
- *   there, and a moving page would throw off where the cover lands.
+ *   there, and a moving page would throw off where the cover lands;
+ * - from the Shelves tab into a shelf, a **zoom** (owner, M3T1): the shelf's page grows out of the card tapped
+ *   ([ZoomOrigin]) as the shelves fade, and shrinks back into it on Back.
  */
 internal object NavMotion {
     private val tabRoutes = TopLevel.entries.map { it.route }.toSet()
@@ -33,11 +35,20 @@ internal object NavMotion {
     private fun NavBackStackEntry.ownsMotion() =
         destination.route?.let { (it.startsWith("book/{") && "?from=" in it) || it.startsWith("reader/") } == true
 
-    private enum class Kind { TABS, OWN, AXIS }
+    private enum class Kind { TABS, OWN, AXIS, ZOOM }
+
+    private fun NavBackStackEntry.isShelf() = destination.route == Routes.SHELF
+
+    private fun NavBackStackEntry.isShelves() = destination.route == TopLevel.Shelves.route
 
     private fun AnimatedContentTransitionScope<NavBackStackEntry>.kind() = when {
         initialState.isTab() && targetState.isTab() -> Kind.TABS
+
+        (initialState.isShelves() && targetState.isShelf()) || (initialState.isShelf() && targetState.isShelves()) ->
+            Kind.ZOOM
+
         initialState.ownsMotion() || targetState.ownsMotion() -> Kind.OWN
+
         else -> Kind.AXIS
     }
 
@@ -46,6 +57,7 @@ internal object NavMotion {
             Kind.TABS -> fadeThroughIn()
             Kind.OWN -> fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut))
             Kind.AXIS -> axisIn(forward = true)
+            Kind.ZOOM -> ZoomMotion.zoomIn()
         }
     }
 
@@ -54,6 +66,7 @@ internal object NavMotion {
             Kind.TABS -> fadeThroughOut()
             Kind.OWN -> fadeOut(tween(Motion.FAST_MS, easing = Motion.EaseOut))
             Kind.AXIS -> axisOut(forward = true)
+            Kind.ZOOM -> ZoomMotion.behindOut()
         }
     }
 
@@ -62,6 +75,7 @@ internal object NavMotion {
             Kind.TABS -> fadeThroughIn()
             Kind.OWN -> fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut))
             Kind.AXIS -> axisIn(forward = false)
+            Kind.ZOOM -> ZoomMotion.behindIn()
         }
     }
 
@@ -70,6 +84,7 @@ internal object NavMotion {
             Kind.TABS -> fadeThroughOut()
             Kind.OWN -> fadeOut(tween(Motion.FAST_MS, easing = Motion.EaseOut))
             Kind.AXIS -> axisOut(forward = false)
+            Kind.ZOOM -> ZoomMotion.zoomOut()
         }
     }
 

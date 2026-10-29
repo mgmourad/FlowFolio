@@ -8,8 +8,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.Text
@@ -35,12 +33,11 @@ import androidx.navigation.navArgument
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.LocalBookOpener
-import com.flowfolio.core.designsystem.LocalChromePadding
 import com.flowfolio.core.designsystem.LocalDestinationScope
 import com.flowfolio.core.designsystem.LocalSharedTransition
 import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.ScreenEntrance
-import com.flowfolio.core.designsystem.chromeStart
+import com.flowfolio.core.designsystem.clearOfChrome
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.feature.library.AnnotationsScreen
 import com.flowfolio.feature.library.AnnotationsViewModel
@@ -142,7 +139,7 @@ private fun NavGraphBuilder.detailsDestination(nav: NavHostController) = composa
 ) { backStack ->
     CompositionLocalProvider(LocalDestinationScope provides this) {
         // The cover flies in while the page settles around it (ADR-0034).
-        ScreenEntrance(holdForLandings = false) {
+        ScreenEntrance(holdForLandings = false, modifier = Modifier.clearOfChrome()) {
             DetailsScreen(
                 origin = backStack.arguments?.getString("from").orEmpty(),
                 onBack = { nav.popBackStack() },
@@ -159,11 +156,9 @@ private fun NavGraphBuilder.bookBookmarksDestination(nav: NavHostController) = c
     Routes.BOOK_BOOKMARKS,
     arguments = listOf(navArgument(BookmarksViewModel.ARG_BOOK_ID) { type = NavType.StringType })
 ) {
-    // Not a tab: no bar or rail here, so no room kept for one.
-    CompositionLocalProvider(LocalChromePadding provides PaddingValues()) {
-        ScreenEntrance {
-            BookmarksScreen(onRead = { book -> nav.navigate(Routes.reader(book.id)) }, onBack = { nav.popBackStack() })
-        }
+    // The bar or rail stays here too (owner, M3T1); the screen keeps clear of it itself.
+    ScreenEntrance {
+        BookmarksScreen(onRead = { book -> nav.navigate(Routes.reader(book.id)) }, onBack = { nav.popBackStack() })
     }
 }
 
@@ -172,7 +167,7 @@ private fun NavGraphBuilder.bookAnnotationsDestination(nav: NavHostController) =
     Routes.BOOK_ANNOTATIONS,
     arguments = listOf(navArgument(AnnotationsViewModel.ARG_BOOK_ID) { type = NavType.StringType })
 ) {
-    ScreenEntrance {
+    ScreenEntrance(Modifier.clearOfChrome()) {
         BookAnnotationsScreen(
             onBack = { nav.popBackStack() },
             onRead = { book -> nav.navigate(Routes.reader(book.id)) }
@@ -185,7 +180,7 @@ private fun NavGraphBuilder.editDestination(nav: NavHostController) = composable
     Routes.EDIT,
     arguments = listOf(navArgument(DetailsViewModel.ARG_BOOK_ID) { type = NavType.StringType })
 ) {
-    ScreenEntrance { EditDetailsScreen(onDone = { nav.popBackStack() }) }
+    ScreenEntrance(Modifier.clearOfChrome()) { EditDetailsScreen(onDone = { nav.popBackStack() }) }
 }
 
 /** A whole shelf, as tiles or a list (opened from a shelf's book count in the library). */
@@ -194,7 +189,7 @@ private fun NavGraphBuilder.shelfDestination(nav: NavHostController) = composabl
     arguments = listOf(navArgument(ShelfPageViewModel.ARG_SHELF_ID) { type = NavType.LongType })
 ) {
     CompositionLocalProvider(LocalDestinationScope provides this) {
-        ScreenEntrance {
+        ScreenEntrance(Modifier.clearOfChrome()) {
             ShelfPageScreen(
                 onBack = { nav.popBackStack() },
                 onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) },
@@ -210,7 +205,7 @@ private fun NavGraphBuilder.folderDestination(nav: NavHostController) = composab
     arguments = listOf(navArgument(ShelfPageViewModel.ARG_FOLDER) { type = NavType.StringType })
 ) {
     CompositionLocalProvider(LocalDestinationScope provides this) {
-        ScreenEntrance {
+        ScreenEntrance(Modifier.clearOfChrome()) {
             ShelfPageScreen(
                 onBack = { nav.popBackStack() },
                 onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) },
@@ -238,11 +233,13 @@ private fun NavGraphBuilder.readerDestination(nav: NavHostController) = composab
     ReaderScreen(onBack = { opener?.close { nav.popBackStack() } ?: nav.popBackStack() })
 }
 
-/** Switches tabs the usual way: one copy of each top-level screen, each keeping its state; Back returns to Library. */
+/**
+ * Switches tabs: one copy of each top-level screen, and Back returns to Library. A tab opens on its own main page
+ * (owner, M3T1): a shelf left open under Shelves is closed, not brought back, when the reader comes back to the tab.
+ */
 private fun NavHostController.switchTo(destination: TopLevel) {
     navigate(destination.route) {
-        popUpTo(graph.findStartDestination().id) { saveState = true }
+        popUpTo(graph.findStartDestination().id)
         launchSingleTop = true
-        restoreState = true
     }
 }

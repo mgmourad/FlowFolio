@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -35,7 +36,9 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.Typeface
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,6 +46,8 @@ import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioFontPicker
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioType
+import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.UiFamily
 import com.flowfolio.core.designsystem.displayName
 import com.flowfolio.core.designsystem.fontFamily
 import com.flowfolio.core.model.LineSpacing
@@ -64,10 +69,10 @@ internal fun TextChoice(text: ReaderText, bookFont: android.graphics.Typeface?, 
         Modifier.padding(bottom = 6.dp).testTag(ReaderTestTags.SETTING_FONT),
         bookFont = remember(bookFont) { bookFont?.let { FontFamily(Typeface(it)) } }
     )
-    LabeledRow(stringResource(R.string.reader_text_size)) {
+    LabeledRow(stringResource(R.string.reader_text_size), Glyph.TextSize) {
         SizeStepper(text.sizeSp) { onChange(text.copy(sizeSp = it)) }
     }
-    LabeledRow(stringResource(R.string.reader_line_spacing)) {
+    LabeledRow(stringResource(R.string.reader_line_spacing), Glyph.LineSpacing, stacked = true) {
         IconChoice(
             listOf(
                 stringResource(R.string.reader_spacing_tight),
@@ -80,7 +85,7 @@ internal fun TextChoice(text: ReaderText, bookFont: android.graphics.Typeface?, 
             { onChange(text.copy(lineSpacing = LineSpacing.entries[it])) }
         ) { i, color -> spacingIcon(i, color) }
     }
-    LabeledRow(stringResource(R.string.reader_margins)) {
+    LabeledRow(stringResource(R.string.reader_margins), Glyph.Margins, stacked = true) {
         IconChoice(
             listOf(
                 stringResource(R.string.reader_margins_narrow),
@@ -93,39 +98,59 @@ internal fun TextChoice(text: ReaderText, bookFont: android.graphics.Typeface?, 
         ) { i, color -> marginsIcon(i, color) }
     }
     Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ToggleChip(stringResource(R.string.reader_justify), text.justify, ReaderTestTags.SETTING_JUSTIFY) {
-            onChange(text.copy(justify = it))
+        ToggleChip(
+            stringResource(R.string.reader_justify),
+            text.justify,
+            ReaderTestTags.SETTING_JUSTIFY,
+            glyph = Glyph.Justify
+        ) { onChange(text.copy(justify = it)) }
+        ToggleChip(
+            stringResource(R.string.reader_hyphenate),
+            text.hyphenate,
+            ReaderTestTags.SETTING_HYPHENATE,
+            glyph = Glyph.Hyphenate
+        ) { onChange(text.copy(hyphenate = it)) }
+    }
+}
+
+/**
+ * Smaller and larger text, one step at a time, with the size between: a small and a large A in rounded squares like
+ * the sheet's other choices, the size centred between them (owner, M3T1).
+ */
+@Composable
+private fun SizeStepper(sizeSp: Int, onSize: (Int) -> Unit) {
+    val p = FlowFolio.palette
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        SquareButton(stringResource(R.string.reader_text_smaller), ReaderTestTags.TEXT_SMALLER, {
+            onSize((sizeSp - 1).coerceAtLeast(ReaderText.MIN_SIZE_SP))
+        }) {
+            Text(
+                "A",
+                style = TextStyle(fontFamily = UiFamily, fontSize = SMALL_A, fontWeight = FontWeight.SemiBold),
+                color = p.item
+            )
         }
-        ToggleChip(stringResource(R.string.reader_hyphenate), text.hyphenate, ReaderTestTags.SETTING_HYPHENATE) {
-            onChange(text.copy(hyphenate = it))
+        Text(
+            "$sizeSp",
+            style = FlowFolioType.rowLabel.merge(FlowFolio.title),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.width(SIZE_VALUE)
+        )
+        SquareButton(stringResource(R.string.reader_text_larger), ReaderTestTags.TEXT_LARGER, {
+            onSize((sizeSp + 1).coerceAtMost(ReaderText.MAX_SIZE_SP))
+        }) {
+            Text(
+                "A",
+                style = TextStyle(fontFamily = UiFamily, fontSize = LARGE_A, fontWeight = FontWeight.SemiBold),
+                color = p.item
+            )
         }
     }
 }
 
-/** Smaller and larger text, one step at a time, with the size between. */
-@Composable
-private fun SizeStepper(sizeSp: Int, onSize: (Int) -> Unit) {
-    val p = FlowFolio.palette
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        val smaller = stringResource(R.string.reader_text_smaller)
-        val larger = stringResource(R.string.reader_text_larger)
-        FlowFolioIconButton(
-            onClick = { onSize((sizeSp - 1).coerceAtLeast(ReaderText.MIN_SIZE_SP)) },
-            glass = true,
-            modifier = Modifier.semantics { contentDescription = smaller }.testTag(ReaderTestTags.TEXT_SMALLER)
-        ) { Text("A", style = TextStyle(fontSize = 13.sp), color = p.item) }
-        Text(
-            "$sizeSp",
-            style = FlowFolioType.rowLabel.merge(FlowFolio.title),
-            modifier = Modifier.widthIn(min = 28.dp)
-        )
-        FlowFolioIconButton(
-            onClick = { onSize((sizeSp + 1).coerceAtMost(ReaderText.MAX_SIZE_SP)) },
-            glass = true,
-            modifier = Modifier.semantics { contentDescription = larger }.testTag(ReaderTestTags.TEXT_LARGER)
-        ) { Text("A", style = TextStyle(fontSize = 21.sp), color = p.item) }
-    }
-}
+private val SMALL_A = 12.sp
+private val LARGE_A = 24.sp
+private val SIZE_VALUE = 44.dp
 
 /** Three lines of text, further apart for each looser spacing. */
 private fun DrawScope.spacingIcon(index: Int, color: Color) {

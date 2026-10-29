@@ -176,17 +176,16 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, modi
     }
 }
 
-/** Contents, Go to page, annotations, "Aa" and the ribbon, falling in one after another (ADR-0034). */
+/**
+ * Contents, annotations, "Aa" and the ribbon, falling in one after another (ADR-0034). Go to page is in the Contents
+ * panel, keeping room here for later tools (owner, M3T1).
+ */
 @Composable
 private fun TopTools(mark: ChromeMark, actions: ChromeActions, button: Dp) {
     val glyph = button * GLYPH_SHARE
     val contents = Modifier.testTag(ReaderTestTags.CONTENTS).reveal(2)
     FlowFolioIconButton({ actions.onPanel(Panel.CONTENTS) }, contents, glass = true, size = button) {
         FlowFolioGlyph(Glyph.Contents, stringResource(R.string.reader_contents), size = glyph)
-    }
-    val goTo = Modifier.testTag(ReaderTestTags.GO_TO).reveal(3)
-    FlowFolioIconButton({ actions.onPanel(Panel.GO_TO) }, goTo, glass = true, size = button) {
-        FlowFolioGlyph(Glyph.GoTo, stringResource(R.string.reader_go_to), size = glyph)
     }
     val notes = Modifier.testTag(ReaderTestTags.ANNOTATIONS).reveal(4)
     FlowFolioIconButton({ actions.onPanel(Panel.ANNOTATIONS) }, notes, glass = true, size = button) {

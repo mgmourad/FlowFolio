@@ -10,7 +10,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -26,6 +25,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
@@ -84,8 +84,8 @@ import com.flowfolio.core.model.pageLabel
 import com.flowfolio.core.model.printedPages
 
 /**
- * `.hdr`: "Library", the library's totals, and search, sort and import. On a narrow screen (the cover screen) the
- * title keeps its one line and the totals and buttons share the row under it (owner, 2026-10-22).
+ * `.hdr`: "Library" with search, sort and import level with it at the top right (owner, M3T1), and the library's
+ * totals under them. The title keeps its one line, shrinking a little on the narrowest screens rather than wrapping.
  */
 @Composable
 internal fun LibraryHeader(
@@ -96,43 +96,24 @@ internal fun LibraryHeader(
     actions: LibraryActions,
     modifier: Modifier = Modifier
 ) {
-    BoxWithConstraints(modifier.fillMaxWidth().padding(start = 22.dp, end = 18.dp, top = 10.dp, bottom = 6.dp)) {
-        val narrow = maxWidth < NARROW_HEADER
-        val title = @Composable {
+    Column(modifier.fillMaxWidth().padding(start = 22.dp, end = 18.dp, top = 10.dp, bottom = 6.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 stringResource(R.string.library_title),
                 style = FlowFolioType.screenTitle.merge(FlowFolio.title),
                 maxLines = 1,
-                softWrap = false
+                softWrap = false,
+                autoSize = TextAutoSize.StepBased(
+                    minFontSize = TITLE_MIN_SP,
+                    maxFontSize = FlowFolioType.screenTitle.fontSize
+                ),
+                modifier = Modifier.weight(1f).padding(end = 8.dp)
             )
-        }
-        val totals = @Composable { if (!state.libraryEmpty) LibraryTotals(state, stats, Modifier.padding(top = 8.dp)) }
-        val buttons = @Composable { HeaderButtons(state, searching, onSearch, actions) }
-        if (narrow) {
-            Column(Modifier.fillMaxWidth()) {
-                title()
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                    Column(Modifier.weight(1f)) { totals() }
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) { buttons() }
-                }
-            }
-        } else {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                Column(Modifier.weight(1f)) {
-                    title()
-                    totals()
-                }
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    buttons()
-                }
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                HeaderButtons(state, searching, onSearch, actions)
             }
         }
+        if (!state.libraryEmpty) LibraryTotals(state, stats, Modifier.padding(top = 8.dp))
     }
 }
 
@@ -432,7 +413,6 @@ private fun MenuEntry(label: Int, warn: Boolean = false, onClick: () -> Unit) {
 internal const val HERO_ORIGIN = "hero"
 
 /** Narrower than this, the header's buttons go under the title. */
-private val NARROW_HEADER = 560.dp
 private const val COUNT_SHADE = 0.14f
 private const val LOOSE_ORIGIN = "loose"
 private const val SEARCH_FILL = 0.6f
@@ -446,3 +426,5 @@ internal val BOOK_SPINE_ROOM = 8.dp
 private val SHELF_BOOK_GAP = 11.dp
 private val SHELF_ROW_TOP = 22.dp
 private val SHELF_ROW_BOTTOM = 6.dp
+
+private val TITLE_MIN_SP = 34.sp

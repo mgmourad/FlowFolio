@@ -26,11 +26,20 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -40,6 +49,8 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
@@ -82,18 +93,21 @@ object ShellTestTags {
 /**
  * The app shell from the mock: screens on the app background, with the floating glass tab bar (`.tabbar`) over them
  * when folded, or a glass rail on the left when the window is at least [RAIL_MIN_WIDTH] wide (unfolded, tablets).
- * The chrome shows only on top-level screens ([route] is one of [TopLevel]) and slides away elsewhere (the reader).
- * Screens learn the space it takes from [LocalChromePadding]; the glass blurs them through [LocalGlassState].
+ * The chrome stays on every screen, so page titles always sit in the same place (owner, M3T1), and slides away only
+ * for the reader. On a page under a tab (a book's details, a shelf) that tab stays lit. Screens learn the space it
+ * takes from [LocalChromePadding]; the glass blurs them through [LocalGlassState].
  */
 @Composable
 fun AppShell(route: String?, onSelect: (TopLevel) -> Unit, content: @Composable () -> Unit) {
     val current = TopLevel.of(route)
     val reading = Routes.isReader(route)
     val p = FlowFolio.palette
+    var lastTab by rememberSaveable { mutableStateOf(TopLevel.Library) }
+    if (current != null) lastTab = current
     // Exposes Compose test tags as resource ids so UiAutomator (on-device gesture tests, benchmarks) can find them.
     BoxWithConstraints(Modifier.fillMaxSize().appBackground(p).semantics { testTagsAsResourceId = true }) {
         val wide = maxWidth >= RAIL_MIN_WIDTH
-        val shown = current != null
+        val shown = !reading
         val haze = rememberHazeState()
         // The space the bar or rail takes, whether or not it is showing: a top-level screen keeps its layout while
         // the rail slides away as a book opens, instead of shifting under it (owner, 2026-10-18: no "kick").
@@ -123,7 +137,7 @@ fun AppShell(route: String?, onSelect: (TopLevel) -> Unit, content: @Composable 
             // reader's pages fill the screen instead.
             val fades by animateFloatAsState(if (reading) 0f else 1f, tween(Motion.FAST_MS), label = "edgeFades")
             if (fades > 0f) EdgeFades(fades, Routes.topFadeOf(route))
-            val selected = current ?: TopLevel.Library
+            val selected = current ?: lastTab
             if (wide) {
                 AnimatedVisibility(
                     visible = shown,
@@ -156,7 +170,12 @@ private fun TabBar(selected: TopLevel, onSelect: (TopLevel) -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         // Equal shares of the bar, so the last tab never runs off its edge (owner, 2026-10-22).
-        TopLevel.entries.forEach { TabItem(it, it == selected, onSelect, Modifier.weight(1f)) }
+        TopLevel.entries.forEach {
+            // Each tab its share of the bar, the tab filling it (centred, whatever its own content's width).
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                TabItem(it, it == selected, onSelect, Modifier.fillMaxWidth())
+            }
+        }
     }
 }
 
@@ -174,62 +193,88 @@ private fun Rail(selected: TopLevel, onSelect: (TopLevel) -> Unit) {
         verticalArrangement = Arrangement.spacedBy(RAIL_GAP, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        TopLevel.entries.forEach { TabItem(it, it == selected, onSelect) }
+        TopLevel.entries.forEach { TabItem(it, it == selected, onSelect, showName = true) }
     }
 }
 
-/** `.tab`: glyph over label in the hint colour; the selected tab turns title-coloured, glows and lifts (spring). */
+/**
+ * `.tab`: a glyph in the hint colour; the selected tab turns title-coloured, glows and lifts (spring). Glyphs only
+ * (owner, M3T1): the tab's name is what TalkBack reads, and shows as a tooltip on a long press.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TabItem(
     destination: TopLevel,
     selected: Boolean,
     onSelect: (TopLevel) -> Unit,
-    modifier: Modifier = Modifier.width(TAB_WIDTH)
+    modifier: Modifier = Modifier.width(TAB_WIDTH),
+    showName: Boolean = false
 ) {
     val lift by animateFloatAsState(
         if (selected) 1f else 0f,
         tween(Motion.SPRING_MS, easing = Motion.Spring),
         label = "tab"
     )
-    val style = if (selected) FlowFolio.title else FlowFolio.hint
     val color = if (selected) FlowFolio.palette.title else FlowFolio.palette.hint
-    Column(
-        modifier
-            .selectable(
-                selected = selected,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                role = Role.Tab
-            ) { onSelect(destination) }
-            .testTag(ShellTestTags.tab(destination)),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(TAB_GAP)
+    val name = stringResource(destination.label)
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+        tooltip = { PlainTooltip { Text(name, style = FlowFolioType.tab) } },
+        state = rememberTooltipState(),
+        modifier = modifier
     ) {
-        FlowFolioGlyph(
-            destination.glyph,
-            contentDescription = null,
-            color = color,
-            size = TAB_GLYPH,
-            glow = selected,
-            modifier = Modifier.glowLayer {
-                translationY = -TAB_LIFT.toPx() * lift
-                val s = 1f + (TAB_SCALE - 1f) * lift
-                scaleX = s
-                scaleY = s
-                // The glow is rasterized once at rest size and the layer is scaled, so the lift leaves no trail of
-                // glow textures in the GPU cache.
-                compositingStrategy = CompositingStrategy.Offscreen
+        // Centred in the tab's width; on the rail (unfolded), where there is room, its name under it (owner, M3T1).
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .selectable(
+                    selected = selected,
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    role = Role.Tab
+                ) { onSelect(destination) }
+                .semantics(mergeDescendants = true) { contentDescription = name }
+                .padding(vertical = TAB_PAD)
+                .testTag(ShellTestTags.tab(destination)),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(TAB_NAME_GAP)
+        ) {
+            TabGlyph(destination, color, selected, lift)
+            if (showName) {
+                Text(
+                    name,
+                    style = FlowFolioType.tab.merge(if (selected) FlowFolio.title else FlowFolio.hint),
+                    maxLines = 1,
+                    softWrap = false,
+                    autoSize = TextAutoSize.StepBased(
+                        minFontSize = TAB_MIN_SP,
+                        maxFontSize = FlowFolioType.tab.fontSize
+                    ),
+                    modifier = Modifier.clearAndSetSemantics {}
+                )
             }
-        )
-        // One line, made smaller when the system's font size would not fit it (long labels on the cover screen).
-        Text(
-            stringResource(destination.label),
-            style = FlowFolioType.tab.merge(style),
-            maxLines = 1,
-            softWrap = false,
-            autoSize = TextAutoSize.StepBased(minFontSize = TAB_MIN_SP, maxFontSize = FlowFolioType.tab.fontSize)
-        )
+        }
     }
+}
+
+@Composable
+private fun TabGlyph(destination: TopLevel, color: androidx.compose.ui.graphics.Color, selected: Boolean, lift: Float) {
+    FlowFolioGlyph(
+        destination.glyph,
+        contentDescription = null,
+        color = color,
+        size = TAB_GLYPH,
+        glow = selected,
+        modifier = Modifier.glowLayer {
+            translationY = -TAB_LIFT.toPx() * lift
+            val s = 1f + (TAB_SCALE - 1f) * lift
+            scaleX = s
+            scaleY = s
+            // The glow is rasterized once at rest size and the layer is scaled, so the lift leaves no trail of
+            // glow textures in the GPU cache.
+            compositingStrategy = CompositingStrategy.Offscreen
+        }
+    )
 }
 
 /**
@@ -251,9 +296,10 @@ private val CHROME_INSET = 14.dp
 private val RAIL_WIDTH = 84.dp
 private val RAIL_GAP = 48.dp
 private val TAB_WIDTH = 70.dp
+private val TAB_PAD = 10.dp
+private val TAB_NAME_GAP = 4.dp
 private val TAB_MIN_SP = 8.sp
-private val TAB_GAP = 4.dp
-private val TAB_GLYPH = 23.dp
+private val TAB_GLYPH = 26.dp
 private val TAB_LIFT = 2.dp
 private val TAB_GLOW_ROOM = 10.dp
 private const val TAB_SCALE = 1.08f

@@ -1,7 +1,14 @@
 package com.flowfolio.feature.reader
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.SizeTransform
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -71,22 +78,36 @@ internal fun ColumnScope.ReaderSettingsContent(
     // A PDF's Dynamic Flow (ADR-0045) heads the sheet: it changes the whole book, not one tab's setting.
     if (flow != null && flow.available && onFlow != null) {
         Box(Modifier.padding(bottom = 12.dp)) {
-            DynamicFlowCard(flow, settings.flowCarry, FlowActions(onFlow, viewModel::setFlowCarry))
+            DynamicFlowCard(flow, settings.flowCarry, FlowActions(onFlow, viewModel::setFlowCarry, viewModel::hasNotes))
         }
     }
     Column(Modifier.testTag(ReaderTestTags.SETTINGS_SHEET)) {
         SheetTabs(tabs, selected.coerceIn(0, tabs.lastIndex)) { selected = it }
     }
-    Column(
-        Modifier
-            .weight(1f, fill = false)
-            .verticalScroll(rememberScrollState())
-            .padding(top = 12.dp, start = 4.dp, end = 4.dp)
-    ) {
-        when (tabs[selected.coerceIn(0, tabs.lastIndex)].tag) {
-            ReaderTestTags.TAB_TEXT -> TextChoice(settings.text, bookFont, viewModel::setText)
-            ReaderTestTags.TAB_PAGE -> PageChoice(settings, viewModel)
-            else -> ControlsChoice(settings, viewModel)
+    // The tabs slide over each other: the next tab comes in from the side it lies on.
+    AnimatedContent(
+        selected.coerceIn(0, tabs.lastIndex),
+        modifier = Modifier.weight(1f, fill = false),
+        transitionSpec = {
+            val way = if (targetState > initialState) 1 else -1
+            (slideInHorizontally(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { it * way } + fadeIn())
+                .togetherWith(
+                    slideOutHorizontally(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { -it * way } + fadeOut()
+                )
+                .using(SizeTransform(clip = true))
+        },
+        label = "sheetTab"
+    ) { index ->
+        Column(
+            Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(top = 12.dp, start = 4.dp, end = 4.dp)
+        ) {
+            when (tabs[index].tag) {
+                ReaderTestTags.TAB_TEXT -> TextChoice(settings.text, bookFont, viewModel::setText)
+                ReaderTestTags.TAB_PAGE -> PageChoice(settings, viewModel)
+                else -> ControlsChoice(settings, viewModel)
+            }
         }
     }
 }
@@ -95,10 +116,11 @@ internal fun ColumnScope.ReaderSettingsContent(
 @Composable
 private fun PageChoice(settings: UserSettings, viewModel: ReaderSettingsViewModel) {
     val reveal = LocalPaperReveal.current
+    LabeledRow(stringResource(R.string.reader_paper), Glyph.Paper) {}
     PaperSwatches(settings.paperStyle) { style ->
         if (reveal != null) reveal.change(style, viewModel::setPaperStyle) else viewModel.setPaperStyle(style)
     }
-    LabeledRow(stringResource(R.string.reader_turn)) {
+    LabeledRow(stringResource(R.string.reader_turn), Glyph.PageTurn) {
         FlowFolioSegmented(
             listOf(
                 stringResource(R.string.reader_turn_curl),
@@ -118,6 +140,7 @@ private fun PageChoice(settings: UserSettings, viewModel: ReaderSettingsViewMode
             settings.readerSpreads,
             ReaderTestTags.SETTING_SPREADS,
             enabled = !scroll,
+            glyph = Glyph.Spread,
             onChange = viewModel::setSpreads
         )
         ToggleChip(
@@ -125,6 +148,7 @@ private fun PageChoice(settings: UserSettings, viewModel: ReaderSettingsViewMode
             settings.spreadCoverAlone,
             ReaderTestTags.SETTING_COVER,
             enabled = settings.readerSpreads && !scroll,
+            glyph = Glyph.Cover,
             onChange = viewModel::setCoverAlone
         )
     }
@@ -134,7 +158,7 @@ private fun PageChoice(settings: UserSettings, viewModel: ReaderSettingsViewMode
 @Composable
 private fun DirectionChoice(viewModel: ReaderSettingsViewModel) {
     val rightToLeft by viewModel.rightToLeft.collectAsStateWithLifecycle()
-    LabeledRow(stringResource(R.string.reader_direction)) {
+    LabeledRow(stringResource(R.string.reader_direction), Glyph.Direction) {
         FlowFolioSegmented(
             listOf(
                 stringResource(R.string.reader_direction_ltr_short),
@@ -150,7 +174,7 @@ private fun DirectionChoice(viewModel: ReaderSettingsViewModel) {
 /** When the controls hide, the two paper sounds with their loudness, and riffle haptics. */
 @Composable
 private fun ControlsChoice(settings: UserSettings, viewModel: ReaderSettingsViewModel) {
-    LabeledRow(stringResource(R.string.reader_auto_hide)) {
+    LabeledRow(stringResource(R.string.reader_auto_hide), Glyph.AutoHide) {
         FlowFolioSegmented(
             ControlsAutoHide.entries.map { stringResource(it.label) },
             ControlsAutoHide.entries.indexOf(settings.controlsAutoHide),
@@ -165,6 +189,7 @@ private fun ControlsChoice(settings: UserSettings, viewModel: ReaderSettingsView
         settings.turnVolume,
         ReaderTestTags.SETTING_TURN_SOUND to ReaderTestTags.SETTING_TURN_VOLUME,
         stringResource(R.string.reader_turn_volume),
+        Glyph.Sound,
         onToggle = viewModel::setTurnSound
     ) {
         viewModel.setTurnVolume(it)
@@ -177,6 +202,7 @@ private fun ControlsChoice(settings: UserSettings, viewModel: ReaderSettingsView
         settings.riffleVolume,
         ReaderTestTags.SETTING_RIFFLE_SOUND to ReaderTestTags.SETTING_RIFFLE_VOLUME,
         stringResource(R.string.reader_riffle_volume),
+        Glyph.Riffle,
         onToggle = viewModel::setRiffleSound
     ) {
         viewModel.setRiffleVolume(it)
@@ -188,6 +214,7 @@ private fun ControlsChoice(settings: UserSettings, viewModel: ReaderSettingsView
             stringResource(R.string.reader_chip_haptics),
             settings.scrubHaptics,
             ReaderTestTags.SETTING_HAPTICS,
+            glyph = Glyph.Haptics,
             onChange = viewModel::setScrubHaptics
         )
     }
@@ -197,6 +224,8 @@ private fun ControlsChoice(settings: UserSettings, viewModel: ReaderSettingsView
  * A sound on one line: its switch as a chip, then its loudness. Letting go of the slider plays the sound at the new
  * loudness (ADR-0026).
  */
+// A sound's switch, its loudness and their names: one row's parts.
+@Suppress("LongParameterList")
 @Composable
 private fun SoundRow(
     label: String,
@@ -204,11 +233,12 @@ private fun SoundRow(
     volume: Float,
     tags: Pair<String, String>,
     volumeLabel: String,
+    glyph: Glyph,
     onToggle: (Boolean) -> Unit,
     onVolume: (Float) -> Unit
 ) {
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        ToggleChip(label, on, tags.first, Modifier.width(SOUND_CHIP), onChange = onToggle)
+        ToggleChip(label, on, tags.first, Modifier.width(SOUND_CHIP), glyph = glyph, onChange = onToggle)
         FlowFolioSlider(
             volume,
             onValueChangeFinished = onVolume,

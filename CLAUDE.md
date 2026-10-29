@@ -15,7 +15,8 @@ app on the emulator, some on shelves.
 **Phase 3 signed off by the owner 2026-10-28 and released as FlowFolio 0.3.0-alpha.1 (build 300001)**
 (`docs/plans/phase3-m1m2-signoff.md`). Next: the owner's tweaks to M3 in three milestones, M3T1 (polish and
 navigation), M3T2 (finished, favourites, search), M3T3 (Reading Goal, Dictionary from English Wiktionary): plan approved
-2026-10-28 (`docs/plans/phase3-m3-tweaks-plan.md`). ADR-0044 is still proposed until the owner accepts it.
+2026-10-28 (`docs/plans/phase3-m3-tweaks-plan.md`); M3T1 built 2026-10-29, waiting for the owner's look. ADR-0044
+is still proposed until the owner accepts it.
 
 **M1 and M2 built 2026-10-27.** The engine is a plain JVM module (ADR-0044), the Python server is retired (ADR-0043). On the
 `fold8_api37` emulator *University Physics* (959 pages) converts in about 58 s into a 40 MB EPUB and opens in the reader;

@@ -5,6 +5,34 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+### Changed
+- M3T1, the owner's polish and navigation tweaks (`docs/plans/phase3-m3-tweaks-plan.md`):
+  - Reader: the Contents panel's rows pour in one after another (`Modifier.cascade`); the riffle bar's side buttons are
+    slim capsules with drawn, centred chevrons; the ribbon and pin are replaced by a riffle book under the bar whose
+    pages flip as it slides, and a glass marker on the page block glowing in the theme's colour (no blur; never wider
+    than the book; Roborazzi references re-recorded).
+  - "Aa" sheet: a glyph for every setting (new glyphs: line spacing, margins, justify, hyphenate, paper, page turn,
+    direction, spread, cover, auto-hide, sound, riffle, haptics); the tabs slide over each other; a setting's control
+    goes under its name when both don't fit; the Dynamic Flow card has a glowing outline that breathes while it is on.
+  - Dynamic Flow asks "convert the changes" only when the view being left has highlights, notes or bookmarks
+    (`DynamicFlow.hasNotes`); otherwise it switches at once.
+  - App shell: the tab bar (folded) and rail (unfolded) stay on every screen but the reader, showing glyphs only (the
+    names are read by TalkBack and shown on a long press); pages under a tab keep clear of it (`clearOfChrome`) and
+    keep that tab lit.
+  - Library: search, sort and import sit level with the title; the Continue reading card sets its title smaller, shows
+    "Progress" (open book) and "Read time" (clock) and, for a PDF, a Dynamic Flow button lit when on and dim when off.
+  - Shelves: opening a shelf zooms its page out of the card tapped and back into it on Back (`ZoomOrigin`,
+    `ZoomMotion`: scale and alpha only, so nothing is measured again while it runs); the shelf page's + and Select sit
+    level with its title, Select's options under them and above the Tiles/List switch.
+  - Owner's round on M3T1: a tab always opens on its own main page (a shelf left open under Shelves is closed) and the
+    bar lights the right tab; the rail centres its glyphs and shows their names under them; the riffle book is outlined
+    in the theme's darkest colour (black on a light theme) and riffles faster; margins sit under their label like line
+    spacing; the text size's smaller and larger A are rounded squares like the sheet's other choices, the size centred
+    between them; Go to page moved from the top bar into the Contents panel's top right.
+  - Continue reading card: the cover sits at the top, level with the title, a little bigger; read time comes first,
+    then the progress with its bar; the shortcuts (Dynamic Flow, annotations, bookmarks, shelf) have a row of their
+    own under it all, so none is cut off on the cover screen.
+
 ## [0.3.0-alpha.1] - 2026-10-28
 
 Phase 3 (the converter on the phone and Dynamic Flow), the first published build (ADR-0042); it also

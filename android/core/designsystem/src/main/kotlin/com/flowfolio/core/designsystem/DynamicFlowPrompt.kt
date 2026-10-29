@@ -28,24 +28,32 @@ import com.flowfolio.core.model.FlowCarry
  * menus: the same questions everywhere. While [toFlow] is set (true into Dynamic Flow, false back to the PDF) it asks,
  * as [carry] says: whether to bring the view's highlights, notes and bookmarks across ("convert the changes"), with
  * "Don't show this again"; agreeing says that runs in the background. Then [onSwitch] (on, bring them) and [onClose].
- * When the reader said not to ask, it switches at once with the answer remembered ([onRemember] saves a new one).
+ * It switches at once when the view being left has nothing to bring ([hasNotes] answers for the view: true Dynamic
+ * Flow), and when the reader said not to ask, with the answer remembered ([onRemember] saves a new one).
  */
 @Composable
 fun DynamicFlowPrompt(
     toFlow: Boolean?,
     carry: FlowCarry,
+    hasNotes: suspend (Boolean) -> Boolean,
     onSwitch: (Boolean, Boolean) -> Unit,
     onRemember: (FlowCarry) -> Unit,
     onClose: () -> Unit
 ) {
     var telling by remember { mutableStateOf(false) }
+    // Whether to ask: known once the view being left has been looked at; null while looking.
+    var asking by remember(toFlow) { mutableStateOf<Boolean?>(null) }
     LaunchedEffect(toFlow, carry) {
-        if (toFlow != null && carry != FlowCarry.ASK) {
-            onSwitch(toFlow, carry == FlowCarry.CONVERT)
+        if (toFlow == null) return@LaunchedEffect
+        val notes = hasNotes(!toFlow)
+        if (!notes || carry != FlowCarry.ASK) {
+            onSwitch(toFlow, notes && carry == FlowCarry.CONVERT)
             onClose()
+        } else {
+            asking = true
         }
     }
-    if (toFlow == null || carry != FlowCarry.ASK) return
+    if (toFlow == null || asking != true) return
     if (telling) {
         val done = {
             telling = false

@@ -104,7 +104,7 @@ fun LibraryScreen(
     statsViewModel: LibraryStatsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val stats by statsViewModel.stats.collectAsStateWithLifecycle()
+    val stats = rememberLibraryStats(statsViewModel, state.continueReading?.book?.id)
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     var shelving by remember { mutableStateOf<Book?>(null) }
@@ -145,7 +145,7 @@ fun LibraryScreen(
             onDelete = viewModel::onRequestDelete,
             onLocate = locate,
             onAddToShelf = { shelving = it },
-            onFlow = rememberDynamicFlowSwitch(viewModel.flowCarry, viewModel::setFlow, viewModel::setFlowCarry),
+            onFlow = rememberDynamicFlowSwitch(viewModel),
             onOpenShelf = onOpenShelf,
             onOpenFolder = onOpenFolder,
             onRemoveFolder = removeFolder,
@@ -237,7 +237,7 @@ fun LibraryContent(
             }
             if (searching) item(key = "search") { SearchField(state.query, actions.onQuery) }
             if (state.importing) item(key = "importing") { ImportProgress(state.importProgress) }
-            libraryBody(state, actions)
+            libraryBody(state, actions, stats.heroReadMillis)
         }
         SnackbarHost(
             snackbar,
@@ -258,7 +258,11 @@ private fun rowIndex(state: LibraryUiState, searching: Boolean, shelfId: Long): 
     return before + row
 }
 
-private fun androidx.compose.foundation.lazy.LazyListScope.libraryBody(state: LibraryUiState, actions: LibraryActions) {
+private fun androidx.compose.foundation.lazy.LazyListScope.libraryBody(
+    state: LibraryUiState,
+    actions: LibraryActions,
+    heroReadMillis: Long
+) {
     when {
         state.loading -> Unit
 
@@ -274,7 +278,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.libraryBody(state: Li
             if (hero != null && state.filter == LibraryFilter.ALL && state.query.isBlank()) {
                 // The shelf its shortcut opens: the first it is on, or the books on no shelf.
                 val shelf = state.shelves.firstOrNull { hero.book.id in it.bookIds }?.id ?: ShelfPageViewModel.LOOSE
-                item(key = "hero") { ContinueReadingCard(hero, actions, shelf, Modifier.reveal(2)) }
+                item(key = "hero") { ContinueReadingCard(hero, actions, shelf, heroReadMillis, Modifier.reveal(2)) }
             }
             val rows = shelfRows(state.items, state.shelves)
             if (rows.isEmpty()) item(key = "nomatch") { NoMatch() }

@@ -6,8 +6,12 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -82,22 +86,63 @@ internal fun SheetTabs(tabs: List<SheetTab>, selected: Int, onSelect: (Int) -> U
     }
 }
 
-/** A setting's name on the left and its control on the right, one compact line. */
+/**
+ * A setting's glyph and name on the left and its control on the right, one compact line. When both don't fit (a long
+ * name beside a wide control on the cover screen), the control goes under the name rather than cutting the name short.
+ * [stacked] always puts it under the name (line spacing and margins, alike; owner, M3T1).
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun LabeledRow(label: String, content: @Composable RowScope.() -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = ROW_HEIGHT).padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            label,
-            style = FlowFolioType.rowLabel.merge(FlowFolio.item),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f).padding(end = 12.dp)
-        )
-        content()
+internal fun LabeledRow(
+    label: String,
+    glyph: Glyph? = null,
+    stacked: Boolean = false,
+    content: @Composable RowScope.() -> Unit
+) {
+    if (stacked) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+            SettingName(label, glyph)
+            Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, content = content)
+        }
+        return
     }
+    FlowRow(
+        Modifier.fillMaxWidth().heightIn(min = ROW_HEIGHT).padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+        itemVerticalAlignment = Alignment.CenterVertically
+    ) {
+        SettingName(label, glyph, Modifier.padding(end = 12.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, content = content)
+    }
+}
+
+/** A setting's glyph and name. */
+@Composable
+private fun SettingName(label: String, glyph: Glyph?, modifier: Modifier = Modifier) {
+    Row(modifier.heightIn(min = ROW_HEIGHT), verticalAlignment = Alignment.CenterVertically) {
+        if (glyph != null) {
+            FlowFolioGlyph(glyph, null, size = ROW_GLYPH, glow = false, modifier = Modifier.padding(end = 10.dp))
+        }
+        Text(label, style = FlowFolioType.rowLabel.merge(FlowFolio.item), maxLines = 1)
+    }
+}
+
+/** A button drawn like [IconChoice]'s boxes, a rounded square, for the sheet's one-off actions (smaller, larger). */
+@Composable
+internal fun SquareButton(label: String, tag: String, onClick: () -> Unit, content: @Composable () -> Unit) {
+    val p = FlowFolio.palette
+    val shape = RoundedCornerShape(12.dp)
+    Box(
+        Modifier
+            .size(ICON_BOX)
+            .clip(shape)
+            .border(1.dp, p.hint.copy(alpha = OUTLINE_ALPHA), shape)
+            .clickable(onClick = onClick)
+            .semantics { contentDescription = label }
+            .testTag(tag),
+        contentAlignment = Alignment.Center
+    ) { content() }
 }
 
 /** An on/off setting as a pill: filled and outlined in the accent when on. */
@@ -108,6 +153,7 @@ internal fun ToggleChip(
     tag: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    glyph: Glyph? = null,
     onChange: (Boolean) -> Unit
 ) {
     val p = FlowFolio.palette
@@ -125,13 +171,28 @@ internal fun ToggleChip(
             .testTag(tag),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            label,
-            style = FlowFolioType.pill.merge(if (checked) FlowFolio.title else FlowFolio.hint),
-            maxLines = 1
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (glyph != null) {
+                FlowFolioGlyph(
+                    glyph,
+                    null,
+                    color = if (checked) p.title else p.hint,
+                    size = CHIP_GLYPH,
+                    glow = false,
+                    modifier = Modifier.padding(end = 6.dp)
+                )
+            }
+            Text(
+                label,
+                style = FlowFolioType.pill.merge(if (checked) FlowFolio.title else FlowFolio.hint),
+                maxLines = 1
+            )
+        }
     }
 }
+
+private val ROW_GLYPH = 20.dp
+private val CHIP_GLYPH = 16.dp
 
 /**
  * A choice drawn as small pictures (line spacing, margins): [count] options, each drawn by [icon] with its index and

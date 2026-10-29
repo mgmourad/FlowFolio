@@ -6,8 +6,10 @@ import android.content.Intent
 import android.content.IntentFilter
 import com.flowfolio.core.data.IoDispatcher
 import com.flowfolio.core.data.toBook
+import com.flowfolio.core.database.AnnotationDao
 import com.flowfolio.core.database.BookDao
 import com.flowfolio.core.database.BookReadingDao
+import com.flowfolio.core.database.BookmarkDao
 import com.flowfolio.core.model.BookFormat
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.FlowFailure
@@ -65,6 +67,12 @@ interface DynamicFlow {
     /** Remembers where the reader is in the book's Dynamic Flow, and the PDF page that is in (null keeps the page). */
     suspend fun saveFlowPlace(bookId: String, locator: String, pdfPage: Int?)
 
+    /**
+     * Whether the book has highlights, notes or bookmarks in its Dynamic Flow ([inFlow]) or in its PDF: switching away
+     * from a view with none has nothing to carry, so it doesn't ask.
+     */
+    suspend fun hasNotes(bookId: String, inFlow: Boolean): Boolean
+
     fun notificationPermissionAsked()
 
     /** Tells the app something about Dynamic Flow (carrying annotations runs in the app and reports here). */
@@ -89,6 +97,8 @@ interface DynamicFlow {
 
         override suspend fun saveFlowPlace(bookId: String, locator: String, pdfPage: Int?) = Unit
 
+        override suspend fun hasNotes(bookId: String, inFlow: Boolean) = false
+
         override fun notificationPermissionAsked() = Unit
 
         override fun notify(notice: FlowNotice) = Unit
@@ -98,10 +108,14 @@ interface DynamicFlow {
 }
 
 @Singleton
+// Hilt injects one dependency per parameter.
+@Suppress("LongParameterList")
 class DefaultDynamicFlow @Inject constructor(
     @ApplicationContext private val context: Context,
     private val books: BookDao,
     private val reading: BookReadingDao,
+    private val annotations: AnnotationDao,
+    private val bookmarks: BookmarkDao,
     @IoDispatcher private val io: CoroutineDispatcher,
     // Lazy: the carrier tells this class what it carried, so neither can be made inside the other.
     private val carrier: dagger.Lazy<AnnotationCarrier>
@@ -213,6 +227,10 @@ class DefaultDynamicFlow @Inject constructor(
         } else {
             reading.updateFlowProgress(bookId, locator, pdfPage)
         }
+    }
+
+    override suspend fun hasNotes(bookId: String, inFlow: Boolean): Boolean = withContext(io) {
+        annotations.countInView(bookId, inFlow) > 0 || bookmarks.countInView(bookId, inFlow) > 0
     }
 
     override fun notificationPermissionAsked() {
