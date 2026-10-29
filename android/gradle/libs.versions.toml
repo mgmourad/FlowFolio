@@ -19,7 +19,7 @@ haze = "2.0.1"
 mlkitTranslate = "17.0.3"
 mlkitLanguageId = "17.0.6"
 robolectric = "4.17"
-roborazzi = "1.76.0"
+roborazzi = "1.77.0"
 # Baseline profile and macrobenchmark (owner-approved 2026-10-19, Phase 1 close-out).
 benchmark = "1.5.0"
 profileinstaller = "1.4.1"
