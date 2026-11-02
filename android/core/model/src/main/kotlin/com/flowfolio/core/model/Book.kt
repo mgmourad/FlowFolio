@@ -35,10 +35,17 @@ data class Book(
      */
     val flowMode: Boolean? = null,
     /** Where the reader is in the book's Dynamic Flow (a reflow locator); [lastPage] stays at the PDF page. */
-    val flowLocator: String? = null
+    val flowLocator: String? = null,
+    /** A favourite (owner, M3T2). */
+    val favorite: Boolean = false,
+    /** When the reader marked it finished (epoch millis); null while not finished. */
+    val finishedAtMillis: Long? = null
 ) {
     /** Whether this PDF is to be read in Dynamic Flow, given the "upon opening" setting [onOpen]. */
     fun wantsFlow(onOpen: Boolean): Boolean = format == BookFormat.PDF && (flowMode ?: onOpen)
+
+    /** Marked finished by the reader. */
+    val finished: Boolean get() = finishedAtMillis != null
 
     /** How far through the book the reader is, 0..1 (0 when not started). */
     val progress: Float

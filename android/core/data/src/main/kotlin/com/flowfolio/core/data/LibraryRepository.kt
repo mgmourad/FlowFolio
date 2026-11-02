@@ -6,6 +6,7 @@ import com.flowfolio.core.model.BookDetails
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.StorageMode
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 @Suppress("TooManyFunctions") // one call per thing the library does
 interface LibraryRepository {
@@ -42,6 +43,21 @@ interface LibraryRepository {
     /** Points a linked book at a new location. The file must be the same book (same SHA-256). */
     suspend fun relink(bookId: String, uri: String): RelinkResult
 
+    /** Returns the number of bookmarks for a book. */
+    fun observeBookmarkCount(bookId: String): Flow<Int> = flowOf(0)
+
+    /** Returns the number of annotations for a book. */
+    fun observeAnnotationCount(bookId: String): Flow<Int> = flowOf(0)
+
+    /** Returns the number of dictionary items for a book. */
+    fun observeDictionaryCount(bookId: String): Flow<Int> = flowOf(0)
+
+    /** Checks if a book has any bookmarks. */
+    fun hasBookmarks(bookId: String): Flow<Boolean> = flowOf(false)
+
+    /** Returns the IDs of all books that have bookmarks. */
+    fun observeBookIdsWithBookmarks(): Flow<Set<String>> = flowOf(emptySet())
+
     /** Removes the book; deletes FlowFolio's copy and cover, and releases access to linked files. */
     suspend fun delete(bookId: String)
 
@@ -52,6 +68,12 @@ interface LibraryRepository {
 
     /** Saves what the reader edited: the title (not blank), the author and the details. Blank fields become unknown. */
     suspend fun updateDetails(bookId: String, title: String, author: String?, details: BookDetails)
+
+    /** Marks the book a favourite, or not (owner, M3T2). */
+    suspend fun setFavorite(bookId: String, on: Boolean) = Unit
+
+    /** Marks the book finished now, or not finished (owner, M3T2). */
+    suspend fun setFinished(bookId: String, on: Boolean) = Unit
 }
 
 sealed interface ImportResult {

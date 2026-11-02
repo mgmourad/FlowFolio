@@ -60,5 +60,9 @@ data class BookEntity(
     /** A PDF's view (ADR-0045): 1 Dynamic Flow, 0 PDF, null never chosen. Added in schema v15. */
     @ColumnInfo(name = "flow_mode") val flowMode: Boolean? = null,
     /** Where the reader is in the book's Dynamic Flow, a reflow locator. Added in schema v15. */
-    @ColumnInfo(name = "flow_locator") val flowLocator: String? = null
+    @ColumnInfo(name = "flow_locator") val flowLocator: String? = null,
+    /** A favourite (owner, M3T2). Added in schema v16. */
+    @ColumnInfo(defaultValue = "0") val favorite: Boolean = false,
+    /** When the reader marked the book finished, epoch millis; null while not finished. Added in schema v16. */
+    @ColumnInfo(name = "finished_at") val finishedAt: Long? = null
 )

@@ -346,6 +346,16 @@ private fun BookRowMenu(book: Book, open: Boolean, actions: BookRowActions, onCl
         }
         actions.selection?.let { selection -> entry(R.string.action_select, false) { selection.startWith(book.id) } }
         entry(R.string.action_add_to_shelf, false) { actions.onShelves(book) }
+        actions.onFavorite?.let { favorite ->
+            entry(if (book.favorite) R.string.action_favorite_remove else R.string.action_favorite_add, false) {
+                favorite(book)
+            }
+        }
+        actions.onFinished?.let { finished ->
+            entry(if (book.finished) R.string.action_mark_unfinished else R.string.action_mark_finished, false) {
+                finished(book)
+            }
+        }
         actions.onFlow?.takeIf { book.format == BookFormat.PDF }?.let { flow ->
             entry(
                 if (book.flowMode ==

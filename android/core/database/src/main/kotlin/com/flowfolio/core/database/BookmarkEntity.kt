@@ -33,6 +33,9 @@ interface BookmarkDao {
     @Query("SELECT COUNT(*) FROM bookmarks WHERE book_id = :bookId AND (locator IS NOT NULL) = :flow")
     suspend fun countInView(bookId: String, flow: Boolean): Int
 
+    @Query("SELECT COUNT(*) FROM bookmarks WHERE book_id = :bookId")
+    fun count(bookId: String): Flow<Int>
+
     @Query("SELECT * FROM bookmarks WHERE book_id = :bookId ORDER BY page ASC, created_at ASC")
     fun observe(bookId: String): Flow<List<BookmarkEntity>>
 

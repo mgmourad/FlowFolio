@@ -38,7 +38,9 @@ data class ShelfPageUiState(
     val items: List<LibraryItem> = emptyList(),
     val shelves: List<Shelf> = emptyList(),
     /** Every book in the library, for "Add books" and for what a chosen folder holds. */
-    val allBooks: List<Book> = emptyList()
+    val allBooks: List<Book> = emptyList(),
+    /** [ShelfPageViewModel.FINISHED] or [ShelfPageViewModel.FAVORITES]: one of the library's own pages. */
+    val special: Long? = null
 ) {
     /** The books select mode's [keys] stand for: books by id, and every book in a chosen folder. */
     fun booksChosen(keys: Set<String>): List<String> {
@@ -74,6 +76,16 @@ class ShelfPageViewModel @Inject constructor(
     /** Whether [book] has highlights, notes or bookmarks in its Dynamic Flow ([inFlow]) or its PDF. */
     override suspend fun hasNotes(book: Book, inFlow: Boolean): Boolean = flow.hasNotes(book.id, inFlow)
 
+    /** Makes [book] a favourite, or not (owner, M3T2). */
+    fun toggleFavorite(book: Book) {
+        viewModelScope.launch { library.setFavorite(book.id, !book.favorite) }
+    }
+
+    /** Marks [book] finished, or not finished (owner, M3T2). */
+    fun toggleFinished(book: Book) {
+        viewModelScope.launch { library.setFinished(book.id, !book.finished) }
+    }
+
     override fun setFlowCarry(carry: FlowCarry) {
         viewModelScope.launch { settingsRepo.setFlowCarry(carry) }
     }
@@ -95,6 +107,11 @@ class ShelfPageViewModel @Inject constructor(
 
                 shelf != null -> shelf.bookIds.mapNotNull(byId::get)
 
+                // The library's own pages (owner, M3T2): finished books, latest first, and favourites.
+                shelfId == FINISHED -> books.filter { it.finished }.sortedByDescending { it.finishedAtMillis }
+
+                shelfId == FAVORITES -> books.filter { it.favorite }.sortedBy { it.title.lowercase() }
+
                 else -> {
                     val shelved = shelves.flatMapTo(HashSet()) { it.bookIds }
                     books.filterNot { it.id in shelved }
@@ -105,6 +122,7 @@ class ShelfPageViewModel @Inject constructor(
                 folder = folder,
                 subfolders = folder?.let { subfolders(books, it) }.orEmpty(),
                 shelf = shelf.takeIf { folder == null },
+                special = shelfId.takeIf { folder == null && shelf == null && it in SPECIAL },
                 noShelves = shelves.isEmpty(),
                 items = list.map { LibraryItem(it, a[it.id] ?: Availability.AVAILABLE) },
                 shelves = shelves,
@@ -166,6 +184,14 @@ class ShelfPageViewModel @Inject constructor(
 
         /** The row of books on no shelf (all books when there are no shelves). */
         const val LOOSE = -1L
+
+        /** The finished books' page (owner, M3T2). */
+        const val FINISHED = -2L
+
+        /** The favourites' page, the Favourites tab (owner, M3T2). */
+        const val FAVORITES = -3L
+
+        private val SPECIAL = setOf(FINISHED, FAVORITES)
         private const val STOP_TIMEOUT_MS = 5_000L
     }
 }

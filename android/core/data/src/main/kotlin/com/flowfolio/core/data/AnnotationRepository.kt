@@ -11,6 +11,7 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -21,6 +22,9 @@ interface AnnotationRepository {
 
     /** Every annotation, most recently changed first. */
     fun observeAll(): Flow<List<Annotation>>
+
+    /** How many highlights and notes [bookId] has (owner, M3T2). */
+    fun observeAnnotationCount(bookId: String): Flow<Int> = flowOf(0)
 
     /** Saves a new highlight over [passage]. Returns its id. */
     suspend fun add(bookId: String, passage: Passage, color: HighlightColor, note: String? = null): Long
@@ -51,6 +55,8 @@ class DefaultAnnotationRepository @Inject constructor(
     override fun observe(bookId: String): Flow<List<Annotation>> = dao.observe(bookId).map { it.map(::toModel) }
 
     override fun observeAll(): Flow<List<Annotation>> = dao.observeAll().map { it.map(::toModel) }
+
+    override fun observeAnnotationCount(bookId: String): Flow<Int> = dao.count(bookId)
 
     override suspend fun add(bookId: String, passage: Passage, color: HighlightColor, note: String?): Long =
         withContext(io) {

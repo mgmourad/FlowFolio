@@ -65,6 +65,9 @@ data class LibraryActions(
     val onRename: ((Book) -> Unit)? = null,
     /** Turns a PDF's Dynamic Flow on or off (ADR-0045); null hides the menu entry. */
     val onFlow: ((Book) -> Unit)? = null,
+    /** Makes a book a favourite, or not; marks it finished, or not (owner, M3T2). */
+    val onFavorite: ((Book) -> Unit)? = null,
+    val onFinished: ((Book) -> Unit)? = null,
     /** The book's ribbons; null hides the menu entry. */
     val onBookmarks: ((Book) -> Unit)? = null,
     /** The book's highlights and notes; null hides the Continue Reading shortcut. */
@@ -101,14 +104,13 @@ fun LibraryScreen(
     onScrolledToShelf: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
     shelves: ShelvesViewModel = hiltViewModel(),
-    statsViewModel: LibraryStatsViewModel = hiltViewModel()
+    statsViewModel: LibraryStatsViewModel = hiltViewModel(),
+    searchViewModel: SearchViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val stats = rememberLibraryStats(statsViewModel, state.continueReading?.book?.id)
-    val snackbar = remember { SnackbarHostState() }
-    val context = LocalContext.current
+    LaunchedEffect(state.query) { searchViewModel.onQuery(state.query) }
+    val found by searchViewModel.results.collectAsStateWithLifecycle()
     var shelving by remember { mutableStateOf<Book?>(null) }
-    val removeFolder = rememberRemoveFolder(viewModel)
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         viewModel.onFilesPicked(uris.map { it.toString() })
     }
@@ -116,18 +118,13 @@ fun LibraryScreen(
         uri?.let { viewModel.onFolderPicked(it.toString()) }
     }
     val locate = rememberLocate(viewModel)
-    LaunchedEffect(viewModel) {
-        viewModel.messages.collect { snackbar.showSnackbar(it.text(context)) }
-    }
     val opener = LocalBookOpener.current
     val heroSpot = remember { CoverSpot() }
     LibraryContent(
-        state = state,
-        stats = stats,
-        snackbar = snackbar,
-        scrollToShelf = scrollToShelf,
-        onScrolledToShelf = onScrolledToShelf,
-        actions = LibraryActions(
+        state,
+        rememberMessages(viewModel),
+        rememberLibraryStats(statsViewModel, state.continueReading?.book?.id),
+        LibraryActions(
             onImport = { importPicker.launch(PDF_TYPES) },
             onImportFolder = { folderPicker.launch(null) },
             onOpen = { item, origin ->
@@ -138,28 +135,46 @@ fun LibraryScreen(
                     locate(item.book)
                 } else {
                     viewModel.onBookOpened(item.book.id)
-                    val open = { onRead(item.book) }
-                    opener?.open(heroSpot, open) ?: open()
+                    opener?.open(heroSpot) { onRead(item.book) } ?: onRead(item.book)
                 }
             },
             onDelete = viewModel::onRequestDelete,
             onLocate = locate,
             onAddToShelf = { shelving = it },
             onFlow = rememberDynamicFlowSwitch(viewModel),
+            onFavorite = viewModel::toggleFavorite,
+            onFinished = viewModel::toggleFinished,
             onOpenShelf = onOpenShelf,
             onOpenFolder = onOpenFolder,
-            onRemoveFolder = removeFolder,
-            onReorder = reorderFor(state, shelves),
+            onRemoveFolder = rememberRemoveFolder(viewModel),
+            onReorder = { id: Long, ids: List<String> ->
+                shelves.setOrder(id, ids)
+                Unit
+            }.takeIf { state.filter == LibraryFilter.ALL && state.query.isBlank() },
             onBookmarks = onBookmarks,
             onAnnotations = onAnnotations,
             onSort = viewModel::onSortChange,
             onFilter = viewModel::onFilter,
             onQuery = viewModel::onQuery,
             heroSpot = heroSpot
-        )
+        ),
+        found,
+        scrollToShelf,
+        onScrolledToShelf
     )
     LibraryDialogs(state.dialog, viewModel)
     shelving?.let { ShelveBookFlow(it, state.shelves, shelves) { shelving = null } }
+}
+
+/** The snackbar the library's messages show in. */
+@Composable
+private fun rememberMessages(viewModel: LibraryViewModel): SnackbarHostState {
+    val snackbar = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    LaunchedEffect(viewModel) {
+        viewModel.messages.collect { snackbar.showSnackbar(it.text(context)) }
+    }
+    return snackbar
 }
 
 /** Remove from library on a folder: asks first, then removes every book in it. */
@@ -171,10 +186,6 @@ private fun rememberRemoveFolder(viewModel: LibraryViewModel): (FolderEntry) -> 
     }
     return { removing = it }
 }
-
-/** Saving a shelf row's new order; null when the rows are filtered or searched (a drag would move hidden books). */
-private fun reorderFor(state: LibraryUiState, shelves: ShelvesViewModel): ((Long, List<String>) -> Unit)? =
-    if (state.filter == LibraryFilter.ALL && state.query.isBlank()) { id, ids -> shelves.setOrder(id, ids) } else null
 
 /** Locate for a moved or missing book: the system picker, then the book is pointed at the file chosen. */
 @Composable
@@ -198,6 +209,7 @@ fun LibraryContent(
     snackbar: SnackbarHostState,
     stats: LibraryStats = LibraryStats(),
     actions: LibraryActions,
+    search: SearchResults = SearchResults(),
     scrollToShelf: Long? = null,
     onScrolledToShelf: () -> Unit = {}
 ) {
@@ -205,6 +217,7 @@ fun LibraryContent(
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     var searching by rememberSaveable { mutableStateOf(state.query.isNotEmpty()) }
     val list = rememberLazyListState()
+    val expanded = remember { mutableStateOf(emptySet<SearchGroup>()) }
     // Shelves screen -> "show this shelf": scroll its row into view once the rows are there.
     LaunchedEffect(scrollToShelf, state.loading, state.shelves) {
         val target = scrollToShelf ?: return@LaunchedEffect
@@ -237,7 +250,12 @@ fun LibraryContent(
             }
             if (searching) item(key = "search") { SearchField(state.query, actions.onQuery) }
             if (state.importing) item(key = "importing") { ImportProgress(state.importProgress) }
-            libraryBody(state, actions, stats.heroReadMillis)
+            // While a query is typed, everything it finds takes the shelves' place (owner, M3T2).
+            if (searching && state.query.isNotBlank()) {
+                searchResults(search, actions, expanded)
+            } else {
+                libraryBody(state, actions, stats)
+            }
         }
         SnackbarHost(
             snackbar,
@@ -261,7 +279,7 @@ private fun rowIndex(state: LibraryUiState, searching: Boolean, shelfId: Long): 
 private fun androidx.compose.foundation.lazy.LazyListScope.libraryBody(
     state: LibraryUiState,
     actions: LibraryActions,
-    heroReadMillis: Long
+    stats: LibraryStats
 ) {
     when {
         state.loading -> Unit
@@ -274,11 +292,26 @@ private fun androidx.compose.foundation.lazy.LazyListScope.libraryBody(
                 folderRoots(state, actions)
                 return
             }
+            if (state.filter == LibraryFilter.FINISHED) {
+                item(key = "finished") { FinishedTiles(state.items, actions, Modifier.reveal(2)) }
+                return
+            }
             val hero = state.continueReading
             if (hero != null && state.filter == LibraryFilter.ALL && state.query.isBlank()) {
                 // The shelf its shortcut opens: the first it is on, or the books on no shelf.
                 val shelf = state.shelves.firstOrNull { hero.book.id in it.bookIds }?.id ?: ShelfPageViewModel.LOOSE
-                item(key = "hero") { ContinueReadingCard(hero, actions, shelf, heroReadMillis, Modifier.reveal(2)) }
+                item(key = "hero") {
+                    ContinueReadingCard(
+                        hero,
+                        actions,
+                        shelf,
+                        stats.heroReadMillis,
+                        Modifier.reveal(2),
+                        bookmarkCount = stats.heroBookmarks,
+                        annotationCount = stats.heroAnnotations,
+                        dictionaryCount = stats.heroDictionary
+                    )
+                }
             }
             val rows = shelfRows(state.items, state.shelves)
             if (rows.isEmpty()) item(key = "nomatch") { NoMatch() }
@@ -321,7 +354,7 @@ private fun EmptyLibrary(actions: LibraryActions) {
 }
 
 @Composable
-private fun NoMatch() {
+internal fun NoMatch() {
     Text(
         stringResource(R.string.library_no_match),
         style = FlowFolioType.sub.merge(FlowFolio.hint),

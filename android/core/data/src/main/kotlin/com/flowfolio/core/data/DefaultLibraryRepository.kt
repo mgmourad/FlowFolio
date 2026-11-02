@@ -1,8 +1,10 @@
 package com.flowfolio.core.data
 
 import android.os.ParcelFileDescriptor
+import com.flowfolio.core.database.AnnotationDao
 import com.flowfolio.core.database.BookDao
 import com.flowfolio.core.database.BookEntity
+import com.flowfolio.core.database.BookmarkDao
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookDetails
@@ -19,6 +21,7 @@ import java.security.MessageDigest
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -31,8 +34,24 @@ class DefaultLibraryRepository @Inject constructor(
     private val files: BookFiles,
     private val clock: Clock,
     @IoDispatcher private val io: CoroutineDispatcher,
-    private val flow: com.flowfolio.core.data.flow.DynamicFlow = com.flowfolio.core.data.flow.DynamicFlow.None
+    private val flow: com.flowfolio.core.data.flow.DynamicFlow = com.flowfolio.core.data.flow.DynamicFlow.None,
+    private val bookmarkDao: BookmarkDao? = null,
+    private val annotationDao: AnnotationDao? = null,
+    private val translations: TranslationRepository? = null
 ) : LibraryRepository {
+
+    override fun observeBookmarkCount(bookId: String): Flow<Int> = bookmarkDao?.count(bookId) ?: flowOf(0)
+
+    override fun observeAnnotationCount(bookId: String): Flow<Int> = annotationDao?.count(bookId) ?: flowOf(0)
+
+    override fun observeDictionaryCount(bookId: String): Flow<Int> =
+        translations?.observeDictionaryCount(bookId) ?: flowOf(0)
+
+    override fun observeBookIdsWithBookmarks(): Flow<Set<String>> =
+        bookmarkDao?.observeAll()?.map { bookmarks -> bookmarks.map { it.bookId }.toSet() } ?: flowOf(emptySet())
+
+    override fun hasBookmarks(bookId: String): Flow<Boolean> =
+        bookmarkDao?.observe(bookId)?.map { it.isNotEmpty() } ?: flowOf(false)
 
     override fun observeBooks(sort: LibrarySort): Flow<List<Book>> {
         val source = if (sort == LibrarySort.TITLE) dao.observeByTitle() else dao.observeByRecent()
@@ -230,6 +249,12 @@ class DefaultLibraryRepository @Inject constructor(
         updateDetails(bookId, title, book.author, book.details)
     }
 
+    override suspend fun setFavorite(bookId: String, on: Boolean) = withContext(io) { dao.setFavorite(bookId, on) }
+
+    override suspend fun setFinished(bookId: String, on: Boolean) = withContext(io) {
+        dao.setFinishedAt(bookId, if (on) System.currentTimeMillis() else null)
+    }
+
     override suspend fun updateDetails(bookId: String, title: String, author: String?, details: BookDetails) =
         withContext(io) {
             require(title.isNotBlank()) { "title is blank" }
@@ -303,7 +328,9 @@ internal fun BookEntity.toBook() = Book(
     lastLocator = lastLocator,
     folder = folder,
     flowMode = flowMode,
-    flowLocator = flowLocator
+    flowLocator = flowLocator,
+    favorite = favorite,
+    finishedAtMillis = finishedAt
 )
 
 private const val SUBJECT_SEPARATOR = "; "

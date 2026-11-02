@@ -111,8 +111,7 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                     editDestination(nav)
                     bookBookmarksDestination(nav)
                     bookAnnotationsDestination(nav)
-                    shelfDestination(nav)
-                    folderDestination(nav)
+                    shelfPages(nav)
                     readerDestination(nav)
                 }
             }
@@ -181,39 +180,6 @@ private fun NavGraphBuilder.editDestination(nav: NavHostController) = composable
     arguments = listOf(navArgument(DetailsViewModel.ARG_BOOK_ID) { type = NavType.StringType })
 ) {
     ScreenEntrance(Modifier.clearOfChrome()) { EditDetailsScreen(onDone = { nav.popBackStack() }) }
-}
-
-/** A whole shelf, as tiles or a list (opened from a shelf's book count in the library). */
-private fun NavGraphBuilder.shelfDestination(nav: NavHostController) = composable(
-    Routes.SHELF,
-    arguments = listOf(navArgument(ShelfPageViewModel.ARG_SHELF_ID) { type = NavType.LongType })
-) {
-    CompositionLocalProvider(LocalDestinationScope provides this) {
-        ScreenEntrance(Modifier.clearOfChrome()) {
-            ShelfPageScreen(
-                onBack = { nav.popBackStack() },
-                onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) },
-                onBookmarks = { book -> nav.navigate(Routes.bookBookmarks(book.id)) }
-            )
-        }
-    }
-}
-
-/** An imported folder: its folders and books, as tiles or a list (from the library's Folders chip). */
-private fun NavGraphBuilder.folderDestination(nav: NavHostController) = composable(
-    Routes.FOLDER,
-    arguments = listOf(navArgument(ShelfPageViewModel.ARG_FOLDER) { type = NavType.StringType })
-) {
-    CompositionLocalProvider(LocalDestinationScope provides this) {
-        ScreenEntrance(Modifier.clearOfChrome()) {
-            ShelfPageScreen(
-                onBack = { nav.popBackStack() },
-                onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) },
-                onBookmarks = { book -> nav.navigate(Routes.bookBookmarks(book.id)) },
-                onOpenFolder = { path -> nav.navigate(Routes.folder(path)) }
-            )
-        }
-    }
 }
 
 /** The reader; `layout` (single or spread) is a debug override used by the measurement scripts. */

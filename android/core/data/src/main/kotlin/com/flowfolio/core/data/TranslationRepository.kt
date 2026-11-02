@@ -17,6 +17,7 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.suspendCancellableCoroutine
 
@@ -95,6 +96,12 @@ interface TranslationRepository {
     /** The most recent translations, newest first. */
     fun history(limit: Int = HISTORY_LIMIT): Flow<List<Translation>>
 
+    /** How many different words and phrases were translated: the dictionary's size (owner, M3T2). */
+    fun wordCount(): Flow<Int> = flowOf(0)
+
+    /** How many of a book's translations there are (owner, M3T2). */
+    fun observeDictionaryCount(bookId: String): Flow<Int> = flowOf(0)
+
     /** Translates and remembers it. */
     suspend fun translate(text: String, from: String, to: String, bookId: String?): Translation
 
@@ -114,6 +121,10 @@ class DefaultTranslationRepository @Inject constructor(
     override fun history(limit: Int): Flow<List<Translation>> = dao.observeRecent(limit).map { list ->
         list.map { Translation(it.id, it.source, it.translated, it.from, it.to, it.bookId, it.createdAt) }
     }
+
+    override fun wordCount(): Flow<Int> = dao.observeWordCount()
+
+    override fun observeDictionaryCount(bookId: String): Flow<Int> = dao.observeCount(bookId)
 
     override suspend fun translate(text: String, from: String, to: String, bookId: String?): Translation {
         val result = translator.translate(text, from, to)

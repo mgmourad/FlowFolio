@@ -139,7 +139,9 @@ fun DetailsScreen(
             libraryVm.onRequestDelete(book)
         },
         onEdit = { onEdit(book) },
-        onBook = onOpenBook
+        onBook = onOpenBook,
+        onFavorite = { libraryVm.toggleFavorite(book) },
+        onFinished = { libraryVm.toggleFinished(book) }
     )
     // System Back flies the cover home too.
     BackHandler(onBack = actions.onBack)
@@ -156,7 +158,10 @@ internal data class DetailsActions(
     val onLocate: () -> Unit = {},
     val onDelete: () -> Unit = {},
     val onEdit: () -> Unit = {},
-    val onBook: (Book) -> Unit = {}
+    val onBook: (Book) -> Unit = {},
+    /** Makes the book a favourite, or not; marks it finished, or not (owner, M3T2). */
+    val onFavorite: () -> Unit = {},
+    val onFinished: () -> Unit = {}
 )
 
 /** Folded: hero, then title, actions and tabs under it. Unfolded (600 dp and wider): cover pane and tabs pane. */
@@ -349,6 +354,7 @@ private fun ShelfButton(onClick: () -> Unit) {
 @Composable
 private fun TopButtons(state: DetailsUiState, actions: DetailsActions) {
     var menu by remember { mutableStateOf(false) }
+    val p = FlowFolio.palette
     Row(
         Modifier
             .fillMaxWidth()
@@ -358,41 +364,31 @@ private fun TopButtons(state: DetailsUiState, actions: DetailsActions) {
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         FlowFolioIconButton(onClick = actions.onBack, glass = true) {
-            FlowFolioGlyph(
-                Glyph.Back,
-                contentDescription = stringResource(R.string.action_back),
-                color = FlowFolio.palette.text
-            )
+            FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = p.text)
         }
         Box {
             FlowFolioIconButton(onClick = { menu = true }, glass = true) {
-                FlowFolioGlyph(
-                    Glyph.More,
-                    contentDescription = stringResource(R.string.action_more),
-                    color = FlowFolio.palette.text
-                )
+                FlowFolioGlyph(Glyph.More, stringResource(R.string.action_more), color = p.text)
             }
             DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                if (state.book?.storage is BookStorage.Linked) {
-                    DropdownMenuItem(text = {
-                        Text(stringResource(R.string.action_locate), style = FlowFolio.title)
-                    }, onClick = {
-                        menu = false
-                        actions.onLocate()
-                    })
+                val book = state.book
+                val entry: @Composable (Int, androidx.compose.ui.text.TextStyle, () -> Unit, Modifier) -> Unit =
+                    { text, style, onClick, mod ->
+                        DropdownMenuItem(text = { Text(stringResource(text), style = style) }, onClick = {
+                            menu = false
+                            onClick()
+                        }, modifier = mod)
+                    }
+                if (book?.storage is BookStorage.Linked) {
+                    entry(R.string.action_locate, FlowFolio.title, actions.onLocate, Modifier)
                 }
-                DropdownMenuItem(text = {
-                    Text(stringResource(R.string.action_edit_details), style = FlowFolio.item)
-                }, onClick = {
-                    menu = false
-                    actions.onEdit()
-                }, modifier = Modifier.testTag(LibraryTestTags.EDIT_MENU))
-                DropdownMenuItem(text = {
-                    Text(stringResource(R.string.action_delete), style = FlowFolio.subItem)
-                }, onClick = {
-                    menu = false
-                    actions.onDelete()
-                })
+                val editMod = Modifier.testTag(LibraryTestTags.EDIT_MENU)
+                entry(R.string.action_edit_details, FlowFolio.item, actions.onEdit, editMod)
+                val fav = if (book?.favorite == true) R.string.action_favorite_remove else R.string.action_favorite_add
+                entry(fav, FlowFolio.item, actions.onFavorite, Modifier)
+                val fin = if (book?.finished == true) R.string.action_mark_unfinished else R.string.action_mark_finished
+                entry(fin, FlowFolio.item, actions.onFinished, Modifier)
+                entry(R.string.action_delete, FlowFolio.subItem, actions.onDelete, Modifier)
             }
         }
     }

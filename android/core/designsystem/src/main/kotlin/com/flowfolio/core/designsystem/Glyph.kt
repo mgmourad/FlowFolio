@@ -138,6 +138,11 @@ enum class Glyph(internal val pathData: String, internal val stroke: Float = 2f,
     /** A phone shaking: haptics. */
     Haptics("M8.5 4h7v16h-7z M5 8v8 M19 8v8 M2 10v4 M22 10v4 M11 17h2"),
 
+    /** Two speech marks with letters, an "A" and a character: the dictionary and translation. */
+    Translate(
+        "M4 5h9 M8.5 3v2 M5.5 5c.8 3.2 3 5.8 6.5 7.3 M11.5 5c-.9 3.4-3.2 6-7 7.8 M12.5 20l4-10 4 10 M13.8 17h5.4"
+    ),
+
     /** A star: a favourite. */
     Star("M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z")
 }

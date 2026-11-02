@@ -7,6 +7,7 @@ import com.flowfolio.core.model.BookmarkColor
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -17,6 +18,9 @@ interface BookmarkRepository {
 
     /** Every bookmark, newest first. */
     fun observeAll(): Flow<List<Bookmark>>
+
+    /** How many ribbons [bookId] has (owner, M3T2). */
+    fun observeBookmarkCount(bookId: String): Flow<Int> = flowOf(0)
 
     /** A ribbon on [page]; in an EPUB, [locator] is the text at its top (ADR-0040). */
     suspend fun add(bookId: String, page: Int, color: BookmarkColor, locator: String? = null): Long
@@ -37,6 +41,8 @@ class DefaultBookmarkRepository @Inject constructor(
     override fun observe(bookId: String): Flow<List<Bookmark>> = dao.observe(bookId).map { it.map(::toModel) }
 
     override fun observeAll(): Flow<List<Bookmark>> = dao.observeAll().map { it.map(::toModel) }
+
+    override fun observeBookmarkCount(bookId: String): Flow<Int> = dao.count(bookId)
 
     override suspend fun add(bookId: String, page: Int, color: BookmarkColor, locator: String?): Long =
         withContext(io) {

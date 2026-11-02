@@ -14,7 +14,7 @@ extensions.configure<com.android.build.api.dsl.LibraryExtension> {
 
 dependencies {
     api(projects.core.model)
-    implementation(projects.core.database)
+    api(projects.core.database)
     api(projects.core.epub)
     implementation(projects.core.datastore)
     api(projects.core.pdf)

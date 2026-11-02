@@ -2,6 +2,8 @@ package com.flowfolio.feature.library
 
 /** Semantic tags used by UI tests to find library, shelves and details elements. */
 object LibraryTestTags {
+    fun searchGroup(group: SearchGroup) = "library.search.${group.name.lowercase()}"
+
     const val IMPORT_PROGRESS = "library_import_progress"
     const val ADD_BOOKS_LIST = "library_add_books_list"
     const val ADD_BOOKS_DONE = "library_add_books_done"
@@ -35,6 +37,8 @@ object LibraryTestTags {
     const val HERO_ANNOTATIONS = "hero_annotations"
     const val HERO_BOOKMARKS = "hero_bookmarks"
     const val HERO_FLOW = "hero_flow"
+    const val HERO_FAVORITE = "hero_favorite"
+    const val HERO_FINISHED = "hero_finished"
     const val HERO_SHELF = "hero_shelf"
     const val SELECT = "select"
     const val SELECTION_BAR = "selection_bar"

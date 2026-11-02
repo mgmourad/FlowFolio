@@ -28,6 +28,14 @@ interface TranslationDao {
     @Query("SELECT * FROM translations ORDER BY created_at DESC LIMIT :limit")
     fun observeRecent(limit: Int): Flow<List<TranslationEntity>>
 
+    /** How many different words and phrases were translated (case aside): the dictionary's size. */
+    @Query("SELECT COUNT(DISTINCT lower(source)) FROM translations")
+    fun observeWordCount(): Flow<Int>
+
+    /** How many of a book's translations there are (owner, M3T2). */
+    @Query("SELECT COUNT(*) FROM translations WHERE book_id = :bookId")
+    fun observeCount(bookId: String): Flow<Int>
+
     @Query("DELETE FROM translations")
     suspend fun clear()
 }

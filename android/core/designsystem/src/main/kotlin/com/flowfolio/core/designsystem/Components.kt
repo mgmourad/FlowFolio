@@ -80,7 +80,13 @@ fun FlowFolioCard(
 
 /** A filter chip (`.chip`): hint text on a card; selected is lit in the title colour with a thin ring. */
 @Composable
-fun FlowFolioChip(text: String, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun FlowFolioChip(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    glyph: Glyph? = null
+) {
     val p = FlowFolio.palette
     val shape = RoundedCornerShape(50)
     // Unselected chips keep a faint ring in the accent, so they stand out from the page (owner, 2026-10-22).
@@ -93,9 +99,24 @@ fun FlowFolioChip(text: String, selected: Boolean, onClick: () -> Unit, modifier
             .clickable(role = Role.Tab, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
-        Text(text, style = FlowFolioType.chip.merge(if (selected) FlowFolio.title else FlowFolio.hint))
+        // A glyph before the name, in the name's colour (owner, M3T2).
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (glyph != null) {
+                FlowFolioGlyph(
+                    glyph,
+                    contentDescription = null,
+                    color = if (selected) p.title else p.hint,
+                    size = CHIP_GLYPH,
+                    glow = false,
+                    modifier = Modifier.padding(end = 6.dp)
+                )
+            }
+            Text(text, style = FlowFolioType.chip.merge(if (selected) FlowFolio.title else FlowFolio.hint))
+        }
     }
 }
+
+private val CHIP_GLYPH = 18.dp
 
 /** A 1.5 dp inner ring (`inset 0 0 0 1.5px`). */
 private fun Modifier.ringOutline(shape: androidx.compose.ui.graphics.Shape, color: Color): Modifier = drawBehind {

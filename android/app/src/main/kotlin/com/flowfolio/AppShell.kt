@@ -75,6 +75,7 @@ import dev.chrisbanes.haze.rememberHazeState
 enum class TopLevel(val route: String, val glyph: Glyph, @StringRes val label: Int) {
     Library("library", Glyph.Library, R.string.tab_library),
     Shelves("shelves", Glyph.Shelves, R.string.tab_shelves),
+    Favorites("favorites", Glyph.Star, R.string.tab_favorites),
     Bookmarks("bookmarks", Glyph.Bookmark, R.string.tab_bookmarks),
     Annotations("annotations", Glyph.Highlight, R.string.tab_annotations),
     Settings("settings", Glyph.Settings, R.string.tab_settings);

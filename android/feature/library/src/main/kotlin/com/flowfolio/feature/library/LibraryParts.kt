@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -137,27 +138,48 @@ private fun HeaderButtons(state: LibraryUiState, searching: Boolean, onSearch: (
 @Composable
 internal fun SearchField(query: String, onQuery: (String) -> Unit) {
     val p = FlowFolio.palette
-    OutlinedTextField(
-        value = query,
-        onValueChange = onQuery,
-        singleLine = true,
-        placeholder = { Text(stringResource(R.string.search_hint), style = FlowFolio.hint) },
-        leadingIcon = { FlowFolioGlyph(Glyph.Search, contentDescription = null, size = 20.dp, glow = false) },
-        shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = p.title,
-            unfocusedBorderColor = p.edge,
-            cursorColor = p.title,
-            focusedTextColor = p.text,
-            unfocusedTextColor = p.text,
-            focusedContainerColor = p.surface.copy(alpha = SEARCH_FILL),
-            unfocusedContainerColor = p.surface.copy(alpha = SEARCH_FILL)
-        ),
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 18.dp, vertical = 6.dp)
-            .testTag(LibraryTestTags.SEARCH_FIELD)
-    )
+    var isFocused by remember { mutableStateOf(false) }
+
+    Box(contentAlignment = Alignment.Center) {
+        if (isFocused) {
+            Box(
+                Modifier
+                    .matchParentSize()
+                    .padding(4.dp)
+                    .drawBehind {
+                        val radius = 16.dp.toPx()
+                        drawCircle(
+                            Brush.radialGradient(listOf(p.title.copy(alpha = 0.3f), Color.Transparent), center, radius),
+                            radius = radius,
+                            center = center
+                        )
+                    }
+            )
+        }
+
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQuery,
+            singleLine = true,
+            placeholder = { Text(stringResource(R.string.search_hint), style = FlowFolio.hint) },
+            leadingIcon = { FlowFolioGlyph(Glyph.Search, contentDescription = null, size = 20.dp, glow = false) },
+            shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = p.title,
+                unfocusedBorderColor = p.edge,
+                cursorColor = p.title,
+                focusedTextColor = p.text,
+                unfocusedTextColor = p.text,
+                focusedContainerColor = p.surface.copy(alpha = SEARCH_FILL),
+                unfocusedContainerColor = p.surface.copy(alpha = SEARCH_FILL)
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { isFocused = it.isFocused }
+                .padding(horizontal = 18.dp, vertical = 6.dp)
+                .testTag(LibraryTestTags.SEARCH_FIELD)
+        )
+    }
 }
 
 /** `.chips`. */
@@ -174,16 +196,30 @@ internal fun FilterChips(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(filters) { f ->
-            FlowFolioChip(stringResource(f.label), selected = f == selected, onClick = { onFilter(f) })
+            FlowFolioChip(stringResource(f.label), selected = f == selected, onClick = { onFilter(f) }, glyph = f.glyph)
         }
     }
 }
+
+/** Each chip's glyph (owner, M3T2). */
+private val LibraryFilter.glyph: Glyph
+    get() = when (this) {
+        LibraryFilter.ALL -> Glyph.Library
+        LibraryFilter.IN_PROGRESS -> Glyph.Hourglass
+        LibraryFilter.NOT_STARTED -> Glyph.Book
+        LibraryFilter.FINISHED -> Glyph.Select
+        LibraryFilter.TEXTBOOKS -> Glyph.OpenBook
+        LibraryFilter.NOVELS -> Glyph.Cover
+        LibraryFilter.RECENT -> Glyph.Clock
+        LibraryFilter.FOLDERS -> Glyph.Folder
+    }
 
 private val LibraryFilter.label: Int
     get() = when (this) {
         LibraryFilter.ALL -> R.string.filter_all
         LibraryFilter.IN_PROGRESS -> R.string.filter_in_progress
         LibraryFilter.NOT_STARTED -> R.string.filter_not_started
+        LibraryFilter.FINISHED -> R.string.filter_finished
         LibraryFilter.RECENT -> R.string.filter_recent
         LibraryFilter.TEXTBOOKS -> R.string.filter_textbooks
         LibraryFilter.NOVELS -> R.string.filter_novels
@@ -199,8 +235,15 @@ internal fun ShelfRowView(
     modifier: Modifier = Modifier,
     order: Int = 0
 ) {
-    val origin = row.shelf?.id?.toString() ?: LOOSE_ORIGIN
-    val name = row.shelf?.name ?: stringResource(if (noShelves) R.string.shelf_all_books else R.string.shelf_loose)
+    val origin = row.shelf?.id?.toString() ?: row.special?.let { "special$it" } ?: LOOSE_ORIGIN
+    val name = row.shelf?.name ?: stringResource(
+        when {
+            row.special == ShelfPageViewModel.FINISHED -> R.string.shelf_finished
+            noShelves -> R.string.shelf_all_books
+            else -> R.string.shelf_loose
+        }
+    )
+    val page = row.shelf?.id ?: row.special ?: ShelfPageViewModel.LOOSE
     // A shelf in its own colour; books not on a shelf (and shelves without one) keep the theme's (owner, 2026-10-22).
     val accent = row.shelf?.color?.color
     Column(modifier.fillMaxWidth().padding(top = 22.dp)) {
@@ -232,9 +275,9 @@ internal fun ShelfRowView(
                     .padding(start = 12.dp)
                     .clip(RoundedCornerShape(50))
                     .background(FlowFolio.palette.subItem.copy(alpha = COUNT_SHADE))
-                    .clickable { actions.onOpenShelf(row.shelf?.id ?: ShelfPageViewModel.LOOSE) }
+                    .clickable { actions.onOpenShelf(page) }
                     .padding(horizontal = 12.dp, vertical = 6.dp)
-                    .testTag(LibraryTestTags.shelfCount(row.shelf?.id ?: ShelfPageViewModel.LOOSE))
+                    .testTag(LibraryTestTags.shelfCount(page))
             )
         }
         ShelfBooks(row, origin, actions, order)
@@ -341,7 +384,7 @@ internal fun ShelfBook(
                 lifted = pressed || reorder?.dragging == book.id,
                 shadow = shadow
             )
-            BookBadge(item, Modifier.align(Alignment.TopStart))
+            BookBadge(item)
             selection?.let { SelectionMark(it, book.id) }
             BookMenu(item, menu, actions) { menu = false }
         }
@@ -349,13 +392,30 @@ internal fun ShelfBook(
 }
 
 @Composable
-private fun BookBadge(item: LibraryItem, modifier: Modifier) {
+private fun androidx.compose.foundation.layout.BoxScope.BookBadge(item: LibraryItem) {
     val label = when {
         item.availability == Availability.MISSING -> R.string.badge_missing
         item.book.passwordProtected -> R.string.badge_locked
-        else -> return
+        else -> null
     }
-    FlowFolioPill(stringResource(label), FlowFolio.subItem, modifier.padding(4.dp))
+    if (label != null) {
+        FlowFolioPill(stringResource(label), FlowFolio.subItem, Modifier.align(Alignment.TopStart).padding(4.dp))
+    } else if (item.hasBookmarks) {
+        FlowFolioGlyph(
+            Glyph.Bookmark,
+            contentDescription = null,
+            Modifier.align(Alignment.TopStart).padding(2.dp, 2.dp, 0.dp, 0.dp),
+            size = 14.dp
+        )
+    }
+    if (item.isFavorite) {
+        FlowFolioGlyph(
+            Glyph.Star,
+            contentDescription = null,
+            Modifier.align(Alignment.TopEnd).padding(4.dp),
+            size = 16.dp
+        )
+    }
 }
 
 @Composable
@@ -370,6 +430,18 @@ private fun BookMenu(item: LibraryItem, open: Boolean, actions: LibraryActions, 
         MenuEntry(R.string.action_add_to_shelf) {
             onClose()
             actions.onAddToShelf(item.book)
+        }
+        actions.onFavorite?.let { favorite ->
+            MenuEntry(if (item.book.favorite) R.string.action_favorite_remove else R.string.action_favorite_add) {
+                onClose()
+                favorite(item.book)
+            }
+        }
+        actions.onFinished?.let { finished ->
+            MenuEntry(if (item.book.finished) R.string.action_mark_unfinished else R.string.action_mark_finished) {
+                onClose()
+                finished(item.book)
+            }
         }
         actions.onFlow?.takeIf { item.book.format == BookFormat.PDF }?.let { flow ->
             MenuEntry(if (item.book.flowMode == true) R.string.action_flow_off else R.string.action_flow_on) {

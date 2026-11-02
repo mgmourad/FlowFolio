@@ -38,13 +38,18 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class LibraryItem(val book: Book, val availability: Availability = Availability.AVAILABLE)
+data class LibraryItem(
+    val book: Book,
+    val availability: Availability = Availability.AVAILABLE,
+    val hasBookmarks: Boolean = false,
+    val isFavorite: Boolean = false
+)
 
 /**
  * The library chips. [TEXTBOOKS] and [NOVELS] (the mock's chips) appear once a book has that type; [FOLDERS] shows the
  * imported folders instead of the shelves (owner, 2026-10-26).
  */
-enum class LibraryFilter { ALL, IN_PROGRESS, NOT_STARTED, TEXTBOOKS, NOVELS, RECENT, FOLDERS }
+enum class LibraryFilter { ALL, IN_PROGRESS, NOT_STARTED, FINISHED, TEXTBOOKS, NOVELS, RECENT, FOLDERS }
 
 /** What the reader picked to import: some files, or a whole folder with every folder inside it. */
 sealed interface ImportRequest {
@@ -68,6 +73,9 @@ data class LibraryUiState(
     /** Books in the library and how many are started, for the header line. */
     val totalCount: Int = 0,
     val inProgressCount: Int = 0,
+    /** Favourites and finished books, for the totals' second column (owner, M3T2). */
+    val favoriteCount: Int = 0,
+    val finishedCount: Int = 0,
     /** The most recently opened book with a saved position, for the "Continue reading" card. */
     val continueReading: LibraryItem? = null,
     /** The chips to show: the type chips only when some book has that type. */
@@ -77,8 +85,11 @@ data class LibraryUiState(
     val libraryEmpty: Boolean get() = totalCount == 0
 }
 
-/** One shelf row on the library screen: a shelf with its visible books, or the books on no shelf ([shelf] null). */
-data class ShelfRow(val shelf: Shelf?, val items: List<LibraryItem>)
+/**
+ * A row of the library: a shelf's books, the books on no shelf ([shelf] null), or a row of the library's own
+ * ([special]: [ShelfPageViewModel.FINISHED], the finished books at the bottom; owner, M3T2).
+ */
+data class ShelfRow(val shelf: Shelf?, val items: List<LibraryItem>, val special: Long? = null)
 
 /**
  * The library's rows: each shelf with the [items] on it (in the shelf's order), then the books on no shelf. Shelves
@@ -91,15 +102,20 @@ fun shelfRows(items: List<LibraryItem>, shelves: List<Shelf>): List<ShelfRow> {
     }
     val shelved = shelves.flatMapTo(HashSet()) { it.bookIds }
     val loose = items.filterNot { it.book.id in shelved }
-    return if (loose.isEmpty()) rows else rows + ShelfRow(null, loose)
+    val finished = items.filter { it.book.finished }.sortedByDescending { it.book.finishedAtMillis }
+    return rows + listOfNotNull(
+        ShelfRow(null, loose).takeIf { loose.isNotEmpty() },
+        ShelfRow(null, finished, ShelfPageViewModel.FINISHED).takeIf { finished.isNotEmpty() }
+    )
 }
 
 internal fun Book.started(): Boolean = (lastPage ?: 0) > 0
 
 internal fun LibraryFilter.accepts(book: Book, now: Long): Boolean = when (this) {
     LibraryFilter.ALL -> true
-    LibraryFilter.IN_PROGRESS -> book.started() && book.progress < 1f
-    LibraryFilter.NOT_STARTED -> !book.started()
+    LibraryFilter.IN_PROGRESS -> book.started() && book.progress < 1f && !book.finished
+    LibraryFilter.NOT_STARTED -> !book.started() && !book.finished
+    LibraryFilter.FINISHED -> book.finished
     LibraryFilter.RECENT -> now - book.addedAtMillis <= RECENT_WINDOW_MS
     LibraryFilter.TEXTBOOKS, LibraryFilter.NOVELS -> book.details.type == type
     LibraryFilter.FOLDERS -> book.folder != null
@@ -189,6 +205,16 @@ class LibraryViewModel @Inject constructor(
     /** Whether [book] has highlights, notes or bookmarks in its Dynamic Flow ([inFlow]) or its PDF. */
     override suspend fun hasNotes(book: Book, inFlow: Boolean): Boolean = flow.hasNotes(book.id, inFlow)
 
+    /** Makes [book] a favourite, or not (owner, M3T2). */
+    fun toggleFavorite(book: Book) {
+        viewModelScope.launch { library.setFavorite(book.id, !book.favorite) }
+    }
+
+    /** Marks [book] finished, or not finished (owner, M3T2). */
+    fun toggleFinished(book: Book) {
+        viewModelScope.launch { library.setFinished(book.id, !book.finished) }
+    }
+
     override fun setFlowCarry(carry: FlowCarry) {
         viewModelScope.launch { settingsRepo.setFlowCarry(carry) }
     }
@@ -211,9 +237,28 @@ class LibraryViewModel @Inject constructor(
         .flatMapLatest { library.observeBooks(it) }
         .onEach { list -> checkAvailability(list) }
 
-    private val listed = combine(books, availability, shelfRepo.observeShelves()) { list, avail, shelves ->
-        Triple(list.map { LibraryItem(it, avail[it.id] ?: Availability.AVAILABLE) }, avail, shelves)
-    }
+    private val bookIdsWithBookmarks: Flow<Set<String>> = library.observeBookIdsWithBookmarks()
+
+    private val listed =
+        combine(books, availability, shelfRepo.observeShelves(), bookIdsWithBookmarks) {
+                list,
+                avail,
+                shelves,
+                bookmarkBookIds
+            ->
+            Triple(
+                list.map {
+                    LibraryItem(
+                        book = it,
+                        availability = avail[it.id] ?: Availability.AVAILABLE,
+                        hasBookmarks = bookmarkBookIds.contains(it.id),
+                        isFavorite = it.favorite
+                    )
+                },
+                avail,
+                shelves
+            )
+        }
 
     val uiState: StateFlow<LibraryUiState> = combine(listed, settingsRepo.settings, transient, view) {
             (all, _, shelves),
@@ -233,8 +278,12 @@ class LibraryViewModel @Inject constructor(
             filter = v.filter,
             query = v.query,
             totalCount = all.size,
-            inProgressCount = all.count { it.book.started() },
-            continueReading = all.filter { it.book.started() && it.book.lastOpenedAtMillis != null }
+            inProgressCount = all.count { it.book.started() && !it.book.finished },
+            favoriteCount = all.count { it.book.favorite },
+            finishedCount = all.count { it.book.finished },
+            continueReading = all.filter {
+                it.book.started() && !it.book.finished && it.book.lastOpenedAtMillis != null
+            }
                 .maxByOrNull { it.book.lastOpenedAtMillis ?: 0L },
             filters = LibraryFilter.entries.filter { f -> f.type == null || all.any { it.book.details.type == f.type } }
         )

@@ -100,6 +100,9 @@ internal data class BookRowActions(
     val onBookmarks: (Book) -> Unit = {},
     /** Turns a PDF's Dynamic Flow on or off (ADR-0045); null hides it. */
     val onFlow: ((Book) -> Unit)? = null,
+    /** Makes a book a favourite, or not; marks it finished, or not (owner, M3T2). */
+    val onFavorite: ((Book) -> Unit)? = null,
+    val onFinished: ((Book) -> Unit)? = null,
     /** Select mode (owner, 2026-10-22); null where books cannot be selected. */
     val selection: Selection? = null,
     val onDeleteChosen: () -> Unit = {},
@@ -121,7 +124,7 @@ internal data class BookRowActions(
  */
 @Composable
 fun ShelfPageScreen(
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     onOpenDetails: (Book, String) -> Unit,
     onBookmarks: (Book) -> Unit = {},
     onOpenFolder: (String) -> Unit = {},
@@ -135,18 +138,13 @@ fun ShelfPageScreen(
     var removing by remember { mutableStateOf<FolderEntry?>(null) }
     var adding by remember { mutableStateOf(false) }
     var shelving by remember { mutableStateOf<List<String>?>(null) }
-    var relinkId by rememberSaveable { mutableStateOf<String?>(null) }
-
-    val relink = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        val id = relinkId
-        if (uri != null && id != null) viewModel.relink(id, uri.toString())
-        relinkId = null
-    }
+    val relink = rememberRelink(viewModel)
     val actions = BookRowActions(
         onOpen = { item ->
-            if (item.availability == Availability.MISSING) {
-                relinkId = item.book.id
-                relink.launch(arrayOf("application/pdf", "application/epub+zip"))
+            if (item.availability ==
+                Availability.MISSING
+            ) {
+                relink(item.book.id)
             } else {
                 onOpenDetails(item.book, SHELF_PAGE_ORIGIN)
             }
@@ -154,12 +152,11 @@ fun ShelfPageScreen(
         onRename = { prompt = BookPrompt.Rename(it) },
         onDelete = { prompt = BookPrompt.Delete(it) },
         onShelves = { prompt = BookPrompt.Shelves(it) },
-        onLocate = {
-            relinkId = it.id
-            relink.launch(arrayOf("application/pdf", "application/epub+zip"))
-        },
+        onLocate = { relink(it.id) },
         onBookmarks = onBookmarks,
         onFlow = rememberDynamicFlowSwitch(viewModel),
+        onFavorite = viewModel::toggleFavorite,
+        onFinished = viewModel::toggleFinished,
         selection = selection,
         onDeleteChosen = { confirmBulk = true },
         folders = FolderActions(onOpen = onOpenFolder, onRemove = { removing = it }, selection = selection),
@@ -185,6 +182,21 @@ fun ShelfPageScreen(
     removing?.let { folder -> RemoveFolderDialog(folder, { viewModel.removeFolder(folder.path) }) { removing = null } }
     BackHandler(selection.active) { selection.done() }
     BookPromptDialogs(prompt, state, viewModel, shelvesVm) { prompt = null }
+}
+
+/** Finding a missing book again: picks its file, then points the book at it. */
+@Composable
+private fun rememberRelink(viewModel: ShelfPageViewModel): (String) -> Unit {
+    var relinkId by rememberSaveable { mutableStateOf<String?>(null) }
+    val relink = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        val id = relinkId
+        if (uri != null && id != null) viewModel.relink(id, uri.toString())
+        relinkId = null
+    }
+    return { id ->
+        relinkId = id
+        relink.launch(arrayOf("application/pdf", "application/epub+zip"))
+    }
 }
 
 /** Asks before select mode removes the chosen books from the library. */
@@ -258,7 +270,7 @@ private fun BookPromptDialogs(
 }
 
 @Composable
-internal fun ShelfPageContent(state: ShelfPageUiState, onBack: () -> Unit, actions: BookRowActions) {
+internal fun ShelfPageContent(state: ShelfPageUiState, onBack: (() -> Unit)?, actions: BookRowActions) {
     var view by rememberSaveable { mutableIntStateOf(0) }
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     val padding = PaddingValues(
@@ -302,19 +314,31 @@ private fun ShelfPageHeader(
     state: ShelfPageUiState,
     view: Int,
     onView: (Int) -> Unit,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)?,
     selectionRow: @Composable () -> Unit,
     select: @Composable () -> Unit
 ) {
-    val name = state.folder?.substringAfterLast('/') ?: state.shelf?.name
-        ?: stringResource(if (state.noShelves) R.string.shelf_all_books else R.string.shelf_loose)
+    val name = state.folder?.substringAfterLast('/') ?: state.shelf?.name ?: stringResource(
+        when {
+            state.special == ShelfPageViewModel.FINISHED -> R.string.shelf_finished
+            state.special == ShelfPageViewModel.FAVORITES -> R.string.shelf_favorites
+            state.noShelves -> R.string.shelf_all_books
+            else -> R.string.shelf_loose
+        }
+    )
     // Back on its own; the title with + and Select level with it; Select's options under those two, above the
     // count and the view switch (owner, M3T1).
     Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
-        FlowFolioIconButton(onClick = onBack) {
-            FlowFolioGlyph(Glyph.Back, contentDescription = stringResource(R.string.action_back))
+        // A page opened as a tab (Favourites) has no Back.
+        if (onBack != null) {
+            FlowFolioIconButton(onClick = onBack) {
+                FlowFolioGlyph(Glyph.Back, contentDescription = stringResource(R.string.action_back))
+            }
         }
-        Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.fillMaxWidth().padding(top = if (onBack != null) 14.dp else 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
                 name,
                 style = FlowFolioType.screenTitle.merge(FlowFolio.title),

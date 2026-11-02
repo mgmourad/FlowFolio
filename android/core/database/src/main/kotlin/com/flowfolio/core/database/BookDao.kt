@@ -9,6 +9,14 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 @Suppress("TooManyFunctions") // one query per change the app makes to a book
 interface BookDao {
+    /** Marks [id] a favourite or not. */
+    @Query("UPDATE books SET favorite = :on WHERE id = :id")
+    suspend fun setFavorite(id: String, on: Boolean)
+
+    /** Marks [id] finished at [at] (epoch millis), or not finished (null). */
+    @Query("UPDATE books SET finished_at = :at WHERE id = :id")
+    suspend fun setFinishedAt(id: String, at: Long?)
+
     /** Most recently opened first; never-opened books by date added. */
     @Query("SELECT * FROM books ORDER BY COALESCE(last_opened_at, added_at) DESC")
     fun observeByRecent(): Flow<List<BookEntity>>

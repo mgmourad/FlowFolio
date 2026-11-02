@@ -44,8 +44,7 @@ data class Metrics(
     companion object {
         const val THRESHOLD = 0.98f
 
-// Each argument is one measured input of the book's metrics.
-        @Suppress("LongParameterList")
+        @Suppress("LongParameterList") // Each argument is one measured input of the book's metrics.
         fun of(
             id: String,
             doc: Document,

@@ -5,13 +5,15 @@ import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.BookmarkColor
 
 /** What is open on top of the reader. */
-internal enum class Panel { NONE, CONTENTS, GO_TO, SETTINGS, MARK, ANNOTATIONS }
+internal enum class Panel { NONE, CONTENTS, GO_TO, SETTINGS, MARK, ANNOTATIONS, DICTIONARY }
 
 /** What the reader's controls can ask for. */
 internal class ChromeActions(
     val onBack: () -> Unit,
     /** Contents, Go to page, Aa and the ribbon button: show or hide their panel (and restart the chrome's clock). */
-    val onPanel: (Panel) -> Unit
+    val onPanel: (Panel) -> Unit,
+    /** Tells the reader to hide the riffle/bottom bar. */
+    val onDismissRiffle: () -> Unit = {}
 )
 
 /**
