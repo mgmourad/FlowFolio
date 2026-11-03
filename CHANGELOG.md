@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [0.3.0-alpha.2] - 2026-11-03
+
 ### Added
 - **M5, Reading Atmosphere, VoiceMark, the tour and the rest** (owner, 2026-11-02 to 2026-11-03). Five rounds of the
   owner's own design, built and checked on the `fold8_api37` emulator:
