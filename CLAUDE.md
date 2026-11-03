@@ -267,9 +267,10 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
 5. Gradle prints "deprecated features ... incompatible with Gradle 10", coming from plugins. Track it.
 6. Branch protection needs a paid plan while the repo is private; `ci-gate` is advisory until then.
 7. **Git identity is pinned per repository** (2026-11-03). The machine's global config is a personal address;
-   `git config user.email` in this checkout is the GitHub noreply one, so commits here never carry the
-   personal address again. A fresh clone has to set it again -- the setting lives in `.git/config`, which is
-   not cloned.
+   `git config user.email` in this checkout is the GitHub noreply one, so commits here never carry a personal
+   address again. A fresh clone has to set it again -- the setting lives in `.git/config`, which is not cloned.
+   The owner intends to move to an address on their own domain once that is set up; that would be a third mailmap
+   pass over the history, or simply a change from then on.
 8. PDFium license texts ship as assets but there is no in-app licenses screen yet (needed before release).
 9. Reference Fold: `wm size` reports the inner screen even when folded (use `wm size -d 0`); folders created by adb
    under `Android/data/<pkg>` are invisible to the app; restart adb if the device shows `unauthorized`.
@@ -439,18 +440,24 @@ and `SECURITY.md` are written, issue templates are in place, the README leads wi
 `detect-private-key` pass over the whole tree; nothing tracked is a key, an environment file or a credential.
 
 **The history was rewritten on 2026-11-03** (owner's decision), while the repository was still private and nobody
-else had cloned it. `git-filter-repo` with a mailmap replaced the personal address in all 10 commits that carried
-it with the GitHub noreply one; the last two commits were squashed into one first. The tree came out byte-identical
-(same tree hash), 146 commits, both tags re-pointed and force-pushed, and both GitHub pre-releases kept their APK
-and `.sha256` assets. Known issue 7 now pins the identity per checkout.
+else had cloned it, in two `git-filter-repo` mailmap passes: the first replaced `the personal address` in the 10
+commits that carried it, the second folded in `a second identity`, the owner's own earlier identity on the 14
+scaffolding commits of 2026-10-16. The last two commits were squashed into one before the first pass. Every commit
+now reads `Mohammed Mourad <102260074+mgmourad@users.noreply.github.com>`; no personal address appears anywhere in
+the history. Both passes left the tree byte-identical (same tree hash), both tags were re-pointed and force-pushed,
+and both GitHub pre-releases kept their APK and `.sha256` assets.
+
+Two things worth knowing about that rewrite:
+- GitHub keeps commits orphaned by a force-push reachable by their exact SHA for a time. Nobody can reach them
+  while the repository is private; GitHub Support purges them on request if that matters once it is public.
+- `git-filter-repo` turns remote-tracking refs into local branches, so five stale `dependabot/*` branches now exist
+  locally. The remote has only `main`. Do not `git push --all`.
 
 The bundled audio is settled (owner, 2026-11-03): the eight ambience beds and the four page-turn `.wav`s are
 royalty-free and are not attributed in the repository. Nothing further to do.
 
-One judgement is still the owner's: **`owlcapone <a second identity>` authored the 14 scaffolding commits of
-2026-10-16** and was left alone, because reassigning authorship that may belong to someone else is not a guess to
-make. If that identity is the owner's own, a second mailmap pass folds it in; if it is a second contributor, their
-address publishes with the repository unless they would rather it did not. Nothing else blocks going public.
+**Nothing now blocks making the repository public.** Doing so is also what makes the in-app update check work
+(known issue 42).
 
 ## Decision log
 
