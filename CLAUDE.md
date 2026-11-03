@@ -67,11 +67,13 @@ emulator cannot: see known issues 40 and 41.
 Green CI on `c7b2c00`; the minified release APK was installed on `fold8_api37` and checked, extractor included, so
 R8 is not stripping the Chaquopy bridge.
 
-**That release is signed with the DEV key, by the owner's decision of 2026-11-03** after being told the cost: it
-cannot install over `0.3.0-alpha.1`, which is signed `CN=FlowFolio Release`. Anyone upgrading has to uninstall
-first, and the release notes say so. The release key was not on this machine (known issue 42). **Decide before the
-next release** whether to restore that key -- which means one more clean install -- or to adopt the dev key as the
-release identity from now on; drifting between the two costs users their library every time.
+**That one release is signed with the DEV key** (owner's decision, 2026-11-03, the release key not being on the
+build machine); its notes say it needs a clean install. **From 0.3.0-alpha.3 onwards the release key is the only
+one that ships**, decided 2026-11-03: the dev key signs every sideloaded build and lives on a development machine,
+so making it the identity users update against would let anyone holding it publish an update straight over their
+install. `app/build.gradle.kts` now fails `packageRelease` when `flowfolio.releaseSigning.*` is missing, rather
+than quietly emitting an unsigned APK as it did for alpha.2. The cost is one more clean install, taken now while
+almost nobody has alpha.2 rather than after the repository is public.
 
 **The repository is still private**, so the in-app update check (ADR-0048) gets a 404 from the releases API and
 neither GitHub nor F-Droid distribution works for anyone else. It has to be made public for either.
@@ -117,14 +119,12 @@ One phase at a time; plan before code; never claim something works without runni
 (state license, last release date, alternatives); every significant decision gets an ADR;
 Conventional Commits; keep `CHANGELOG.md`; no secrets in the repo; propose a spike when unsure.
 
-**Delivery and cost (owner, 2026-11-02).** GitHub CI/CD gates run at **phase** boundaries only, never for milestone
-tweaks or fixes: tweak work is verified locally (`spotlessCheck detekt lintDebug testDebugUnitTest` and the
-`fold8_api37` emulator) and must say plainly that CI has not run. Tweaks and fixes are delivered in **large batches**;
-at the end of a batch, build and hand over the debug APK (`assembleDebug`, fixed dev key ADR-0036), then update the
-documentation the batch requires (this file, `CHANGELOG.md`, an ADR for anything significant) in one pass. Several
-LLMs work in this folder in turn, so when the owner's token allowance drops under 5% (the weekly window in the usage
-card), stop taking on new work and write a handoff prompt into the repo for the next LLM: task state, uncommitted
-files, decisions made and still open, what was verified and how, and the single next action.
+**Delivery (owner, 2026-11-02).** CI gates run at **phase** boundaries, not for milestone tweaks and fixes: tweak
+work is verified locally (`spotlessCheck detekt lintDebug testDebugUnitTest` and the `fold8_api37` emulator) and must
+say plainly that CI has not run. Tweaks and fixes are delivered in **large batches**; at the end of a batch, build
+and hand over the debug APK (`assembleDebug`, fixed dev key ADR-0036), then update the documentation the batch needs
+(this file, `CHANGELOG.md`, an ADR for anything significant) in one pass. Work changes hands between sessions, so
+leave the repository able to explain itself: what is in flight, what was verified and how, and what is still open.
 
 ## Architecture summary
 
@@ -233,7 +233,7 @@ python -I tools/corpus/fetch_corpus.py
 .\gradlew.bat :core:conversion:test :tools:convert:test
 .\gradlew.bat :tools:convert:test --tests "*CorpusTest*" "-Pflowfolio.recordBaselines"   # after a deliberate change
 # The converter on the desktop (development only): installDist once, then
-#   $env:JAVA_OPTS="-Djna.library.path=D:/Projects/FlowFolio/android/tools/convert/build/pdfium"
+#   $env:JAVA_OPTS="-Djna.library.path=<repo>/android/tools/convert/build/pdfium"
 #   tools\convert\build\install\convert\bin\convert.bat convert|page|probe|unmatched|render <file.pdf> ...
 .\gradlew.bat :tools:convert:installDist
 # On the device: ConversionOnDeviceTest converts the pushed textbook through JNI (install the :core:pdf test APK with
@@ -244,9 +244,8 @@ python -I tools/corpus/fetch_corpus.py
 pre-commit run --all-files
 ```
 
-Local toolchain (installed 2026-10-16): Microsoft OpenJDK 21 (`JAVA_HOME`), Android SDK at
-`%LOCALAPPDATA%\Android\Sdk` (`ANDROID_HOME`, user env var), platform 37, AVD `flowfolio_api37`
-(Pixel 7, API 37, x86_64, WHPX acceleration), Android Studio, uv 0.13.1, gh, Docker.
+Toolchain: JDK 21 (`JAVA_HOME`), the Android SDK (`ANDROID_HOME`) with platform 37, Android Studio, uv, `gh`.
+Emulators used here: `fold8_api37` (the reference Fold, see Commands) and `flowfolio_api37` (Pixel 7, API 37).
 
 ## CI
 
@@ -405,8 +404,9 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     cannot be checked on an emulator; the pill's clock is held to its behaviour by `VoiceTimerTest` instead, and
     `VoiceRecorder` is an interface so a test can stand in for the microphone.
 41. **Emulator wrangling, M5 round 4.** `-gpu host` can wedge on a cold start after a crash ("hanging thread 'QEMU2
-    main loop'"); the cause is usually a crash-consent dialog waiting offscreen. Clear `/tmp/android-mgmourad/
-    emu-crash-*.db`, delete any `*.lock` under the AVD, and start with `-no-metrics`. Do not change
+    main loop'"); the cause is usually a crash-consent dialog waiting offscreen. Clear the emulator's crash
+    database (`/tmp/android-$USER/emu-crash-*.db` on macOS), delete any `*.lock` under the AVD, and start with
+    `-no-metrics`. Do not change
     `hw.gpu.mode` in `config.ini` (known issue 39) -- pass `-gpu` on the command line if you must. `emu fold` does
     not reliably move a running activity to the cover panel; capture on the inner panel instead.
 42. **The release signing key is missing from this machine, and the repository is private.** ADR-0042 expects
@@ -415,13 +415,34 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     v0.3.0-alpha.1 APK is signed `CN=FlowFolio Release, O=FlowFolio`, SHA-256
     `560eb00ca346b33a79d9d9fdd465b0762a8d0d9662b4145406b19e9e06bb7d0d` -- so it has to be restored here, not made
     again. **Never sign a release with the dev key** (`CN=FlowFolio Dev`, SHA-256 `bf34f1e7...`): Android would
-    treat it as a different app and no existing install could upgrade.
+    treat it as a different app and no existing install could upgrade. 0.3.0-alpha.2 was signed that way once, by
+    the owner's decision; `checkReleaseSigning` in `app/build.gradle.kts` now makes it impossible to repeat by
+    accident.
     Separately, `api.github.com/repos/mgmourad/FlowFolio/releases` answers 404 while the repository is private, so
     the in-app update check (ADR-0048) reports "Could not reach the releases page" however correct the code is.
 43. **Tour screenshots are real and go stale.** `feature/library/src/main/res/drawable-nodpi/tour_*.webp` are
     screenshots of an actual build at 900 px wide (about 1 MB in all), with larger copies in `docs/screenshots/`
     for the README. Retake both whenever the screens they show change; a tour that shows something the app no
     longer looks like is worse than none.
+
+## Before the repository is made public
+
+Most of the work is done (2026-11-03): `CLAUDE.md` carries no personal paths or private workflow, `CONTRIBUTING.md`
+and `SECURITY.md` are written, issue templates are in place, the README leads with what the app does, and
+`docs/plans/README.md` explains why the sign-off reports are addressed to the owner. Gitleaks and
+`detect-private-key` pass over the whole tree; nothing tracked is a key, an environment file or a credential.
+
+Two things are the owner's to settle first:
+
+1. **The eight ambient recordings have no recorded licence** (`core/data/res/raw/ambient_*.mp3`, 6.4 MB, supplied
+   as royalty-free). Publishing the repository redistributes them. Confirm where they came from and on what terms,
+   name the source in `docs/licenses.md`, and write an ADR if the terms need one. The four page-turn `.wav`s are
+   fine: ADR-0025 records them as the owner's own recordings.
+2. **The commit history carries a personal address** (`the personal address`) beside the GitHub noreply one. Known
+   issue 7 recorded the choice to keep the machine's git identity while the repository was private; a public
+   repository publishes it to anyone who clones. Changing it for future commits is one `git config user.email`;
+   changing the past means rewriting history that a release and two tags already point at, so it is not something
+   to do casually.
 
 ## Decision log
 

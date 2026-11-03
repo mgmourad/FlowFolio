@@ -129,6 +129,14 @@ anywhere, because everything ships inside the app ([licence matrix](docs/license
 
 ---
 
+## Contributing
+
+Issues and pull requests are welcome — [CONTRIBUTING.md](CONTRIBUTING.md) has the build, the checks CI will run,
+and how decisions get recorded. Security reports go [here](SECURITY.md) instead, privately.
+
+A good place to start reading is [`docs/adr/`](docs/adr): every significant decision, with the alternatives that
+lost and the consequences accepted.
+
 ## Licence
 
 [MIT](LICENSE). PDFium, Fraunces, Instrument Sans, JetBrains Mono, yt-dlp and the bundled Wiktionary

@@ -35,8 +35,8 @@ android {
         }
     }
 
-    // ADR-0042: the release key, also outside the repo (`flowfolio.releaseSigning.*`). Without it release builds are
-    // unsigned and can't be published.
+    // ADR-0042: the release key, also outside the repo (`flowfolio.releaseSigning.*`). Without it a release build
+    // would come out unsigned, which `checkReleaseSigning` below turns into a failure rather than a surprise.
     val releaseStore = providers.gradleProperty("flowfolio.releaseSigning.storeFile").orNull
     val releaseSigning = releaseStore?.let {
         signingConfigs.create("release") {
@@ -66,6 +66,28 @@ android {
         }
     }
 }
+
+/**
+ * A release must be signed with the release key, and nothing else (ADR-0042).
+ *
+ * Without `flowfolio.releaseSigning.*` the release build type simply has no signing config, and `assembleRelease`
+ * hands back an unsigned APK with no complaint -- which is how 0.3.0-alpha.2 came to be signed by hand with the dev
+ * key. The dev key signs every sideloaded build and lives on a development machine; it must never become the
+ * identity users update against. So the build stops instead, and says what is missing.
+ */
+val checkReleaseSigning = tasks.register("checkReleaseSigning") {
+    val keyed = providers.gradleProperty("flowfolio.releaseSigning.storeFile").orNull != null
+    doLast {
+        check(keyed) {
+            "No release signing key. Set flowfolio.releaseSigning.storeFile, .storePassword, .keyAlias and " +
+                ".keyPassword in ~/.gradle/gradle.properties, pointing at the keystore for " +
+                "CN=FlowFolio Release (ADR-0042). Never sign a release with the dev key: Android treats a " +
+                "differently signed APK as a different app, so no existing install can upgrade."
+        }
+    }
+}
+
+tasks.matching { it.name == "packageRelease" }.configureEach { dependsOn(checkReleaseSigning) }
 
 // The plugin copies `release` into these build types after the DSL runs, so the flag is set per variant instead.
 androidComponents {

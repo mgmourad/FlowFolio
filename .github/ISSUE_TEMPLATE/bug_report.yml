@@ -1,0 +1,40 @@
+name: Bug report
+description: Something in the app behaves wrongly
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: FlowFolio version
+      description: Settings → Updates → This build.
+      placeholder: 0.3.0-alpha.2 (build 300002)
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Device and Android version
+      placeholder: Galaxy Z Fold 8, Android 17
+    validations:
+      required: true
+  - type: dropdown
+    id: format
+    attributes:
+      label: Which kind of book
+      options: [A PDF, An EPUB, Both, Not about a book]
+    validations:
+      required: true
+  - type: textarea
+    id: book
+    attributes:
+      label: The book, if it matters
+      description: >
+        Most hard bugs here are a book doing something unusual. If you can say which book it is, or attach the page
+        it goes wrong on, that usually settles it. Only share a book you are free to share.
