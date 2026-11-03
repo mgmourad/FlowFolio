@@ -85,6 +85,11 @@ jobs:
         with:
           distribution: temurin
           java-version: "21"
+      # Chaquopy pip-installs yt-dlp while building :core:extract and needs a Python of the version it targets
+      # (ADR-0047). The runner has no 3.12 of its own, so one is put on PATH here.
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
       - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
       - name: Validate Gradle wrapper
         uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
