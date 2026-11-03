@@ -265,8 +265,11 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
    go back to the library and wake the device (`input keyevent KEYCODE_WAKEUP; wm dismiss-keyguard`) before
    importing, or `openBookId` shows "File not found".
 5. Gradle prints "deprecated features ... incompatible with Gradle 10", coming from plugins. Track it.
-6. **Branch protection is now available** (the repo went public 2026-11-03; GitHub gives it free on public
-   repositories). `ci-gate` is still only advisory -- nobody has made it a required check yet.
+6. **`main` is protected** (2026-11-03): `ci-gate` is a required status check, and force pushes and deletion are
+   blocked. Deliberately *not* set: pull requests are not required, and `enforce_admins` is off, so the owner can
+   still push straight to `main` -- the working agreement verifies tweak batches locally and runs CI gates at phase
+   boundaries, and a PR per tweak would fight that. The protection is what gates outside contributors' pull
+   requests. `enforce_admins` being off also leaves a future history rewrite possible (known issue 7).
 7. **Git identity is pinned per repository** (2026-11-03). The machine's global config is a personal address;
    `git config user.email` in this checkout is the GitHub noreply one, so commits here never carry a personal
    address again. A fresh clone has to set it again -- the setting lives in `.git/config`, which is not cloned.
