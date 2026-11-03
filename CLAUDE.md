@@ -419,7 +419,10 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     the owner's decision; `checkReleaseSigning` in `app/build.gradle.kts` now makes it impossible to repeat by
     accident.
     Separately, `api.github.com/repos/mgmourad/FlowFolio/releases` answers 404 while the repository is private, so
-    the in-app update check (ADR-0048) reports "Could not reach the releases page" however correct the code is.
+    the in-app update check (ADR-0048) can never find anything however correct the code is. Since M5 round 6 it at
+    least says so accurately: `UpdateFailure` carries the reason (`MISSING` for the 404, `OFFLINE`, `BUSY`,
+    `UNEXPECTED`, `DOWNLOAD`) instead of one `offline` flag that reported every failure as an unreachable page.
+    Making the repository public is still the only thing that makes the check *work*.
 43. **Tour screenshots are real and go stale.** `feature/library/src/main/res/drawable-nodpi/tour_*.webp` are
     screenshots of an actual build at 900 px wide (about 1 MB in all), with larger copies in `docs/screenshots/`
     for the README. Retake both whenever the screens they show change; a tour that shows something the app no
@@ -432,17 +435,14 @@ and `SECURITY.md` are written, issue templates are in place, the README leads wi
 `docs/plans/README.md` explains why the sign-off reports are addressed to the owner. Gitleaks and
 `detect-private-key` pass over the whole tree; nothing tracked is a key, an environment file or a credential.
 
-Two things are the owner's to settle first:
+One thing is the owner's to settle first: **the commit history carries a personal address**
+(`the personal address`) beside the GitHub noreply one. Known issue 7 recorded the choice to keep the machine's git
+identity while the repository was private; a public repository publishes it to anyone who clones. Changing it for
+future commits is one `git config user.email`; changing the past means rewriting history that a release and two
+tags already point at, so it is not something to do casually.
 
-1. **The eight ambient recordings have no recorded licence** (`core/data/res/raw/ambient_*.mp3`, 6.4 MB, supplied
-   as royalty-free). Publishing the repository redistributes them. Confirm where they came from and on what terms,
-   name the source in `docs/licenses.md`, and write an ADR if the terms need one. The four page-turn `.wav`s are
-   fine: ADR-0025 records them as the owner's own recordings.
-2. **The commit history carries a personal address** (`the personal address`) beside the GitHub noreply one. Known
-   issue 7 recorded the choice to keep the machine's git identity while the repository was private; a public
-   repository publishes it to anyone who clones. Changing it for future commits is one `git config user.email`;
-   changing the past means rewriting history that a release and two tags already point at, so it is not something
-   to do casually.
+The bundled audio is settled (owner, 2026-11-03): the eight ambience beds and the four page-turn `.wav`s are
+royalty-free and are not attributed in the repository. Nothing further to do.
 
 ## Decision log
 

@@ -44,9 +44,36 @@ sealed interface UpdateState {
     /** Downloaded and checked; [install] hands it to Android, which asks the reader before installing. */
     data class Ready(val release: Release, val file: File) : UpdateState
 
-    /** No network, nothing published, or a download that did not arrive whole. */
-    data class Failed(val offline: Boolean) : UpdateState
+    /** Could not finish; [reason] is what the reader is told. */
+    data class Failed(val reason: UpdateFailure) : UpdateState
 }
+
+/**
+ * Why a check or a download could not finish.
+ *
+ * This was a single `offline` flag until a check against a repository with no public releases reported "could not
+ * reach the releases page" -- when the page had answered perfectly promptly, with a 404. One flag cannot carry both
+ * "your connection is down" and "there is nothing published there", and a reader can only act on the difference.
+ */
+enum class UpdateFailure {
+    /** The request never got an answer at all. */
+    OFFLINE,
+
+    /** The releases page answered 404: nothing published there, or the repository is not public. */
+    MISSING,
+
+    /** GitHub is rate-limiting unauthenticated callers. */
+    BUSY,
+
+    /** Some other status, or a body that would not parse. */
+    UNEXPECTED,
+
+    /** The APK arrived short of the size the releases page gave. */
+    DOWNLOAD
+}
+
+/** Carries [reason] from the connection up to the screen, which is the only place it is any use. */
+class UpdateUnavailable(val reason: UpdateFailure) : IOException(reason.name)
 
 /**
  * Finding and fetching a newer FlowFolio (ADR-0048).
@@ -72,8 +99,7 @@ class Updates @Inject constructor(
      * the next alpha.
      */
     suspend fun latest(): Release? = withContext(io) {
-        val body = get(RELEASES) ?: throw IOException("no releases")
-        newest(JSONArray(body))?.takeIf { it.versionCode > installed().second }
+        newest(JSONArray(get(RELEASES)))?.takeIf { it.versionCode > installed().second }
     }
 
     /** What this build calls itself, for the line in Settings that says which one you are on. */
@@ -183,7 +209,14 @@ class Updates @Inject constructor(
             .firstOrNull { it.optString("name").endsWith(".apk") }
     }
 
-    private fun get(url: String): String? {
+    /**
+     * The body of [url], or an [UpdateUnavailable] saying why there is none.
+     *
+     * Every non-200 used to collapse into null and then one bare `IOException`, which the screen could report only
+     * as "could not reach the releases page" -- wrong, and nothing the reader could act on, when the page had
+     * answered 404.
+     */
+    private fun get(url: String): String {
         val connection = (URL(url).openConnection() as HttpURLConnection).apply {
             connectTimeout = TIMEOUT_MS
             readTimeout = TIMEOUT_MS
@@ -191,17 +224,16 @@ class Updates @Inject constructor(
             setRequestProperty("Accept", "application/vnd.github+json")
         }
         return try {
-            if (connection.responseCode == HttpURLConnection.HTTP_OK) {
-                connection.inputStream.bufferedReader().use { it.readText() }
-            } else {
-                null
-            }
+            val code = runCatching { connection.responseCode }
+                .getOrElse { throw UpdateUnavailable(UpdateFailure.OFFLINE) }
+            if (code != HttpURLConnection.HTTP_OK) throw UpdateUnavailable(failureFor(code))
+            connection.inputStream.bufferedReader().use { it.readText() }
         } finally {
             connection.disconnect()
         }
     }
 
-    private companion object {
+    internal companion object {
         const val RELEASES = "https://api.github.com/repos/mgmourad/FlowFolio/releases?per_page=10"
         const val RELEASES_PAGE = "https://github.com/mgmourad/FlowFolio/releases/latest"
         const val APK_TYPE = "application/vnd.android.package-archive"
@@ -209,6 +241,14 @@ class Updates @Inject constructor(
         const val TIMEOUT_MS = 20_000
         const val BUFFER = 64 * 1024
         const val AGENT = "FlowFolio (Android; https://github.com/mgmourad/FlowFolio)"
+        const val TOO_MANY_REQUESTS = 429
         val APK_NAME = Regex("""-(\d+)\.apk$""")
+
+        /** What an HTTP status means for a reader waiting on a check. */
+        fun failureFor(code: Int): UpdateFailure = when (code) {
+            HttpURLConnection.HTTP_NOT_FOUND -> UpdateFailure.MISSING
+            HttpURLConnection.HTTP_FORBIDDEN, TOO_MANY_REQUESTS -> UpdateFailure.BUSY
+            else -> UpdateFailure.UNEXPECTED
+        }
     }
 }

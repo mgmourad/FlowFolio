@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.Ambience
 import com.flowfolio.core.data.Maintenance
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.data.UpdateFailure
 import com.flowfolio.core.data.UpdateState
+import com.flowfolio.core.data.UpdateUnavailable
 import com.flowfolio.core.data.Updates
 import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.Atmosphere
@@ -158,7 +160,7 @@ class SettingsViewModel @Inject constructor(
             }
             _update.value = file.getOrNull()
                 ?.let { UpdateState.Ready(release, it) }
-                ?: UpdateState.Failed(offline = false)
+                ?: UpdateState.Failed(UpdateFailure.DOWNLOAD)
         }
     }
 
@@ -180,13 +182,17 @@ class SettingsViewModel @Inject constructor(
             val found = runCatching { updates.latest() }
             val release = found.getOrNull()
             _update.value = when {
-                found.isFailure -> UpdateState.Failed(offline = true)
+                found.isFailure -> UpdateState.Failed(reasonOf(found.exceptionOrNull()))
                 release == null -> UpdateState.UpToDate
                 else -> UpdateState.Available(release)
             }
             if (download && release != null) downloadUpdate()
         }
     }
+
+    /** A check that failed keeps the reason it was given; anything else was the body, not the connection. */
+    private fun reasonOf(cause: Throwable?): UpdateFailure =
+        (cause as? UpdateUnavailable)?.reason ?: UpdateFailure.UNEXPECTED
 
     private val _audition = MutableStateFlow(Audition.IDLE)
 

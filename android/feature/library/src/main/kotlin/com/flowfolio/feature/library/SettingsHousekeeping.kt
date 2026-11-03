@@ -1,5 +1,6 @@
 package com.flowfolio.feature.library
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.flowfolio.core.data.UpdateFailure
 import com.flowfolio.core.data.UpdateState
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGhostButton
@@ -83,26 +85,34 @@ private fun UpdateRow(state: UpdateState, actions: SettingsActions) {
 private fun UpdateSays(state: UpdateState) {
     val said = when (state) {
         UpdateState.Idle -> null
-
         UpdateState.Checking -> stringResource(R.string.settings_update_checking)
-
         UpdateState.UpToDate -> stringResource(R.string.settings_update_current)
-
         is UpdateState.Available -> stringResource(R.string.settings_update_found, state.release.versionName)
-
         is UpdateState.Downloading -> stringResource(R.string.settings_update_downloading)
-
         is UpdateState.Ready -> stringResource(R.string.settings_update_ready, state.release.versionName)
-
-        is UpdateState.Failed -> stringResource(
-            if (state.offline) R.string.settings_update_offline else R.string.settings_update_broken
-        )
+        is UpdateState.Failed -> stringResource(failureSaid(state.reason))
     } ?: return
     Text(
         said,
         style = FlowFolioType.rowDetail.merge(if (state is UpdateState.Failed) FlowFolio.subItem else FlowFolio.hint),
         modifier = Modifier.testTag(LibraryTestTags.UPDATE_SAID)
     )
+}
+
+/**
+ * Which line a failed check or download shows.
+ *
+ * The reason is the reader's only clue about what to do next, so each one gets its own sentence: waiting fixes
+ * [UpdateFailure.BUSY], a connection fixes [UpdateFailure.OFFLINE], and nothing they can do fixes
+ * [UpdateFailure.MISSING].
+ */
+@StringRes
+private fun failureSaid(reason: UpdateFailure): Int = when (reason) {
+    UpdateFailure.OFFLINE -> R.string.settings_update_offline
+    UpdateFailure.MISSING -> R.string.settings_update_missing
+    UpdateFailure.BUSY -> R.string.settings_update_busy
+    UpdateFailure.UNEXPECTED -> R.string.settings_update_unexpected
+    UpdateFailure.DOWNLOAD -> R.string.settings_update_broken
 }
 
 /** Check, then download, then install: one button at a time, and a way out of each. */

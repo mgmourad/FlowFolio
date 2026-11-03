@@ -49,8 +49,9 @@ samples/models/
 # Local measurement output (contains renders/timings from local test books)
 android/tools/results/
 
-# Local Claude Code preview servers
+# Per-developer Claude Code files (preview servers, local preferences)
 .claude/launch.json
+.claude/settings.local.json
 
 # Spike raw results (summaries go to docs/spikes/)
 android/spikes/*/results/

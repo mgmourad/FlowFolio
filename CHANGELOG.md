@@ -5,6 +5,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+### Fixed
+- **A failed update check says which failure it was** (owner, 2026-11-03). `UpdateState.Failed` carried a single
+  `offline` flag, and every non-200 from the releases API collapsed into it, so a prompt, correct `404` was
+  reported as "Could not reach the releases page" -- blaming the reader's connection for a page that had answered.
+  `UpdateFailure` now carries the reason (`OFFLINE`, `MISSING`, `BUSY`, `UNEXPECTED`, `DOWNLOAD`) from the
+  connection up to the screen, and each gets its own sentence. `UpdateFailureTest` holds the mapping. This makes
+  the message honest; only making the repository public makes the check find anything.
+
 ## [0.3.0-alpha.2] - 2026-11-03
 
 > Signed with the **dev** key rather than the release key (owner's decision, 2026-11-03: the release key was not on
