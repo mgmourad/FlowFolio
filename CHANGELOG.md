@@ -7,6 +7,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [0.3.0-alpha.2] - 2026-11-03
 
+> Signed with the **dev** key rather than the release key (owner's decision, 2026-11-03: the release key was not on
+> the build machine). It therefore cannot install over 0.3.0-alpha.1 -- Android sees a different app -- so this
+> build needs a clean install, and so will the next one if the release key comes back.
+
 ### Added
 - **M5, Reading Atmosphere, VoiceMark, the tour and the rest** (owner, 2026-11-02 to 2026-11-03). Five rounds of the
   owner's own design, built and checked on the `fold8_api37` emulator:

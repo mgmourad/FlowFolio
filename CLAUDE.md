@@ -63,11 +63,18 @@ Two new ADRs: **0047** (yt-dlp on embedded CPython for audio out of video pages;
 and **0048** (updating from the releases page; proposed). All verified on `fold8_api37` except where the
 emulator cannot: see known issues 40 and 41.
 
-**The release the owner asked for (2026-11-03) is blocked on two things that are theirs to decide**, both recorded
-in ADR-0048 and known issue 42: there is **no release signing key** (`~/.flowfolio` holds only the dev key, and
-`flowfolio.releaseSigning.*` is not in `~/.gradle/gradle.properties`), and **the repository is private**, so the
-in-app update check gets a 404 from the releases API and F-Droid/GitHub distribution cannot work. Everything else
-for the release is done: CHANGELOG entry, docs, README.
+**Released as FlowFolio 0.3.0-alpha.2 (build 300002) on 2026-11-03**, tag `v0.3.0-alpha.2`, GitHub pre-release.
+Green CI on `c7b2c00`; the minified release APK was installed on `fold8_api37` and checked, extractor included, so
+R8 is not stripping the Chaquopy bridge.
+
+**That release is signed with the DEV key, by the owner's decision of 2026-11-03** after being told the cost: it
+cannot install over `0.3.0-alpha.1`, which is signed `CN=FlowFolio Release`. Anyone upgrading has to uninstall
+first, and the release notes say so. The release key was not on this machine (known issue 42). **Decide before the
+next release** whether to restore that key -- which means one more clean install -- or to adopt the dev key as the
+release identity from now on; drifting between the two costs users their library every time.
+
+**The repository is still private**, so the in-app update check (ADR-0048) gets a 404 from the releases API and
+neither GitHub nor F-Droid distribution works for anyone else. It has to be made public for either.
 
 Phase 2 in brief (details in the milestone sign-offs and the CHANGELOG):
 - M1 EPUB in the library (ADR-0020); M2 the paginated reader (ADR-0019, islands ADR-0021); M2b the riffle scrubber
