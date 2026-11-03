@@ -440,11 +440,11 @@ and `SECURITY.md` are written, issue templates are in place, the README leads wi
 `detect-private-key` pass over the whole tree; nothing tracked is a key, an environment file or a credential.
 
 **The history was rewritten on 2026-11-03** (owner's decision), while the repository was still private and nobody
-else had cloned it, in two `git-filter-repo` mailmap passes: the first replaced `the personal address` in the 10
-commits that carried it, the second folded in `a second identity`, the owner's own earlier identity on the 14
-scaffolding commits of 2026-10-16. The last two commits were squashed into one before the first pass. Every commit
-now reads `Mohammed Mourad <102260074+mgmourad@users.noreply.github.com>`; no personal address appears anywhere in
-the history. Both passes left the tree byte-identical (same tree hash), both tags were re-pointed and force-pushed,
+else had cloned it, in two `git-filter-repo` mailmap passes: the first replaced the personal address carried by 10
+commits, the second folded in a second identity the owner had used on the 14 scaffolding commits of 2026-10-16.
+The last two commits were squashed into one before the first pass. Every commit now reads
+`Mohammed Mourad <102260074+mgmourad@users.noreply.github.com>`; no personal address appears anywhere in the
+history, this file included -- do not write the old ones down again. Both passes left the tree byte-identical (same tree hash), both tags were re-pointed and force-pushed,
 and both GitHub pre-releases kept their APK and `.sha256` assets.
 
 Two things worth knowing about that rewrite:
