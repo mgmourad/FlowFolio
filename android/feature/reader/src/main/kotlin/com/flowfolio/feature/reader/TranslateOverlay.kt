@@ -59,11 +59,12 @@ import java.util.Locale
  */
 @Composable
 internal fun BoxScope.TranslateOverlay(
-    text: String,
+    request: TranslateRequest,
     onClose: () -> Unit,
     viewModel: TranslateViewModel = hiltViewModel()
 ) {
-    LaunchedEffect(text) { viewModel.start(text) }
+    val text = request.text
+    LaunchedEffect(request) { viewModel.start(text, request.page, request.locator) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val history by viewModel.history.collectAsStateWithLifecycle()
     Column(

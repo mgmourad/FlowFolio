@@ -1,9 +1,17 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package com.flowfolio.feature.reader.riffle
 
 import android.os.SystemClock
 import android.util.Log
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,15 +20,18 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
@@ -39,6 +50,9 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioGlyph
+import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.UiFamily
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.first
@@ -131,15 +145,26 @@ private fun RiffleHeader(state: RiffleScrubberState, events: RiffleEvents?) {
         )
         // The page numbers open the go-to-page field (spec 3.2); the touch area is at least 48 dp tall.
         val goTo = stringResource(R.string.riffle_open_go_to)
+        val mark = stringResource(R.string.riffle_detour_mark)
         val open = if (events == null) {
             Modifier
         } else {
             Modifier
-                .clickable {
-                    events.onInteraction()
-                    state.goToOpen = true
-                }
-                .semantics { contentDescription = goTo }
+                // A tap opens go-to-page; holding marks the detour, which is the riffle book right underneath
+                // (owner, M5).
+                .combinedClickable(
+                    onLongClick = {
+                        events.onInteraction()
+                        val here = state.currentUnit
+                        state.detourUnit = here
+                        events.onDetour(here)
+                    },
+                    onClick = {
+                        events.onInteraction()
+                        state.goToOpen = true
+                    }
+                )
+                .semantics { contentDescription = "$goTo. $mark" }
                 .defaultMinSize(minHeight = 48.dp)
         }
         Box(open, contentAlignment = Alignment.Center) {
@@ -158,6 +183,8 @@ private fun RiffleHeader(state: RiffleScrubberState, events: RiffleEvents?) {
             color = palette.hint,
             style = style.copy(fontWeight = FontWeight.SemiBold)
         )
+        // After the whole label: between its halves the mark read as part of the page number (owner, M5 round 3).
+        events?.let { DetourMark(state, it) }
     }
 }
 
@@ -169,6 +196,8 @@ private fun RiffleHeader(state: RiffleScrubberState, events: RiffleEvents?) {
 fun RiffleStrip(state: RiffleScrubberState, boards: BoardColors, modifier: Modifier = Modifier) {
     val dark = FlowFolio.palette.dark
     val glow = FlowFolio.palette.title
+    // The detour mark's colour, read here so the draw lambda captures it once (owner, M5).
+    val detourTint = FlowFolio.palette.item
     // The book's outline (owner, M3T1): the theme's darkest colour on its paper-white pages, or black on a light theme.
     val ink = if (dark) FlowFolio.palette.backgroundDeep else androidx.compose.ui.graphics.Color.Black
     val density = LocalDensity.current.density
@@ -190,7 +219,7 @@ fun RiffleStrip(state: RiffleScrubberState, boards: BoardColors, modifier: Modif
             .drawWithCache {
                 val g = state.geometry
                 state.flags // new flags make new stacks: build the parts again
-                val painter = g?.let { StripPainter(state, it, dark) }
+                val painter = g?.let { StripPainter(state, it, dark, boards) }
                 val parts = g?.let {
                     StripParts(state, it, dark, StripAssets(boards, measurer, labels, cloth, glow, ink))
                 }
@@ -202,6 +231,7 @@ fun RiffleStrip(state: RiffleScrubberState, boards: BoardColors, modifier: Modif
                         with(parts) {
                             paintBoards()
                             paintFlags()
+                            paintDetour(detourTint)
                             paintRibbon()
                         }
                         if (state.measureDraw) timing.add(SystemClock.elapsedRealtimeNanos() - start)
@@ -245,3 +275,50 @@ private class DrawTiming {
 
 private const val STRIP_HEIGHT = 124
 private const val PERCENT = 100
+
+/**
+ * The way back from a detour (owner, M5): the mark beside the page number, pulsing until it is used, and gone once
+ * the reader has taken it. Nothing is drawn while no detour is marked.
+ */
+@Composable
+private fun DetourMark(state: RiffleScrubberState, events: RiffleEvents) {
+    val marked = state.detourUnit ?: return
+    val palette = FlowFolio.palette
+    val pulse = rememberInfiniteTransition(label = "detour")
+    val glow by pulse.animateFloat(
+        initialValue = DETOUR_DIM,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(DETOUR_PULSE_MS, easing = Motion.EaseInOut),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "detourPulse"
+    )
+    val back = stringResource(R.string.riffle_detour_back)
+    Box(
+        Modifier
+            .padding(start = 6.dp)
+            .clip(CircleShape)
+            .clickable {
+                events.onInteraction()
+                state.detourUnit = null
+                events.onDetour(null)
+                events.onGoTo(marked)
+            }
+            .semantics { contentDescription = back }
+            .padding(4.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        FlowFolioGlyph(
+            Glyph.Detour,
+            contentDescription = null,
+            color = palette.title.copy(alpha = glow),
+            size = DETOUR_GLYPH,
+            glow = false
+        )
+    }
+}
+
+private val DETOUR_GLYPH = 16.dp
+private const val DETOUR_DIM = 0.35f
+private const val DETOUR_PULSE_MS = 900

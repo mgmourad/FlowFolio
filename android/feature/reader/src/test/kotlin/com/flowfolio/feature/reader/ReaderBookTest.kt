@@ -1,11 +1,13 @@
 package com.flowfolio.feature.reader
 
+import androidx.compose.ui.graphics.luminance
 import com.flowfolio.core.model.OutlineEntry
 import com.flowfolio.feature.reader.layout.ReaderLayout
 import com.flowfolio.feature.reader.riffle.Section
 import com.flowfolio.feature.reader.riffle.SectionKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /** The reader's book as the riffle scrubber sees it (ADR-0022). */
@@ -72,5 +74,32 @@ class ReaderBookTest {
         assertEquals(4, book.pageOfLabel("3"))
         assertNull(book.pageOfLabel("xx"))
         assertEquals(true, book.rightToLeft)
+    }
+
+    @Test
+    fun riffleBoardAndPageColorsFollowReadingToneLuminanceRules() {
+        for (tone in listOf(PageTone.RUSTIC, PageTone.NIGHT, PageTone.BLACK)) {
+            val colors = boardColors(tone)
+            val pages = colors.pageColor!!
+            assertTrue(
+                "Expected riffled pages for $tone to be lighter than its covers",
+                pages.luminance() > colors.main.luminance()
+            )
+        }
+        for (tone in listOf(PageTone.PRINTED, PageTone.PAPER, PageTone.SEPIA)) {
+            val colors = boardColors(tone)
+            val pages = colors.pageColor!!
+            assertTrue(
+                "Expected riffled pages for $tone to be darker than its covers",
+                pages.luminance() < colors.main.luminance()
+            )
+        }
+    }
+
+    @Test
+    fun dictionaryFuzzySearchMatchesPrefixSubstringAndSubsequence() {
+        assertTrue(fuzzyScore("ephem", "ephemeral") > fuzzyScore("eph", "the ephemeral moment"))
+        assertTrue(fuzzyScore("ephmrl", "ephemeral") > 0)
+        assertEquals(0, fuzzyScore("xyz", "ephemeral"))
     }
 }

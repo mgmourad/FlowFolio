@@ -15,8 +15,8 @@ app on the emulator, some on shelves.
 **Phase 3 signed off by the owner 2026-10-28 and released as FlowFolio 0.3.0-alpha.1 (build 300001)**
 (`docs/plans/phase3-m1m2-signoff.md`). Next: the owner's tweaks to M3 in three milestones, M3T1 (polish and
 navigation), M3T2 (finished, favourites, search), M3T3 (Reading Goal, Dictionary from English Wiktionary): plan approved
-2026-10-28 (`docs/plans/phase3-m3-tweaks-plan.md`); M3T1 built 2026-10-29, waiting for the owner's look. ADR-0044
-is still proposed until the owner accepts it.
+2026-10-28 (`docs/plans/phase3-m3-tweaks-plan.md`); M3T1 built 2026-10-29, M3T2 and M3T3 built 2026-11-01 (Room v16
+and v17, ADR-0046). ADR-0044 is still proposed until the owner accepts it.
 
 **M1 and M2 built 2026-10-27.** The engine is a plain JVM module (ADR-0044), the Python server is retired (ADR-0043). On the
 `fold8_api37` emulator *University Physics* (959 pages) converts in about 58 s into a 40 MB EPUB and opens in the reader;
@@ -35,6 +35,39 @@ published as a GitHub pre-release: Phases 3-5 alpha, 6-8 canary, 9 beta. Version
 release key in `~/.flowfolio` (never in the repo). Checklist: set `flowfolio.versionName`/`versionCode` in
 `android/gradle.properties`, add the CHANGELOG version heading, commit, push, wait for green CI, build the release APK,
 tag, `gh release create --prerelease`.
+
+**M4, the owner's batch of tweaks, built 2026-11-02** (CHANGELOG, Unreleased). Fourteen items in one batch, delivered
+as a debug APK under the delivery rule below (no CI run): the AMOLED theme (`AppStyle.AMOLED`, `AmoledPalette`, black
+in both of its `PaletteFamily` slots); confetti on anything that fills (`Confetti.kt`, built into
+`FlowFolioProgressBar`, `FlowFolioRing` and `GradientProgressBar`); the shelf page's six orders in the library,
+applied inside each shelf row (`ShelfSorting.kt`); the reminder's time-of-day window and solid/hollow day toggles
+(`GoalReminder.kt`, split out of `ReadingGoalDialog.kt`); a target for `Glyph.ReadingGoal`; a deeper goal-path curve
+with a green tick at its end; the library search box animated, focused and themed; a book's marks gathered on the
+bottom right of its cover; one row of actions in book details in every fold state; and `ic_stat_flowfolio` on every
+notification. Verified on `fold8_api37` folded and unfolded; three items were not reproducible on an emulator with no
+reading history and are **implemented but untested**: the Continue Reading card's filled star and green tick, the
+confetti itself, and the notification glyph in the status bar.
+
+**M4b, a second batch of tweaks, built 2026-11-02** (CHANGELOG, Unreleased). Eight items: book details stacks its
+actions (wide Read over a centred second row); the Continue Reading card's tick is green and its page count reads
+"p. N/N"; a slogan and bottom-aligned buttons on every top-level page (`ScreenHeader.kt`); the reader's lookup search
+reaches across both tabs at once; translations remember where they were asked for (**Room v18**: `translations.page`,
+`translations.locator`, and `ReadingPlace` in `:core:model`) so they navigate like definitions; and four more ribbon
+and highlighter colours. All eight verified on `fold8_api37` unfolded.
+
+**M5 built over five rounds, 2026-11-02 to 2026-11-03** (CHANGELOG, Unreleased; owner's lists of 2026-11-02 and
+2026-11-03). Reading Atmosphere (five moods over eight owner-supplied ambiences, plus a file or a stream address of
+the reader's own), VoiceMark (Room v20), the detour mark, the offline Dictionary (ADR-0046), intentional tags
+(Room v19), the first-launch tour, folders-to-shelves on import, in-app updates (ADR-0048) and Storage housekeeping.
+Two new ADRs: **0047** (yt-dlp on embedded CPython for audio out of video pages; accepted by the owner 2026-11-03)
+and **0048** (updating from the releases page; proposed). All verified on `fold8_api37` except where the
+emulator cannot: see known issues 40 and 41.
+
+**The release the owner asked for (2026-11-03) is blocked on two things that are theirs to decide**, both recorded
+in ADR-0048 and known issue 42: there is **no release signing key** (`~/.flowfolio` holds only the dev key, and
+`flowfolio.releaseSigning.*` is not in `~/.gradle/gradle.properties`), and **the repository is private**, so the
+in-app update check gets a 404 from the releases API and F-Droid/GitHub distribution cannot work. Everything else
+for the release is done: CHANGELOG entry, docs, README.
 
 Phase 2 in brief (details in the milestone sign-offs and the CHANGELOG):
 - M1 EPUB in the library (ADR-0020); M2 the paginated reader (ADR-0019, islands ADR-0021); M2b the riffle scrubber
@@ -77,13 +110,23 @@ One phase at a time; plan before code; never claim something works without runni
 (state license, last release date, alternatives); every significant decision gets an ADR;
 Conventional Commits; keep `CHANGELOG.md`; no secrets in the repo; propose a spike when unsure.
 
+**Delivery and cost (owner, 2026-11-02).** GitHub CI/CD gates run at **phase** boundaries only, never for milestone
+tweaks or fixes: tweak work is verified locally (`spotlessCheck detekt lintDebug testDebugUnitTest` and the
+`fold8_api37` emulator) and must say plainly that CI has not run. Tweaks and fixes are delivered in **large batches**;
+at the end of a batch, build and hand over the debug APK (`assembleDebug`, fixed dev key ADR-0036), then update the
+documentation the batch requires (this file, `CHANGELOG.md`, an ADR for anything significant) in one pass. Several
+LLMs work in this folder in turn, so when the owner's token allowance drops under 5% (the weekly window in the usage
+card), stop taking on new work and write a handoff prompt into the repo for the next LLM: task state, uncommitted
+files, decisions made and still open, what was verified and how, and the single next action.
+
 ## Architecture summary
 
 - Android modules (ADR-0012): `:app`, `:core:model` (JVM), `:core:pdf` (PDFium JNI, NDK), `:core:database` (Room),
   `:core:datastore`, `:core:epub` (EPUB parsing, ADR-0020), `:core:reflow` (EPUB pagination and page drawing, ADR-0019), `:feature:reader:riffle` (the riffle scrubber, ADR-0022), `:core:data` (repositories, import, reader access), `:core:designsystem`, `:core:pagecurl`
   (vendored), `:feature:library` (library + settings), `:feature:reader` (curl, spreads, page cache),
-  `:core:conversion` (the PDF to EPUB converter, plain JVM, ADR-0044), `:tools:convert` (the converter on the desktop
-  through JNA, the corpus harness; development only, never in the app).
+  `:core:conversion` (the PDF to EPUB converter, plain JVM, ADR-0044), `:core:extract` (yt-dlp on an embedded
+  CPython 3.12 through Chaquopy, for audio out of a video page, ADR-0047), `:tools:convert` (the converter on the
+  desktop through JNA, the corpus harness; development only, never in the app).
 - Monorepo: `android/` holds the app and the conversion engine; the Python server is retired (ADR-0043).
   Output contract: `docs/conversion-spec.md` v1.0.0 and `docs/schemas/flowfolio.schema.json`.
 - Conversion (ADR-0009, ADR-0044): runs on the phone. `Converter` (`:core:conversion`) reads a `PdfSource`:
@@ -334,10 +377,48 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
 25. The reader's panels (Contents, Go to page, ribbon colours, "Aa") are drawn in the reader's window (`ReaderPanels`),
     not as sheets or dialogs, so glass can blur the page; their tags are resource ids. The bars and panels use
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
+37. **This Mac cannot run the converter's JVM tests.** `android/tools/convert/build/pdfium/libpdfium.so` is an x86-64
+    **Linux** ELF (fetched for CI); JNA on Darwin arm64 needs a `.dylib`, so `:tools:convert:test` fails three tests
+    (`CorpusTest`, `TechnicalBookTest`, `ConversionTest`) with `ExceptionInInitializerError` in `NativeLibrary`
+    whatever the app code says. Run the other checks with `-x :tools:convert:test` and say that is what was run.
+38. **The `fold8_api37` emulator keeps both panels alive at once**, so the app can be on the cover panel while the
+    launcher is on the inner one. SurfaceFlinger's ids (`dumpsys SurfaceFlinger --display-id`) are what `screencap -d`
+    wants; the *logical* ids (`dumpsys display | grep mDisplayId`) are what `input -d` wants, and they differ -- the
+    cover panel was SurfaceFlinger `4619827551948147201` but logical display **2**. A tap sent without `-d` goes to
+    display 0 and silently does nothing. `emu unfold` does not move a running activity: `am force-stop` first, then
+    `am start --display 0`.
+
+39. **The emulator's renderer must stay `host`.** `hw.gpu.mode=auto` picks software rendering (`swangle` +
+    `lavapipe`) on Apple Silicon, which flickers under the design's blurs at the Fold's resolution. The AVD's
+    `config.ini` now pins `hw.gpu.mode=host` (Metal); a backup of the old file sits beside it. `angle_indirect` is
+    not a valid mode on emulator 37.2 and silently falls back to `auto`.
+
+40. **Recording crashes the `fold8_api37` emulator.** `MediaRecorder.start()` takes the host audio stack down with
+    it, whether the microphone permission was granted through the dialog or `pm grant`. VoiceMark recording therefore
+    cannot be checked on an emulator; the pill's clock is held to its behaviour by `VoiceTimerTest` instead, and
+    `VoiceRecorder` is an interface so a test can stand in for the microphone.
+41. **Emulator wrangling, M5 round 4.** `-gpu host` can wedge on a cold start after a crash ("hanging thread 'QEMU2
+    main loop'"); the cause is usually a crash-consent dialog waiting offscreen. Clear `/tmp/android-mgmourad/
+    emu-crash-*.db`, delete any `*.lock` under the AVD, and start with `-no-metrics`. Do not change
+    `hw.gpu.mode` in `config.ini` (known issue 39) -- pass `-gpu` on the command line if you must. `emu fold` does
+    not reliably move a running activity to the cover panel; capture on the inner panel instead.
+42. **No release signing key, and the repository is private.** ADR-0042 expects `flowfolio.releaseSigning.*` in
+    `~/.gradle/gradle.properties` pointing at a keystore in `~/.flowfolio`; only the dev key (ADR-0036) is there, so
+    `assembleRelease` produces an unsigned APK. **Do not create one without the owner**: it is the app's permanent
+    identity, and signing with a different key than v0.3.0-alpha.1 used would stop every existing install upgrading.
+    Separately, `api.github.com/repos/mgmourad/FlowFolio/releases` answers 404 while the repository is private, so
+    the in-app update check (ADR-0048) reports "Could not reach the releases page" however correct the code is.
+43. **Tour screenshots are real and go stale.** `feature/library/src/main/res/drawable-nodpi/tour_*.webp` are
+    screenshots of an actual build at 900 px wide (about 1 MB in all), with larger copies in `docs/screenshots/`
+    for the README. Retake both whenever the screens they show change; a tour that shows something the app no
+    longer looks like is worse than none.
+
 ## Decision log
 
-ADRs 0001–0045 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0048 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
-Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026), reading fonts (0027), app themes (0028), Rustic without texture (0029), the book's own fonts (0030), EPUB memory and island stand-ins (0031), page sounds on the media stream (0032), the motion system (0033), element entrances and edge fades (0034), edge fades blurring behind the bars only (0035), the fixed signing key for sideloaded dev builds (0036), Google Books as a second details source (0037, its Google part superseded by 0039), multi-file and folder imports with folders as book paths (0038), book details from Open Library only (0039), EPUB highlights and ribbons stored by locator (0040), chapters on their own spread and the reader's chapter laid out first (0041), release channels and versioning (0042), retiring the Python converter (0043), the conversion engine as a plain JVM module with JNA in desktop tooling only (0044, proposed for the M1+M2 sign-off; would supersede the KMP part of 0009), Dynamic Flow (0045, the owner's design).
+Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026), reading fonts (0027), app themes (0028), Rustic without texture (0029), the book's own fonts (0030), EPUB memory and island stand-ins (0031), page sounds on the media stream (0032), the motion system (0033), element entrances and edge fades (0034), edge fades blurring behind the bars only (0035), the fixed signing key for sideloaded dev builds (0036), Google Books as a second details source (0037, its Google part superseded by 0039), multi-file and folder imports with folders as book paths (0038), book details from Open Library only (0039), EPUB highlights and ribbons stored by locator (0040), chapters on their own spread and the reader's chapter laid out first (0041), release channels and versioning (0042), retiring the Python converter (0043), the conversion engine as a plain JVM module with JNA in desktop tooling only (0044, proposed for the M1+M2 sign-off; would supersede the KMP part of 0009), Dynamic Flow (0045, the owner's design), the offline Wiktionary dictionary (0046),
+audio extraction with yt-dlp embedded (0047, accepted 2026-11-03: Unlicense source on MIT Chaquopy and PSF CPython,
+no ffmpeg because only an address is extracted), updating from the releases page (0048, proposed).

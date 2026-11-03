@@ -115,13 +115,16 @@ internal data class BookRowActions(
     /** Saves the shelf's new order after a drag and drop; null where books keep their order. */
     val onReorder: ((List<String>) -> Unit)? = null,
     /** The drag and drop under way in the current view (set by [ShelfPageContent]). */
-    val reorder: ReorderState? = null
+    val reorder: ReorderState? = null,
+    /** Changes the sort order on a shelf or the 'Not on a shelf' page. */
+    val onSort: (ShelfSort) -> Unit = {}
 )
 
 /**
  * A whole shelf (opened from its book count in the library): its books as 3D tiles, or as a list for fast scrolling
  * whose rows swipe to show more actions.
  */
+@Suppress("LongMethod")
 @Composable
 fun ShelfPageScreen(
     onBack: (() -> Unit)?,
@@ -161,8 +164,18 @@ fun ShelfPageScreen(
         onDeleteChosen = { confirmBulk = true },
         folders = FolderActions(onOpen = onOpenFolder, onRemove = { removing = it }, selection = selection),
         onAddBooks = state.shelf?.let { { adding = true } },
-        onReorder = state.shelf?.let { s -> { ids: List<String> -> shelvesVm.setOrder(s.id, ids) } },
-        onShelveChosen = { shelving = state.booksChosen(selection.chosen) }
+        onReorder = when {
+            state.shelf != null -> { ids: List<String> ->
+                shelvesVm.setOrder(state.shelf!!.id, ids)
+                Unit
+            }
+
+            state.canSort -> viewModel::setLooseOrder
+
+            else -> null
+        },
+        onShelveChosen = { shelving = state.booksChosen(selection.chosen) },
+        onSort = viewModel::setSort
     )
     ShelfPageContent(state, onBack, actions)
     val shelf = state.shelf
@@ -282,18 +295,26 @@ internal fun ShelfPageContent(state: ShelfPageUiState, onBack: (() -> Unit)?, ac
     // Select mode chooses folders as well as books on a folder's page.
     val keys = state.subfolders.map { it.selectionId } + state.items.map { item -> item.book.id }
     val header: @Composable () -> Unit = {
-        ShelfPageHeader(state, view, { view = it }, onBack, selectionRow = {
-            actions.selection?.let {
-                SelectionRow(it, keys, actions.onDeleteChosen, onAddToShelf = actions.onShelveChosen)
+        ShelfPageHeader(
+            state = state,
+            view = view,
+            onView = { view = it },
+            onBack = onBack,
+            onSort = actions.onSort,
+            selectionRow = {
+                actions.selection?.let {
+                    SelectionRow(it, keys, actions.onDeleteChosen, onAddToShelf = actions.onShelveChosen)
+                }
             }
-        }) {
+        ) {
             actions.selection?.let {
                 SelectControls(it, keys) { actions.onAddBooks?.let { add -> AddBooksButton(add) } }
             }
         }
     }
-    // A shelf's books can be dragged into a new order, but not while choosing (owner, 2026-10-26).
-    val canReorder = actions.onReorder != null && actions.selection?.active != true
+    // Books can be dragged into a new order when Custom sort is active and not in select mode.
+    val canReorder =
+        actions.onReorder != null && actions.selection?.active != true && state.sort == ShelfSort.CUSTOM
     if (view == 0) {
         ShelfTiles(state, padding, header, actions, canReorder)
     } else {
@@ -309,12 +330,14 @@ private fun AddBooksButton(onClick: () -> Unit) {
     }
 }
 
+@Suppress("LongParameterList")
 @Composable
 private fun ShelfPageHeader(
     state: ShelfPageUiState,
     view: Int,
     onView: (Int) -> Unit,
     onBack: (() -> Unit)?,
+    onSort: (ShelfSort) -> Unit,
     selectionRow: @Composable () -> Unit,
     select: @Composable () -> Unit
 ) {
@@ -326,32 +349,28 @@ private fun ShelfPageHeader(
             else -> R.string.shelf_loose
         }
     )
-    // Back on its own; the title with + and Select level with it; Select's options under those two, above the
-    // count and the view switch (owner, M3T1).
+    // The page's name, the line under it saying what it holds, and the + / Select controls on the slogan's line
+    // (owner, M4b/M4c), as every other top-level page wears it.
+    val slogan = stringResource(state.sloganRes())
     Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
-        // A page opened as a tab (Favourites) has no Back.
-        if (onBack != null) {
-            FlowFolioIconButton(onClick = onBack) {
-                FlowFolioGlyph(Glyph.Back, contentDescription = stringResource(R.string.action_back))
-            }
-        }
-        Row(
-            Modifier.fillMaxWidth().padding(top = if (onBack != null) 14.dp else 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                name,
-                style = FlowFolioType.screenTitle.merge(FlowFolio.title),
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f).padding(end = 10.dp)
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                select()
-            }
-        }
+        ScreenHeader(
+            title = name,
+            slogan = slogan,
+            leading = onBack?.let { back ->
+                {
+                    FlowFolioIconButton(onClick = back, modifier = Modifier.padding(end = 10.dp)) {
+                        FlowFolioGlyph(Glyph.Back, contentDescription = stringResource(R.string.action_back))
+                    }
+                }
+            },
+            actions = select
+        )
         selectionRow()
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.fillMaxWidth().padding(top = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Text(
                 listOfNotNull(
                     state.subfolders.size.takeIf { it > 0 }?.let {
@@ -364,6 +383,9 @@ private fun ShelfPageHeader(
                 style = FlowFolioType.sub.merge(FlowFolio.hint),
                 modifier = Modifier.weight(1f)
             )
+            if (state.canSort) {
+                ShelfSortButton(current = state.sort, onSelect = onSort)
+            }
             FlowFolioSegmented(
                 listOf(stringResource(R.string.view_tiles), stringResource(R.string.view_list)),
                 view,
@@ -372,6 +394,61 @@ private fun ShelfPageHeader(
             )
         }
     }
+}
+
+@Composable
+private fun ShelfSortButton(current: ShelfSort, onSelect: (ShelfSort) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    val p = FlowFolio.palette
+    Box {
+        Row(
+            Modifier
+                .clip(RoundedCornerShape(999.dp))
+                .background(p.surface)
+                .clickable { expanded = true }
+                .padding(horizontal = 12.dp, vertical = 7.dp)
+                .testTag(LibraryTestTags.SHELF_SORT),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            FlowFolioGlyph(
+                Glyph.Sliders,
+                contentDescription = stringResource(R.string.action_sort),
+                color = p.glyph,
+                size = 15.dp
+            )
+            Text(
+                stringResource(current.labelRes()),
+                style = FlowFolioType.pill.merge(FlowFolio.item),
+                maxLines = 1
+            )
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            ShelfSort.entries.forEach { sort ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(sort.labelRes()),
+                            style = if (sort == current) FlowFolio.title else FlowFolio.item
+                        )
+                    },
+                    onClick = {
+                        expanded = false
+                        onSelect(sort)
+                    }
+                )
+            }
+        }
+    }
+}
+
+private fun ShelfSort.labelRes(): Int = when (this) {
+    ShelfSort.CUSTOM -> R.string.sort_custom
+    ShelfSort.NAME -> R.string.sort_name
+    ShelfSort.DATE_ADDED -> R.string.sort_date_added
+    ShelfSort.PROGRESS -> R.string.sort_progress
+    ShelfSort.READ_TIME -> R.string.sort_read_time
+    ShelfSort.READ_GOAL -> R.string.sort_read_goal
 }
 
 internal const val SHELF_PAGE_ORIGIN = "shelfpage"
@@ -385,3 +462,13 @@ internal val TILE_CELL = TILE_BOOK_WIDTH + BOOK_SPINE_ROOM
 
 internal val TILE_COLUMN_GAP = 12.dp
 internal val TILE_ROW_GAP = 28.dp
+
+/** The line under a shelf page's name, saying what the page holds (owner, M4b). */
+private fun ShelfPageUiState.sloganRes(): Int = when {
+    folder != null -> R.string.folder_slogan
+    special == ShelfPageViewModel.FINISHED -> R.string.finished_slogan
+    special == ShelfPageViewModel.FAVORITES -> R.string.favourites_slogan
+    noShelves -> R.string.all_books_slogan
+    shelf != null -> R.string.shelf_slogan
+    else -> R.string.loose_slogan
+}

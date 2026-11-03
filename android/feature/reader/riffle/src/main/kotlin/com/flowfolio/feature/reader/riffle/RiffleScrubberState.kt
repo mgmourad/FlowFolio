@@ -91,6 +91,15 @@ class RiffleScrubberState(val book: BookGeometry, current: Int = 0) {
     var previewUnit by mutableIntStateOf(this.current)
         private set
 
+    /**
+     * The page left behind on a detour (owner, M5): hold the riffle book to mark where you are, slide away as far
+     * as you like, then tap the mark to come back. Null when nothing is marked.
+     *
+     * It is deliberately not saved: a detour is a thing you are in the middle of, and one left over from last week
+     * would be a puzzle rather than a help.
+     */
+    var detourUnit: Int? by mutableStateOf(null)
+
     /** True while the previewed unit follows the ribbon rather than the reader. */
     var live by mutableStateOf(false)
         private set

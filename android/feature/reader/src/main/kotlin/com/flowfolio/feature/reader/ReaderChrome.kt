@@ -1,6 +1,7 @@
 package com.flowfolio.feature.reader
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
@@ -10,6 +11,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +28,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,9 +37,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
@@ -47,6 +52,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,6 +76,7 @@ import com.flowfolio.core.model.FlowStatus
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.feature.reader.layout.ReaderLayout
 import com.flowfolio.feature.reader.layout.Spreads
+import com.flowfolio.feature.reader.riffle.R as RiffleR
 import kotlin.math.abs
 
 /**
@@ -85,6 +93,7 @@ internal fun BoxScope.ReaderChrome(
     controlsVisible: Boolean,
     mark: ChromeMark,
     actions: ChromeActions,
+    bottomBarVisible: Boolean = controlsVisible,
     bottomBar: @Composable () -> Unit
 ) {
     val slide = tween<IntOffset>(Motion.SLOW_MS, easing = Motion.EaseOut)
@@ -122,15 +131,17 @@ internal fun BoxScope.ReaderChrome(
         }
     }
     AnimatedVisibility(
-        controlsVisible,
+        bottomBarVisible,
         Modifier.align(Alignment.BottomCenter),
         enter = slideInVertically(slide) { it * 2 } + fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)),
         exit = slideOutVertically(slide) { it * 2 } + fadeOut(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut))
     ) {
         ScreenEntrance(holdForLandings = false) { Box(Modifier.reveal(DOCK_ORDER)) { bottomBar() } }
     }
-    // In Scroll the number would float over the text; the bars show the page there.
-    if (!controlsVisible && state.turn != PageTurn.SCROLL) PageNumber(state, navigation.labels, flow)
+    // In Scroll the number would float over the text; the bars show the page there. Whenever the riffle bar is not
+    // showing -- hidden with the rest of the chrome, or dismissed on its own -- the page number stands in for it, and
+    // carries the way back from a detour with it (owner, M5 round 3).
+    if (!bottomBarVisible && state.turn != PageTurn.SCROLL) PageNumber(state, navigation.labels, flow)
 }
 
 /**
@@ -177,8 +188,8 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, modi
 }
 
 /**
- * Contents, annotations, "Aa" and the ribbon, falling in one after another (ADR-0034). Go to page is in the Contents
- * panel, keeping room here for later tools (owner, M3T1).
+ * Contents, Dictionary, Annotations, Bookmarks (the ribbon), and Page setup ("Aa"), ordered from right to left as
+ * (page setup, bookmarks, annotations, dictionary, contents).
  */
 @Composable
 private fun TopTools(mark: ChromeMark, actions: ChromeActions, button: Dp) {
@@ -187,11 +198,16 @@ private fun TopTools(mark: ChromeMark, actions: ChromeActions, button: Dp) {
     FlowFolioIconButton({ actions.onPanel(Panel.CONTENTS) }, contents, glass = true, size = button) {
         FlowFolioGlyph(Glyph.Contents, stringResource(R.string.reader_contents), size = glyph)
     }
+    val dictionary = Modifier.testTag(ReaderTestTags.DICTIONARY).reveal(3)
+    FlowFolioIconButton({ actions.onPanel(Panel.DICTIONARY) }, dictionary, glass = true, size = button) {
+        FlowFolioGlyph(Glyph.Translate, stringResource(R.string.reader_dictionary), size = glyph)
+    }
     val notes = Modifier.testTag(ReaderTestTags.ANNOTATIONS).reveal(4)
     FlowFolioIconButton({ actions.onPanel(Panel.ANNOTATIONS) }, notes, glass = true, size = button) {
         FlowFolioGlyph(Glyph.Highlight, stringResource(R.string.reader_annotations), size = glyph)
     }
-    val settings = Modifier.testTag(ReaderTestTags.SETTINGS).reveal(5)
+    Box(Modifier.reveal(5)) { BookmarkButton(mark, actions, button) }
+    val settings = Modifier.testTag(ReaderTestTags.SETTINGS).reveal(6)
     FlowFolioIconButton({ actions.onPanel(Panel.SETTINGS) }, settings, glass = true, size = button) {
         Text(
             stringResource(R.string.reader_settings_button),
@@ -202,7 +218,6 @@ private fun TopTools(mark: ChromeMark, actions: ChromeActions, button: Dp) {
                 .merge(FlowFolio.title)
         )
     }
-    Box(Modifier.reveal(6)) { BookmarkButton(mark, actions, button) }
 }
 
 /** The book's title on glass, beside Back (unfolded) or centred (folded). */
@@ -246,6 +261,7 @@ private fun BoxScope.PageNumber(state: ReaderState.Ready, labels: List<String?>,
             style = PrintStyle.copy(color = LocalTone.current.folioInk),
             modifier = Modifier.testTag(ReaderTestTags.INDICATOR)
         )
+        DetourReturn()
         FlowProgressBar(flow)
     }
 }
@@ -350,13 +366,13 @@ private val BAR_ROW_GAP = 10.dp
 private val PAGE_MARGIN = 32.dp
 private val FOOTER_MARGIN = 14.dp
 private val TITLE_MAX_WIDTH = 520.dp
-private val TITLE_BESIDE_BACK = 600.dp
+internal val TITLE_BESIDE_BACK = 600.dp
 
 /** The reader's round buttons: 56 dp unfolded, 50 dp folded (the app's usual is 42 dp; owner, 2026-10-22). */
 private val BASE_BUTTON = 42.dp
 private val BIG_BUTTON = 56.dp
 private val FOLDED_BUTTON = 50.dp
-private val TOOL_GAP = 10.dp
+private val TOOL_GAP = 8.dp
 
 /** Back, Contents, Go to page, annotations, Aa and the ribbon, for PDFs and EPUBs alike (M4). */
 private const val TOOL_BUTTONS = 6
@@ -367,3 +383,54 @@ internal const val GLYPH_SHARE = 24f / 42f
 
 /** The riffle dock falls in just after the top bar's first buttons. */
 private const val DOCK_ORDER = 2
+
+/**
+ * The way back from a detour, beside the page number (owner, M5 round): it pulses until it is used, and does the
+ * same as the notch on the riffle bar, so dismissing the bar does not take the way back with it.
+ */
+@Composable
+private fun DetourReturn() {
+    val detour = LocalDetour.current
+    val marked = detour.unit ?: return
+    val jump = LocalDetourJump.current
+    val ink = LocalTone.current.folioInk
+    val pulse = rememberInfiniteTransition(label = "detourFooter")
+    val glow by pulse.animateFloat(
+        initialValue = DETOUR_DIM,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(DETOUR_PULSE_MS, easing = Motion.EaseInOut),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "detourFooterPulse"
+    )
+    val back = stringResource(RiffleR.string.riffle_detour_back)
+    Box(
+        Modifier
+            .padding(start = 8.dp)
+            .clip(CircleShape)
+            .clickable {
+                detour.clear()
+                jump(marked)
+            }
+            .semantics { contentDescription = back }
+            .padding(3.dp)
+            .testTag(ReaderTestTags.DETOUR_RETURN),
+        contentAlignment = Alignment.Center
+    ) {
+        FlowFolioGlyph(
+            Glyph.Detour,
+            contentDescription = null,
+            color = ink.copy(alpha = glow),
+            size = DETOUR_GLYPH,
+            glow = false
+        )
+    }
+}
+
+/** How the reader takes a detour back; set by the screen that knows how to land on a unit. */
+val LocalDetourJump = staticCompositionLocalOf<(Int) -> Unit> { {} }
+
+private val DETOUR_GLYPH = 15.dp
+private const val DETOUR_DIM = 0.3f
+private const val DETOUR_PULSE_MS = 900

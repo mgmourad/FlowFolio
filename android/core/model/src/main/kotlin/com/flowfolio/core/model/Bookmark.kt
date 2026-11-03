@@ -18,4 +18,4 @@ data class Bookmark(
  * sub-item (red, the mock's ribbon), title (orange / brown), item (cyan / teal), accent (magenta / indigo), and a
  * green in the same tone.
  */
-enum class BookmarkColor { SUB_ITEM, TITLE, ITEM, ACCENT, GREEN }
+enum class BookmarkColor { SUB_ITEM, TITLE, ITEM, ACCENT, GREEN, TEAL, AMBER, ROSE, VIOLET }

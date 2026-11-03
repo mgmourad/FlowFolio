@@ -12,6 +12,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.flowfolio.core.designsystem.FlowFolioTheme
 import com.flowfolio.core.model.BookDetails
 import com.flowfolio.core.model.BookType
+import com.flowfolio.core.model.ReadingGoal
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -71,6 +72,24 @@ class BookDetailsUiTest {
             }
         }
         compose.onNodeWithText("2h 05m").assertIsDisplayed()
+    }
+
+    @Test
+    fun overviewShowsBookReadingGoalAndExceededTip() {
+        compose.setContent {
+            FlowFolioTheme {
+                OverviewPanel(
+                    DetailsUiState(
+                        loading = false,
+                        book = physics,
+                        readMillis = 45 * 60_000L,
+                        bookGoal = ReadingGoal(scope = physics.id, targetMinutes = 30)
+                    ),
+                    physics
+                )
+            }
+        }
+        compose.onNodeWithTag(LibraryTestTags.GOAL_EXCEEDED_TIP).assertIsDisplayed()
     }
 
     @Test

@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -62,14 +64,17 @@ internal fun BookmarkButton(mark: ChromeMark, actions: ChromeActions, size: Dp) 
 }
 
 /** The colour choices, the current one ringed, then a remove button when the page has a ribbon. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ColourStrip(mark: ChromeMark, onChoose: (BookmarkColor?) -> Unit) {
-    Row(
+    // Since M4b there are nine ribbons, which do not fit one line on the cover screen, so they wrap.
+    FlowRow(
         Modifier
             .padding(horizontal = 12.dp, vertical = 10.dp)
             .testTag(ReaderTestTags.BOOKMARK_COLOURS),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalAlignment = Alignment.CenterVertically
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        maxItemsInEachRow = RIBBONS_IN_A_ROW
     ) {
         BookmarkColor.entries.forEach { c ->
             val colour = c.color
@@ -105,6 +110,9 @@ internal fun ColourStrip(mark: ChromeMark, onChoose: (BookmarkColor?) -> Unit) {
 }
 
 private val SWATCH = 32.dp
+
+/** Five ribbons a line, so nine plus the remove button fit a folded screen. */
+private const val RIBBONS_IN_A_ROW = 5
 
 /**
  * The book's ribbons under the colour strip (owner, 2026-10-18): each with its colour, page and chapter; a tap goes

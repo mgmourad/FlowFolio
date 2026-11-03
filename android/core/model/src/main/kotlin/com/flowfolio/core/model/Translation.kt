@@ -9,5 +9,8 @@ data class Translation(
     val from: String,
     val to: String,
     val bookId: String?,
-    val createdAtMillis: Long
+    val createdAtMillis: Long,
+    /** Where it was looked up, so the word can take the reader back there (owner, M4b). */
+    val page: Int? = null,
+    val locator: String? = null
 )

@@ -3,6 +3,15 @@
 
     <!-- Translate (Google Translate in the reader) and the optional online book lookup (ADR-0017). -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Reading Goal reminders and rescheduling after phone restart (M3T3). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Voice notes on annotations (owner, M5); asked for only when the reader taps record. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Updating in place (ADR-0048): FlowFolio is not on a store, so it fetches its own APK and hands it to
+         Android, which always asks the reader before installing it. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:name=".FlowFolioApplication"
@@ -39,6 +48,28 @@
                 <data android:mimeType="application/epub+zip" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name="com.flowfolio.core.data.GoalReminderReceiver"
+            android:exported="false" />
+        <receiver
+            android:name="com.flowfolio.core.data.GoalBootReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Hands a downloaded update to the system installer; serves nothing but that one cache folder. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.updates"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/update_paths" />
+        </provider>
     </application>
 
 </manifest>

@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.LibraryRepository
+import com.flowfolio.core.data.ReadingGoalRepository
+import com.flowfolio.core.data.ReadingRepository
 import com.flowfolio.core.data.RelinkResult
 import com.flowfolio.core.data.SettingsRepository
 import com.flowfolio.core.data.ShelfRepository
@@ -16,15 +18,19 @@ import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.Shelf
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+/** Sort options for a shelf page and the 'Not on a shelf' page. */
 
 data class ShelfPageUiState(
     val loading: Boolean = true,
@@ -40,8 +46,15 @@ data class ShelfPageUiState(
     /** Every book in the library, for "Add books" and for what a chosen folder holds. */
     val allBooks: List<Book> = emptyList(),
     /** [ShelfPageViewModel.FINISHED] or [ShelfPageViewModel.FAVORITES]: one of the library's own pages. */
-    val special: Long? = null
+    val special: Long? = null,
+    val sort: ShelfSort = ShelfSort.CUSTOM
 ) {
+    /** The top-level tab this page is, when it is one: only Favourites is (owner, M4c). */
+    val tabRoute: String? get() = if (special == ShelfPageViewModel.FAVORITES) "favorites" else null
+
+    /** Whether this page is a shelf or the 'Not on a shelf' page (which both support sorting & custom reorder). */
+    val canSort: Boolean get() = folder == null && special == null
+
     /** The books select mode's [keys] stand for: books by id, and every book in a chosen folder. */
     fun booksChosen(keys: Set<String>): List<String> {
         val paths = keys.filter {
@@ -52,13 +65,22 @@ data class ShelfPageUiState(
     }
 }
 
+private object EmptyReadingRepository : ReadingRepository {
+    override suspend fun record(bookId: String, startedAt: Long, endedAt: Long) = Unit
+    override fun observeReadMillis(bookId: String): Flow<Long> = flowOf(0L)
+    override fun observeLibraryReadMillis(): Flow<Long> = flowOf(0L)
+}
+
 /** One shelf's books, as tiles or a list, with renaming, removing and locating books. */
+@Suppress("LongParameterList")
 @HiltViewModel
 class ShelfPageViewModel @Inject constructor(
     saved: SavedStateHandle,
     private val library: LibraryRepository,
     shelfRepo: ShelfRepository,
     private val settingsRepo: SettingsRepository,
+    private val readingRepo: ReadingRepository = EmptyReadingRepository,
+    private val goalRepo: ReadingGoalRepository = object : ReadingGoalRepository {},
     private val flow: DynamicFlow = DynamicFlow.None
 ) : ViewModel(),
     FlowSwitching {
@@ -93,16 +115,38 @@ class ShelfPageViewModel @Inject constructor(
     private val shelfId: Long = saved[ARG_SHELF_ID] ?: LOOSE
     private val folder: String? = saved.get<String>(ARG_FOLDER)?.let(android.net.Uri::decode)
     private val availability = MutableStateFlow<Map<String, Availability>>(emptyMap())
+    private val sortFlow = MutableStateFlow(ShelfSort.CUSTOM)
+    private val looseCustomOrder = MutableStateFlow<List<String>>(emptyList())
+
+    fun setSort(sort: ShelfSort) {
+        sortFlow.value = sort
+    }
+
+    fun setLooseOrder(ids: List<String>) {
+        looseCustomOrder.value = ids
+    }
+
+    private data class SortInputs(val sort: ShelfSort, val looseOrder: List<String>, val inputs: ShelfSortInputs)
+
+    private val sortInputs = combine(
+        sortFlow,
+        looseCustomOrder,
+        readingRepo.observeReadMillisByBook(),
+        goalRepo.observeAllGoals()
+    ) { sort, looseOrder, readMillis, goalList ->
+        SortInputs(sort, looseOrder, ShelfSortInputs(readMillis, goalList.associateBy { it.scope }))
+    }
 
     val uiState: StateFlow<ShelfPageUiState> =
-        combine(library.observeBooks(LibrarySort.RECENT), shelfRepo.observeShelves(), availability) {
-                books,
-                shelves,
-                a
-            ->
+        combine(
+            library.observeBooks(LibrarySort.RECENT),
+            shelfRepo.observeShelves(),
+            availability,
+            sortInputs
+        ) { books, shelves, a, sInputs ->
             val shelf = shelves.firstOrNull { it.id == shelfId }
             val byId = books.associateBy { it.id }
-            val list = when {
+            val rawList = when {
                 folder != null -> books.filter { it.folder == folder }.sortedBy { it.title.lowercase() }
 
                 shelf != null -> shelf.bookIds.mapNotNull(byId::get)
@@ -114,9 +158,19 @@ class ShelfPageViewModel @Inject constructor(
 
                 else -> {
                     val shelved = shelves.flatMapTo(HashSet()) { it.bookIds }
-                    books.filterNot { it.id in shelved }
+                    val loose = books.filterNot { it.id in shelved }
+                    if (sInputs.looseOrder.isEmpty()) {
+                        loose
+                    } else {
+                        val looseById = loose.associateBy { it.id }
+                        val ordered = sInputs.looseOrder.mapNotNull(looseById::get)
+                        val seen = ordered.mapTo(HashSet()) { it.id }
+                        ordered + loose.filterNot { it.id in seen }
+                    }
                 }
             }
+            val canSort = folder == null && (shelf != null || shelfId !in SPECIAL)
+            val sortedList = if (canSort) sortBooks(rawList, sInputs) else rawList
             ShelfPageUiState(
                 loading = false,
                 folder = folder,
@@ -124,11 +178,15 @@ class ShelfPageViewModel @Inject constructor(
                 shelf = shelf.takeIf { folder == null },
                 special = shelfId.takeIf { folder == null && shelf == null && it in SPECIAL },
                 noShelves = shelves.isEmpty(),
-                items = list.map { LibraryItem(it, a[it.id] ?: Availability.AVAILABLE) },
+                items = sortedList.map { LibraryItem(it, a[it.id] ?: Availability.AVAILABLE) },
                 shelves = shelves,
-                allBooks = books
+                allBooks = books,
+                sort = sInputs.sort
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ShelfPageUiState())
+
+    private fun sortBooks(books: List<Book>, inputs: SortInputs): List<Book> =
+        sortBooks(books, inputs.sort, inputs.inputs)
 
     init {
         viewModelScope.launch {

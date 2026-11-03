@@ -5,7 +5,161 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+### Added
+- **M5, Reading Atmosphere, VoiceMark, the tour and the rest** (owner, 2026-11-02 to 2026-11-03). Five rounds of the
+  owner's own design, built and checked on the `fold8_api37` emulator:
+  - **Reading Atmosphere** (`Atmosphere`, `AmbientPlayer`, `Ambience`, `AtmosphereOverlay`): the page and the sound
+    kept together. Five moods ship with the app over eight recorded ambiences; a reader can make their own from a
+    paper, an ambience, **an audio file on the phone or any stream address**, choosing between the three with radio
+    buttons. Choosing a mood plays a drawn scene over the page for a moment -- rain, a fire, swell, shafts through
+    leaves, a stream, a moon and fireflies, café bokeh, a breathing haze. An atmosphere can be edited by the pencil
+    beside it and deleted from inside its own editor, which says what will go before it goes.
+  - **Audio from a page, through yt-dlp embedded** (ADR-0048's sibling, **ADR-0047**; `:core:extract`): a stream
+    address that is a *page* rather than a file is resolved. `StreamResolver` reads what any site publishes openly --
+    an `og:audio` tag, a podcast enclosure, an `<audio>` element, a `.pls` or `.m3u`, an HLS manifest in the player's
+    own data -- and only when that finds nothing does it ask yt-dlp, running on an embedded CPython 3.12 (Chaquopy).
+    Only an address is extracted; Android's own `MediaPlayer` plays it, so nothing is downloaded and no ffmpeg is
+    needed, which is what keeps the app clear of GPL code (ADR-0003). Live pages answer nothing on purpose.
+  - **VoiceMark** (`VoiceRecorder`, `VoicePlayer`, `VoiceMarkPill`, Room v20): a spoken note kept against a highlight,
+    recorded as AAC in an `.m4a`, with its loudness sampled as it runs so the waveform can be drawn without decoding
+    the file again. The pill's one button is a microphone, a square, a play or a pause depending on what it will do.
+    The Annotations panel gained a VoiceMark tab where each one can be played, stopped and deleted, while tapping the
+    row still goes to the passage.
+  - **The detour mark** (`DetourState`, `RiffleGestures`): holding the riffle book drops a mark, which pulses on the
+    bar *and* beside the page number, so dismissing the bar does not take the way back with it. Tapping either
+    returns to the mark and clears it, and a notice says so when one is made.
+  - **An offline dictionary and a Dictionary page** (ADR-0046), translation history that remembers its page, and a
+    bin on every definition, translation, note and ribbon.
+  - **The app's own tour** (`Onboarding.kt`): ten pages of **real screenshots of this build**, swiped or stepped
+    through, with Skip on screen the whole way. Shown once on first launch and brought back by
+    "Introduce features again".
+  - **Folders become shelves** (`FoldersToShelves`): after importing a folder, FlowFolio offers to make a shelf for
+    every folder that holds books, at any depth, named after the folder and coloured at random. The question says
+    what it will do and carries a "don't ask me again".
+  - **Updates in the app** (**ADR-0048**, `Updates`): Settings says which build is running, checks the releases page
+    for a newer one, fetches it and hands it to Android's installer -- which always asks first. "Fetch updates
+    automatically" does the checking and fetching, never the installing, because no app can install silently and
+    this one does not pretend to.
+  - **Storage housekeeping** (`Maintenance`): Clear cache, with what it is holding shown beside it, and Reset
+    FlowFolio, which empties the library and everything made in it. **No file on the phone is ever deleted** -- a
+    book read from its own location is only let go of; only FlowFolio's own copies go. Settings are kept, and the
+    confirmation says all of this.
+  - **Intentional tags** on a book's details ("Need the right mood", "Want to study this", "Paused, not abandoned",
+    "Read with someone"), in a row whose ends fade while there is more past them and whose chosen tag glows.
+
+### Fixed
+- **The ambience was not on the media stream.** `AmbientPlayer` set its audio attributes *after* `prepare()`, where
+  `MediaPlayer` ignores them (`setAudioAttributes called in state 8` in the device log), so ADR-0032's placement was
+  silently not happening for a reader's own sounds. Set before `prepare()` now.
+- **Wiktionary's stylesheet showed up in definitions.** A `<style>` block's *contents* are text, so stripping tags
+  left `.mw-parser-output .defdate{font-size:smaller}` under the word. `WiktionaryStore.readable` removes style and
+  script blocks, and any CSS rule that lost its tags, before the markup.
+- **The VoiceMark clock sat at 00:00.** The recorder's flags are plain properties, so reading them told Compose
+  nothing and nothing redrew. The ViewModel publishes both as state now, held to it by `VoiceTimerTest`.
+- The detour mark was drawn between the two halves of the riffle bar's label, and its notice overlapped the reader's
+  top bar.
+- The one-line welcome no longer stacks on top of the first-launch tour.
+
 ### Changed
+- `FlowFolioChip` can be lit as well as ringed when selected (`glow`), drawn with a cached soft shadow rather than a
+  GPU blur, since these sit in scrolling rows (known issue 21).
+- `Modifier.scrollEdgeFades` fades a scrollable row at whichever end still has something past it, on the content's
+  own alpha so it works on any background.
+- `VoiceRecorder` is an interface, so the pill's clock can be tested without a microphone.
+
+
+### Added
+- M4b, the owner's second batch of tweaks (owner, 2026-11-02):
+  - **A slogan on every top-level page** (`ScreenHeader.kt`): the line under the page's name that Shelves already had
+    ("Collections you curate") now appears on Bookmarks, Annotations, Dictionary and Settings too, with each page's
+    buttons bottom-aligned and dropped onto the slogan's line rather than floating above it, so select mode opens
+    neatly under the heading.
+  - **Four more ribbons and four more highlighters** (owner: "why not make it more fun"): Teal, Amber, Rose and
+    Violet ribbons; Orange, Teal, Mint and Coral highlighters. Appended to their enums so every stored colour keeps
+    its name. The ribbon strip wraps five to a line and the highlighter grid splits five and four, since nine no
+    longer fit one line on the cover screen.
+  - **A translation remembers where it was asked for** (Room v18: `translations.page`, `translations.locator`,
+    `ReadingPlace`): tapping one in the reader's Dictionary panel or on the Dictionary page takes the reader back to
+    that page, which definitions already did.
+- M4, the owner's batch of tweaks (owner, 2026-11-02):
+  - **AMOLED theme** (`AppStyle.AMOLED`, `AmoledPalette`): pitch black with the dark FlowFolio palette's colours and
+    the least contrasting lines the layouts still read by. No grain, since the texture would light every background
+    pixel the theme exists to leave dark. It is black whichever way Light or dark points. The theme picker wraps two
+    by two below 520 dp so four previews fit a folded screen.
+  - **Confetti on anything that fills** (`FlowFolioConfetti`, `rememberCelebration`, `ConfettiHeight`): a burst thrown
+    up and out from a bar that reaches its end, built into `FlowFolioProgressBar`, `FlowFolioRing` and
+    `GradientProgressBar`, so every caller gets it. A `celebrationId` (a book's id, a goal's scope) lets a screen that
+    is already full celebrate once per run of the app; without one, only a completion watched happening fires. Dropping
+    back under 100% arms it again.
+  - **A green tick at the end of the reading-goal path** once the goal is met, beside the open book, with the burst
+    over the whole path.
+  - **Dynamic Flow on the cover**, beside the ribbon and the favourite: all of a book's marks now sit together in the
+    bottom-right corner of its cover on a dimmed plate (`BookBadge`), instead of a ribbon top-left and a star top-right.
+  - **A window for the reminder's time of day** (`TimeOfDayDialog` in the new `GoalReminder.kt`): hour and five-minute
+    wheels, Cancel and Save, in place of a chip that stepped the time on a quarter of an hour per tap with no sign it
+    could be set at all.
+  - **The shelf page's six orders in the library** (`ShelfSorting.kt`: `ShelfSort`, `sortBooks`, `sortRank`): Custom,
+    Name, Date added, Progress, Read Time and Read Goal, applied inside each shelf row so the books stay on their
+    shelves. Picking Name also fetches the books by title, so the rows need no reordering at all.
+  - `Glyph.StarFilled`, and `ic_stat_flowfolio`, the app icon's open book and "f" as one white stroke for the status
+    bar.
+- M3T2, finished books, favourites and fuzzy search (`docs/plans/phase3-m3-tweaks-plan.md`, Room v16):
+  - Favourites (`books.favorite`): a star on each book, a Favourites tab in the tab bar and rail, a star toggle on the
+    Continue reading card, and "Add to / Remove from favourites" in press-and-hold menus.
+  - Finished books (`books.finished_at`): "Mark as finished" in press-and-hold menus and on the Continue reading card,
+    a "Finished" filter chip (tiles view), a "Finished Books" shelf at the bottom of the library, and automatic
+    removal from "In progress".
+  - Glyphs on every filter chip and a second column of library header stats (favourites, finished books, dictionary
+    words).
+  - Global fuzzy search (`Fuzzy`, `SearchViewModel`, `SearchResultsList`): searches books (title, author, series,
+    subjects), shelves, highlights and notes, bookmarks, favourites, and dictionary words (translations and
+    definitions), forgiving typos and partial words, grouped with counts.
+- M3T3, Reading Goal and offline Dictionary (`docs/plans/phase3-m3-tweaks-plan.md`, ADR-0046, Room v17):
+  - Reading Goal icon (`Glyph.ReadingGoal`, open book with target and arrow) at the top right of the library header,
+    and the curved Goal path (`GoalPath`, from `Glyph.Glasses` to `Glyph.OpenBook`) under the second column of stats
+    when folded and in its own column when unfolded.
+  - Centred Reading Goal window (`ReadingGoalDialog`): iPhone-style scrollable wheels for hours and minutes, period
+    selector (Day, Week, Month), Reset, "Remind me" with time of day and day-of-week chips (requesting notification
+    permission on Android 13+), and an In-progress section with gradient progress bars (`GradientProgressBar`).
+  - Book details: "Add Reading Goal" button beside Read/Continue and Add to shelf, a second progress bar in Overview
+    for time read against that book's goal, and a tip suggesting resetting the goal once exceeded.
+  - Reading goal reminders (`GoalReminderScheduler`, `GoalReminderReceiver`, `GoalBootReceiver`, `ReadingQuotes`):
+    scheduled via `AlarmManager`, restored after reboot, titled "Time to read <book title>" with 60 public-domain
+    quotes about reading and knowledge.
+  - Offline English Wiktionary dictionary (`WiktionaryStore`, `DictionaryRepository`, `DefineOverlay`): "Define" in
+    the reader's selection menu when a single word is selected, and a Dictionary tab in the app shell grouped by book
+    showing each word's translation and English definition, searchable and opening its place in the book.
+
+### Changed
+- M4b, the owner's second batch of tweaks (owner, 2026-11-02):
+  - **Book details stacks its actions**: Read/Continue wide across the top, with Add to shelf and Add Reading Goal
+    centred on a second row under it. Two to a row leaves room for their words, so only the narrowest screens
+    shorten them.
+  - **The reader's lookup search is no longer a tab.** Typing in the Dictionary panel now shows every definition and
+    every translation it matches at once, whichever tab is showing; the tabs only split the lists when nothing is
+    being searched for.
+  - **The Continue Reading card's finished tick is the palette's green** whether or not the book is finished -- muted
+    when it is not, bright and glowing when it is -- instead of reading as a dim grey tick. Its page count is now
+    "p. 90/201" at 10 sp, which fits the cover screen; "p. 90 of 201" was cut off.
+- M4, the owner's batch of tweaks (owner, 2026-11-02):
+  - **The Reading Goal glyph is a target.** The M3T3 glyph drew an open book, a target and an arrow over one another
+    and closed into a blot at the 16-18 dp it is used at; three rings stay legible that small.
+  - **The reading-goal path curves much further**: its control points now sit beyond the ends and just outside a box
+    raised from 20 dp to 34 dp, so the swing has room.
+  - **The library's search box animates open** -- it grows, slides and fades in rather than appearing whole -- takes
+    the cursor and raises the keyboard with it, and is outlined in the theme's own title colour instead of the faint
+    hairline the rest of the app uses.
+  - **The reminder's days are unmistakable**: solid and glowing in the theme's colour when the reminder runs on them,
+    hollow and dim when it does not. The last day left cannot be turned off, since the reminder would never fire.
+  - The goal period chips read **"A day", "A week", "A month"**.
+  - **Book details keeps its three actions on one line** in every orientation and fold state. Where the line is short
+    -- a folded screen, or the unfolded page's left half -- the two quieter buttons take one-word labels ("Shelf",
+    "Goal") at chip size, everything tightens, and the three share the width equally so no label is cut off.
+    `FlowFolioPrimaryButton` gained a `compact` flag and no longer wraps its label onto a second line.
+  - On the Continue Reading card the **favourite's star fills in** (`ToggleShortcut`'s `checkedGlyph`) and the
+    **finished tick turns the palette's green** (`checkedColor`), both glowing.
+  - Every FlowFolio notification -- the reading-goal reminder, Dynamic Flow's progress, and "Dynamic Flow ready" for a
+    shelf -- now carries the app's own glyph instead of a stock Android bell, download tick or the page-and-waves mark.
 - M3T1, the owner's polish and navigation tweaks (`docs/plans/phase3-m3-tweaks-plan.md`):
   - Reader: the Contents panel's rows pour in one after another (`Modifier.cascade`); the riffle bar's side buttons are
     slim capsules with drawn, centred chevrons; the ribbon and pin are replaced by a riffle book under the bar whose
@@ -32,6 +186,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Continue reading card: the cover sits at the top, level with the title, a little bigger; read time comes first,
     then the progress with its bar; the shortcuts (Dynamic Flow, annotations, bookmarks, shelf) have a row of their
     own under it all, so none is cut off on the cover screen.
+
+### Fixed
+- M4 (owner, 2026-11-02): the marker in the shelf colour picker followed the theme swatch rather than the choice. It
+  was drawn under `c == null`, and the theme swatch is always first, so it looked stuck on the first colour. The
+  selected swatch now carries a tick, in black or white depending on what it sits on.
+
+- M4b (owner, 2026-11-02): the `fold8_api37` emulator flickered on macOS because `hw.gpu.mode=auto` resolved to
+  software rendering (`swangle` + `lavapipe`) on Apple Silicon, which could not keep up with the design's blurs and
+  glows at 2256x2504. The AVD now pins `hw.gpu.mode=host`, which selects Metal.
 
 ## [0.3.0-alpha.1] - 2026-10-28
 

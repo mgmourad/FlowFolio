@@ -20,9 +20,11 @@ import javax.inject.Singleton
         BookmarkEntity::class,
         ReadingSessionEntity::class,
         AnnotationEntity::class,
-        TranslationEntity::class
+        TranslationEntity::class,
+        ReadingGoalEntity::class,
+        DefinitionEntity::class
     ],
-    version = 16,
+    version = 20,
     exportSchema = true,
     // v2: books.last_page (reading position, Phase 1 milestone 4).
     // v3: books.author, shelves and shelf_books (milestone 5, slice 3).
@@ -39,6 +41,7 @@ import javax.inject.Singleton
     // v14: annotations.locator and bookmarks.locator (EPUB highlights and ribbons by locator, ADR-0040).
     // v15: books.flow_mode and books.flow_locator (Dynamic Flow, ADR-0045).
     // v16: books.favorite and books.finished_at (favourites and finished books, M3T2).
+    // v17: reading_goals and definitions (Reading Goal and offline Dictionary, M3T3).
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -54,7 +57,11 @@ import javax.inject.Singleton
         AutoMigration(from = 12, to = 13),
         AutoMigration(from = 13, to = 14),
         AutoMigration(from = 14, to = 15),
-        AutoMigration(from = 15, to = 16)
+        AutoMigration(from = 15, to = 16),
+        AutoMigration(from = 16, to = 17),
+        AutoMigration(from = 17, to = 18),
+        AutoMigration(from = 18, to = 19),
+        AutoMigration(from = 19, to = 20)
     ]
 )
 abstract class FlowFolioDatabase : RoomDatabase() {
@@ -71,6 +78,10 @@ abstract class FlowFolioDatabase : RoomDatabase() {
     abstract fun bookReadingDao(): BookReadingDao
 
     abstract fun translationDao(): TranslationDao
+
+    abstract fun readingGoalDao(): ReadingGoalDao
+
+    abstract fun definitionDao(): DefinitionDao
 }
 
 @Module
@@ -101,4 +112,10 @@ object DatabaseModule {
 
     @Provides
     fun translationDao(db: FlowFolioDatabase): TranslationDao = db.translationDao()
+
+    @Provides
+    fun readingGoalDao(db: FlowFolioDatabase): ReadingGoalDao = db.readingGoalDao()
+
+    @Provides
+    fun definitionDao(db: FlowFolioDatabase): DefinitionDao = db.definitionDao()
 }

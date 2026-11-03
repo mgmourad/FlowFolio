@@ -17,6 +17,9 @@ interface BookDao {
     @Query("UPDATE books SET finished_at = :at WHERE id = :id")
     suspend fun setFinishedAt(id: String, at: Long?)
 
+    @Query("UPDATE books SET intent = :intent WHERE id = :id")
+    suspend fun setIntent(id: String, intent: String?)
+
     /** Most recently opened first; never-opened books by date added. */
     @Query("SELECT * FROM books ORDER BY COALESCE(last_opened_at, added_at) DESC")
     fun observeByRecent(): Flow<List<BookEntity>>

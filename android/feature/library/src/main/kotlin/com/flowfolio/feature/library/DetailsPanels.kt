@@ -96,6 +96,21 @@ internal fun OverviewPanel(state: DetailsUiState, book: Book) {
             modifier = Modifier.padding(bottom = 8.dp)
         )
         FlowFolioProgressBar(book.progress)
+        state.bookGoal?.let { goal ->
+            Text(
+                stringResource(R.string.goal_book_progress, readTime(state.readMillis), readTime(goal.targetMillis)),
+                style = FlowFolioType.rowLabel.merge(FlowFolio.item),
+                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+            )
+            FlowFolioProgressBar(goal.progress(state.readMillis))
+            if (goal.exceeded(state.readMillis)) {
+                Text(
+                    stringResource(R.string.goal_exceeded_tip),
+                    style = FlowFolioType.rowDetail.merge(FlowFolio.subItem),
+                    modifier = Modifier.padding(top = 6.dp).testTag(LibraryTestTags.GOAL_EXCEEDED_TIP)
+                )
+            }
+        }
         Row(
             Modifier.fillMaxWidth().padding(top = 26.dp).height(IntrinsicSize.Min),
             verticalAlignment = Alignment.CenterVertically

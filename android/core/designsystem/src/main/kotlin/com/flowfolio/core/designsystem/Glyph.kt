@@ -144,7 +144,87 @@ enum class Glyph(internal val pathData: String, internal val stroke: Float = 2f,
     ),
 
     /** A star: a favourite. */
-    Star("M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z")
+    Star("M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"),
+
+    /** The same star, solid: a favourite that is on (owner, M4). */
+    StarFilled("M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.8l-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z", filled = true),
+
+    /**
+     * Reading Goal (owner, M4): three rings of a target. The M3T3 glyph drew an open book, a target and an arrow on
+     * top of one another, which closed up into a blot at the 16-18 dp it is used at; rings stay legible that small.
+     */
+    ReadingGoal(
+        "M21 12a9 9 0 1 1-18 0a9 9 0 1 1 18 0z " +
+            "M17 12a5 5 0 1 1-10 0a5 5 0 1 1 10 0z " +
+            "M13.6 12a1.6 1.6 0 1 1-3.2 0a1.6 1.6 0 1 1 3.2 0z",
+        stroke = 1.9f
+    ),
+
+    /** Reading glasses: the start of the reading-goal path in the library header (owner, M3T3). */
+    Glasses(
+        "M9.5 14.5a3.5 3.5 0 1 1-7 0a3.5 3.5 0 1 1 7 0z " +
+            "M21.5 14.5a3.5 3.5 0 1 1-7 0a3.5 3.5 0 1 1 7 0z " +
+            "M9.5 14c1-1.2 4-1.2 5 0 M2.5 14L4 8.5c.3-1 1.2-1.5 2.2-1.5 M21.5 14L20 8.5c-.3-1-1.2-1.5-2.2-1.5",
+        stroke = 1.9f
+    ),
+
+    /** A sun with rays: screen brightness in the reader's controls. */
+    Brightness(
+        "M16 12a4 4 0 1 1-8 0a4 4 0 1 1 8 0z M12 3v2 M12 19v2 M3 12h2 M19 12h2 " +
+            "M5.6 5.6l1.4 1.4 M17 17l1.4 1.4 M5.6 18.4L7 17 M17 7l1.4-1.4"
+    ),
+
+    /** An open eye: keep screen on while reading. */
+    KeepScreenOn("M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6z M14.5 12a2.5 2.5 0 1 1-5 0a2.5 2.5 0 1 1 5 0z"),
+
+    /** A lit bulb: a tip about something the reader might walk past (owner, M5). */
+    Hint(
+        "M12 3a6 6 0 0 0-3.4 10.9c.5.4.9 1 .9 1.7v.4h5v-.4c0-.7.4-1.3.9-1.7A6 6 0 0 0 12 3z " +
+            "M9.5 19h5 M10.5 21.5h3",
+        stroke = 1.9f
+    ),
+
+    /** A question in a circle: the tutorial (owner, M5). */
+    Help(
+        "M21 12a9 9 0 1 1-18 0a9 9 0 1 1 18 0z " +
+            "M9.3 9.4a2.8 2.8 0 1 1 3.4 3.3c-.5.2-.8.6-.8 1.1v.6 M12 17.3h.01",
+        stroke = 1.9f
+    ),
+
+    /**
+     * A U-turn: the detour mark on the riffle bar, and the way back to the page it was left on (owner, M5).
+     */
+    Detour("M7 19.5V11a4.6 4.6 0 0 1 9.2 0v5.6 M12.4 13.8l3.8 3.8 3.8-3.8", stroke = 2.1f),
+
+    /** An arrow leaving a box: share the passage (owner, M5 round). */
+    Share("M12 3.5v11 M8.5 7l3.5-3.5L15.5 7 M5 13.5v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5", stroke = 1.95f),
+
+    /** Two sheets, one over the other: copy (owner, M5 round). */
+    Copy(
+        "M9 9h9a1.5 1.5 0 0 1 1.5 1.5v9A1.5 1.5 0 0 1 18 21H9a1.5 1.5 0 0 1-1.5-1.5v-9A1.5 1.5 0 0 1 9 9z " +
+            "M15 6.5V4.5A1.5 1.5 0 0 0 13.5 3H6a1.5 1.5 0 0 0-1.5 1.5V14a1.5 1.5 0 0 0 1.5 1.5h2",
+        stroke = 1.9f
+    ),
+
+    /** A pencil in a square: edit something already made (owner, M5 round). */
+    EditBox(
+        "M20 13v5.5A2.5 2.5 0 0 1 17.5 21h-11A2.5 2.5 0 0 1 4 18.5v-11A2.5 2.5 0 0 1 6.5 5H12 " +
+            "M9 15h2.5L20 6.5a1.8 1.8 0 0 0-2.5-2.5L9 12.5z",
+        stroke = 1.9f
+    ),
+
+    /** A pause: a VoiceMark playing (owner, M5 round). */
+    Pause("M9.5 5v14 M14.5 5v14", stroke = 2.6f),
+
+    /** A square: stop (owner, M5 round). */
+    Stop("M6.5 6.5h11v11h-11z", stroke = 2.2f),
+
+    /** A microphone: a voice note on an annotation (owner, M5). */
+    Mic(
+        "M12 3a2.8 2.8 0 0 1 2.8 2.8v6a2.8 2.8 0 0 1-5.6 0v-6A2.8 2.8 0 0 1 12 3z " +
+            "M5.8 11.5a6.2 6.2 0 0 0 12.4 0 M12 17.8V21 M9 21h6",
+        stroke = 1.9f
+    )
 }
 
 /**

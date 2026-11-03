@@ -23,10 +23,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -44,6 +48,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioChip
 import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioSlider
 import com.flowfolio.core.designsystem.FlowFolioType
@@ -53,6 +58,8 @@ import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.UserSettings
+import com.flowfolio.core.model.allAtmospheres
+import com.flowfolio.core.model.atmosphereInForce
 
 /**
  * The reading sheet ("Aa"), in tabs so it stays under half the screen (owner, 2026-10-21): Text (EPUBs: font, size,
@@ -120,6 +127,7 @@ private fun PageChoice(settings: UserSettings, viewModel: ReaderSettingsViewMode
     PaperSwatches(settings.paperStyle) { style ->
         if (reveal != null) reveal.change(style, viewModel::setPaperStyle) else viewModel.setPaperStyle(style)
     }
+    AtmosphereRow(settings, viewModel::chooseAtmosphere)
     LabeledRow(stringResource(R.string.reader_turn), Glyph.PageTurn) {
         FlowFolioSegmented(
             listOf(
@@ -209,7 +217,8 @@ private fun ControlsChoice(settings: UserSettings, viewModel: ReaderSettingsView
         sounds?.let { s -> s.settings = s.settings.copy(riffleVolume = it) }
         sounds?.previewRiffle()
     }
-    Row(Modifier.padding(top = 8.dp)) {
+    BrightnessRow(settings, viewModel)
+    Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ToggleChip(
             stringResource(R.string.reader_chip_haptics),
             settings.scrubHaptics,
@@ -217,6 +226,31 @@ private fun ControlsChoice(settings: UserSettings, viewModel: ReaderSettingsView
             glyph = Glyph.Haptics,
             onChange = viewModel::setScrubHaptics
         )
+        ToggleChip(
+            stringResource(R.string.reader_chip_keep_screen_on),
+            settings.keepScreenOn,
+            ReaderTestTags.SETTING_KEEP_SCREEN_ON,
+            glyph = Glyph.KeepScreenOn,
+            onChange = viewModel::setKeepScreenOn
+        )
+    }
+}
+
+@Composable
+private fun BrightnessRow(settings: UserSettings, viewModel: ReaderSettingsViewModel) {
+    val brightnessOn = settings.readerBrightness >= 0f
+    val brightnessValue = if (brightnessOn) settings.readerBrightness.coerceIn(0f, 1f) else DEFAULT_SLIDER_BRIGHTNESS
+    SoundRow(
+        stringResource(R.string.reader_chip_brightness),
+        on = brightnessOn,
+        volume = brightnessValue,
+        tags = ReaderTestTags.SETTING_BRIGHTNESS to ReaderTestTags.SETTING_BRIGHTNESS_SLIDER,
+        volumeLabel = stringResource(R.string.reader_brightness_slider),
+        glyph = Glyph.Brightness,
+        sliderAlwaysEnabled = true,
+        onToggle = { viewModel.setReaderBrightness(if (brightnessOn) -1f else DEFAULT_SLIDER_BRIGHTNESS) }
+    ) {
+        viewModel.setReaderBrightness(it.coerceIn(MIN_BRIGHTNESS, 1f))
     }
 }
 
@@ -234,6 +268,7 @@ private fun SoundRow(
     tags: Pair<String, String>,
     volumeLabel: String,
     glyph: Glyph,
+    sliderAlwaysEnabled: Boolean = false,
     onToggle: (Boolean) -> Unit,
     onVolume: (Float) -> Unit
 ) {
@@ -243,7 +278,7 @@ private fun SoundRow(
             volume,
             onValueChangeFinished = onVolume,
             label = volumeLabel,
-            enabled = on,
+            enabled = on || sliderAlwaysEnabled,
             modifier = Modifier.weight(1f).padding(start = 12.dp).testTag(tags.second)
         )
     }
@@ -327,3 +362,50 @@ private val PaperStyle.label: Int
 private val SWATCH = 42.dp
 private val SOUND_CHIP = 132.dp
 private const val SELECTED_SCALE = 1.1f
+private const val DEFAULT_SLIDER_BRIGHTNESS = 0.75f
+private const val MIN_BRIGHTNESS = 0.05f
+
+/**
+ * The Reading Atmosphere on the "Aa" sheet's Page tab (owner, M5): the one in force, and a menu of the rest.
+ *
+ * Choosing one here applies its page settings and turns the atmosphere on, so the mood can be changed without
+ * leaving the book; Settings keeps the universal switch for turning it all off again.
+ */
+@Composable
+private fun AtmosphereRow(settings: UserSettings, onChoose: (String?) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val chosen = settings.atmosphereInForce()
+    LabeledRow(stringResource(R.string.reader_atmosphere), Glyph.Sound) {
+        Box {
+            FlowFolioChip(
+                text = chosen?.name ?: stringResource(R.string.reader_atmosphere_none),
+                selected = chosen != null,
+                onClick = { open = true },
+                modifier = Modifier.testTag(ReaderTestTags.ATMOSPHERE)
+            )
+            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.reader_atmosphere_none), style = FlowFolio.item) },
+                    onClick = {
+                        open = false
+                        onChoose(null)
+                    }
+                )
+                settings.allAtmospheres().forEach { atmosphere ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                atmosphere.name,
+                                style = if (atmosphere.name == chosen?.name) FlowFolio.title else FlowFolio.item
+                            )
+                        },
+                        onClick = {
+                            open = false
+                            onChoose(atmosphere.name)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}

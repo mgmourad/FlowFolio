@@ -46,6 +46,8 @@ import com.flowfolio.feature.library.BookmarksScreen
 import com.flowfolio.feature.library.BookmarksViewModel
 import com.flowfolio.feature.library.DetailsScreen
 import com.flowfolio.feature.library.DetailsViewModel
+import com.flowfolio.feature.library.DictionaryScreen
+import com.flowfolio.feature.library.DictionaryViewModel
 import com.flowfolio.feature.library.EditDetailsScreen
 import com.flowfolio.feature.library.LibraryScreen
 import com.flowfolio.feature.library.LibraryViewModel
@@ -56,6 +58,7 @@ import com.flowfolio.feature.library.ShelvesScreen
 import com.flowfolio.feature.reader.ReaderScreen
 
 @OptIn(ExperimentalSharedTransitionApi::class)
+@Suppress("LongMethod")
 @Composable
 fun FlowFolioApp(appViewModel: AppViewModel) {
     val nav = rememberNavController()
@@ -86,31 +89,34 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                                 onOpenFolder = { path -> nav.navigate(Routes.folder(path)) },
                                 onBookmarks = { book -> nav.navigate(Routes.bookBookmarks(book.id)) },
                                 onAnnotations = { book -> nav.navigate(Routes.bookAnnotations(book.id)) },
+                                onDictionary = { book -> nav.navigate(Routes.bookDictionary(book.id)) },
                                 scrollToShelf = shelfToShow,
                                 onScrolledToShelf = { shelfToShow = null },
                                 viewModel = library
                             )
                         }
                     }
+                    // A shelf opens on its own page, as from its book count in the library (owner, 2026-10-22).
                     destination(TopLevel.Shelves.route) {
-                        ScreenEntrance {
-                            // A shelf opens on its own page, as from its book count in the library (owner, 2026-10-22).
-                            ShelvesScreen(onOpenShelf = { id -> nav.navigate(Routes.shelf(id)) })
-                        }
+                        ScreenEntrance { ShelvesScreen(onOpenShelf = { id -> nav.navigate(Routes.shelf(id)) }) }
                     }
                     destination(TopLevel.Bookmarks.route) {
-                        ScreenEntrance { BookmarksScreen(onRead = { book -> nav.navigate(Routes.reader(book.id)) }) }
+                        ScreenEntrance { BookmarksScreen(onRead = { nav.navigate(Routes.reader(it.id)) }) }
                     }
                     destination(TopLevel.Annotations.route) {
                         ScreenEntrance {
                             AnnotationsScreen(onOpenBook = { book -> nav.navigate(Routes.bookAnnotations(book.id)) })
                         }
                     }
+                    destination(TopLevel.Dictionary.route) {
+                        ScreenEntrance { DictionaryScreen(onRead = { nav.navigate(Routes.reader(it.id)) }) }
+                    }
                     destination(TopLevel.Settings.route) { ScreenEntrance { SettingsScreen() } }
                     detailsDestination(nav)
                     editDestination(nav)
                     bookBookmarksDestination(nav)
                     bookAnnotationsDestination(nav)
+                    bookDictionaryDestination(nav)
                     shelfPages(nav)
                     readerDestination(nav)
                 }
@@ -171,6 +177,16 @@ private fun NavGraphBuilder.bookAnnotationsDestination(nav: NavHostController) =
             onBack = { nav.popBackStack() },
             onRead = { book -> nav.navigate(Routes.reader(book.id)) }
         )
+    }
+}
+
+/** One book's dictionary words (from a book's menu). */
+private fun NavGraphBuilder.bookDictionaryDestination(nav: NavHostController) = composable(
+    Routes.BOOK_DICTIONARY,
+    arguments = listOf(navArgument(DictionaryViewModel.ARG_BOOK_ID) { type = NavType.StringType })
+) {
+    ScreenEntrance {
+        DictionaryScreen(onRead = { book -> nav.navigate(Routes.reader(book.id)) }, onBack = { nav.popBackStack() })
     }
 }
 

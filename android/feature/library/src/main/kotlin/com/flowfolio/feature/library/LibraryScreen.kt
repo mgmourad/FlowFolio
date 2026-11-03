@@ -3,6 +3,13 @@ package com.flowfolio.feature.library
 import android.text.format.Formatter
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.WindowInsets
@@ -41,6 +48,8 @@ import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.LocalBookOpener
 import com.flowfolio.core.designsystem.LocalChromePadding
+import com.flowfolio.core.designsystem.Motion
+import com.flowfolio.core.designsystem.ScrollToTopOnTab
 import com.flowfolio.core.designsystem.Selection
 import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.reveal
@@ -70,8 +79,12 @@ data class LibraryActions(
     val onFinished: ((Book) -> Unit)? = null,
     /** The book's ribbons; null hides the menu entry. */
     val onBookmarks: ((Book) -> Unit)? = null,
-    /** The book's highlights and notes; null hides the Continue Reading shortcut. */
+    /** The book's highlights and notes; null hides the Continue Reading shortcut and menu entry. */
     val onAnnotations: ((Book) -> Unit)? = null,
+    /** The book's dictionary entries; null hides the menu entry. */
+    val onDictionary: ((Book) -> Unit)? = null,
+    /** Opens the Reading Goal dialog for a specific book; null hides the menu entry. */
+    val onSetBookGoal: ((Book) -> Unit)? = null,
     /** Opens an imported folder's page, by its path. */
     val onOpenFolder: (String) -> Unit = {},
     /** Asks to remove a folder's books from the library. */
@@ -80,7 +93,9 @@ data class LibraryActions(
     val onReorder: ((Long, List<String>) -> Unit)? = null,
     /** Opens a whole shelf ([ShelfPageViewModel.LOOSE] for the books on no shelf). */
     val onOpenShelf: (Long) -> Unit = {},
+    val onReadingGoal: () -> Unit = {},
     val onSort: (LibrarySort) -> Unit = {},
+    val onShelfSort: (ShelfSort) -> Unit = {},
     val onFilter: (LibraryFilter) -> Unit = {},
     val onQuery: (String) -> Unit = {},
     /** Where the "Continue reading" cover is, so Resume opens the book from it. */
@@ -92,6 +107,7 @@ data class LibraryActions(
 )
 
 /** Library route: wires the ViewModels, file pickers, snackbar messages and shelf dialogs to [LibraryContent]. */
+@Suppress("LongParameterList", "LongMethod")
 @Composable
 fun LibraryScreen(
     onOpenDetails: (Book, String) -> Unit,
@@ -100,6 +116,7 @@ fun LibraryScreen(
     onOpenFolder: (String) -> Unit = {},
     onBookmarks: (Book) -> Unit = {},
     onAnnotations: (Book) -> Unit = {},
+    onDictionary: (Book) -> Unit = {},
     scrollToShelf: Long? = null,
     onScrolledToShelf: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
@@ -109,6 +126,11 @@ fun LibraryScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     LaunchedEffect(state.query) { searchViewModel.onQuery(state.query) }
+    // The app introduces itself once, when the library first opens (owner, M5). The one-line welcome stays out of
+    // the way while the full tour is still owed, so the two never stack on top of each other (owner, M5 round 4).
+    val guideSettings by viewModel.guideSettings.collectAsStateWithLifecycle()
+    guideSettings?.takeIf { TOUR_SEEN in it.seenGuides }
+        ?.let { GuideSplash(Guide.Welcome, it, viewModel::markGuideSeen) }
     val found by searchViewModel.results.collectAsStateWithLifecycle()
     var shelving by remember { mutableStateOf<Book?>(null) }
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -120,10 +142,12 @@ fun LibraryScreen(
     val locate = rememberLocate(viewModel)
     val opener = LocalBookOpener.current
     val heroSpot = remember { CoverSpot() }
+    val stats = rememberLibraryStats(statsViewModel, state.continueReading?.book?.id)
+    val setBookGoal = rememberLibraryBookGoalDialog(statsViewModel)
     LibraryContent(
         state,
         rememberMessages(viewModel),
-        rememberLibraryStats(statsViewModel, state.continueReading?.book?.id),
+        stats,
         LibraryActions(
             onImport = { importPicker.launch(PDF_TYPES) },
             onImportFolder = { folderPicker.launch(null) },
@@ -145,15 +169,17 @@ fun LibraryScreen(
             onFavorite = viewModel::toggleFavorite,
             onFinished = viewModel::toggleFinished,
             onOpenShelf = onOpenShelf,
+            onReadingGoal = rememberLibraryGoalDialog(statsViewModel, stats, state, onOpenDetails),
             onOpenFolder = onOpenFolder,
             onRemoveFolder = rememberRemoveFolder(viewModel),
-            onReorder = { id: Long, ids: List<String> ->
-                shelves.setOrder(id, ids)
-                Unit
-            }.takeIf { state.filter == LibraryFilter.ALL && state.query.isBlank() },
+            onReorder = { id: Long, ids: List<String> -> shelves.setOrder(id, ids).let {} }
+                .takeIf { state.filter == LibraryFilter.ALL && state.query.isBlank() },
             onBookmarks = onBookmarks,
             onAnnotations = onAnnotations,
+            onDictionary = onDictionary,
+            onSetBookGoal = setBookGoal,
             onSort = viewModel::onSortChange,
+            onShelfSort = viewModel::onShelfSortChange,
             onFilter = viewModel::onFilter,
             onQuery = viewModel::onQuery,
             heroSpot = heroSpot
@@ -203,6 +229,7 @@ private fun rememberLocate(viewModel: LibraryViewModel): (Book) -> Unit {
 }
 
 /** The library as in the mock: header, chips, "Continue reading" and a shelf row per shelf, on the app background. */
+@Suppress("LongMethod")
 @Composable
 fun LibraryContent(
     state: LibraryUiState,
@@ -217,12 +244,14 @@ fun LibraryContent(
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     var searching by rememberSaveable { mutableStateOf(state.query.isNotEmpty()) }
     val list = rememberLazyListState()
+    // A tap on the Library tab shows the page from the top (owner, M4c).
+    ScrollToTopOnTab("library", list)
     val expanded = remember { mutableStateOf(emptySet<SearchGroup>()) }
     // Shelves screen -> "show this shelf": scroll its row into view once the rows are there.
     LaunchedEffect(scrollToShelf, state.loading, state.shelves) {
         val target = scrollToShelf ?: return@LaunchedEffect
         if (state.loading) return@LaunchedEffect
-        val index = rowIndex(state, searching, target)
+        val index = rowIndex(state, target)
         if (index != null) list.animateScrollToItem(index)
         onScrolledToShelf()
     }
@@ -248,7 +277,20 @@ fun LibraryContent(
                     modifier = Modifier.reveal(0)
                 )
             }
-            if (searching) item(key = "search") { SearchField(state.query, actions.onQuery) }
+            // Always emitted so that it can animate: it grows, slides and fades in rather than appearing whole,
+            // and takes the cursor with it (owner, M4).
+            item(key = "search") {
+                AnimatedVisibility(
+                    visible = searching,
+                    enter = expandVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) +
+                        slideInVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { -it / SLIDE_FROM } +
+                        fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)),
+                    exit = shrinkVertically(tween(Motion.FAST_MS, easing = Motion.EaseInOut)) +
+                        fadeOut(tween(Motion.FAST_MS, easing = Motion.EaseInOut))
+                ) {
+                    SearchField(state.query, actions.onQuery, autoFocus = true)
+                }
+            }
             if (state.importing) item(key = "importing") { ImportProgress(state.importProgress) }
             // While a query is typed, everything it finds takes the shelves' place (owner, M3T2).
             if (searching && state.query.isNotBlank()) {
@@ -267,12 +309,13 @@ fun LibraryContent(
 }
 
 /** The list index of [shelfId]'s row, matching the items [LibraryContent] emits; null when it has no row. */
-private fun rowIndex(state: LibraryUiState, searching: Boolean, shelfId: Long): Int? {
-    val rows = shelfRows(state.items, state.shelves)
+private fun rowIndex(state: LibraryUiState, shelfId: Long): Int? {
+    val rows = shelfRows(state.items, state.shelves, state.sortRank)
     val row = rows.indexOfFirst { it.shelf?.id == shelfId }.takeIf { it >= 0 } ?: return null
     val hero = state.continueReading != null && state.filter == LibraryFilter.ALL && state.query.isBlank()
-    // Header, search field, import progress, chips and the hero card come before the rows.
-    val before = listOf(true, searching, state.importing, true, hero).count { it }
+    // Header, search field, import progress, chips and the hero card come before the rows. Since M4 the search
+    // row is always emitted (it animates open), so it always counts.
+    val before = listOf(true, true, state.importing, true, hero).count { it }
     return before + row
 }
 
@@ -300,6 +343,8 @@ private fun androidx.compose.foundation.lazy.LazyListScope.libraryBody(
             if (hero != null && state.filter == LibraryFilter.ALL && state.query.isBlank()) {
                 // The shelf its shortcut opens: the first it is on, or the books on no shelf.
                 val shelf = state.shelves.firstOrNull { hero.book.id in it.bookIds }?.id ?: ShelfPageViewModel.LOOSE
+                val goalProgress = stats.heroGoal?.progress(stats.heroReadMillis)
+                    ?: stats.libraryGoal?.progress(stats.periodReadMillis)
                 item(key = "hero") {
                     ContinueReadingCard(
                         hero,
@@ -309,11 +354,12 @@ private fun androidx.compose.foundation.lazy.LazyListScope.libraryBody(
                         Modifier.reveal(2),
                         bookmarkCount = stats.heroBookmarks,
                         annotationCount = stats.heroAnnotations,
-                        dictionaryCount = stats.heroDictionary
+                        dictionaryCount = stats.heroDictionary,
+                        readGoalProgress = goalProgress
                     )
                 }
             }
-            val rows = shelfRows(state.items, state.shelves)
+            val rows = shelfRows(state.items, state.shelves, state.sortRank)
             if (rows.isEmpty()) item(key = "nomatch") { NoMatch() }
             itemsIndexed(rows, key = { _, r -> "row-" + (r.shelf?.id ?: "loose") }) { i, row ->
                 ShelfRowView(
@@ -362,6 +408,9 @@ internal fun NoMatch() {
         modifier = Modifier.fillMaxWidth().padding(32.dp)
     )
 }
+
+/** The search box slides down from a third of its own height. */
+private const val SLIDE_FROM = 3
 
 private val LIST_END = 24.dp
 

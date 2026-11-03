@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -68,8 +69,18 @@ internal fun BoxScope.ReaderPanels(
     onFlow: ((Boolean, Boolean) -> Unit)? = null,
     onPanel: (Panel) -> Unit = {}
 ) {
-    DropPanel(panel == Panel.CONTENTS, CONTENTS_WIDTH, fillDown = true) {
-        ContentsList(navigation.outline, navigation.labels, s.anchorPage, jump) { onPanel(Panel.GO_TO) }
+    val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
+    if (wide) {
+        CenteredPanel(panel == Panel.CONTENTS, CONTENTS_WIDTH) {
+            ContentsList(navigation.outline, navigation.labels, s.anchorPage, jump) { onPanel(Panel.GO_TO) }
+        }
+    } else {
+        DropPanel(panel == Panel.CONTENTS, CONTENTS_WIDTH, fillDown = true) {
+            ContentsList(navigation.outline, navigation.labels, s.anchorPage, jump) { onPanel(Panel.GO_TO) }
+        }
+    }
+    CenteredPanel(panel == Panel.DICTIONARY, CONTENTS_WIDTH) {
+        ReaderDictionaryPanel(navigation, jump)
     }
     DropPanel(panel == Panel.ANNOTATIONS, CONTENTS_WIDTH, fillDown = true) {
         AnnotationList(mark.notes, navigation, jump)
@@ -88,6 +99,38 @@ internal fun BoxScope.ReaderPanels(
 }
 
 /**
+ * A glass panel centered in the middle of the screen (for unfolded Contents and the Dictionary popup), keeping clear
+ * of the top control buttons and bottom bar.
+ */
+@Composable
+private fun BoxScope.CenteredPanel(visible: Boolean, width: Dp, content: @Composable ColumnScope.() -> Unit) {
+    val maxHeight = LocalWindowInfo.current.containerDpSize.height * CENTERED_MAX_HEIGHT
+    AnimatedVisibility(
+        visible,
+        Modifier
+            .align(Alignment.Center)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(horizontal = PANEL_INSET, vertical = CENTERED_VERTICAL_CLEARANCE)
+            .imePadding(),
+        enter = fadeIn(tween(Motion.FAST_MS)) +
+            slideInVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { -it / DROP_FRACTION },
+        exit = fadeOut(tween(Motion.FAST_MS)) +
+            slideOutVertically(tween(Motion.FAST_MS, easing = Motion.EaseOut)) { -it / DROP_FRACTION }
+    ) {
+        Column(
+            Modifier
+                .widthIn(max = width)
+                .fillMaxWidth()
+                .heightIn(max = maxHeight)
+                .glass(PanelShape, tint = panelTint())
+                .padding(vertical = 4.dp),
+            content = content
+        )
+    }
+}
+
+/**
  * A glass panel under the top bar, at the right (under the buttons that open it). [fillDown] stretches it to just above
  * the bottom bar; [width] caps it on wide screens (null: as wide as its content).
  */
@@ -98,12 +141,14 @@ private fun BoxScope.DropPanel(
     fillDown: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
+    val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
+    val topClearance = if (wide) WIDE_TOP_BAR_CLEARANCE else FOLDED_TOP_BAR_CLEARANCE
     AnimatedVisibility(
         visible,
         Modifier
             .align(Alignment.TopEnd)
             .statusBarsPadding()
-            .padding(start = PANEL_INSET, end = PANEL_INSET, top = TOP_BAR_CLEARANCE)
+            .padding(start = PANEL_INSET, end = PANEL_INSET, top = topClearance)
             .then(if (fillDown) Modifier.navigationBarsPadding().padding(bottom = BOTTOM_BAR_CLEARANCE) else Modifier)
             .imePadding(),
         enter = fadeIn(tween(Motion.FAST_MS)) +
@@ -176,8 +221,11 @@ private const val LIGHT_PANEL_ALPHA = 0.6f
 private val PanelShape = RoundedCornerShape(26.dp)
 private val PANEL_INSET = 14.dp
 
-/** The top bar is 8 + 42 + 8 dp under the status bar; panels start just below it. */
-private val TOP_BAR_CLEARANCE = 64.dp
+/** The top bar is 8 + 56 + 8 dp unfolded, and 2 rows folded; panels start clearly below it. */
+private val WIDE_TOP_BAR_CLEARANCE = 78.dp
+private val FOLDED_TOP_BAR_CLEARANCE = 116.dp
+private val CENTERED_VERTICAL_CLEARANCE = 84.dp
+private const val CENTERED_MAX_HEIGHT = 0.72f
 
 /** The bottom bar is 56 dp tall, 26 dp above the navigation bar; the contents stop 10 dp above it. */
 private val BOTTOM_BAR_CLEARANCE = 92.dp

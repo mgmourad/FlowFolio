@@ -82,7 +82,7 @@ class FlowNotifications(private val context: Context) {
     }
 
     private fun builder(bookId: String): Notification.Builder = Notification.Builder(context, CHANNEL)
-        .setSmallIcon(R.drawable.ic_stat_dynamic_flow)
+        .setSmallIcon(R.drawable.ic_stat_flowfolio)
         .setContentIntent(openBook(bookId))
 
     /** Opens the app on the book (MainActivity reads [EXTRA_OPEN_BOOK]). */

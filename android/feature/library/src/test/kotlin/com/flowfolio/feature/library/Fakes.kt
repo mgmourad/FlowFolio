@@ -20,6 +20,7 @@ import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
@@ -106,6 +107,8 @@ class FakeSettings(initial: UserSettings = UserSettings()) : SettingsRepository 
     val state = MutableStateFlow(initial)
     override val settings: Flow<UserSettings> = state
 
+    override suspend fun setAutoUpdate(on: Boolean) = state.update { it.copy(autoUpdate = on) }
+
     override suspend fun setStorageMode(mode: StorageMode) = state.update { it.copy(storageMode = mode) }
 
     override suspend fun setAskStorageEachImport(ask: Boolean) = state.update { it.copy(askStorageEachImport = ask) }
@@ -183,3 +186,20 @@ class FakeLookup(var result: com.flowfolio.core.data.Found? = null) : com.flowfo
 
     override suspend fun find(book: Book): com.flowfolio.core.data.Found? = result.also { asked += book.id }
 }
+
+/**
+ * The reading times the library orders books by (M4). Empty unless a test sets [millis], which is enough for the
+ * cases that only need the view model to build.
+ */
+class FakeReading(var millis: Map<String, Long> = emptyMap()) : com.flowfolio.core.data.ReadingRepository {
+    override suspend fun record(bookId: String, startedAt: Long, endedAt: Long) = Unit
+
+    override fun observeReadMillis(bookId: String): Flow<Long> = flowOf(millis[bookId] ?: 0L)
+
+    override fun observeLibraryReadMillis(): Flow<Long> = flowOf(millis.values.sum())
+
+    override fun observeReadMillisByBook(): Flow<Map<String, Long>> = flowOf(millis)
+}
+
+/** Reading goals for the orders that need them (M4); every member of the interface already defaults to empty. */
+class FakeGoals : com.flowfolio.core.data.ReadingGoalRepository

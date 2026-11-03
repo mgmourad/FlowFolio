@@ -1,6 +1,8 @@
 package com.flowfolio.feature.library
 
 import android.text.format.Formatter
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,7 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
@@ -24,6 +28,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -38,7 +43,6 @@ import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.flowFolioRadioColors
 import com.flowfolio.core.model.BookStorage
-import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.StorageMode
 
 @Composable
@@ -53,6 +57,13 @@ internal fun LibraryDialogs(dialog: LibraryDialog?, viewModel: LibraryViewModel)
             showChangeLater = dialog.firstTime,
             onConfirm = { viewModel.onStorageChosen(dialog, it) },
             onDismiss = viewModel::dismissDialog
+        )
+
+        is LibraryDialog.FoldersToShelvesAsk -> FoldersToShelvesDialog(
+            folders = dialog.shelves,
+            books = dialog.books.size,
+            onYes = { never -> viewModel.onFoldersToShelves(dialog, never) },
+            onNo = { never -> viewModel.onFoldersToShelvesDeclined(never) }
         )
 
         is LibraryDialog.AskLookup -> FlowFolioAlertDialog(
@@ -241,29 +252,32 @@ internal fun RemoveFolderDialog(folder: FolderEntry, onConfirm: () -> Unit, onCl
     )
 }
 
+/**
+ * The library's order: the same six the shelf page offers (owner, M4). It orders the books inside each shelf row
+ * rather than across the library, so the books stay on their shelves.
+ */
 @Composable
-internal fun SortMenu(current: LibrarySort, onSort: (LibrarySort) -> Unit) {
+internal fun SortMenu(current: ShelfSort, onSort: (ShelfSort) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
         FlowFolioIconButton(onClick = { open = true }) {
             FlowFolioGlyph(Glyph.Sort, contentDescription = stringResource(R.string.action_sort))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            listOf(
-                LibrarySort.RECENT to R.string.sort_recent,
-                LibrarySort.TITLE to R.string.sort_title
-            ).forEach { (sort, label) ->
+            ShelfSort.entries.forEach { sort ->
                 DropdownMenuItem(
                     text = {
+                        val label = when (sort) {
+                            ShelfSort.CUSTOM -> R.string.sort_custom
+                            ShelfSort.NAME -> R.string.sort_name
+                            ShelfSort.DATE_ADDED -> R.string.sort_date_added
+                            ShelfSort.PROGRESS -> R.string.sort_progress
+                            ShelfSort.READ_TIME -> R.string.sort_read_time
+                            ShelfSort.READ_GOAL -> R.string.sort_read_goal
+                        }
                         Text(
                             stringResource(label),
-                            style = if (sort ==
-                                current
-                            ) {
-                                FlowFolio.title
-                            } else {
-                                FlowFolio.item
-                            }
+                            style = if (sort == current) FlowFolio.title else FlowFolio.item
                         )
                     },
                     onClick = {

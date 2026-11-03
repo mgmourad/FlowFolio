@@ -32,6 +32,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,10 +41,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -80,7 +84,6 @@ import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookFormat
 import com.flowfolio.core.model.BookStorage
-import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.pageLabel
 import com.flowfolio.core.model.printedPages
 
@@ -110,19 +113,31 @@ internal fun LibraryHeader(
                 ),
                 modifier = Modifier.weight(1f).padding(end = 8.dp)
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 HeaderButtons(state, searching, onSearch, actions)
             }
         }
-        if (!state.libraryEmpty) LibraryTotals(state, stats, Modifier.padding(top = 8.dp))
+        if (!state.libraryEmpty) {
+            LibraryTotals(state, stats, Modifier.padding(top = 8.dp), onOpenGoal = actions.onReadingGoal)
+        }
     }
 }
 
-/** Search, sort and import. No select mode here: bulk deletion from the whole library was too easy to do by
- * accident (owner, 2026-10-23); shelf pages keep it. */
+/** Search, sort, reading goal and import. No select mode here: bulk deletion from the whole library was too easy to do
+ * by accident (owner, 2026-10-23); shelf pages keep it. */
 @Composable
 private fun HeaderButtons(state: LibraryUiState, searching: Boolean, onSearch: () -> Unit, actions: LibraryActions) {
     if (!state.libraryEmpty) {
+        FlowFolioIconButton(
+            onClick = actions.onReadingGoal,
+            modifier = Modifier.testTag(LibraryTestTags.READING_GOAL)
+        ) {
+            FlowFolioGlyph(
+                Glyph.ReadingGoal,
+                contentDescription = stringResource(R.string.action_reading_goal),
+                color = FlowFolio.palette.glyph
+            )
+        }
         FlowFolioIconButton(onClick = onSearch, modifier = Modifier.testTag(LibraryTestTags.SEARCH)) {
             FlowFolioGlyph(
                 Glyph.Search,
@@ -130,15 +145,35 @@ private fun HeaderButtons(state: LibraryUiState, searching: Boolean, onSearch: (
                 color = if (searching) FlowFolio.palette.title else FlowFolio.palette.glyph
             )
         }
-        SortMenu(state.sort, actions.onSort)
+        SortMenu(state.shelfSort, actions.onShelfSort)
     }
     ImportMenu(actions)
 }
 
+/**
+ * The library's search box. [autoFocus] puts the cursor in it and raises the keyboard as it appears, so opening
+ * search is one tap rather than two (owner, M4).
+ *
+ * Its outline is the theme's own title colour rather than the faint hairline the rest of the app uses, so the box
+ * reads as the one thing waiting for input, in whichever theme is on (owner, M4).
+ */
 @Composable
-internal fun SearchField(query: String, onQuery: (String) -> Unit) {
+internal fun SearchField(
+    query: String,
+    onQuery: (String) -> Unit,
+    hintRes: Int = R.string.search_hint,
+    autoFocus: Boolean = false
+) {
     val p = FlowFolio.palette
     var isFocused by remember { mutableStateOf(false) }
+    val focusRequester = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    if (autoFocus) {
+        LaunchedEffect(Unit) {
+            focusRequester.requestFocus()
+            keyboard?.show()
+        }
+    }
 
     Box(contentAlignment = Alignment.Center) {
         if (isFocused) {
@@ -161,12 +196,12 @@ internal fun SearchField(query: String, onQuery: (String) -> Unit) {
             value = query,
             onValueChange = onQuery,
             singleLine = true,
-            placeholder = { Text(stringResource(R.string.search_hint), style = FlowFolio.hint) },
+            placeholder = { Text(stringResource(hintRes), style = FlowFolio.hint) },
             leadingIcon = { FlowFolioGlyph(Glyph.Search, contentDescription = null, size = 20.dp, glow = false) },
             shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = p.title,
-                unfocusedBorderColor = p.edge,
+                unfocusedBorderColor = p.title.copy(alpha = SEARCH_OUTLINE),
                 cursorColor = p.title,
                 focusedTextColor = p.text,
                 unfocusedTextColor = p.text,
@@ -175,6 +210,7 @@ internal fun SearchField(query: String, onQuery: (String) -> Unit) {
             ),
             modifier = Modifier
                 .fillMaxWidth()
+                .focusRequester(focusRequester)
                 .onFocusChanged { isFocused = it.isFocused }
                 .padding(horizontal = 18.dp, vertical = 6.dp)
                 .testTag(LibraryTestTags.SEARCH_FIELD)
@@ -391,8 +427,14 @@ internal fun ShelfBook(
     }
 }
 
+/**
+ * What is true of the book, on its cover: "Missing" or "Locked" as a pill at the top, and its marks together in the
+ * bottom-right corner (owner, M4) -- Dynamic Flow, a ribbon in it, and a favourite's filled star. They sit on a
+ * dimmed plate, since a cover can be any colour underneath.
+ */
 @Composable
 private fun androidx.compose.foundation.layout.BoxScope.BookBadge(item: LibraryItem) {
+    val p = FlowFolio.palette
     val label = when {
         item.availability == Availability.MISSING -> R.string.badge_missing
         item.book.passwordProtected -> R.string.badge_locked
@@ -400,24 +442,50 @@ private fun androidx.compose.foundation.layout.BoxScope.BookBadge(item: LibraryI
     }
     if (label != null) {
         FlowFolioPill(stringResource(label), FlowFolio.subItem, Modifier.align(Alignment.TopStart).padding(4.dp))
-    } else if (item.hasBookmarks) {
-        FlowFolioGlyph(
-            Glyph.Bookmark,
-            contentDescription = null,
-            Modifier.align(Alignment.TopStart).padding(2.dp, 2.dp, 0.dp, 0.dp),
-            size = 14.dp
-        )
     }
-    if (item.isFavorite) {
-        FlowFolioGlyph(
-            Glyph.Star,
-            contentDescription = null,
-            Modifier.align(Alignment.TopEnd).padding(4.dp),
-            size = 16.dp
-        )
+    val flowing = item.book.flowMode == true && item.book.format == BookFormat.PDF
+    if (!flowing && !item.hasBookmarks && !item.isFavorite) return
+    Row(
+        Modifier
+            .align(Alignment.BottomEnd)
+            .padding(BADGE_EDGE)
+            .clip(RoundedCornerShape(BADGE_RADIUS))
+            .background(p.backgroundDeep.copy(alpha = BADGE_PLATE))
+            .padding(horizontal = 4.dp, vertical = 3.dp),
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        if (flowing) {
+            FlowFolioGlyph(
+                Glyph.DynamicFlow,
+                stringResource(R.string.badge_flow),
+                size = BADGE_GLYPH,
+                color = p.item,
+                glow = false
+            )
+        }
+        if (item.hasBookmarks) {
+            FlowFolioGlyph(
+                Glyph.Bookmark,
+                stringResource(R.string.badge_bookmarked),
+                size = BADGE_GLYPH,
+                color = p.subItem,
+                glow = false
+            )
+        }
+        if (item.isFavorite) {
+            FlowFolioGlyph(
+                Glyph.StarFilled,
+                stringResource(R.string.badge_favourite),
+                size = BADGE_GLYPH,
+                color = p.title,
+                glow = false
+            )
+        }
     }
 }
 
+@Suppress("LongMethod")
 @Composable
 private fun BookMenu(item: LibraryItem, open: Boolean, actions: LibraryActions, onClose: () -> Unit) {
     DropdownMenu(expanded = open, onDismissRequest = onClose) {
@@ -455,6 +523,24 @@ private fun BookMenu(item: LibraryItem, open: Boolean, actions: LibraryActions, 
                 bookmarks(item.book)
             }
         }
+        actions.onAnnotations?.let { annotations ->
+            MenuEntry(R.string.hero_annotations) {
+                onClose()
+                annotations(item.book)
+            }
+        }
+        actions.onDictionary?.let { dictionary ->
+            MenuEntry(R.string.dictionary_title) {
+                onClose()
+                dictionary(item.book)
+            }
+        }
+        actions.onSetBookGoal?.let { setGoal ->
+            MenuEntry(R.string.action_set_read_goal) {
+                onClose()
+                setGoal(item.book)
+            }
+        }
         actions.onRename?.let { rename ->
             MenuEntry(R.string.action_rename) {
                 onClose()
@@ -487,8 +573,19 @@ internal const val HERO_ORIGIN = "hero"
 /** Narrower than this, the header's buttons go under the title. */
 private const val COUNT_SHADE = 0.14f
 private const val LOOSE_ORIGIN = "loose"
+
+/** The search box's resting outline: the theme's title colour, dimmed but still clearly a line. */
+private const val SEARCH_OUTLINE = 0.55f
+
 private const val SEARCH_FILL = 0.6f
 private const val PAGES_PER_DP = 70
+private val BADGE_GLYPH = 13.dp
+private val BADGE_EDGE = 4.dp
+private val BADGE_RADIUS = 7.dp
+
+/** How far the badges' plate dims the cover under them. */
+private const val BADGE_PLATE = 0.55f
+
 private val SHELF_BOOK_WIDTH = 90.dp
 private val SHELF_BOOK_HEIGHT = 124.dp
 private const val SHELF_BOOK_EXTRA = 18

@@ -27,6 +27,7 @@ class SystemClock @Inject constructor() : Clock {
     override fun now(): Long = System.currentTimeMillis()
 }
 
+@Suppress("TooManyFunctions")
 @Module
 @InstallIn(SingletonComponent::class)
 abstract class DataBindings {
@@ -52,10 +53,22 @@ abstract class DataBindings {
     abstract fun http(impl: UrlConnectionGet): HttpGet
 
     @Binds
+    abstract fun mediaProbe(impl: UrlConnectionProbe): MediaProbe
+
+    @Binds
+    abstract fun voiceRecorder(impl: AndroidVoiceRecorder): VoiceRecorder
+
+    @Binds
     abstract fun translator(impl: MlKitTranslator): Translator
 
     @Binds
     abstract fun translations(impl: DefaultTranslationRepository): TranslationRepository
+
+    @Binds
+    abstract fun goals(impl: DefaultReadingGoalRepository): ReadingGoalRepository
+
+    @Binds
+    abstract fun dictionary(impl: DefaultDictionaryRepository): DictionaryRepository
 
     @Binds
     abstract fun settings(impl: DefaultSettingsRepository): SettingsRepository

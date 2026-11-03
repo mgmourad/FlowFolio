@@ -1,5 +1,7 @@
 package com.flowfolio.feature.library
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -13,31 +15,45 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.data.UpdateState
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioCard
+import com.flowfolio.core.designsystem.FlowFolioGlyph
+import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
+import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalChromePadding
+import com.flowfolio.core.designsystem.ScrollToTopOnTab
 import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.reveal
+import com.flowfolio.core.designsystem.softShadow
 import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.FlowCarry
@@ -49,6 +65,9 @@ import com.flowfolio.core.model.UserSettings
 @Composable
 fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val audition by viewModel.audition.collectAsStateWithLifecycle()
+    val cacheBytes by viewModel.cacheBytes.collectAsStateWithLifecycle()
+    val update by viewModel.update.collectAsStateWithLifecycle()
     SettingsContent(
         settings,
         SettingsActions(
@@ -70,58 +89,139 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             onScrubHaptics = viewModel::setScrubHaptics,
             onReaderText = viewModel::setReaderText,
             onFlowOnOpen = viewModel::setFlowOnOpen,
-            onFlowAsk = viewModel::setFlowAsk
-        )
+            onFlowAsk = viewModel::setFlowAsk,
+            onAtmosphereOn = viewModel::setAtmosphereOn,
+            onAtmosphere = viewModel::setAtmosphere,
+            onAtmosphereSave = viewModel::saveAtmosphere,
+            onAtmosphereVolume = viewModel::setAtmosphereVolume,
+            onAtmosphereDelete = viewModel::deleteAtmosphere,
+            onAudition = viewModel::audition,
+            onAuditionStop = viewModel::stopAudition,
+            onGuideSeen = viewModel::markGuideSeen,
+            onGuidesReset = viewModel::resetGuides,
+            onClearCache = viewModel::clearCache,
+            onResetApp = viewModel::resetApp,
+            onCheckUpdates = viewModel::checkForUpdates,
+            onDownloadUpdate = viewModel::downloadUpdate,
+            onInstallUpdate = viewModel::installUpdate,
+            onDismissUpdate = viewModel::dismissUpdate,
+            onAutoUpdate = viewModel::setAutoUpdate
+        ),
+        audition,
+        Housekeeping(viewModel.installedVersion, update, cacheBytes)
     )
 }
+
+/** What Settings needs beyond the stored settings: the build it is running, and what the cache weighs. */
+data class Housekeeping(val version: String = "", val update: UpdateState = UpdateState.Idle, val cacheBytes: Long = 0L)
 
 /**
  * The mock's Settings (`#s-settings`): headed groups on cards. Appearance (theme, Neon glow, page turn), Text (how
  * EPUBs are set, M3), Reading (the spread layout), Library (how imports are stored) and Conversion (where it
  * happens). Unfolded, the groups sit in two columns. The mock's notification settings stay hidden until they exist.
  */
+@Suppress("LongMethod")
 @Composable
-fun SettingsContent(settings: UserSettings, actions: SettingsActions) {
+fun SettingsContent(
+    settings: UserSettings,
+    actions: SettingsActions,
+    audition: Audition = Audition.IDLE,
+    housekeeping: Housekeeping = Housekeeping()
+) {
     val chrome = LocalChromePadding.current
     val insets = WindowInsets.safeDrawing.asPaddingValues()
+    var tutorial by rememberSaveable { mutableStateOf(false) }
+    if (tutorial) TutorialSheet { tutorial = false }
     BoxWithConstraints(Modifier.fillMaxSize().chromeStart().testTag(LibraryTestTags.SETTINGS)) {
         val twoColumns = maxWidth >= TWO_COLUMNS
+        val settingsScroll = rememberScrollState()
+        ScrollToTopOnTab("settings", settingsScroll)
         Column(
             Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                // The scrolling area stops above the floating help button, so no setting can end up underneath it
+                // where a tap would hit the button instead (owner, M5 round).
+                .padding(bottom = HELP_SIZE + HELP_CLEARANCE)
+                .verticalScroll(settingsScroll)
                 .padding(top = insets.calculateTopPadding())
                 .padding(horizontal = 18.dp)
         ) {
-            Column(Modifier.padding(start = 4.dp, top = 10.dp, bottom = 4.dp).reveal(0)) {
-                Text(stringResource(R.string.settings_title), style = FlowFolioType.screenTitle.merge(FlowFolio.title))
-                Text(
-                    stringResource(R.string.settings_sub),
-                    style = FlowFolioType.sub.merge(FlowFolio.hint),
-                    modifier = Modifier.padding(top = 6.dp)
-                )
-            }
+            ScreenHeader(
+                title = stringResource(R.string.settings_title),
+                slogan = stringResource(R.string.settings_sub),
+                modifier = Modifier.reveal(0)
+            )
             if (twoColumns) {
                 Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                     Column(Modifier.weight(1f)) {
                         AppearanceGroup(settings, actions)
                         ReadingGroup(settings, actions)
+                        AtmosphereGroup(settings, actions, audition)
                     }
                     Column(Modifier.weight(1f)) {
                         TextGroup(settings.text, 2, actions.onReaderText)
                         LibraryGroup(settings, actions)
                         ConversionGroup(settings, actions)
+                        UpdatesGroup(settings, housekeeping.version, housekeeping.update, actions)
+                        HousekeepingGroup(housekeeping.cacheBytes, actions)
                     }
                 }
             } else {
                 AppearanceGroup(settings, actions)
                 TextGroup(settings.text, 2, actions.onReaderText)
                 ReadingGroup(settings, actions)
+                AtmosphereGroup(settings, actions, audition)
                 LibraryGroup(settings, actions)
                 ConversionGroup(settings, actions)
+                UpdatesGroup(settings, housekeeping.version, housekeeping.update, actions)
+                HousekeepingGroup(housekeeping.cacheBytes, actions)
             }
+            // A tip beside the setting it is about, once (owner, M5).
+            GuideTip(
+                Guide.Atmosphere,
+                settings,
+                actions.onGuideSeen,
+                Modifier.padding(top = 8.dp)
+            )
+            GuidesResetRow(actions.onGuidesReset)
+            // Room for the floating help button, so no setting ever rests underneath it (owner, M5 round).
             Spacer(Modifier.height(insets.calculateBottomPadding() + chrome.calculateBottomPadding() + 24.dp))
         }
+        // The help button floats over the page rather than sitting in a group, so the tour is reachable from
+        // anywhere in Settings (owner, M5).
+        val p = FlowFolio.palette
+        Box(
+            Modifier
+                .align(Alignment.BottomEnd)
+                .padding(
+                    end = 20.dp,
+                    bottom = insets.calculateBottomPadding() + chrome.calculateBottomPadding() + 20.dp
+                )
+                .size(HELP_SIZE)
+                .softShadow(CircleShape, p.title.copy(alpha = HELP_GLOW), blur = 22.dp)
+                .clip(CircleShape)
+                // Solid, in the primary button's own gradient: a help button nobody can miss (owner, M5 round).
+                .background(Brush.verticalGradient(listOf(p.buttonTop, p.buttonBottom)), CircleShape)
+                .clickable { tutorial = true }
+                .testTag(LibraryTestTags.HELP_BUTTON),
+            contentAlignment = Alignment.Center
+        ) {
+            FlowFolioGlyph(
+                Glyph.Help,
+                stringResource(R.string.action_help),
+                color = p.buttonInk,
+                size = HELP_GLYPH,
+                glow = false
+            )
+        }
+    }
+}
+
+/** "Introduce features again": empties what the app remembers having shown (owner, M5). */
+@Composable
+private fun GuidesResetRow(onReset: () -> Unit) {
+    Group(R.string.settings_tutorial, 1) {
+        ActionRow(R.string.settings_guides_reset, R.string.settings_guides_reset_detail, onReset)
     }
 }
 
@@ -281,3 +381,11 @@ internal fun Group(title: Int, order: Int, content: @Composable ColumnScope.() -
 }
 
 private val TWO_COLUMNS = 600.dp
+
+/** The floating help button: big and solid, so the tour is never hidden behind a faint outline. */
+private val HELP_SIZE = 62.dp
+private val HELP_GLYPH = 32.dp
+private const val HELP_GLOW = 0.65f
+
+/** The gap kept between the last setting and the help button. */
+private val HELP_CLEARANCE = 28.dp

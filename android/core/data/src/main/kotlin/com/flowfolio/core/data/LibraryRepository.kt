@@ -4,6 +4,7 @@ import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookDetails
 import com.flowfolio.core.model.LibrarySort
+import com.flowfolio.core.model.ReadingIntent
 import com.flowfolio.core.model.StorageMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
@@ -74,6 +75,9 @@ interface LibraryRepository {
 
     /** Marks the book finished now, or not finished (owner, M3T2). */
     suspend fun setFinished(bookId: String, on: Boolean) = Unit
+
+    /** Sets the reader's own intention for a book, or clears it (owner, M5). */
+    suspend fun setIntent(bookId: String, intent: ReadingIntent?) = Unit
 }
 
 sealed interface ImportResult {

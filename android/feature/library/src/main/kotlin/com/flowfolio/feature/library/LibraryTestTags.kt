@@ -1,6 +1,7 @@
 package com.flowfolio.feature.library
 
 /** Semantic tags used by UI tests to find library, shelves and details elements. */
+@Suppress("TooManyFunctions")
 object LibraryTestTags {
     fun searchGroup(group: SearchGroup) = "library.search.${group.name.lowercase()}"
 
@@ -29,6 +30,7 @@ object LibraryTestTags {
     const val SHELF_TILES = "shelf_page_tiles"
     const val SHELF_LIST = "shelf_page_list"
     const val SHELF_VIEW = "shelf_page_view"
+    const val SHELF_SORT = "shelf_page_sort"
     const val BOOKMARKS = "bookmarks"
     const val ANNOTATIONS = "annotations"
     const val BOOK_ANNOTATIONS = "book_annotations"
@@ -51,12 +53,59 @@ object LibraryTestTags {
     const val EDIT_DETAILS = "edit_details"
     const val SAVE_DETAILS = "edit_details_save"
     const val LOOKUP = "edit_details_lookup"
+    const val READING_GOAL = "library_reading_goal"
+    const val GOAL_PATH = "library_goal_path"
+    const val GOAL_DIALOG = "reading_goal_dialog"
+    const val GOAL_REMIND_SWITCH = "reading_goal_remind_switch"
+    const val GOAL_RESET = "reading_goal_reset"
+    const val GOAL_SAVE = "reading_goal_save"
+    const val GOAL_TIME = "reading_goal_time"
+    const val GOAL_TIME_DIALOG = "reading_goal_time_dialog"
+    const val GOAL_TIME_SET = "reading_goal_time_set"
+    const val GOAL_DAY_PREFIX = "reading_goal_day_"
+    const val ATMOSPHERE_ROW = "settings_atmosphere_row"
+    const val ATMOSPHERE_VOLUME = "settings_atmosphere_volume"
+    const val ATMOSPHERE_PICKER = "reader_atmosphere_picker"
+    const val ATMOSPHERE_EDITOR = "settings_atmosphere_editor"
+    const val ATMOSPHERE_NAME = "settings_atmosphere_name"
+    const val ATMOSPHERE_SAVE = "settings_atmosphere_save"
+    const val ATMOSPHERE_SOURCE = "atmosphere_source"
+    const val ATMOSPHERE_URL = "atmosphere_url"
+    const val ATMOSPHERE_LISTEN = "atmosphere_listen"
+    const val ATMOSPHERE_LISTEN_SAID = "atmosphere_listen_said"
+    const val ATMOSPHERE_DELETE = "atmosphere_delete"
+    const val ATMOSPHERE_DELETE_CONFIRM = "atmosphere_delete_confirm"
+    const val ATMOSPHERE_DELETE_YES = "atmosphere_delete_yes"
+    const val UPDATE_ROW = "settings_update_row"
+    const val UPDATE_SAID = "settings_update_said"
+    const val UPDATE_ACTION = "settings_update_action"
+    const val CACHE_SIZE = "settings_cache_size"
+    const val CACHE_CLEAR = "settings_cache_clear"
+    const val RESET = "settings_reset"
+    const val RESET_CONFIRM = "settings_reset_confirm"
+    const val RESET_YES = "settings_reset_yes"
+    const val SHELVES_NEVER = "shelves_ask_never"
+    const val SHELVES_YES = "shelves_ask_yes"
+    const val TOUR = "onboarding_tour"
+    const val TOUR_SKIP = "onboarding_skip"
+    const val TOUR_NEXT = "onboarding_next"
+    const val INTENT_CHIPS = "details_intent_chips"
+    const val TUTORIAL = "tutorial"
+    const val TUTORIAL_CLOSE = "tutorial_close"
+    const val HELP_BUTTON = "settings_help"
+    const val ADD_GOAL = "details_add_goal"
+    const val GOAL_EXCEEDED_TIP = "details_goal_exceeded_tip"
+    const val DICTIONARY = "dictionary"
+
+    fun dictionaryGroup(key: String) = "dictionary_group_$key"
 
     fun book(id: String) = "book_$id"
 
     fun shelf(id: Long) = "shelf_$id"
 
     fun shelfCount(id: Long) = "shelf_count_$id"
+
+    fun shelfFlow(id: Long) = "shelf_flow_$id"
 
     fun row(bookId: String) = "row_$bookId"
 

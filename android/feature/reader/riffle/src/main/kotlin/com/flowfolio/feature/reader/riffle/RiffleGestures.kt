@@ -8,6 +8,8 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.pointerInput
+import kotlin.math.abs
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * The strip's touches (spec 5.3). A touch belongs to what it first lands on: a flag (tap-only, cancelled after 10 dp of
@@ -74,13 +76,28 @@ private suspend fun AwaitPointerEventScope.flagTap(
     }
 }
 
-/** A drag of the ribbon: fine scrubbing by height, feedback as units pass, landing on release. */
+/**
+ * A drag of the ribbon: fine scrubbing by height, feedback as units pass, landing on release.
+ *
+ * Holding the ribbon still instead of dragging it marks a detour (owner, M5): the ribbon is the riffle book at the
+ * reader's place, and this gesture has to live here because [riffleGestures] consumes every touch on the strip --
+ * a `combinedClickable` laid over it would never see one.
+ */
 private suspend fun AwaitPointerEventScope.riffle(
     down: PointerInputChange,
     state: RiffleScrubberState,
     g: StripGeometry,
     events: RiffleEvents
 ) {
+    if (heldStill(down)) {
+        val here = state.currentUnit
+        state.detourUnit = here
+        events.onDetour(here)
+        // The same tick a chapter crossing gives, so the mark is felt as well as seen.
+        events.onFeedback(RiffleFeedback(RiffleHaptic.CHAPTER, 0, chapter = true))
+        consumeUntilUp(down)
+        return
+    }
     val drag = ScrubDrag(down.position.x, down.position.y, state.pinX, g.x0, g.x1, density)
     val rules = state.feedbackRules()
     var unit = state.mapping.unitAtX(drag.ribbonX, g.x0, g.x1)
@@ -104,6 +121,33 @@ private suspend fun AwaitPointerEventScope.riffle(
     events.onPause(ChromePause.DRAGGING, false)
     events.onRelease(unit)
 }
+
+/**
+ * Whether [down] was held still long enough to be a hold rather than the start of a drag (owner, M5).
+ *
+ * Any movement past the tap slop, or a lift, answers false at once, so riffling is not delayed by this: only a
+ * finger that stays put pays the wait.
+ */
+private suspend fun AwaitPointerEventScope.heldStill(down: PointerInputChange): Boolean {
+    val slop = TapTracker.SLOP_DP * density
+    val moved = withTimeoutOrNull(DETOUR_HOLD_MS) {
+        while (true) {
+            val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id } ?: return@withTimeoutOrNull true
+            change.consume()
+            if (!change.pressed) return@withTimeoutOrNull true
+            val dx = abs(change.position.x - down.position.x)
+            val dy = abs(change.position.y - down.position.y)
+            if (dx > slop || dy > slop) return@withTimeoutOrNull true
+        }
+        @Suppress("UNREACHABLE_CODE")
+        true
+    }
+    // Null means the wait ran out with the finger still down and still: that is the hold.
+    return moved == null
+}
+
+/** How long the ribbon must be held still to mark a detour. */
+private const val DETOUR_HOLD_MS = 450L
 
 /** Follows [down]'s pointer, calling [onMove] for each move, until it lifts (true) or is cancelled (false). */
 private suspend fun AwaitPointerEventScope.trackUntilUp(

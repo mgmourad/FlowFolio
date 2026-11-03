@@ -9,7 +9,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -45,45 +48,53 @@ import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.MaterialSeed
 
 /**
- * The app's themes as three small previews (ADR-0028), each drawn in its own palette at the current light or dark
+ * The app's themes as small previews (ADR-0028), each drawn in its own palette at the current light or dark
  * mode: background, a card with a title and lines of text, a button. The chosen one is ringed.
  */
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 internal fun ThemeCards(selected: AppStyle, seed: MaterialSeed, onSelect: (AppStyle) -> Unit) {
     val dark = FlowFolio.palette.dark
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp).selectableGroup(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        AppStyle.entries.forEach { style ->
-            val palette = paletteFamily(style, seed).of(dark)
-            val on = style == selected
-            val shape = RoundedCornerShape(18.dp)
-            Column(
-                Modifier
-                    .weight(1f)
-                    .selectable(on, role = Role.RadioButton) { onSelect(style) }
-                    .testTag(LibraryTestTags.THEME_PREFIX + style.name),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Box(
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        // Since AMOLED joined them (M4) the four previews no longer fit across a folded screen: there they go two by
+        // two, and on the unfolded Fold they stay on one line.
+        val perRow = if (maxWidth >= THEMES_ACROSS) AppStyle.entries.size else 2
+        FlowRow(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp).selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            maxItemsInEachRow = perRow
+        ) {
+            AppStyle.entries.forEach { style ->
+                val palette = paletteFamily(style, seed).of(dark)
+                val on = style == selected
+                val shape = RoundedCornerShape(18.dp)
+                Column(
                     Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(PREVIEW_ASPECT)
-                        .clip(shape)
-                        .border(
-                            if (on) 2.5.dp else 1.dp,
-                            if (on) FlowFolio.palette.title else FlowFolio.palette.edge,
-                            shape
-                        )
+                        .weight(1f)
+                        .selectable(on, role = Role.RadioButton) { onSelect(style) }
+                        .testTag(LibraryTestTags.THEME_PREFIX + style.name),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Canvas(Modifier.matchParentSize()) { preview(palette) }
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(PREVIEW_ASPECT)
+                            .clip(shape)
+                            .border(
+                                if (on) 2.5.dp else 1.dp,
+                                if (on) FlowFolio.palette.title else FlowFolio.palette.edge,
+                                shape
+                            )
+                    ) {
+                        Canvas(Modifier.matchParentSize()) { preview(palette) }
+                    }
+                    Text(
+                        stringResource(style.label),
+                        style = FlowFolioType.pill.merge(if (on) FlowFolio.title else FlowFolio.hint),
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
                 }
-                Text(
-                    stringResource(style.label),
-                    style = FlowFolioType.pill.merge(if (on) FlowFolio.title else FlowFolio.hint),
-                    modifier = Modifier.padding(top = 8.dp)
-                )
             }
         }
     }
@@ -192,6 +203,7 @@ private val AppStyle.label: Int
         AppStyle.FLOWFOLIO -> R.string.style_flowfolio
         AppStyle.RUSTIC -> R.string.style_rustic
         AppStyle.MATERIAL -> R.string.style_material
+        AppStyle.AMOLED -> R.string.style_amoled
     }
 
 private val MaterialSeed.label: Int
@@ -209,6 +221,10 @@ private val SWATCH = 40.dp
 private const val PREVIEW_ASPECT = 0.78f
 private const val PAD = 0.08f
 private const val CARD_TOP = 0.12f
+
+/** From this width the four theme previews sit on one line. */
+private val THEMES_ACROSS = 520.dp
+
 private const val CARD_HEIGHT = 0.42f
 private const val CARD_RADIUS = 0.08f
 private const val LINE = 0.045f

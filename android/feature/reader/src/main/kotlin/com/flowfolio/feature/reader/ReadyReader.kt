@@ -1,17 +1,29 @@
 package com.flowfolio.feature.reader
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.systemGestureExclusion
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -22,28 +34,42 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.designsystem.AtmosphereOverlay
+import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioPalette
+import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.GlassStyle
+import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalGlassState
 import com.flowfolio.core.designsystem.LocalGlassStyle
+import com.flowfolio.core.designsystem.Motion
+import com.flowfolio.core.designsystem.glass
 import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.PageTurn
+import com.flowfolio.core.model.atmosphereInForce
 import com.flowfolio.feature.reader.layout.ReaderLayout
 import com.flowfolio.feature.reader.layout.Spreads
 import com.flowfolio.feature.reader.riffle.ChromePause
+import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
+import kotlinx.coroutines.delay
 
 /**
  * What floats over the book. A centre tap shows the controls until the [chrome] clock hides them (each use of them
  * restarts it); another centre tap hides them sooner. They stay up while a panel is open.
  */
 @Stable
-private class Overlay(val chrome: ChromeClock, val textPinch: TextPinch) {
+internal class Overlay(val chrome: ChromeClock, val textPinch: TextPinch) {
     var panel by mutableStateOf(Panel.NONE)
+    var riffleDismissed by mutableStateOf(false)
     var webLink by mutableStateOf<String?>(null)
 
     /** The EPUB footnote shown in a popover, if any. */
@@ -66,11 +92,15 @@ private class Overlay(val chrome: ChromeClock, val textPinch: TextPinch) {
         if (zoom?.isAtRest == true) zoom = null
     }
 
-    fun toggle() = chrome.toggle()
+    fun toggle() {
+        riffleDismissed = false
+        chrome.toggle()
+    }
 
-    /** Opens [which], or closes it when it is already open (a second tap on its button). */
+    /** Opens [which], or closes it when it is already open (a second tap on its button); dismisses the riffle bar. */
     fun open(which: Panel) {
         chrome.interacted()
+        riffleDismissed = true
         panel = if (panel == which) Panel.NONE else which
     }
 
@@ -97,6 +127,7 @@ private class Overlay(val chrome: ChromeClock, val textPinch: TextPinch) {
 
     fun closeAll() {
         panel = Panel.NONE
+        riffleDismissed = false
         chrome.hide()
     }
 }
@@ -120,6 +151,7 @@ internal fun BoxScope.ReadyReader(
     val uriHandler = LocalUriHandler.current
     val overlay = rememberOverlay(viewModel)
     val riffling = rememberRiffling(s, navigation, viewModel)
+    val detour = remember { DetourState() }
     LaunchedEffect(s.unit, s.layout, s.coverAlone) { overlay.leavePage() }
     val jump = { page: Int ->
         viewModel.goToPage(page)
@@ -156,18 +188,17 @@ internal fun BoxScope.ReadyReader(
         }
     }
     RiffleLanding(s, riffling, images, viewModel.thumbnails)
-    PageOverlays(s, overlay.textPinch, viewModel)
+    CompositionLocalProvider(LocalGlassState provides haze) { PageOverlays(s, overlay.textPinch, viewModel) }
     overlay.zoom?.let {
         ZoomView(it, framesFor, images, tiles, viewModel::showTiles, annotating, onExit = { overlay.zoom = null })
     }
     // Selection and highlight menus: over the pages, and over the zoomed view too; under the bars.
     CompositionLocalProvider(LocalGlassState provides haze) { AnnotatingLayer(annotating, s) }
     if (overlay.zoom == null) {
-        val bar: @Composable () -> Unit = { RiffleBar(s, riffling, marks, viewModel, overlay.chrome) }
-        CompositionLocalProvider(LocalGlassState provides haze, LocalReaderSounds provides riffling.sounds) {
-            Controls(s, navigation, overlay, mark, ChromeParts(onBack, jump, bar, viewModel))
-        }
+        ReaderControls(s, navigation, viewModel, riffling, overlay, mark, marks, haze, detour, onBack, jump)
     }
+    // Outside the chrome: a mark made just before the bars hide is still worth announcing.
+    DetourNotice(detour)
     overlay.webLink?.let { uri ->
         WebLinkDialog(uri, onOpen = { runCatching { uriHandler.openUri(uri) } }, onDismiss = { overlay.webLink = null })
     }
@@ -221,6 +252,9 @@ private fun rememberOverlay(viewModel: ReaderViewModel): Overlay {
     val overlay = remember(chrome, textPinch) { Overlay(chrome, textPinch) }
     // Closing the panel starts the countdown again in full.
     LaunchedEffect(overlay.panel) { chrome.pause(ChromePause.PANEL, overlay.panel != Panel.NONE) }
+    LaunchedEffect(chrome.shown) {
+        if (!chrome.shown) overlay.riffleDismissed = false
+    }
     return overlay
 }
 
@@ -236,7 +270,7 @@ private fun MirroredBook(mirrored: Boolean, content: @Composable () -> Unit) {
 }
 
 /** Back, a jump from a panel, the bottom bar (the riffle scrubber), and the book, for footnotes and islands. */
-private class ChromeParts(
+internal class ChromeParts(
     val onBack: () -> Unit,
     val jump: (Int) -> Unit,
     val bar: @Composable () -> Unit,
@@ -248,7 +282,7 @@ private class ChromeParts(
  * glass that shows on it (owner, 2026-10-18).
  */
 @Composable
-private fun BoxScope.Controls(
+internal fun BoxScope.Controls(
     s: ReaderState.Ready,
     navigation: BookNavigation,
     overlay: Overlay,
@@ -266,6 +300,7 @@ private fun BoxScope.Controls(
                 controlsVisible = overlay.chrome.shown,
                 mark = mark,
                 actions = ChromeActions(parts.onBack, onPanel = overlay::open),
+                bottomBarVisible = overlay.chrome.shown && overlay.panel == Panel.NONE && !overlay.riffleDismissed,
                 bottomBar = parts.bar
             )
             ReaderPanels(
@@ -279,6 +314,7 @@ private fun BoxScope.Controls(
                 onFlow = parts.book::setFlow,
                 onPanel = overlay::open
             )
+            AtmosphereGlimpse(parts.book)
             FootnotePopover(overlay.note, parts.book::footnote, onDismiss = { overlay.note = null })
             overlay.figure?.let { FigureZoom(it, parts.book, onDismiss = { overlay.figure = null }) }
         }

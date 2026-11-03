@@ -12,6 +12,7 @@ import com.flowfolio.core.model.BookFormat
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.BookType
 import com.flowfolio.core.model.LibrarySort
+import com.flowfolio.core.model.ReadingIntent
 import com.flowfolio.core.model.StorageMode
 import java.io.File
 import java.io.IOException
@@ -255,6 +256,10 @@ class DefaultLibraryRepository @Inject constructor(
         dao.setFinishedAt(bookId, if (on) System.currentTimeMillis() else null)
     }
 
+    override suspend fun setIntent(bookId: String, intent: ReadingIntent?) = withContext(io) {
+        dao.setIntent(bookId, intent?.name)
+    }
+
     override suspend fun updateDetails(bookId: String, title: String, author: String?, details: BookDetails) =
         withContext(io) {
             require(title.isNotBlank()) { "title is blank" }
@@ -330,6 +335,7 @@ internal fun BookEntity.toBook() = Book(
     flowMode = flowMode,
     flowLocator = flowLocator,
     favorite = favorite,
+    intent = ReadingIntent.entries.firstOrNull { it.name == intent },
     finishedAtMillis = finishedAt
 )
 

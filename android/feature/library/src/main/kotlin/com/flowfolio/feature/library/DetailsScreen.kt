@@ -67,6 +67,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -90,6 +91,7 @@ import com.flowfolio.core.designsystem.shelfCoverKey
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
+import com.flowfolio.core.model.ReadingIntent
 import kotlinx.coroutines.launch
 
 /**
@@ -134,13 +136,13 @@ fun DetailsScreen(
         onRead = { if (state.availability == Availability.MISSING) locate() else open(null) },
         onChapter = { open(it) },
         onShelves = { picking = true },
+        onGoal = rememberBookGoalDialog(book, state.bookGoal, viewModel),
         onLocate = locate,
-        onDelete = {
-            libraryVm.onRequestDelete(book)
-        },
+        onDelete = { libraryVm.onRequestDelete(book) },
         onEdit = { onEdit(book) },
         onBook = onOpenBook,
         onFavorite = { libraryVm.toggleFavorite(book) },
+        onIntent = { libraryVm.setIntent(book, it) },
         onFinished = { libraryVm.toggleFinished(book) }
     )
     // System Back flies the cover home too.
@@ -155,13 +157,16 @@ internal data class DetailsActions(
     val onRead: () -> Unit = {},
     val onChapter: (Int) -> Unit = {},
     val onShelves: () -> Unit = {},
+    val onGoal: () -> Unit = {},
     val onLocate: () -> Unit = {},
     val onDelete: () -> Unit = {},
     val onEdit: () -> Unit = {},
     val onBook: (Book) -> Unit = {},
     /** Makes the book a favourite, or not; marks it finished, or not (owner, M3T2). */
     val onFavorite: () -> Unit = {},
-    val onFinished: () -> Unit = {}
+    val onFinished: () -> Unit = {},
+    /** The reader's own intention for the book (owner, M5). */
+    val onIntent: (ReadingIntent?) -> Unit = {}
 )
 
 /** Folded: hero, then title, actions and tabs under it. Unfolded (600 dp and wider): cover pane and tabs pane. */
@@ -281,6 +286,7 @@ private fun Backdrop(backdrop: androidx.compose.ui.graphics.ImageBitmap?, modifi
 }
 
 /** Title, author, pills and the actions row (`.det-body` up to `.actions`). */
+@Suppress("LongMethod")
 @Composable
 private fun DetailsHeading(state: DetailsUiState, book: Book, actions: DetailsActions, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth().padding(horizontal = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -308,45 +314,92 @@ private fun DetailsHeading(state: DetailsUiState, book: Book, actions: DetailsAc
             )
         }
         DetailsMeta(state, book, Modifier.padding(top = 10.dp).reveal(3))
-        Row(
-            Modifier.padding(top = 18.dp).reveal(4),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            val read = when {
-                state.availability == Availability.MISSING -> R.string.action_locate
-                book.lastPage != null -> R.string.action_continue
-                else -> R.string.action_read
+        IntentChips(book.intent, actions.onIntent, Modifier.padding(top = 5.dp).reveal(3))
+        // Read/Continue across the top, the two quieter actions centred on a second row under it (owner,
+        // M4b). Two to a row leaves room for their words, so only the narrowest screens shorten them.
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 18.dp).reveal(4)) {
+            val compact = maxWidth < ACTIONS_ROOMY
+            Column(
+                Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                val read = when {
+                    state.availability == Availability.MISSING -> R.string.action_locate
+                    book.lastPage != null -> R.string.action_continue
+                    else -> R.string.action_read
+                }
+                FlowFolioPrimaryButton(
+                    text = stringResource(read),
+                    onClick = actions.onRead,
+                    modifier = Modifier.fillMaxWidth(READ_WIDTH).testTag(LibraryTestTags.READ),
+                    icon = { PlayGlyph() }
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SecondaryButton(
+                        Glyph.Shelves,
+                        if (compact) R.string.action_add_to_shelf_compact else R.string.action_add_to_shelf,
+                        LibraryTestTags.ADD_TO_SHELF,
+                        compact,
+                        onClick = actions.onShelves
+                    )
+                    SecondaryButton(
+                        Glyph.ReadingGoal,
+                        if (compact) R.string.action_add_goal_short else R.string.action_add_goal,
+                        LibraryTestTags.ADD_GOAL,
+                        compact,
+                        onClick = actions.onGoal
+                    )
+                }
             }
-            FlowFolioPrimaryButton(
-                text = stringResource(read),
-                onClick = actions.onRead,
-                modifier = Modifier.testTag(LibraryTestTags.READ),
-                icon = { PlayGlyph() }
-            )
-            ShelfButton(actions.onShelves)
         }
     }
 }
 
-/** "Add to shelf" beside Read: an outlined, quieter second action. */
+/** "Add to shelf" and "Add Reading Goal" beside Read: outlined, quieter actions. [compact] tightens them up. */
 @Composable
-private fun ShelfButton(onClick: () -> Unit) {
+private fun SecondaryButton(
+    glyph: Glyph,
+    label: Int,
+    tag: String,
+    compact: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
     val p = FlowFolio.palette
     val shape = RoundedCornerShape(50)
     Row(
-        Modifier
+        modifier
             .clip(shape)
             .border(1.dp, p.edge, shape)
             .clickable(onClick = onClick)
             .heightIn(min = 48.dp)
-            .padding(horizontal = 18.dp)
-            .testTag(LibraryTestTags.ADD_TO_SHELF),
+            .padding(horizontal = if (compact) 8.dp else 18.dp)
+            .testTag(tag),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(
+            if (compact) 4.dp else 8.dp,
+            Alignment.CenterHorizontally
+        )
     ) {
-        FlowFolioGlyph(Glyph.Shelves, contentDescription = null, size = 18.dp, color = p.glyph, glow = false)
-        Text(stringResource(R.string.action_add_to_shelf), style = FlowFolioType.rowLabel.merge(FlowFolio.item))
+        FlowFolioGlyph(
+            glyph,
+            contentDescription = null,
+            size = if (compact) 16.dp else 18.dp,
+            color = p.glyph,
+            glow = false
+        )
+        Text(
+            stringResource(label),
+            // A third of a folded screen, or of the unfolded page's left half, is not wide enough for the
+            // 15 sp label beside a glyph; the chip size keeps the whole word (owner, M4).
+            style = (if (compact) FlowFolioType.chip else FlowFolioType.rowLabel).merge(FlowFolio.item),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -462,6 +515,13 @@ private fun Modifier.swipeTabs(tab: Int, count: Int, onTab: (Int) -> Unit): Modi
         total += dx
     }
 }
+
+/** Under this, the two quieter actions take their one-word labels. */
+private val ACTIONS_ROOMY = 360.dp
+
+/** How much of the line Read/Continue takes: wide, but not edge to edge. */
+private const val READ_WIDTH = 0.72f
+
 private const val LEFT_PANE = 0.46f
 private val HERO_HEIGHT = 430.dp
 private val HERO_OVERLAP = 40.dp

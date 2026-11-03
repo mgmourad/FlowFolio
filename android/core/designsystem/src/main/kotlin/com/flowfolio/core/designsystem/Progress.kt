@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -53,9 +54,14 @@ import androidx.compose.ui.unit.dp
 
 /**
  * A 6 dp progress bar (`.prog`): a sunken track and a title-to-sub-item gradient that glows and grows in on first show.
+ *
+ * Reaching the end throws confetti (owner, M4). [celebrationId] names the thing being finished (a book's id, a goal's
+ * scope) so coming back to a screen that is already full still celebrates once a run; without one, only a completion
+ * the reader watches happen is celebrated. The burst is drawn over the bar and reaches [ConfettiHeight] above it, so
+ * it shows in full only where nothing clips it.
  */
 @Composable
-fun FlowFolioProgressBar(progress: Float, modifier: Modifier = Modifier) {
+fun FlowFolioProgressBar(progress: Float, modifier: Modifier = Modifier, celebrationId: Any? = null) {
     val p = FlowFolio.palette
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
@@ -64,30 +70,51 @@ fun FlowFolioProgressBar(progress: Float, modifier: Modifier = Modifier) {
         tween(Motion.GROW_MS, Motion.GROW_DELAY_MS, Motion.EaseOut),
         label = "progress"
     )
+    val celebrate = rememberCelebration(progress, celebrationId)
     val shape = RoundedCornerShape(6.dp)
-    Box(
-        modifier
-            .fillMaxWidth()
-            .height(6.dp)
-            .clip(shape)
-            .drawBehind { drawRect(p.hint.copy(alpha = 0.25f)) }
-            .pressedInset(shape)
-    ) {
-        Spacer(
+    Box(modifier.fillMaxWidth()) {
+        Box(
             Modifier
-                .fillMaxHeight()
-                .fillMaxWidth(grown)
-                .softShadow(shape, p.title.copy(alpha = if (p.dark) 0.6f else 0f), blur = 10.dp)
+                .fillMaxWidth()
+                .height(6.dp)
                 .clip(shape)
-                .drawBehind { drawRect(Brush.horizontalGradient(listOf(p.title, p.subItem))) }
-        )
+                .drawBehind { drawRect(p.hint.copy(alpha = 0.25f)) }
+                .pressedInset(shape)
+        ) {
+            Spacer(
+                Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth(grown)
+                    .softShadow(shape, p.title.copy(alpha = if (p.dark) 0.6f else 0f), blur = 10.dp)
+                    .clip(shape)
+                    .drawBehind { drawRect(Brush.horizontalGradient(listOf(p.title, p.subItem))) }
+            )
+        }
+        if (celebrate.value) {
+            FlowFolioConfetti(
+                play = true,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .requiredHeight(ConfettiHeight)
+            ) { celebrate.value = false }
+        }
     }
 }
 
-/** An 84 dp progress ring (`.ring`) in the item colour with its glow, sweeping in over 1.6 s. */
+/**
+ * An 84 dp progress ring (`.ring`) in the item colour with its glow, sweeping in over 1.6 s. A full ring
+ * throws confetti on the same terms as [FlowFolioProgressBar] (owner, M4).
+ */
 @Composable
-fun FlowFolioRing(progress: Float, modifier: Modifier = Modifier, center: @Composable BoxScope.() -> Unit = {}) {
+fun FlowFolioRing(
+    progress: Float,
+    modifier: Modifier = Modifier,
+    celebrationId: Any? = null,
+    center: @Composable BoxScope.() -> Unit = {}
+) {
     val p = FlowFolio.palette
+    val celebrate = rememberCelebration(progress, celebrationId)
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
     val sweep by animateFloatAsState(
@@ -130,6 +157,12 @@ fun FlowFolioRing(progress: Float, modifier: Modifier = Modifier, center: @Compo
             )
         }
         center()
+        if (celebrate.value) {
+            FlowFolioConfetti(
+                play = true,
+                modifier = Modifier.align(Alignment.BottomCenter).size(84.dp).requiredHeight(ConfettiHeight)
+            ) { celebrate.value = false }
+        }
     }
 }
 

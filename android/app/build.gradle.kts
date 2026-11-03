@@ -88,6 +88,7 @@ dependencies {
     baselineProfile(projects.benchmark)
     implementation(libs.androidx.profileinstaller)
     implementation(projects.core.data)
+    implementation(projects.core.extract)
     implementation(projects.core.designsystem)
     implementation(projects.feature.library)
     implementation(projects.feature.reader)

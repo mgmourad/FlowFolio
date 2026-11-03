@@ -22,8 +22,19 @@ data class Annotation(
     val note: String?,
     val createdAtMillis: Long,
     val updatedAtMillis: Long,
-    val locator: String? = null
+    val locator: String? = null,
+    /** A voice note recorded against this highlight (owner, M5); null when there is none. */
+    val voice: VoiceNote? = null
 )
+
+/**
+ * A spoken note kept with a highlight (owner, M5).
+ *
+ * [levels] are the loudnesses sampled while recording, 0 to 1, which the playback bar draws as a waveform. They are
+ * captured as the recording runs rather than read back from [path] afterwards: decoding a whole file to draw one
+ * small picture would cost far more than remembering a few hundred bytes.
+ */
+data class VoiceNote(val path: String, val millis: Long, val levels: List<Float> = emptyList())
 
 /**
  * The passage a new highlight covers: on [page] (printed [label], if any), characters [range] of the page's text,
@@ -46,7 +57,7 @@ fun chapterOfLocator(locator: String?): Int? = locator?.substringBefore(':')?.to
 data class PageRect(val left: Float, val top: Float, val right: Float, val bottom: Float)
 
 /** The highlighter colours (owner, 2026-10-18: four or five choices); the app picks shades readable on every paper. */
-enum class HighlightColor { YELLOW, GREEN, BLUE, PINK, PURPLE }
+enum class HighlightColor { YELLOW, GREEN, BLUE, PINK, PURPLE, ORANGE, TEAL, MINT, CORAL }
 
 /**
  * Text to share a highlight (owner, 2026-10-18): the passage in quotation marks, then on its own line where it

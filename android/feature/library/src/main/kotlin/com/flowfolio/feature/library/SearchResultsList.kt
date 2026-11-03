@@ -108,6 +108,7 @@ private fun HitRow(hit: SearchHit, actions: LibraryActions) {
         is SearchHit.OfAnnotation -> actions.onAnnotations?.let { { it(hit.book) } }
         is SearchHit.OfBookmark -> actions.onBookmarks?.let { { it(hit.book) } }
         is SearchHit.OfWord -> hit.book?.let { b -> { actions.onOpen(LibraryItem(b), SEARCH_ORIGIN) } }
+        is SearchHit.OfDefinition -> hit.book?.let { b -> { actions.onOpen(LibraryItem(b), SEARCH_ORIGIN) } }
     }
     Column(
         Modifier
@@ -149,6 +150,8 @@ private fun SearchHit.lines(): Pair<String, String?> = when (this) {
     is SearchHit.OfBookmark -> stringResource(R.string.search_ribbon_page, book.pageLabel(bookmark.page)) to book.title
 
     is SearchHit.OfWord -> "${translation.source} → ${translation.translated}" to book?.title
+
+    is SearchHit.OfDefinition -> "${definition.word} — ${definition.definition}" to book?.title
 }
 
 private val SearchGroup.glyph: Glyph

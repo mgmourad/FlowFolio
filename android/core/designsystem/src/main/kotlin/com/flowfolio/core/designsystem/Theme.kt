@@ -109,6 +109,9 @@ fun paletteFamily(style: AppStyle, seed: MaterialSeed): PaletteFamily = when (st
         val context = LocalContext.current
         remember(seed, context) { materialFamily(context, seed) }
     }
+
+    // Both slots are the same black palette: choosing Light under AMOLED keeps the black (owner, M4).
+    AppStyle.AMOLED -> PaletteFamily(AmoledPalette, AmoledPalette)
 }
 
 /** Access to the design language from any composable. */

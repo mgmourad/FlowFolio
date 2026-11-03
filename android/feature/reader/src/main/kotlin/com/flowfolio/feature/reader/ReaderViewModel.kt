@@ -6,6 +6,7 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flowfolio.core.data.Ambience
 import com.flowfolio.core.data.FolioScanner
 import com.flowfolio.core.data.NotYetReadableException
 import com.flowfolio.core.data.OpenedBook
@@ -25,6 +26,7 @@ import com.flowfolio.core.model.PixelSize
 import com.flowfolio.core.model.ReaderText
 import com.flowfolio.core.model.ReadingFont
 import com.flowfolio.core.model.UserSettings
+import com.flowfolio.core.model.atmosphereInForce
 import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfException
 import com.flowfolio.core.reflow.CodeFace
@@ -116,8 +118,12 @@ class ReaderViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val saved: SavedStateHandle,
     @ApplicationContext private val context: Context,
+    private val ambience: Ambience,
     dynamicFlow: DynamicFlow
 ) : ViewModel() {
+    /** The ambience being started: cancelled when the atmosphere changes, so two sounds never race. */
+    private var sound: Job? = null
+
     private val bookId: String = checkNotNull(saved[ARG_BOOK_ID]) { "reader needs a bookId" }
     private val forcedLayout: ReaderLayout? = saved.get<String>(ARG_LAYOUT)?.let {
         runCatching { ReaderLayout.valueOf(it.uppercase()) }.getOrNull()
@@ -305,6 +311,7 @@ class ReaderViewModel @Inject constructor(
             settingsRepository.settings.collect {
                 settings = it
                 _userSettings.value = it
+                playAmbience(it)
                 publishReady()
                 replan()
             }
@@ -865,7 +872,23 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    /**
+     * The Reading Atmosphere's ambience, kept in step with the settings (owner, M5): it starts when the atmosphere
+     * is on and one is chosen, follows a change of atmosphere or volume, and falls silent the moment it is switched
+     * off. It plays for as long as this ViewModel lives, which is exactly as long as the book is open.
+     */
+    private fun playAmbience(settings: UserSettings) {
+        val chosen = settings.atmosphereInForce()?.takeIf { settings.atmosphereOn && !it.silent }
+        sound?.cancel()
+        if (chosen == null) {
+            ambience.stop()
+            return
+        }
+        sound = viewModelScope.launch { ambience.play(chosen.ambient, chosen.volume, chosen.soundUri) }
+    }
+
     override fun onCleared() {
+        ambience.stop()
         thumbnails?.clear()
         cache?.clear()
         tileCache?.clear()

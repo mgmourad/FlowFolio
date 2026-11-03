@@ -1,6 +1,13 @@
 package com.flowfolio.feature.library
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
@@ -29,6 +36,7 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -38,6 +46,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -74,6 +83,8 @@ import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalBookOpener
 import com.flowfolio.core.designsystem.LocalChromePadding
+import com.flowfolio.core.designsystem.Motion
+import com.flowfolio.core.designsystem.ScrollToTopOnTab
 import com.flowfolio.core.designsystem.card
 import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.color
@@ -132,13 +143,37 @@ fun BookmarksScreen(
     BackHandler(selection.active) { selection.done() }
 }
 
+@Suppress("LongMethod")
 @Composable
 fun BookmarksContent(state: BookmarksUiState, actions: BookmarkActions) {
     val chrome = LocalChromePadding.current
     val insets = WindowInsets.safeDrawing.asPaddingValues()
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
+    val filteredItems = remember(state.items, query) {
+        val q = query.trim()
+        if (q.isEmpty()) {
+            state.items
+        } else {
+            state.items.mapNotNull { item ->
+                val score = maxOf(
+                    Fuzzy.score(q, item.book.title),
+                    Fuzzy.score(q, item.book.author),
+                    Fuzzy.score(q, item.chapter),
+                    Fuzzy.score(q, item.label),
+                    Fuzzy.score(q, (item.bookmark.page + 1).toString())
+                )
+                if (score > 0) item to score else null
+            }.sortedByDescending { it.second }.map { it.first }
+        }
+    }
     BoxWithConstraints(Modifier.fillMaxSize().chromeStart().testTag(LibraryTestTags.BOOKMARKS)) {
         val twoColumns = maxWidth - GRID_SIDES * 2 >= CARD_MIN_WIDTH * 2 + GRID_GAP
+        val grid = rememberLazyGridState()
+        // Tapping the tab shows this page from the top (owner, M4c).
+        ScrollToTopOnTab("bookmarks", grid)
         LazyVerticalGrid(
+            state = grid,
             columns = GridCells.Adaptive(CARD_MIN_WIDTH),
             contentPadding = PaddingValues(
                 start = GRID_SIDES,
@@ -150,7 +185,20 @@ fun BookmarksContent(state: BookmarksUiState, actions: BookmarkActions) {
             verticalArrangement = Arrangement.spacedBy(GRID_GAP),
             modifier = Modifier.fillMaxSize()
         ) {
-            item(span = { GridItemSpan(maxLineSpan) }) { BookmarksHeader(state, actions, Modifier.reveal(0)) }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                BookmarksHeader(
+                    state = state,
+                    actions = actions,
+                    searchOpen = searchOpen,
+                    query = query,
+                    onToggleSearch = {
+                        searchOpen = !searchOpen
+                        if (!searchOpen) query = ""
+                    },
+                    onQuery = { query = it },
+                    modifier = Modifier.reveal(0)
+                )
+            }
             if (state.colours.size > 1) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     ColourFilter(state.colours, state.filter, actions.onFilter, Modifier.reveal(1))
@@ -159,31 +207,64 @@ fun BookmarksContent(state: BookmarksUiState, actions: BookmarkActions) {
             if (!state.loading && state.total == 0) {
                 item(span = { GridItemSpan(maxLineSpan) }) { EmptyBookmarks(Modifier.reveal(1)) }
             }
-            itemsIndexed(state.items, key = { _, entry -> entry.bookmark.id }) { i, item ->
+            itemsIndexed(filteredItems, key = { _, entry -> entry.bookmark.id }) { i, item ->
                 Box(Modifier.animateItem().reveal(2 + i)) { BookmarkRow(item, actions, twoColumns) }
             }
         }
     }
 }
 
+@Suppress("LongParameterList", "LongMethod")
 @Composable
-private fun BookmarksHeader(state: BookmarksUiState, actions: BookmarkActions, modifier: Modifier) {
+private fun BookmarksHeader(
+    state: BookmarksUiState,
+    actions: BookmarkActions,
+    searchOpen: Boolean,
+    query: String,
+    onToggleSearch: () -> Unit,
+    onQuery: (String) -> Unit,
+    modifier: Modifier
+) {
+    val keys = state.items.map { item -> item.bookmark.id.toString() }
     Column(modifier.padding(start = 4.dp, top = 10.dp, bottom = 4.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            actions.onBack?.let {
-                FlowFolioIconButton(onClick = it, glass = true, modifier = Modifier.padding(end = 14.dp)) {
-                    FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = FlowFolio.palette.text)
-                }
+        val searchBtn: @Composable () -> Unit = {
+            FlowFolioIconButton(onClick = onToggleSearch, modifier = Modifier.testTag(LibraryTestTags.SEARCH)) {
+                FlowFolioGlyph(Glyph.Search, stringResource(R.string.action_search))
             }
-            Text(
-                stringResource(R.string.bookmarks_title),
-                style = FlowFolioType.screenTitle.merge(FlowFolio.title),
-                modifier = Modifier.weight(1f)
+        }
+        ScreenHeader(
+            title = stringResource(R.string.bookmarks_title),
+            slogan = stringResource(R.string.bookmarks_slogan),
+            leading = actions.onBack?.let { back ->
+                {
+                    FlowFolioIconButton(onClick = back, glass = true, modifier = Modifier.padding(end = 14.dp)) {
+                        FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = FlowFolio.palette.text)
+                    }
+                }
+            },
+            actions = {
+                val sel = actions.selection
+                if (sel != null) SelectControls(sel, keys, normal = searchBtn) else searchBtn()
+            }
+        )
+        // The box grows, slides and fades in rather than appearing whole, as the library's does (owner, M5 round).
+        AnimatedVisibility(
+            visible = searchOpen,
+            enter = expandVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) +
+                slideInVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { -it / SEARCH_SLIDE } +
+                fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)),
+            exit = shrinkVertically(tween(Motion.FAST_MS, easing = Motion.EaseInOut)) +
+                fadeOut(tween(Motion.FAST_MS, easing = Motion.EaseInOut))
+        ) {
+            SearchField(
+                query = query,
+                onQuery = onQuery,
+                hintRes = R.string.search_bookmarks_hint,
+                autoFocus = true
             )
-            actions.selection?.let { SelectControls(it, state.items.map { item -> item.bookmark.id.toString() }) }
         }
         actions.selection?.let {
-            SelectionRow(it, state.items.map { item -> item.bookmark.id.toString() }, actions.onDeleteChosen)
+            SelectionRow(it, keys, actions.onDeleteChosen)
         }
         val book = state.book
         if (book != null) {
@@ -312,7 +393,7 @@ private fun BookmarkRow(item: BookmarkItem, actions: BookmarkActions, uniform: B
                         it.startWith(item.bookmark.id.toString())
                     }
                 }
-                HoldEntry(R.string.action_remove, warn = true) {
+                HoldEntry(R.string.action_remove, warn = true, glyph = Glyph.Trash) {
                     menu = false
                     actions.onRemove(item)
                 }
@@ -449,6 +530,10 @@ private val BookmarkColor.label: Int
         BookmarkColor.ITEM -> R.string.bookmark_colour_cyan
         BookmarkColor.ACCENT -> R.string.bookmark_colour_magenta
         BookmarkColor.GREEN -> R.string.bookmark_colour_green
+        BookmarkColor.TEAL -> R.string.bookmark_colour_teal
+        BookmarkColor.AMBER -> R.string.bookmark_colour_amber
+        BookmarkColor.ROSE -> R.string.bookmark_colour_rose
+        BookmarkColor.VIOLET -> R.string.bookmark_colour_violet
     }
 
 private val CARD_MIN_WIDTH = 280.dp
@@ -462,3 +547,6 @@ private const val TAG_NOTCH = 0.78f
 private val TAG_RISE = 14.dp
 private const val RING_ALPHA = 0.6f
 private const val MINI_SHADOW = 0.55f
+
+/** The search box slides down from a third of its own height. */
+private const val SEARCH_SLIDE = 3

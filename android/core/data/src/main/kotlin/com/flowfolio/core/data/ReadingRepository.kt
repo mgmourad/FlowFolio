@@ -5,6 +5,8 @@ import com.flowfolio.core.database.ReadingSessionEntity
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 /** Time spent reading each book. */
@@ -17,6 +19,9 @@ interface ReadingRepository {
 
     /** Total time read in the whole library, in milliseconds. */
     fun observeLibraryReadMillis(): Flow<Long>
+
+    /** Total time read per book in the library, in milliseconds. */
+    fun observeReadMillisByBook(): Flow<Map<String, Long>> = flowOf(emptyMap())
 }
 
 class DefaultReadingRepository @Inject constructor(
@@ -38,4 +43,7 @@ class DefaultReadingRepository @Inject constructor(
     override fun observeReadMillis(bookId: String): Flow<Long> = dao.observeTotal(bookId)
 
     override fun observeLibraryReadMillis(): Flow<Long> = dao.observeLibraryTotal()
+
+    override fun observeReadMillisByBook(): Flow<Map<String, Long>> =
+        dao.observeTotalsByBook().map { list -> list.associate { it.bookId to it.total } }
 }

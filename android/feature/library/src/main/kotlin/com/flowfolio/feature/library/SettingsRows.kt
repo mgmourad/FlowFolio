@@ -1,5 +1,6 @@
 package com.flowfolio.feature.library
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,10 +15,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioSlider
 import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
+import com.flowfolio.core.designsystem.Glyph
 
 /** `.set-row` with a toggle; the whole row toggles. */
 @Composable
@@ -96,4 +99,28 @@ internal fun Label(title: Int, detail: Int?, modifier: Modifier) {
 @Composable
 internal fun Divider() {
     HorizontalDivider(thickness = 1.dp, color = FlowFolio.palette.edge)
+}
+
+/** A settings row that does something when tapped, rather than holding a value (owner, M5). */
+@Composable
+internal fun ActionRow(title: Int, detail: Int, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(title), style = FlowFolioType.rowLabel.merge(FlowFolio.item))
+            Text(stringResource(detail), style = FlowFolioType.rowDetail.merge(FlowFolio.hint))
+        }
+        FlowFolioGlyph(
+            Glyph.GoTo,
+            contentDescription = null,
+            color = FlowFolio.palette.glyph,
+            size = 18.dp,
+            glow = false
+        )
+    }
 }

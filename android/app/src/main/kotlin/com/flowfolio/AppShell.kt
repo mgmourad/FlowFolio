@@ -63,10 +63,13 @@ import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalChromePadding
 import com.flowfolio.core.designsystem.LocalGlassState
+import com.flowfolio.core.designsystem.LocalScrollToTop
 import com.flowfolio.core.designsystem.Motion
+import com.flowfolio.core.designsystem.ScrollToTopSignals
 import com.flowfolio.core.designsystem.appBackground
 import com.flowfolio.core.designsystem.glass
 import com.flowfolio.core.designsystem.glassSource
+import com.flowfolio.feature.library.OnboardingHost
 import dev.chrisbanes.haze.HazePerformanceMode
 import dev.chrisbanes.haze.LocalHazePerformanceMode
 import dev.chrisbanes.haze.rememberHazeState
@@ -78,6 +81,7 @@ enum class TopLevel(val route: String, val glyph: Glyph, @StringRes val label: I
     Favorites("favorites", Glyph.Star, R.string.tab_favorites),
     Bookmarks("bookmarks", Glyph.Bookmark, R.string.tab_bookmarks),
     Annotations("annotations", Glyph.Highlight, R.string.tab_annotations),
+    Dictionary("dictionary", Glyph.Translate, R.string.tab_dictionary),
     Settings("settings", Glyph.Settings, R.string.tab_settings);
 
     companion object {
@@ -101,6 +105,12 @@ object ShellTestTags {
 @Composable
 fun AppShell(route: String?, onSelect: (TopLevel) -> Unit, content: @Composable () -> Unit) {
     val current = TopLevel.of(route)
+    // A tab tap shows its page from the top, even when that page is the one already showing (owner, M4c).
+    val scrollSignals = remember { ScrollToTopSignals() }
+    val select: (TopLevel) -> Unit = { destination ->
+        scrollSignals.tapped(destination.route)
+        onSelect(destination)
+    }
     val reading = Routes.isReader(route)
     val p = FlowFolio.palette
     var lastTab by rememberSaveable { mutableStateOf(TopLevel.Library) }
@@ -123,6 +133,7 @@ fun AppShell(route: String?, onSelect: (TopLevel) -> Unit, content: @Composable 
         CompositionLocalProvider(
             LocalGlassState provides haze,
             LocalChromePadding provides chrome,
+            LocalScrollToTop provides scrollSignals,
             // Blurs a down-scaled copy of what is behind the glass: indistinguishable at these radii and far
             // lighter on GPU memory on the large unfolded screen (ADR-0013).
             LocalHazePerformanceMode provides HazePerformanceMode.Performance
@@ -144,16 +155,18 @@ fun AppShell(route: String?, onSelect: (TopLevel) -> Unit, content: @Composable 
                     visible = shown,
                     enter = slideInHorizontally(tween(HIDE_MS, easing = Motion.EaseOut)) { -it * 3 / 2 },
                     exit = slideOutHorizontally(tween(HIDE_MS, easing = Motion.EaseOut)) { -it * 3 / 2 }
-                ) { Rail(selected, onSelect) }
+                ) { Rail(selected, select) }
             } else {
                 AnimatedVisibility(
                     visible = shown,
                     modifier = Modifier.align(Alignment.BottomCenter),
                     enter = slideInVertically(tween(HIDE_MS, easing = Motion.EaseOut)) { it * 3 / 2 },
                     exit = slideOutVertically(tween(HIDE_MS, easing = Motion.EaseOut)) { it * 3 / 2 }
-                ) { TabBar(selected, onSelect) }
+                ) { TabBar(selected, select) }
             }
         }
+        // Over the bars and everything else: the app's own tour, the first time it opens (owner, M5 round 4).
+        OnboardingHost()
     }
 }
 
@@ -295,7 +308,7 @@ private val BAR_BOTTOM = 20.dp
 private val BAR_BLUR = 22.dp
 private val CHROME_INSET = 14.dp
 private val RAIL_WIDTH = 84.dp
-private val RAIL_GAP = 48.dp
+private val RAIL_GAP = 32.dp
 private val TAB_WIDTH = 70.dp
 private val TAB_PAD = 10.dp
 private val TAB_NAME_GAP = 4.dp

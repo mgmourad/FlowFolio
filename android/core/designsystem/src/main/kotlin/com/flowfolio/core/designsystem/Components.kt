@@ -48,6 +48,7 @@ import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -85,14 +86,23 @@ fun FlowFolioChip(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    glyph: Glyph? = null
+    glyph: Glyph? = null,
+    glow: Boolean = false
 ) {
     val p = FlowFolio.palette
     val shape = RoundedCornerShape(50)
     // Unselected chips keep a faint ring in the accent, so they stand out from the page (owner, 2026-10-22).
     val ring = Modifier.ringOutline(shape, p.title.copy(alpha = if (selected) 0.6f else RING_ALPHA))
+    // The chosen one can be lit as well as ringed (owner, M5 round 3), for chips that have to read as set at a
+    // glance. A cached soft shadow, never a GPU blur: these sit in scrolling rows (known issue 21).
+    val lit = if (selected && glow) {
+        Modifier.softShadow(shape, p.title.copy(alpha = CHIP_GLOW), blur = CHIP_GLOW_BLUR, spread = CHIP_GLOW_SPREAD)
+    } else {
+        Modifier
+    }
     Box(
         modifier
+            .then(lit)
             .card(shape)
             .then(ring)
             .clip(shape)
@@ -117,6 +127,9 @@ fun FlowFolioChip(
 }
 
 private val CHIP_GLYPH = 18.dp
+private val CHIP_GLOW_BLUR = 16.dp
+private val CHIP_GLOW_SPREAD = 1.dp
+private const val CHIP_GLOW = 0.55f
 
 /** A 1.5 dp inner ring (`inset 0 0 0 1.5px`). */
 private fun Modifier.ringOutline(shape: androidx.compose.ui.graphics.Shape, color: Color): Modifier = drawBehind {
@@ -178,6 +191,8 @@ fun FlowFolioPrimaryButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    /** Narrows the side padding, for rows of buttons on a folded screen (owner, M4). */
+    compact: Boolean = false,
     icon: (@Composable () -> Unit)? = null
 ) {
     val p = FlowFolio.palette
@@ -193,12 +208,20 @@ fun FlowFolioPrimaryButton(
                 drawLine(Color.White.copy(alpha = 0.45f), Offset(0f, 0.5f), Offset(size.width, 0.5f), 1.dp.toPx())
             }
             .clickable(source, indication = null, role = Role.Button, onClick = onClick)
-            .padding(horizontal = 18.dp, vertical = 11.dp),
+            .padding(horizontal = if (compact) 8.dp else 18.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(
+            if (compact) 5.dp else 8.dp,
+            Alignment.CenterHorizontally
+        )
     ) {
         icon?.invoke()
-        Text(text, style = FlowFolioType.button.copy(color = p.buttonInk))
+        Text(
+            text,
+            style = FlowFolioType.button.copy(color = p.buttonInk),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
 

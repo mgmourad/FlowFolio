@@ -2,6 +2,8 @@
 # Every entry must also appear in docs/licenses.md.
 [versions]
 agp = "9.4.1"
+chaquopy = "17.2.0"
+ytdlp = "2026.10.26"
 kotlin = "2.4.21"
 ksp = "2.3.12"
 hilt = "2.60.1"
@@ -116,6 +118,7 @@ detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
 android-test = { id = "com.android.test", version.ref = "agp" }
 androidx-baselineprofile = { id = "androidx.baselineprofile", version.ref = "benchmark" }
 roborazzi = { id = "io.github.takahirom.roborazzi", version.ref = "roborazzi" }
+chaquopy = { id = "com.chaquo.python", version.ref = "chaquopy" }
 
 # Convention plugins (build-logic)
 flowfolio-android-application = { id = "flowfolio.android.application" }

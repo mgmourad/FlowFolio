@@ -63,6 +63,8 @@ data class BookEntity(
     @ColumnInfo(name = "flow_locator") val flowLocator: String? = null,
     /** A favourite (owner, M3T2). Added in schema v16. */
     @ColumnInfo(defaultValue = "0") val favorite: Boolean = false,
+    /** The reader's own intention for the book ([ReadingIntent] name); null when unsaid. Added in v19. */
+    @ColumnInfo(name = "intent") val intent: String? = null,
     /** When the reader marked the book finished, epoch millis; null while not finished. Added in schema v16. */
     @ColumnInfo(name = "finished_at") val finishedAt: Long? = null
 )

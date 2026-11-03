@@ -69,6 +69,7 @@ import com.flowfolio.core.designsystem.FlowFolioProgressBar
 import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.ScrollToTopOnTab
 import com.flowfolio.core.designsystem.Selection
 import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.designsystem.reveal
@@ -92,6 +93,8 @@ internal fun ShelfTiles(
     val bookKeys = state.items.map { it.book.id }
     val byId = state.items.associateBy { it.book.id }
     val grid = rememberLazyGridState()
+    // The Favourites page is a tab of its own, so its tab sends it back to the top (owner, M4c).
+    ScrollToTopOnTab(state.tabRoute, grid)
     val reorder = actions.onReorder?.let { rememberGridReorder(bookKeys, grid, it) }?.takeIf { canReorder }
     val rowActions = actions.copy(reorder = reorder)
     val shown = reorder?.order?.mapNotNull(byId::get) ?: state.items
@@ -138,6 +141,7 @@ internal fun ShelfList(
     val bookKeys = state.items.map { it.book.id }
     val byId = state.items.associateBy { it.book.id }
     val list = rememberLazyListState()
+    ScrollToTopOnTab(state.tabRoute, list)
     val reorder = actions.onReorder?.let { rememberColumnReorder(bookKeys, list, it) }?.takeIf { canReorder }
     val rowActions = actions.copy(reorder = reorder)
     val shown = reorder?.order?.mapNotNull(byId::get) ?: state.items

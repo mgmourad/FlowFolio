@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.BookmarkRepository
 import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.data.ReaderRepository
+import com.flowfolio.core.data.ReadingGoalRepository
 import com.flowfolio.core.data.ReadingRepository
 import com.flowfolio.core.data.RelinkResult
 import com.flowfolio.core.data.ShelfRepository
@@ -16,6 +17,7 @@ import com.flowfolio.core.model.BookDetails
 import com.flowfolio.core.model.BookFormat
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.OutlineEntry
+import com.flowfolio.core.model.ReadingGoal
 import com.flowfolio.core.model.Shelf
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -47,7 +49,9 @@ data class DetailsUiState(
     /** Time spent reading this book (milliseconds), its ribbons, and the other books by the same author. */
     val readMillis: Long = 0,
     val ribbons: Int = 0,
-    val sameAuthor: List<Book> = emptyList()
+    val sameAuthor: List<Book> = emptyList(),
+    /** This book's reading goal (M3T3), if set. */
+    val bookGoal: ReadingGoal? = null
 ) {
     val bookShelves: List<Shelf> get() = book?.let { b -> shelves.filter { b.id in it.bookIds } }.orEmpty()
 }
@@ -62,7 +66,8 @@ class DetailsViewModel @Inject constructor(
     shelves: ShelfRepository,
     reading: ReadingRepository,
     bookmarks: BookmarkRepository,
-    private val views: ReadingViews
+    private val views: ReadingViews,
+    private val goals: ReadingGoalRepository
 ) : ViewModel() {
     val bookId: String = checkNotNull(saved[ARG_BOOK_ID]) { "details needs a book id" }
 
@@ -75,7 +80,7 @@ class DetailsViewModel @Inject constructor(
             shelves.observeShelves(),
             contents,
             availability,
-            extras(reading, bookmarks)
+            extras(reading, bookmarks, goals)
         ) { book, s, c, a, x ->
             DetailsUiState(
                 loading = false,
@@ -86,7 +91,8 @@ class DetailsViewModel @Inject constructor(
                 readMillis = x.readMillis,
                 ribbons = x.ribbons,
                 sameAuthor = book?.author?.let { author -> x.books.filter { it.id != bookId && it.author == author } }
-                    .orEmpty()
+                    .orEmpty(),
+                bookGoal = x.goal
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), DetailsUiState())
 
@@ -107,13 +113,19 @@ class DetailsViewModel @Inject constructor(
         if (library.relink(bookId, uri) == RelinkResult.Relinked) load()
     }
 
-    private class Extras(val readMillis: Long, val ribbons: Int, val books: List<Book>)
+    private class Extras(val readMillis: Long, val ribbons: Int, val books: List<Book>, val goal: ReadingGoal?)
 
-    private fun extras(reading: ReadingRepository, bookmarks: BookmarkRepository) = combine(
-        reading.observeReadMillis(bookId),
-        views.bookmarks(bookmarks.observe(bookId)),
-        library.observeBooks(LibrarySort.RECENT)
-    ) { ms, marks, books -> Extras(ms, marks.size, books) }
+    private fun extras(reading: ReadingRepository, bookmarks: BookmarkRepository, goals: ReadingGoalRepository) =
+        combine(
+            reading.observeReadMillis(bookId),
+            views.bookmarks(bookmarks.observe(bookId)),
+            library.observeBooks(LibrarySort.RECENT),
+            goals.observeBookGoal(bookId)
+        ) { ms, marks, books, goal -> Extras(ms, marks.size, books, goal) }
+
+    fun saveGoal(goal: ReadingGoal) = viewModelScope.launch { goals.saveGoal(goal) }
+
+    fun resetGoal() = viewModelScope.launch { goals.resetGoal(bookId) }
 
     /** Saves Edit details. */
     fun saveDetails(title: String, author: String?, details: BookDetails, then: () -> Unit) = viewModelScope.launch {

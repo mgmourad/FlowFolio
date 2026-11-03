@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  FlowFolio's status-bar glyph (owner, M4): the app icon's open book with its "f", drawn as one white stroke.
+  Android tints a notification's small icon a flat colour and masks out everything but its alpha, so this keeps to
+  outlines at a single weight; the launcher icon's colour and depth cannot survive here.
+  Artwork it follows: docs/brand/flowfolio-icon-master.png.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- The open book: both pages as one silhouette, with no centre fold, to leave the "f" room to read. -->
+    <path
+        android:pathData="M3 6.3c3-1.1 6.2-.8 9 1.2 2.8-2 6-2.3 9-1.2v12c-3-1.1-6.2-.8-9 1.2-2.8-2-6-2.3-9-1.2z"
+        android:strokeWidth="1.9"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+    <!-- The "f", standing on the spine. -->
+    <path
+        android:pathData="M10.6 17.1V11c0-1.4 1.1-2.5 2.5-2.5h0.8 M9.7 12.8h3.6"
+        android:strokeWidth="1.9"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>

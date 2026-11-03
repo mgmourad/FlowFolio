@@ -14,6 +14,9 @@ Release dates were checked on Maven Central, Google Maven, PyPI, or GitHub Relea
 | Gradle (wrapper) | 9.8.1 | 2026-10-07 | Apache-2.0 | build | Distribution SHA-256 pinned in wrapper properties |
 | KSP | 2.3.12 | 2026-09-09 | Apache-2.0 | build | |
 | Hilt / Dagger | 2.60.1 | 2026-07-06 | Apache-2.0 | app | |
+| Chaquopy (Gradle plugin + runtime) | 17.2.0 | 2026-09-30 | MIT | app/build | Embeds CPython 3.12 (PSF-2.0) for arm64-v8a and x86_64 only; pip-installs at build time, which F-Droid still has to be checked against (ADR-0047) |
+| CPython (through Chaquopy) | 3.12 | - | PSF-2.0 | app | Shipped as Chaquopy's prebuilt runtime |
+| yt-dlp | 2026.10.26 | 2026-10-26 | Unlicense | app | Source only, via pip. Its *PyInstaller release binaries* are GPLv3+ and are NOT used. No ffmpeg: only an address is extracted, and MediaPlayer plays it (ADR-0047) |
 | kotlinx-coroutines (core, android, test) | 1.11.0 | 2026-05-08 | Apache-2.0 | app/test | |
 | Room (runtime, ktx, compiler, Gradle plugin) | 2.8.5 | 2026-09-09 | Apache-2.0 | app/build | Schema exported to `core/database/schemas/` |
 | DataStore Preferences | 1.2.1 | 2026-03-11 | Apache-2.0 | app | |
@@ -57,6 +60,7 @@ Release dates were checked on Maven Central, Google Maven, PyPI, or GitHub Relea
 | JNA (net.java.dev.jna:jna) | 5.19.1 | 2026-06-12 | Apache-2.0 (dual-licensed with LGPL-2.1; used under Apache-2.0) | dev tool only | `android/tools/convert` (ADR-0044): calls the desktop PDFium build for the JVM tests and the corpus harness. Never a dependency of the app. Owner-approved 2026-10-27 |
 | PDFium desktop builds (pdfium-binaries win-x64, linux-x64) | chromium/8100 | 2026-10-12 | as PDFium above | dev tool only | Fetched by `FetchHostPdfiumTask`, SHA-256 pinned; never shipped |
 | EPUBCheck (org.w3c:epubcheck) | 5.4.0 | 2026-09-15 | BSD-3-Clause; its dependencies (Saxon-HE MPL-2.0, Jing BSD-3-Clause, Guava, Apache Commons, TwelveMonkeys, Xerces Apache-2.0, ICU4J ICU) are test-only too | test | Validates every converted EPUB in `ConversionTest`/`CorpusTest`. Not distributed. Owner-approved 2026-10-27 |
+| English Wiktionary lexicon data (`WiktionaryStore`) | 2026-10 snapshot + REST cache | 2026-10 | CC BY-SA 4.0 | app data | Offline English definitions for the reader's Define panel and Dictionary tab (ADR-0046). Stored as TSV data in `filesDir/dictionary/en-wiktionary.tsv` (ShareAlike applies to the lexicon data itself, not FlowFolio's MIT code). Attributed in the Define panel and here. Owner-approved 2026-10-28 |
 
 ## Converter (Python): retired
 

@@ -17,7 +17,11 @@ data class TranslationEntity(
     @ColumnInfo(name = "from_lang") val from: String,
     @ColumnInfo(name = "to_lang") val to: String,
     @ColumnInfo(name = "book_id") val bookId: String?,
-    @ColumnInfo(name = "created_at") val createdAt: Long
+    @ColumnInfo(name = "created_at") val createdAt: Long,
+    /** The PDF page the word was looked up on; null for a translation saved before Room v18, or outside a book. */
+    @ColumnInfo(name = "page") val page: Int? = null,
+    /** The place in the reflowed view (`chapter:offset`), as annotations store it (ADR-0040). */
+    @ColumnInfo(name = "locator") val locator: String? = null
 )
 
 @Dao
@@ -35,6 +39,9 @@ interface TranslationDao {
     /** How many of a book's translations there are (owner, M3T2). */
     @Query("SELECT COUNT(*) FROM translations WHERE book_id = :bookId")
     fun observeCount(bookId: String): Flow<Int>
+
+    @Query("DELETE FROM translations WHERE id = :id")
+    suspend fun delete(id: Long)
 
     @Query("DELETE FROM translations")
     suspend fun clear()

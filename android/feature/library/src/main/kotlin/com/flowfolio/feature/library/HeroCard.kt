@@ -4,13 +4,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,7 +44,6 @@ import com.flowfolio.core.model.printedPages
  * shortcuts under it all: its Dynamic Flow (lit when on), its annotations, its bookmarks and the shelf it is on
  * ([shelfId]; owner, 2026-10-22, and M3T1).
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun ContinueReadingCard(
     item: LibraryItem,
@@ -55,7 +53,8 @@ internal fun ContinueReadingCard(
     modifier: Modifier = Modifier,
     bookmarkCount: Int = 0,
     annotationCount: Int = 0,
-    dictionaryCount: Int = 0
+    dictionaryCount: Int = 0,
+    readGoalProgress: Float? = null
 ) {
     val book = item.book
     FlowFolioCard(
@@ -75,7 +74,7 @@ internal fun ContinueReadingCard(
                     ShelfBook(item, HERO_ORIGIN, actions, width = COVER_WIDTH, height = COVER_HEIGHT)
                 }
                 Column(Modifier.weight(1f)) {
-                    HeroDetails(book, readMillis, bookmarkCount, annotationCount, dictionaryCount)
+                    HeroDetails(book, readMillis, bookmarkCount, annotationCount, dictionaryCount, readGoalProgress)
                     FlowFolioPrimaryButton(
                         text = stringResource(R.string.action_resume),
                         onClick = { actions.onResume(item) },
@@ -84,11 +83,11 @@ internal fun ContinueReadingCard(
                     )
                 }
             }
-            // The shortcuts on a line of their own under the cover and the words, room for more (owner, M3T1).
-            FlowRow(
-                Modifier.fillMaxWidth().padding(top = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+            // The shortcuts on a single right-aligned line under the cover and the words.
+            Row(
+                Modifier.fillMaxWidth().padding(top = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+                verticalAlignment = Alignment.CenterVertically
             ) { HeroShortcuts(book, actions, shelfId) }
         }
     }
@@ -112,7 +111,14 @@ private fun BoxScope.HeroGlow(glow: Color) {
 
 /** The card's words: the eyebrow, the title and author, and the book's progress and read time. */
 @Composable
-private fun HeroDetails(book: Book, readMillis: Long, bookmarkCount: Int, annotationCount: Int, dictionaryCount: Int) {
+private fun HeroDetails(
+    book: Book,
+    readMillis: Long,
+    bookmarkCount: Int,
+    annotationCount: Int,
+    dictionaryCount: Int,
+    readGoalProgress: Float?
+) {
     Text(
         stringResource(R.string.continue_reading).uppercase(),
         style = FlowFolioType.eyebrow.merge(FlowFolio.subItem)
@@ -137,10 +143,11 @@ private fun HeroDetails(book: Book, readMillis: Long, bookmarkCount: Int, annota
             HeroMeasure(
                 Glyph.OpenBook,
                 stringResource(R.string.hero_progress),
-                stringResource(R.string.page_of, book.pageLabel(book.lastPage ?: 0), book.printedPages()),
-                valueStyle = FlowFolioType.rowDetail.merge(FlowFolio.hint).copy(fontSize = 12.sp)
+                // "p. 90/201" at 10 sp, since "p. 90 of 201" was cut off on the cover screen (owner, M4b).
+                stringResource(R.string.page_of_short, book.pageLabel(book.lastPage ?: 0), book.printedPages()),
+                valueStyle = FlowFolioType.rowDetail.merge(FlowFolio.hint).copy(fontSize = PAGES_SP)
             )
-            FlowFolioProgressBar(book.progress, Modifier.padding(top = 4.dp))
+            FlowFolioProgressBar(book.progress, Modifier.padding(top = 4.dp), celebrationId = book.id)
         }
         HeroMeasure(
             Glyph.Clock,
@@ -148,6 +155,13 @@ private fun HeroDetails(book: Book, readMillis: Long, bookmarkCount: Int, annota
             readTime(readMillis),
             Modifier.padding(top = 12.dp)
         )
+        if (readGoalProgress != null) {
+            FlowFolioProgressBar(
+                readGoalProgress,
+                Modifier.padding(top = 4.dp),
+                celebrationId = "goal:" + book.id
+            )
+        }
         Row(
             Modifier.fillMaxWidth().padding(top = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -172,20 +186,27 @@ private fun HeroMeasure(
     valueStyle: TextStyle? = null
 ) {
     Row(
-        modifier.fillMaxWidth().padding(start = 8.dp, end = 16.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier.fillMaxWidth().padding(start = 8.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            FlowFolioGlyph(glyph, contentDescription = null, size = 18.dp, glow = false)
-            Text(
-                name,
-                style = FlowFolioType.rowDetail.merge(FlowFolio.item),
-                maxLines = 1,
-                modifier = Modifier.padding(start = 8.dp)
-            )
-        }
-        Text(value, style = valueStyle ?: FlowFolioType.rowDetail.merge(FlowFolio.hint), maxLines = 1)
+        FlowFolioGlyph(glyph, contentDescription = null, size = 18.dp, glow = false)
+        Text(
+            name,
+            // Small enough that "Progress" and "Read time" survive whole on the cover screen, where the row used
+            // to cut them to "Progr..." (owner, M5 round).
+            style = FlowFolioType.rowDetail.merge(FlowFolio.item).copy(fontSize = MEASURE_SP),
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.padding(start = 8.dp)
+        )
+        // The space between pushes the value to the right edge, whatever the name's length.
+        Spacer(Modifier.weight(1f).widthIn(min = MEASURE_GAP))
+        Text(
+            value,
+            style = valueStyle ?: FlowFolioType.rowDetail.merge(FlowFolio.hint),
+            maxLines = 1,
+            softWrap = false
+        )
     }
 }
 
@@ -205,12 +226,17 @@ private fun HeroMeasureCompact(glyph: Glyph, value: String, modifier: Modifier =
 }
 
 /** The Continue Reading's shortcuts: the book's Dynamic Flow, its annotations, its bookmarks and its shelf. */
+@Suppress("LongMethod")
 @Composable
 private fun HeroShortcuts(book: Book, actions: LibraryActions, shelfId: Long) {
     val onFlow = actions.onFlow
     if (onFlow != null && book.format == BookFormat.PDF) {
         val on = book.flowMode == true
-        FlowFolioIconButton(onClick = { onFlow(book) }, modifier = Modifier.testTag(LibraryTestTags.HERO_FLOW)) {
+        FlowFolioIconButton(
+            onClick = { onFlow(book) },
+            modifier = Modifier.testTag(LibraryTestTags.HERO_FLOW),
+            size = SHORTCUT_SIZE
+        ) {
             // Lit and glowing while the book is read in Dynamic Flow, dim while it is read as the PDF.
             FlowFolioGlyph(
                 Glyph.DynamicFlow,
@@ -220,14 +246,16 @@ private fun HeroShortcuts(book: Book, actions: LibraryActions, shelfId: Long) {
             )
         }
     }
-    // A star and a check, lit when the book is a favourite and when it is finished (owner, M3T2).
+    // A star and a check: the star fills, the check turns the palette's green, both glowing (owner, M3T2, M4).
     actions.onFavorite?.let { favorite ->
         val on = book.favorite
         ToggleShortcut(
             Glyph.Star,
             on,
             if (on) R.string.action_favorite_remove else R.string.action_favorite_add,
-            Modifier.testTag(LibraryTestTags.HERO_FAVORITE)
+            Modifier.testTag(LibraryTestTags.HERO_FAVORITE),
+            size = SHORTCUT_SIZE,
+            checkedGlyph = Glyph.StarFilled
         ) { favorite(book) }
     }
     actions.onFinished?.let { finished ->
@@ -236,22 +264,34 @@ private fun HeroShortcuts(book: Book, actions: LibraryActions, shelfId: Long) {
             Glyph.Select,
             on,
             if (on) R.string.action_mark_unfinished else R.string.action_mark_finished,
-            Modifier.testTag(LibraryTestTags.HERO_FINISHED)
+            Modifier.testTag(LibraryTestTags.HERO_FINISHED),
+            size = SHORTCUT_SIZE,
+            checkedColor = FlowFolio.palette.green,
+            uncheckedColor = FlowFolio.palette.green
         ) { finished(book) }
     }
     actions.onAnnotations?.let { open ->
-        FlowFolioIconButton(onClick = { open(book) }, modifier = Modifier.testTag(LibraryTestTags.HERO_ANNOTATIONS)) {
+        FlowFolioIconButton(
+            onClick = { open(book) },
+            modifier = Modifier.testTag(LibraryTestTags.HERO_ANNOTATIONS),
+            size = SHORTCUT_SIZE
+        ) {
             FlowFolioGlyph(Glyph.Highlight, stringResource(R.string.hero_annotations))
         }
     }
     actions.onBookmarks?.let { open ->
-        FlowFolioIconButton(onClick = { open(book) }, modifier = Modifier.testTag(LibraryTestTags.HERO_BOOKMARKS)) {
+        FlowFolioIconButton(
+            onClick = { open(book) },
+            modifier = Modifier.testTag(LibraryTestTags.HERO_BOOKMARKS),
+            size = SHORTCUT_SIZE
+        ) {
             FlowFolioGlyph(Glyph.Bookmark, stringResource(R.string.hero_bookmarks), color = FlowFolio.palette.subItem)
         }
     }
     FlowFolioIconButton(
         onClick = { actions.onOpenShelf(shelfId) },
-        modifier = Modifier.testTag(LibraryTestTags.HERO_SHELF)
+        modifier = Modifier.testTag(LibraryTestTags.HERO_SHELF),
+        size = SHORTCUT_SIZE
     ) {
         FlowFolioGlyph(Glyph.Shelves, stringResource(R.string.hero_open_shelf))
     }
@@ -259,7 +299,15 @@ private fun HeroShortcuts(book: Book, actions: LibraryActions, shelfId: Long) {
 
 private const val HERO_GLOW_ALPHA = 0.22f
 private const val FLOW_OFF_ALPHA = 0.55f
+private val SHORTCUT_SIZE = 38.dp
 private val HERO_TITLE_SP = 22.sp
+private val PAGES_SP = 10.sp
+
+/** The least space between a measure's name and its value, so they never run together. */
+private val MEASURE_GAP = 10.dp
+
+/** The measures' names, small enough to stay whole on the cover screen. */
+private val MEASURE_SP = 11.sp
 private val COVER_WIDTH = 130.dp
 private val COVER_HEIGHT = 190.dp
 

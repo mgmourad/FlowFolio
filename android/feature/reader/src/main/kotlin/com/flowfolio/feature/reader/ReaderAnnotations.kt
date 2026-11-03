@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -31,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -51,10 +54,15 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGlyph
+import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.VoiceBar
+import com.flowfolio.core.designsystem.Waveform
 import com.flowfolio.core.designsystem.glass
 import com.flowfolio.core.designsystem.marker
 import com.flowfolio.core.model.Annotation
@@ -62,40 +70,87 @@ import com.flowfolio.core.model.HighlightColor
 import kotlin.math.roundToInt
 
 /**
- * The glass bar over a selection or a tapped highlight: the five highlighter colours (the current one ringed), then
- * Note, Share and Copy (or Delete). It sits above [around], or below it when there is no room above.
+ * The glass box over a selection or a tapped highlight: the five highlighter colours stacked in two rows on the left,
+ * and the actions (Note, Share, Define, Translate, Copy/Delete) stacked in two rows on the right. It sits above
+ * [around], or below it when there is no room above.
  */
 @Composable
 internal fun BoxScope.HighlightBar(around: Rect, actions: HighlightActions) {
-    val gap = with(androidx.compose.ui.platform.LocalDensity.current) { BAR_GAP.toPx() }
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val gap = with(density) { BAR_GAP.toPx() }
+    val margin = with(density) { BAR_EDGE_MARGIN.roundToPx() }
     Layout(
         content = {
             Row(
                 Modifier
-                    .glass(RoundedCornerShape(26.dp))
-                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                    .glass(RoundedCornerShape(22.dp))
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
                     .testTag(ReaderTestTags.HIGHLIGHT_BAR),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                HighlightColor.entries.forEach { c -> ColourDot(c, c == actions.current) { actions.onColour(c) } }
-                BarAction(R.string.reader_note, actions.onNote)
-                BarAction(R.string.reader_share, actions.onShare)
-                BarAction(R.string.reader_translate, actions.onTranslate)
-                BarAction(actions.extra.label, actions.extra.onClick, warn = actions.extra.warn)
+                HighlightColourGrid(actions.current, actions.onColour)
+                Box(Modifier.width(1.dp).height(56.dp).background(FlowFolio.palette.edge))
+                HighlightActionGrid(actions)
             }
         },
         modifier = Modifier.matchParentSize()
     ) { measurables, constraints ->
-        val bar = measurables.first().measure(Constraints(maxWidth = constraints.maxWidth))
+        val maxW = (constraints.maxWidth - margin * 2).coerceAtLeast(0)
+        val bar = measurables.first().measure(Constraints(maxWidth = maxW))
         val x = (around.center.x - bar.width / 2f).roundToInt().coerceIn(
-            0,
-            (constraints.maxWidth - bar.width).coerceAtLeast(0)
+            margin,
+            (constraints.maxWidth - margin - bar.width).coerceAtLeast(margin)
         )
         val above = around.top - gap - bar.height
         val y = if (above > gap * TOP_ROOM) above else around.bottom + gap
         layout(constraints.maxWidth, constraints.maxHeight) {
-            bar.place(IntOffset(x, y.roundToInt().coerceIn(0, (constraints.maxHeight - bar.height).coerceAtLeast(0))))
+            bar.place(
+                IntOffset(
+                    x,
+                    y.roundToInt().coerceIn(margin, (constraints.maxHeight - margin - bar.height).coerceAtLeast(margin))
+                )
+            )
+        }
+    }
+}
+
+@Composable
+private fun HighlightColourGrid(current: HighlightColor?, onColour: (HighlightColor) -> Unit) {
+    val colours = HighlightColor.entries
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            colours.take(TOP_COLOUR_COUNT).forEach { c -> ColourDot(c, c == current) { onColour(c) } }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            colours.drop(TOP_COLOUR_COUNT).forEach { c -> ColourDot(c, c == current) { onColour(c) } }
+        }
+    }
+}
+
+@Composable
+private fun HighlightActionGrid(actions: HighlightActions) {
+    val items = buildList {
+        add(BarExtra(R.string.reader_note, Glyph.Edit, warn = false, onClick = actions.onNote))
+        add(BarExtra(R.string.reader_voicemark, Glyph.Mic, warn = false, onClick = actions.onVoiceMark))
+        add(BarExtra(R.string.reader_share, Glyph.Share, warn = false, onClick = actions.onShare))
+        actions.onDefine?.let { add(BarExtra(R.string.reader_define, Glyph.Book, warn = false, onClick = it)) }
+        add(BarExtra(R.string.reader_translate, Glyph.Translate, warn = false, onClick = actions.onTranslate))
+        add(actions.extra)
+    }
+    val split = (items.size + 1) / 2
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+            items.take(split).forEach { item -> BarAction(item.label, item.glyph, item.onClick, item.warn) }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+            items.drop(split).forEach { item -> BarAction(item.label, item.glyph, item.onClick, item.warn) }
         }
     }
 }
@@ -107,7 +162,7 @@ private fun ColourDot(colour: HighlightColor, current: Boolean, onClick: () -> U
     val name = stringResource(colour.label)
     Box(
         Modifier
-            .size(30.dp)
+            .size(28.dp)
             .semantics {
                 contentDescription = name
                 selected = current
@@ -120,14 +175,24 @@ private fun ColourDot(colour: HighlightColor, current: Boolean, onClick: () -> U
 }
 
 @Composable
-private fun BarAction(label: Int, onClick: () -> Unit, warn: Boolean = false) {
-    Text(
-        stringResource(label),
-        style = FlowFolioType.pill.copy(fontSize = 13.sp).merge(if (warn) FlowFolio.subItem else FlowFolio.title),
-        modifier = Modifier.clip(
-            RoundedCornerShape(50)
-        ).clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 8.dp)
-    )
+private fun BarAction(label: Int, glyph: Glyph, onClick: () -> Unit, warn: Boolean = false) {
+    val name = stringResource(label)
+    Box(
+        Modifier
+            .size(BAR_ACTION)
+            .clip(RoundedCornerShape(50))
+            .clickable(onClick = onClick)
+            .semantics { contentDescription = name },
+        contentAlignment = Alignment.Center
+    ) {
+        FlowFolioGlyph(
+            glyph,
+            contentDescription = null,
+            color = if (warn) FlowFolio.palette.subItem else FlowFolio.palette.title,
+            size = BAR_GLYPH,
+            glow = false
+        )
+    }
 }
 
 /** Writing a note for a highlight: a glass card with a text field, Save and Cancel. */
@@ -170,64 +235,6 @@ internal fun BoxScope.NoteEditor(quote: String, initial: String?, onSave: (Strin
     }
 }
 
-/** The open book's highlights (the reader's Annotations panel): colour, passage, note and page; a tap goes there. */
-@Composable
-internal fun AnnotationList(all: List<Annotation>, navigation: BookNavigation, onGo: (Int) -> Unit) {
-    Text(
-        stringResource(R.string.reader_annotations),
-        style = MaterialTheme.typography.titleLarge.merge(FlowFolio.title),
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)
-    )
-    if (all.isEmpty()) {
-        Text(
-            stringResource(R.string.reader_annotations_empty),
-            style = MaterialTheme.typography.bodyMedium.merge(FlowFolio.hint),
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 20.dp)
-        )
-        return
-    }
-    LazyColumn(Modifier.testTag(ReaderTestTags.ANNOTATION_LIST)) {
-        items(all, key = { it.id }) { a ->
-            Row(
-                Modifier.fillMaxWidth().clickable { onGo(a.page) }.padding(horizontal = 20.dp, vertical = 12.dp)
-            ) {
-                val bar = a.color.marker
-                Canvas(Modifier.width(4.dp).size(4.dp, 44.dp)) { drawRect(bar) }
-                Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                    Text(
-                        "“${a.text}”",
-                        style = FlowFolioType.sub.copy(
-                            fontFamily = FlowFolioType.heroTitle.fontFamily,
-                            fontStyle = FontStyle.Italic
-                        )
-                            .merge(FlowFolio.item),
-                        maxLines = 3,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    a.note?.let {
-                        Text(
-                            it,
-                            style = FlowFolioType.rowDetail.merge(FlowFolio.subItem),
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(top = 4.dp)
-                        )
-                    }
-                    Text(
-                        stringResource(
-                            R.string.reader_page_short,
-                            a.label ?: PageLookup.labelOf(a.page, navigation.labels)
-                        ),
-                        style = FlowFolioType.rowDetail.merge(FlowFolio.hint),
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-            }
-            HorizontalDivider(color = FlowFolio.palette.edge)
-        }
-    }
-}
-
 /** Opens the share sheet with [text]. */
 internal fun share(context: Context, text: String) {
     val send = Intent(Intent.ACTION_SEND).apply {
@@ -250,8 +257,18 @@ internal val HighlightColor.label: Int
         HighlightColor.BLUE -> R.string.highlight_blue
         HighlightColor.PINK -> R.string.highlight_pink
         HighlightColor.PURPLE -> R.string.highlight_purple
+        HighlightColor.ORANGE -> R.string.highlight_orange
+        HighlightColor.TEAL -> R.string.highlight_teal
+        HighlightColor.MINT -> R.string.highlight_mint
+        HighlightColor.CORAL -> R.string.highlight_coral
     }
 
+private val BAR_ACTION = 40.dp
+private val BAR_GLYPH = 20.dp
 private val BAR_GAP = 14.dp
+private val BAR_EDGE_MARGIN = 8.dp
+
+/** The top row of the highlighter grid; the rest go under it (five and four since M4b). */
+private const val TOP_COLOUR_COUNT = 5
 private const val TOP_ROOM = 6f
 private val NOTE_WIDTH = 480.dp

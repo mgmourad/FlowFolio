@@ -28,11 +28,15 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -53,12 +57,14 @@ import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Selection
+import com.flowfolio.core.designsystem.VoiceBar
 import com.flowfolio.core.designsystem.marker
 import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.shareQuote
+import kotlinx.coroutines.delay
 
 /**
  * One book's annotations, in page order: each passage in its colour, its note, page and date. Tap to open the book
@@ -73,21 +79,36 @@ fun BookAnnotationsScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var editing by remember { mutableStateOf<Annotation?>(null) }
+    val playingPath by viewModel.voicePlaying.collectAsStateWithLifecycle()
+    var tick by remember { mutableIntStateOf(0) }
+    LaunchedEffect(playingPath) {
+        while (playingPath != null) {
+            tick++
+            delay(VOICE_TICK_MS)
+        }
+    }
+    val playback = VoicePlayback(
+        playingPath = playingPath,
+        positionMillis = if (tick >= 0 && playingPath != null) viewModel.voiceMillis else 0,
+        onPlayPause = viewModel::playVoice
+    )
     val book = state.book
     val selection = rememberSelection()
     var confirmBulk by remember { mutableStateOf(false) }
-    BookAnnotationsContent(
-        state,
-        onBack,
-        AnnotationActions(
-            onOpen = { a -> book?.let { b -> viewModel.open(a) { onRead(b) } } },
-            onShare = { a -> book?.let { shareAnnotation(context, a, it) } },
-            onNote = { editing = it },
-            onDelete = viewModel::remove,
-            onSelect = { selection.startWith(it.id.toString()) }
-        ),
-        selection
-    ) { confirmBulk = true }
+    CompositionLocalProvider(LocalVoicePlayback provides playback) {
+        BookAnnotationsContent(
+            state,
+            onBack,
+            AnnotationActions(
+                onOpen = { a -> book?.let { b -> viewModel.open(a) { onRead(b) } } },
+                onShare = { a -> book?.let { shareAnnotation(context, a, it) } },
+                onNote = { editing = it },
+                onDelete = viewModel::remove,
+                onSelect = { selection.startWith(it.id.toString()) }
+            ),
+            selection
+        ) { confirmBulk = true }
+    }
     if (confirmBulk) {
         val n = selection.chosen.size
         BulkDeleteDialog(
@@ -208,8 +229,10 @@ private fun AnnotationRow(a: Annotation, chapter: String?, actions: AnnotationAc
 }
 
 /** The chapter, then the passage with its colour bar, the note under it, and its page and date. */
+@Suppress("LongMethod")
 @Composable
 private fun AnnotationCard(a: Annotation, chapter: String?, onHold: (() -> Unit)? = null, onOpen: () -> Unit) {
+    val voice = LocalVoicePlayback.current
     val context = LocalContext.current
     val bar = a.color.marker
     FlowFolioCard(
@@ -244,6 +267,18 @@ private fun AnnotationCard(a: Annotation, chapter: String?, onHold: (() -> Unit)
                         it,
                         style = FlowFolioType.rowLabel.merge(FlowFolio.subItem),
                         modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+                // A spoken note plays here as well as in the book (owner, M5).
+                a.voice?.let { note ->
+                    VoiceBar(
+                        levels = note.levels,
+                        millis = note.millis,
+                        playing = voice.playingPath == note.path,
+                        positionMillis = if (voice.playingPath == note.path) voice.positionMillis else 0,
+                        onPlayPause = { voice.onPlayPause(note.path) },
+                        onStop = { voice.onPlayPause(note.path) },
+                        modifier = Modifier.padding(top = 10.dp)
                     )
                 }
                 Text(
@@ -294,3 +329,21 @@ internal fun shareAnnotation(context: Context, a: Annotation, book: Book) {
 
 private val ACTION = 84.dp
 private val LIST_WIDTH = 720.dp
+
+/**
+ * What the annotation cards need to play a voice note back (owner, M5), so a card stays a drawing and the player
+ * stays in the ViewModel.
+ *
+ * Passed through the composition rather than down three layers of parameters: it is the same for every card on the
+ * screen, and nothing between the screen and a card has any use for it.
+ */
+internal data class VoicePlayback(
+    val playingPath: String? = null,
+    val positionMillis: Int = 0,
+    val onPlayPause: (String) -> Unit = {}
+)
+
+internal val LocalVoicePlayback = staticCompositionLocalOf { VoicePlayback() }
+
+/** How often the playback bar redraws while a note plays. */
+private const val VOICE_TICK_MS = 120L

@@ -1,0 +1,764 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 17,
+    "identityHash": "67145e2d0fa99f871ff363e87dce8b35",
+    "entities": [
+      {
+        "tableName": "books",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `title` TEXT NOT NULL, `page_count` INTEGER NOT NULL, `storage_mode` TEXT NOT NULL, `location` TEXT NOT NULL, `size_bytes` INTEGER NOT NULL, `added_at` INTEGER NOT NULL, `last_opened_at` INTEGER, `cover_path` TEXT, `password_protected` INTEGER NOT NULL, `last_page` INTEGER, `author` TEXT, `subtitle` TEXT, `edition` TEXT, `publisher` TEXT, `isbn` TEXT, `description` TEXT, `language` TEXT, `released` TEXT, `author_role` TEXT, `author_bio` TEXT, `book_type` TEXT, `right_to_left` INTEGER NOT NULL DEFAULT 0, `page_labels` TEXT, `format` TEXT NOT NULL DEFAULT 'PDF', `last_locator` TEXT, `folder` TEXT, `subjects` TEXT, `print_pages` INTEGER, `series` TEXT, `rating` REAL, `ratings_count` INTEGER, `flow_mode` INTEGER, `flow_locator` TEXT, `favorite` INTEGER NOT NULL DEFAULT 0, `finished_at` INTEGER, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pageCount",
+            "columnName": "page_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "storageMode",
+            "columnName": "storage_mode",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "location",
+            "columnName": "location",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sizeBytes",
+            "columnName": "size_bytes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "addedAt",
+            "columnName": "added_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastOpenedAt",
+            "columnName": "last_opened_at",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "coverPath",
+            "columnName": "cover_path",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "passwordProtected",
+            "columnName": "password_protected",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastPage",
+            "columnName": "last_page",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "author",
+            "columnName": "author",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "subtitle",
+            "columnName": "subtitle",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "edition",
+            "columnName": "edition",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "publisher",
+            "columnName": "publisher",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isbn",
+            "columnName": "isbn",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "language",
+            "columnName": "language",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "released",
+            "columnName": "released",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "authorRole",
+            "columnName": "author_role",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "authorBio",
+            "columnName": "author_bio",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "bookType",
+            "columnName": "book_type",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rightToLeft",
+            "columnName": "right_to_left",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "pageLabels",
+            "columnName": "page_labels",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "format",
+            "columnName": "format",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'PDF'"
+          },
+          {
+            "fieldPath": "lastLocator",
+            "columnName": "last_locator",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "folder",
+            "columnName": "folder",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "subjects",
+            "columnName": "subjects",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "printPages",
+            "columnName": "print_pages",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "series",
+            "columnName": "series",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "rating",
+            "columnName": "rating",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "ratingsCount",
+            "columnName": "ratings_count",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "flowMode",
+            "columnName": "flow_mode",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "flowLocator",
+            "columnName": "flow_locator",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "favorite",
+            "columnName": "favorite",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "finishedAt",
+            "columnName": "finished_at",
+            "affinity": "INTEGER"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "shelves",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `color` TEXT)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "color",
+            "columnName": "color",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "shelf_books",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`shelf_id` INTEGER NOT NULL, `book_id` TEXT NOT NULL, `added_at` INTEGER NOT NULL, `position` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`shelf_id`, `book_id`), FOREIGN KEY(`shelf_id`) REFERENCES `shelves`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`book_id`) REFERENCES `books`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "shelfId",
+            "columnName": "shelf_id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bookId",
+            "columnName": "book_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "addedAt",
+            "columnName": "added_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "position",
+            "columnName": "position",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "shelf_id",
+            "book_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_shelf_books_book_id",
+            "unique": false,
+            "columnNames": [
+              "book_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_shelf_books_book_id` ON `${TABLE_NAME}` (`book_id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "shelves",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "shelf_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "books",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "book_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "bookmarks",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `book_id` TEXT NOT NULL, `page` INTEGER NOT NULL, `color` TEXT NOT NULL, `created_at` INTEGER NOT NULL, `locator` TEXT, FOREIGN KEY(`book_id`) REFERENCES `books`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bookId",
+            "columnName": "book_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "page",
+            "columnName": "page",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "color",
+            "columnName": "color",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "locator",
+            "columnName": "locator",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_bookmarks_book_id",
+            "unique": false,
+            "columnNames": [
+              "book_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_bookmarks_book_id` ON `${TABLE_NAME}` (`book_id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "books",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "book_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "reading_sessions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `book_id` TEXT NOT NULL, `started_at` INTEGER NOT NULL, `ended_at` INTEGER NOT NULL, FOREIGN KEY(`book_id`) REFERENCES `books`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bookId",
+            "columnName": "book_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startedAt",
+            "columnName": "started_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endedAt",
+            "columnName": "ended_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_reading_sessions_book_id",
+            "unique": false,
+            "columnNames": [
+              "book_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_reading_sessions_book_id` ON `${TABLE_NAME}` (`book_id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "books",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "book_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "annotations",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `book_id` TEXT NOT NULL, `page` INTEGER NOT NULL, `page_label` TEXT, `char_start` INTEGER NOT NULL, `char_end` INTEGER NOT NULL, `text` TEXT NOT NULL, `rects` TEXT NOT NULL, `color` TEXT NOT NULL, `note` TEXT, `created_at` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, `locator` TEXT, FOREIGN KEY(`book_id`) REFERENCES `books`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bookId",
+            "columnName": "book_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "page",
+            "columnName": "page",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pageLabel",
+            "columnName": "page_label",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "charStart",
+            "columnName": "char_start",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "charEnd",
+            "columnName": "char_end",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rects",
+            "columnName": "rects",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "color",
+            "columnName": "color",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "note",
+            "columnName": "note",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "locator",
+            "columnName": "locator",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_annotations_book_id",
+            "unique": false,
+            "columnNames": [
+              "book_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_annotations_book_id` ON `${TABLE_NAME}` (`book_id`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "books",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "book_id"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "translations",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `source` TEXT NOT NULL, `translated` TEXT NOT NULL, `from_lang` TEXT NOT NULL, `to_lang` TEXT NOT NULL, `book_id` TEXT, `created_at` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "translated",
+            "columnName": "translated",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "from",
+            "columnName": "from_lang",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "to",
+            "columnName": "to_lang",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bookId",
+            "columnName": "book_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "reading_goals",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`scope` TEXT NOT NULL, `target_minutes` INTEGER NOT NULL, `period` TEXT NOT NULL DEFAULT 'DAY', `remind_enabled` INTEGER NOT NULL DEFAULT 0, `remind_hour` INTEGER NOT NULL DEFAULT 20, `remind_minute` INTEGER NOT NULL DEFAULT 0, `remind_days` INTEGER NOT NULL DEFAULT 127, `updated_at` INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(`scope`))",
+        "fields": [
+          {
+            "fieldPath": "scope",
+            "columnName": "scope",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetMinutes",
+            "columnName": "target_minutes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "period",
+            "columnName": "period",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'DAY'"
+          },
+          {
+            "fieldPath": "remindEnabled",
+            "columnName": "remind_enabled",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "remindHour",
+            "columnName": "remind_hour",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "20"
+          },
+          {
+            "fieldPath": "remindMinute",
+            "columnName": "remind_minute",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "remindDaysMask",
+            "columnName": "remind_days",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "127"
+          },
+          {
+            "fieldPath": "updatedAt",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "scope"
+          ]
+        }
+      },
+      {
+        "tableName": "definitions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `word` TEXT NOT NULL, `part_of_speech` TEXT, `definition` TEXT NOT NULL, `book_id` TEXT, `page` INTEGER, `locator` TEXT, `created_at` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "word",
+            "columnName": "word",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "partOfSpeech",
+            "columnName": "part_of_speech",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "definition",
+            "columnName": "definition",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bookId",
+            "columnName": "book_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "page",
+            "columnName": "page",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "locator",
+            "columnName": "locator",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_definitions_word",
+            "unique": false,
+            "columnNames": [
+              "word"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_definitions_word` ON `${TABLE_NAME}` (`word`)"
+          },
+          {
+            "name": "index_definitions_book_id",
+            "unique": false,
+            "columnNames": [
+              "book_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_definitions_book_id` ON `${TABLE_NAME}` (`book_id`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '67145e2d0fa99f871ff363e87dce8b35')"
+    ]
+  }
+}

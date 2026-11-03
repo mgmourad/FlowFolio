@@ -2,6 +2,7 @@ package com.flowfolio.core.data
 
 import com.flowfolio.core.datastore.SettingsDataSource
 import com.flowfolio.core.model.AppStyle
+import com.flowfolio.core.model.Atmosphere
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.LibrarySort
@@ -29,6 +30,18 @@ interface SettingsRepository {
 
     suspend fun setLibrarySort(sort: LibrarySort)
 
+    /** Reading Atmosphere (owner, M5). */
+    suspend fun setAtmosphereOn(on: Boolean) = Unit
+
+    suspend fun setAtmosphereName(name: String?) = Unit
+
+    suspend fun setAtmospheres(list: List<Atmosphere>) = Unit
+
+    /** First-run splashes and tips (owner, M5). */
+    suspend fun markGuideSeen(id: String) = Unit
+
+    suspend fun clearGuidesSeen() = Unit
+
     suspend fun setReaderSpreads(on: Boolean)
 
     suspend fun setSpreadCoverAlone(on: Boolean)
@@ -38,6 +51,8 @@ interface SettingsRepository {
     suspend fun setPageTurn(turn: PageTurn)
 
     suspend fun setNeonGlow(on: Boolean)
+
+    suspend fun setAutoUpdate(on: Boolean)
 
     suspend fun setOnlineLookup(on: Boolean)
 
@@ -55,6 +70,10 @@ interface SettingsRepository {
     suspend fun setTurnVolume(volume: Float) = Unit
 
     suspend fun setScrubHaptics(on: Boolean) = Unit
+
+    suspend fun setReaderBrightness(brightness: Float) = Unit
+
+    suspend fun setKeepScreenOn(on: Boolean) = Unit
 
     /** The EPUB text settings (M3). */
     suspend fun setReaderText(text: ReaderText) = Unit
@@ -94,6 +113,26 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
         source.setLibrarySort(sort)
     }
 
+    override suspend fun setAtmosphereOn(on: Boolean) {
+        source.setAtmosphereOn(on)
+    }
+
+    override suspend fun setAtmosphereName(name: String?) {
+        source.setAtmosphereName(name)
+    }
+
+    override suspend fun setAtmospheres(list: List<Atmosphere>) {
+        source.setAtmospheres(list)
+    }
+
+    override suspend fun markGuideSeen(id: String) {
+        source.markGuideSeen(id)
+    }
+
+    override suspend fun clearGuidesSeen() {
+        source.clearGuidesSeen()
+    }
+
     override suspend fun setReaderSpreads(on: Boolean) {
         source.setReaderSpreads(on)
     }
@@ -112,6 +151,10 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setNeonGlow(on: Boolean) {
         source.setNeonGlow(on)
+    }
+
+    override suspend fun setAutoUpdate(on: Boolean) {
+        source.setAutoUpdate(on)
     }
 
     override suspend fun setOnlineLookup(on: Boolean) {
@@ -152,6 +195,14 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setScrubHaptics(on: Boolean) {
         source.setScrubHaptics(on)
+    }
+
+    override suspend fun setReaderBrightness(brightness: Float) {
+        source.setReaderBrightness(brightness)
+    }
+
+    override suspend fun setKeepScreenOn(on: Boolean) {
+        source.setKeepScreenOn(on)
     }
 
     override suspend fun setTranslateTo(language: String) {

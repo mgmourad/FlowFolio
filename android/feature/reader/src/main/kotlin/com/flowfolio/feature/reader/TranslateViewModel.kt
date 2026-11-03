@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.SettingsRepository
 import com.flowfolio.core.data.TranslationRepository
+import com.flowfolio.core.model.ReadingPlace
 import com.flowfolio.core.model.Translation
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.Locale
@@ -44,6 +45,7 @@ class TranslateViewModel @Inject constructor(
     private val settings: SettingsRepository
 ) : ViewModel() {
     private val bookId: String? = saved[ReaderViewModel.ARG_BOOK_ID]
+    private var at: ReadingPlace = ReadingPlace.Unknown
     private val _state = MutableStateFlow(TranslateUiState())
     val state: StateFlow<TranslateUiState> = _state.asStateFlow()
 
@@ -55,8 +57,12 @@ class TranslateViewModel @Inject constructor(
 
     private var job: Job? = null
 
-    /** Opens the panel on [text]: detect, then translate into the last language chosen. */
-    fun start(text: String) {
+    /**
+     * Opens the panel on [text]: detect, then translate into the last language chosen. [page] and [locator] are
+     * where the reader asked for it, so the saved translation can take them back (owner, M4b).
+     */
+    fun start(text: String, page: Int? = null, locator: String? = null) {
+        at = ReadingPlace(page, locator)
         job?.cancel()
         job = viewModelScope.launch {
             _state.value = TranslateUiState(source = text, status = TranslateStatus.DETECTING)
@@ -130,7 +136,9 @@ class TranslateViewModel @Inject constructor(
         _state.update {
             it.copy(result = null, status = if (ready) TranslateStatus.TRANSLATING else TranslateStatus.DOWNLOADING)
         }
-        val done = runCatching { repository.translate(s.source, from, s.to, bookId) }.getOrNull()
+        val done = runCatching {
+            repository.translate(s.source, from, s.to, bookId, at)
+        }.getOrNull()
         _state.update {
             if (done != null) {
                 it.copy(result = done.translated, status = TranslateStatus.DONE)

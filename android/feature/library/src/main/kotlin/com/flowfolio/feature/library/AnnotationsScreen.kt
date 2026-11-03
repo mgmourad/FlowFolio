@@ -1,6 +1,13 @@
 package com.flowfolio.feature.library
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -21,12 +28,14 @@ import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,9 +51,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioGlyph
+import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalChromePadding
+import com.flowfolio.core.designsystem.Motion
+import com.flowfolio.core.designsystem.ScrollToTopOnTab
 import com.flowfolio.core.designsystem.Selection
 import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.marker
@@ -78,6 +90,7 @@ fun AnnotationsScreen(onOpenBook: (Book) -> Unit, viewModel: AnnotationsViewMode
     BackHandler(selection.active) { selection.done() }
 }
 
+@Suppress("LongMethod")
 @Composable
 fun AnnotationsContent(
     state: AnnotationsUiState,
@@ -87,8 +100,31 @@ fun AnnotationsContent(
 ) {
     val chrome = LocalChromePadding.current
     val insets = WindowInsets.safeDrawing.asPaddingValues()
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
+    val filteredBooks = remember(state.books, state.chapters, query) {
+        val q = query.trim()
+        if (q.isEmpty()) {
+            state.books
+        } else {
+            state.books.mapNotNull { item ->
+                val score = maxOf(
+                    Fuzzy.score(q, item.book.title),
+                    Fuzzy.score(q, item.book.author),
+                    Fuzzy.score(q, state.chapters[item.latest.id]),
+                    Fuzzy.score(q, item.latest.text),
+                    Fuzzy.score(q, item.latest.note)
+                )
+                if (score > 0) item to score else null
+            }.sortedByDescending { it.second }.map { it.first }
+        }
+    }
     Box(Modifier.fillMaxSize().chromeStart().testTag(LibraryTestTags.ANNOTATIONS)) {
+        val grid = rememberLazyGridState()
+        // Tapping the tab shows this page from the top (owner, M4c).
+        ScrollToTopOnTab("annotations", grid)
         LazyVerticalGrid(
+            state = grid,
             columns = GridCells.Adaptive(CARD_MIN),
             contentPadding = PaddingValues(
                 start = 18.dp,
@@ -101,16 +137,41 @@ fun AnnotationsContent(
             modifier = Modifier.fillMaxSize()
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
+                val keys = filteredBooks.map { it.book.id }
                 Column(Modifier.padding(start = 4.dp, top = 10.dp, bottom = 4.dp).reveal(0)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            stringResource(R.string.annotations_title),
-                            style = FlowFolioType.screenTitle.merge(FlowFolio.title),
-                            modifier = Modifier.weight(1f)
+                    ScreenHeader(
+                        title = stringResource(R.string.annotations_title),
+                        slogan = stringResource(R.string.annotations_slogan),
+                        actions = {
+                            SelectControls(selection, keys) {
+                                FlowFolioIconButton(
+                                    onClick = {
+                                        searchOpen = !searchOpen
+                                        if (!searchOpen) query = ""
+                                    },
+                                    modifier = Modifier.testTag(LibraryTestTags.SEARCH)
+                                ) {
+                                    FlowFolioGlyph(Glyph.Search, stringResource(R.string.action_search))
+                                }
+                            }
+                        }
+                    )
+                    AnimatedVisibility(
+                        visible = searchOpen,
+                        enter = expandVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) +
+                            slideInVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { -it / 3 } +
+                            fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)),
+                        exit = shrinkVertically(tween(Motion.FAST_MS, easing = Motion.EaseInOut)) +
+                            fadeOut(tween(Motion.FAST_MS, easing = Motion.EaseInOut))
+                    ) {
+                        SearchField(
+                            query = query,
+                            onQuery = { query = it },
+                            hintRes = R.string.search_annotations_hint,
+                            autoFocus = true
                         )
-                        SelectControls(selection, state.books.map { it.book.id })
                     }
-                    SelectionRow(selection, state.books.map { it.book.id }, onDeleteChosen)
+                    SelectionRow(selection, keys, onDeleteChosen)
                     if (state.total > 0) {
                         Text(
                             stringResource(
@@ -127,7 +188,7 @@ fun AnnotationsContent(
             if (!state.loading && state.total == 0) {
                 item(span = { GridItemSpan(maxLineSpan) }) { NoAnnotations(Modifier.reveal(1)) }
             }
-            itemsIndexed(state.books, key = { _, entry -> entry.book.id }) { i, item ->
+            itemsIndexed(filteredBooks, key = { _, entry -> entry.book.id }) { i, item ->
                 Box(Modifier.animateItem().reveal(1 + i)) {
                     AnnotatedBookItem(item, state.chapters[item.latest.id], selection, onOpenBook)
                 }

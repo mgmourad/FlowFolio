@@ -34,4 +34,7 @@
     <string name="riffle_demo_light">Light</string>
     <string name="riffle_demo_spreads">Spreads</string>
     <string name="riffle_demo_single">Single pages</string>
+    <!-- Detour (owner, M5). -->
+    <string name="riffle_detour_mark">Hold to mark a detour</string>
+    <string name="riffle_detour_back">Back to the detour mark</string>
 </resources>

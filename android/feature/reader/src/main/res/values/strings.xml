@@ -108,6 +108,10 @@
     <string name="reader_delete">Delete</string>
     <string name="reader_save">Save</string>
     <string name="highlight_yellow">Yellow</string>
+    <string name="highlight_orange">Orange</string>
+    <string name="highlight_teal">Teal</string>
+    <string name="highlight_mint">Mint</string>
+    <string name="highlight_coral">Coral</string>
     <string name="highlight_green">Green</string>
     <string name="highlight_blue">Blue</string>
     <string name="highlight_pink">Pink</string>
@@ -135,4 +139,38 @@
     <string name="flow_status_failed">This book can\'t be reflowed. It stays a PDF.</string>
     <string name="flow_status_on">On: the text flows to fit your screen</string>
     <string name="flow_status_ready">Ready whenever you want it</string>
+    <string name="reader_define">Define</string>
+    <string name="reader_define_note">English Wiktionary · CC BY-SA 4.0 · On your phone</string>
+    <string name="reader_define_working">Looking up definition…</string>
+    <string name="reader_define_not_found">No definition found in the offline dictionary.</string>
+    <string name="reader_chip_brightness">Brightness</string>
+    <string name="reader_brightness_slider">Screen brightness</string>
+    <string name="reader_chip_keep_screen_on">Keep screen on</string>
+    <string name="reader_dictionary">Dictionary</string>
+    <string name="reader_tab_definitions">Definitions</string>
+    <string name="reader_tab_translations">Translations</string>
+    <string name="reader_dictionary_search_hint">Search words, definitions or translations</string>
+    <string name="reader_definitions_empty">No definitions saved in this book yet. Select a word while reading and tap Define.</string>
+    <string name="reader_translations_empty">No translations saved in this book yet. Select text while reading and tap Translate.</string>
+    <string name="reader_dictionary_no_match">No matches found.</string>
+    <!-- Voice notes (owner, M5). -->
+    <string name="reader_voice_record">Record a voice note</string>
+    <string name="reader_voice_stop">Stop recording</string>
+    <string name="reader_voice_denied">FlowFolio needs the microphone to record a voice note.</string>
+    <string name="reader_atmosphere">Atmosphere</string>
+    <string name="reader_atmosphere_none">None</string>
+    <!-- VoiceMark (owner, M5). -->
+    <string name="reader_voicemark">VoiceMark</string>
+    <string name="reader_voicemark_record">Record a VoiceMark</string>
+    <string name="reader_voicemark_stop">Stop recording</string>
+    <string name="reader_voicemark_play">Play this VoiceMark</string>
+    <string name="reader_voicemark_stop_playing">Stop playing</string>
+    <string name="reader_annotation_delete">Delete this highlight</string>
+    <string name="reader_definition_forget">Forget this definition</string>
+    <string name="reader_translation_forget">Forget this translation</string>
+    <string name="reader_voicemark_pause">Pause</string>
+    <string name="reader_voicemark_discard">Delete this VoiceMark</string>
+    <string name="reader_tab_notes">Notes</string>
+    <string name="reader_voicemarks_empty">No VoiceMarks in this book yet. Select a passage and tap VoiceMark to speak one.</string>
+    <string name="reader_detour_marked">Detour marked \u2014 tap the mark to come back</string>
 </resources>

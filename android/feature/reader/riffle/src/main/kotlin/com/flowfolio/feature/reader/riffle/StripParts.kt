@@ -109,7 +109,7 @@ internal class StripParts(
     private val bookHeight = BOOK_HEIGHT_DP * d
     private val bookLine =
         Stroke(width = 1.6f * d, cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round)
-    private val pageFill = if (dark) Color(0xFFD6CBB8) else Color(0xFFF3EBDB)
+    private val pageFill = boards.pageColor ?: if (dark) Color(0xFFD6CBB8) else Color(0xFFF3EBDB)
     private val book = openBook()
     private val flipping = Array(FLIP_PAGES) { Path() }
     private var flipPhase = 0f
@@ -174,6 +174,23 @@ internal class StripParts(
                 )
             }
         }
+    }
+
+    /**
+     * The detour mark on the bar (owner, M5): a slim notch standing in the block where the reader left off, so the
+     * place is visible on the strip itself and not only beside the page number.
+     *
+     * Nothing is drawn while no detour is marked, which is why the scrubber's screenshots are unchanged by it.
+     */
+    fun DrawScope.paintDetour(tint: Color) {
+        val marked = state.detourUnit ?: return
+        val x = g.x0 + (g.x1 - g.x0) * state.mapping.fractionOf(marked)
+        val top = g.top + 2 * d
+        val bottom = g.bottom - 2 * d
+        drawRect(Color.Black.copy(alpha = 0.25f), Offset(x - d, top), Size(2.6f * d, bottom - top))
+        drawRect(tint, Offset(x - 1.3f * d, top), Size(2.6f * d, bottom - top))
+        // A small flag at the top, so it reads as a place to come back to rather than a page edge.
+        drawCircle(tint, 3.2f * d, Offset(x, top))
     }
 
     /**
@@ -242,6 +259,9 @@ internal class StripParts(
      * faster the faster it goes (forward turns them right to left, as reading does).
      */
     private fun DrawScope.paintBook(grab: Float) {
+        if (boards.pageColor != null) {
+            drawPath(book.cover, boards.main)
+        }
         drawPath(book.pages, pageFill)
         drawPath(book.cover, ink, style = bookLine)
         drawPath(book.pages, ink, style = bookLine)

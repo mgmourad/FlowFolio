@@ -1,5 +1,9 @@
 package com.flowfolio.feature.reader
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -10,6 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -27,10 +32,13 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.data.DefaultDictionaryRepository
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioPalette
+import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.HighlightColor
 import com.flowfolio.core.model.PageRect
@@ -44,16 +52,25 @@ import kotlinx.coroutines.launch
 /** Highlights by page, for the page panes (they turn with the page). */
 internal val LocalHighlights = staticCompositionLocalOf<Map<Int, List<Annotation>>> { emptyMap() }
 
-/** The bar's last action: Copy for a new selection, Delete (a [warn]ing) for an existing highlight. */
-internal class BarExtra(val label: Int, val warn: Boolean, val onClick: () -> Unit)
+/**
+ * The bar's last action: Copy for a new selection, Delete (a [warn]ing) for an existing highlight.
+ *
+ * [glyph] is what the bar draws; the label stays for the screen reader and the long-press tooltip, so the bar reads
+ * as pictures without becoming a guessing game (owner, M5 round).
+ */
+internal class BarExtra(val label: Int, val glyph: Glyph, val warn: Boolean, val onClick: () -> Unit)
 
 /** What the highlight bar can do. */
+@Suppress("LongParameterList")
 internal class HighlightActions(
     val current: HighlightColor?,
     val onColour: (HighlightColor) -> Unit,
     val onNote: () -> Unit,
     val onShare: () -> Unit,
     val onTranslate: () -> Unit,
+    val onDefine: (() -> Unit)? = null,
+    /** Speaks a note against the passage instead of typing one (owner, M5). */
+    val onVoiceMark: () -> Unit = {},
     val extra: BarExtra
 )
 
@@ -70,7 +87,8 @@ internal sealed interface NoteTarget {
  */
 @Stable
 internal class Annotating(
-    private val vm: ReaderAnnotationsViewModel,
+    /** Also the way to the recorder behind voice notes (owner, M5). */
+    internal val annotations: ReaderAnnotationsViewModel,
     private val texts: PageTexts,
     private val scope: CoroutineScope,
     private val labelOf: (Int) -> String?,
@@ -97,8 +115,14 @@ internal class Annotating(
     var lens by mutableStateOf(Offset.Unspecified)
     var note by mutableStateOf<NoteTarget?>(null)
 
+    /** The highlight a VoiceMark is being recorded against (owner, M5); null when none is. */
+    var voiceMarking by mutableStateOf<Long?>(null)
+
     /** A passage being translated (the translate panel is open). */
-    var translating by mutableStateOf<String?>(null)
+    var translating by mutableStateOf<TranslateRequest?>(null)
+
+    /** A single word being defined (the define panel is open; M3T3). */
+    var defining by mutableStateOf<DefineRequest?>(null)
 
     /** The book, for the reference under a shared quote. */
     var title: String = ""
@@ -173,7 +197,7 @@ internal class Annotating(
     fun save(colour: HighlightColor) {
         val new = selection() ?: return
         lastColour = colour
-        vm.highlight(new, colour)
+        annotations.highlight(new, colour)
         pick.clear()
     }
 
@@ -182,10 +206,19 @@ internal class Annotating(
         note = NoteTarget.New(new, lastColour)
     }
 
+    /** Keeps the selection as a highlight and opens a VoiceMark on it (owner, M5). */
+    fun voiceForSelection() {
+        val passage = selection() ?: return
+        annotations.highlightThen(passage, lastColour) { id ->
+            voiceMarking = id
+            pick.clear()
+        }
+    }
+
     fun saveNote(text: String) {
         when (val target = note) {
-            is NoteTarget.New -> vm.highlight(target.highlight, target.color, text)
-            is NoteTarget.Existing -> vm.setNote(target.annotation.id, text)
+            is NoteTarget.New -> annotations.highlight(target.highlight, target.color, text)
+            is NoteTarget.Existing -> annotations.setNote(target.annotation.id, text)
             null -> Unit
         }
         note = null
@@ -194,12 +227,12 @@ internal class Annotating(
 
     fun recolour(a: Annotation, colour: HighlightColor) {
         lastColour = colour
-        vm.recolour(a.id, colour)
+        annotations.recolour(a.id, colour)
         pick.clear()
     }
 
     fun delete(a: Annotation) {
-        vm.remove(a.id)
+        annotations.remove(a.id)
         pick.clear()
     }
 }
@@ -254,7 +287,9 @@ internal fun Annotating.byPage(): Map<Int, List<Annotation>> = byPage
 internal fun BoxScope.AnnotatingLayer(annotating: Annotating, s: ReaderState.Ready) {
     val pick = annotating.pick
     Lens(annotating)
-    if (!pick.active && annotating.note == null && annotating.translating == null) return
+    val hasOverlay = annotating.note != null || annotating.translating != null ||
+        annotating.defining != null || annotating.voiceMarking != null
+    if (!pick.active && !hasOverlay) return
     FlowFolioPalette(dark = s.tone.dark) {
         if (pick.selecting) {
             SelectionMarks(pick, annotating::frameOfPick, FlowFolio.palette.item, onLens = { annotating.lens = it }) {
@@ -262,13 +297,22 @@ internal fun BoxScope.AnnotatingLayer(annotating: Annotating, s: ReaderState.Rea
             }
         }
         val note = annotating.note
+        val voiceMark = annotating.voiceMarking
         val editing = pick.editing
         val translating = annotating.translating
+        val defining = annotating.defining
         when {
+            defining != null -> {
+                SelectionCatcher { annotating.defining = null }
+                DefineOverlay(defining, onClose = { annotating.defining = null })
+            }
+
             translating != null -> {
                 SelectionCatcher { annotating.translating = null }
                 TranslateOverlay(translating, onClose = { annotating.translating = null })
             }
+
+            voiceMark != null -> VoiceMarkLayer(annotating, voiceMark)
 
             note != null -> NoteLayer(annotating, note)
 
@@ -284,6 +328,7 @@ internal fun BoxScope.AnnotatingLayer(annotating: Annotating, s: ReaderState.Rea
 private fun BoxScope.EditingBar(annotating: Annotating, editing: Annotation) {
     val context = LocalContext.current
     val around = annotating.around(editing.page, editing.rects) ?: return
+    val singleWord = DefaultDictionaryRepository.isSingleWord(editing.text)
     Box(Modifier.matchParentSize()) {
         SelectionCatcher { annotating.pick.clear() }
         HighlightBar(
@@ -293,8 +338,16 @@ private fun BoxScope.EditingBar(annotating: Annotating, editing: Annotation) {
                 onColour = { annotating.recolour(editing, it) },
                 onNote = { annotating.note = NoteTarget.Existing(editing) },
                 onShare = { share(context, annotating.quote(editing.text, editing.page, editing.label)) },
-                onTranslate = { annotating.translating = editing.text },
-                extra = BarExtra(R.string.reader_delete, warn = true) { annotating.delete(editing) }
+                onTranslate = {
+                    annotating.translating = TranslateRequest(editing.text, editing.page, editing.locator)
+                },
+                onDefine = if (singleWord) {
+                    { annotating.defining = DefineRequest(editing.text, editing.page, editing.locator) }
+                } else {
+                    null
+                },
+                onVoiceMark = { annotating.voiceMarking = editing.id },
+                extra = BarExtra(R.string.reader_delete, Glyph.Trash, warn = true) { annotating.delete(editing) }
             )
         )
     }
@@ -307,15 +360,25 @@ private fun BoxScope.SelectionBar(annotating: Annotating) {
     val selection = annotating.selection() ?: return
     val around = annotating.around(selection.page, selection.rects) ?: return
     val quote = annotating.quote(selection.text, selection.page, selection.label)
+    val singleWord = DefaultDictionaryRepository.isSingleWord(selection.text)
     HighlightBar(
         around,
         HighlightActions(
             current = null,
             onColour = annotating::save,
             onNote = annotating::noteForSelection,
+            onVoiceMark = annotating::voiceForSelection,
             onShare = { share(context, quote) },
-            onTranslate = { annotating.translating = selection.text },
-            extra = BarExtra(R.string.reader_copy, warn = false) {
+            onTranslate = {
+                annotating.translating =
+                    TranslateRequest(selection.text, selection.page, selection.locator)
+            },
+            onDefine = if (singleWord) {
+                { annotating.defining = DefineRequest(selection.text, selection.page, selection.locator) }
+            } else {
+                null
+            },
+            extra = BarExtra(R.string.reader_copy, Glyph.Copy, warn = false) {
                 copy(context, quote)
                 annotating.pick.clear()
             }
@@ -365,7 +428,7 @@ private val LENS_LIFT = 72.dp
 
 /** A tap anywhere outside the bar or editor closes it. */
 @Composable
-private fun BoxScope.SelectionCatcher(onTap: () -> Unit) {
+internal fun BoxScope.SelectionCatcher(onTap: () -> Unit) {
     val tap by rememberUpdatedState(onTap)
     Box(Modifier.matchParentSize().pointerInput(Unit) { detectTapGestures { tap() } })
 }

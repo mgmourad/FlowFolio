@@ -7,6 +7,7 @@ import com.flowfolio.core.data.Translator
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
+import com.flowfolio.core.model.ReadingPlace
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.Translation
@@ -41,8 +42,24 @@ private class FakeTranslations(override val translator: Translator) : Translatio
 
     override fun history(limit: Int): Flow<List<Translation>> = saved
 
-    override suspend fun translate(text: String, from: String, to: String, bookId: String?): Translation {
-        val t = Translation(saved.value.size + 1L, text, translator.translate(text, from, to), from, to, bookId, 0)
+    override suspend fun translate(
+        text: String,
+        from: String,
+        to: String,
+        bookId: String?,
+        at: ReadingPlace
+    ): Translation {
+        val t = Translation(
+            saved.value.size + 1L,
+            text,
+            translator.translate(text, from, to),
+            from,
+            to,
+            bookId,
+            0,
+            at.page,
+            at.locator
+        )
         saved.update { listOf(t) + it }
         return t
     }
@@ -63,6 +80,8 @@ private class Settings(initial: UserSettings) : SettingsRepository {
     override suspend fun setPaperStyle(style: PaperStyle) = Unit
     override suspend fun setPageTurn(turn: PageTurn) = Unit
     override suspend fun setNeonGlow(on: Boolean) = Unit
+    override suspend fun setAutoUpdate(on: Boolean) = Unit
+
     override suspend fun setOnlineLookup(on: Boolean) = Unit
     override suspend fun setTranslateTo(language: String) = state.update { it.copy(translateTo = language) }
 }

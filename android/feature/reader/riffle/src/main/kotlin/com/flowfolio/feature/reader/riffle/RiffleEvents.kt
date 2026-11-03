@@ -25,4 +25,7 @@ interface RiffleEvents {
 
     /** Go to [unit]: an arrow at an end of the strip, or the go-to-page field (land there with the turn, spec 5.4). */
     fun onGoTo(unit: Int) = Unit
+
+    /** A detour was marked at [unit], or cleared when null (owner, M5). */
+    fun onDetour(unit: Int?) = Unit
 }

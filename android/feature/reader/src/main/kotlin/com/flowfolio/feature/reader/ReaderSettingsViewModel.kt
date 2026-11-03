@@ -12,15 +12,18 @@ import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.ReaderText
 import com.flowfolio.core.model.UserSettings
+import com.flowfolio.core.model.allAtmospheres
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** Backs the reader's "Aa" sheet. The reader itself observes the same settings and re-lays the book out. */
+@Suppress("TooManyFunctions")
 @HiltViewModel
 class ReaderSettingsViewModel @Inject constructor(
     saved: SavedStateHandle,
@@ -48,6 +51,26 @@ class ReaderSettingsViewModel @Inject constructor(
 
     fun setCoverAlone(on: Boolean) {
         viewModelScope.launch { repository.setSpreadCoverAlone(on) }
+    }
+
+    /**
+     * Puts a Reading Atmosphere on from the "Aa" sheet (owner, M5): the page settings it carries are applied at
+     * once, and the ambience follows from the settings the reader is already watching.
+     */
+    fun chooseAtmosphere(name: String?) {
+        viewModelScope.launch {
+            if (name == null) {
+                // "None": silence, leaving the page as the reader has it.
+                repository.setAtmosphereName(null)
+                return@launch
+            }
+            val settings = repository.settings.first()
+            val chosen = settings.allAtmospheres().firstOrNull { it.name == name } ?: return@launch
+            repository.setAtmosphereName(name)
+            if (!settings.atmosphereOn) repository.setAtmosphereOn(true)
+            repository.setReaderText(chosen.text)
+            repository.setPaperStyle(chosen.paper)
+        }
     }
 
     fun setPaperStyle(style: PaperStyle) {
@@ -90,6 +113,14 @@ class ReaderSettingsViewModel @Inject constructor(
 
     fun setScrubHaptics(on: Boolean) {
         viewModelScope.launch { repository.setScrubHaptics(on) }
+    }
+
+    fun setReaderBrightness(brightness: Float) {
+        viewModelScope.launch { repository.setReaderBrightness(brightness) }
+    }
+
+    fun setKeepScreenOn(on: Boolean) {
+        viewModelScope.launch { repository.setKeepScreenOn(on) }
     }
 
     private companion object {

@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
@@ -31,6 +30,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -39,7 +40,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioAlertDialog
+import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioType
+import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.color
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.Shelf
@@ -221,7 +224,16 @@ private fun ShelfColorRow(selected: ShelfColor?, onSelect: (ShelfColor?) -> Unit
                         .testTag(LibraryTestTags.SHELF_COLOUR_PREFIX + (c?.name ?: "THEME")),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (c == null) Box(Modifier.size(10.dp).border(2.dp, p.background, CircleShape))
+                    if (on) {
+                        val swatch = c.color
+                        FlowFolioGlyph(
+                            Glyph.Check,
+                            contentDescription = null,
+                            color = if (swatch.luminance() > INK_FLIP) Color.Black else Color.White,
+                            size = SWATCH_TICK,
+                            glow = false
+                        )
+                    }
                 }
             }
         }
@@ -240,6 +252,10 @@ private val ShelfColor.label: Int
 
 private const val MAX_NAME = 60
 private val SWATCH = 40.dp
+private val SWATCH_TICK = 18.dp
+
+/** Above this luminance a swatch takes black ink, below it white. */
+private const val INK_FLIP = 0.5f
 
 /**
  * "Add to shelf" for [book]: the picker, and from its "New shelf" row a name dialog that makes the shelf with the

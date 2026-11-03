@@ -23,6 +23,8 @@ data class ReadingSessionEntity(
     @ColumnInfo(name = "ended_at") val endedAt: Long
 )
 
+data class BookReadTotal(@ColumnInfo(name = "book_id") val bookId: String, @ColumnInfo(name = "total") val total: Long)
+
 @Dao
 interface ReadingSessionDao {
     @Insert
@@ -32,10 +34,21 @@ interface ReadingSessionDao {
     @Query("SELECT COALESCE(SUM(ended_at - started_at), 0) FROM reading_sessions WHERE book_id = :bookId")
     fun observeTotal(bookId: String): Flow<Long>
 
+    /** Total time read per book, in milliseconds. */
+    @Query("SELECT book_id, COALESCE(SUM(ended_at - started_at), 0) AS total FROM reading_sessions GROUP BY book_id")
+    fun observeTotalsByBook(): Flow<List<BookReadTotal>>
+
     /** Total time read in the books still in the library, in milliseconds. */
     @Query(
         "SELECT COALESCE(SUM(s.ended_at - s.started_at), 0) FROM reading_sessions s " +
             "JOIN books b ON b.id = s.book_id"
     )
     fun observeLibraryTotal(): Flow<Long>
+
+    /** Total time read in the books still in the library since [sinceMillis], in milliseconds (owner, M3T3). */
+    @Query(
+        "SELECT COALESCE(SUM(s.ended_at - MAX(s.started_at, :sinceMillis)), 0) FROM reading_sessions s " +
+            "JOIN books b ON b.id = s.book_id WHERE s.ended_at > :sinceMillis"
+    )
+    fun observeLibraryTotalSince(sinceMillis: Long): Flow<Long>
 }

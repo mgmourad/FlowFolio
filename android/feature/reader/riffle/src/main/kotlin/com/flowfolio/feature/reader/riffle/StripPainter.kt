@@ -16,8 +16,11 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
-/** The book's cover colours for the boards: [main] and a [dark] shade (spec 4.1). */
-data class BoardColors(val main: Color, val dark: Color)
+/**
+ * The book's cover colours for the boards: [main] and a [dark] shade (spec 4.1), plus optional [pageColor] for the
+ * riffled leaves and open book pages when matched to the reader's paper tone.
+ */
+data class BoardColors(val main: Color, val dark: Color, val pageColor: Color? = null)
 
 /**
  * Draws the fore edge (spec 4.1, the mock's draw order without its floor shadow, owner 2026-10-21): the book's
@@ -27,7 +30,8 @@ data class BoardColors(val main: Color, val dark: Color)
 internal class StripPainter(
     private val state: RiffleScrubberState,
     private val g: StripGeometry,
-    private val dark: Boolean
+    private val dark: Boolean,
+    boards: BoardColors? = null
 ) {
     private val d = g.density
     private val blockHeight = g.bottom - g.top
@@ -36,8 +40,18 @@ internal class StripPainter(
     private val shades = Array(SHADES) { Path() }
     private val shadeColors = Array(SHADES) { i ->
         val m = MIN_SHADE + i / (SHADES - 1f) * SHADE_RANGE
-        val base = if (dark) PAPER_DARK else PAPER_LIGHT
-        Color(base[0] * m / 255f, base[1] * m / 255f, base[2] * m / 255f)
+        val page = boards?.pageColor
+        if (page != null) {
+            Color(
+                (page.red * m).coerceIn(0f, 1f),
+                (page.green * m).coerceIn(0f, 1f),
+                (page.blue * m).coerceIn(0f, 1f),
+                1f
+            )
+        } else {
+            val base = if (dark) PAPER_DARK else PAPER_LIGHT
+            Color(base[0] * m / 255f, base[1] * m / 255f, base[2] * m / 255f)
+        }
     }
 
     // Leaves narrower than their spacing, so the dark between them shows and each page reads on its own.

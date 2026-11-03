@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.flowfolio.feature.reader
 
 import android.content.ComponentCallbacks2
@@ -18,7 +20,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.systemGestureExclusion
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -75,9 +76,11 @@ fun ReaderScreen(
     direction: ReaderSettingsViewModel = hiltViewModel()
 ) {
     val rightToLeft by direction.rightToLeft.collectAsStateWithLifecycle()
+    val userSettings by direction.settings.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val images by viewModel.pageImages.collectAsStateWithLifecycle()
     val navigation by viewModel.navigation.collectAsStateWithLifecycle()
+    ReaderDisplayEffects(userSettings.keepScreenOn, userSettings.readerBrightness)
     TrimMemoryEffect(viewModel::onTrimMemory)
     // System Back closes the book the same way as the Back button (open panels catch it first).
     BackHandler(onBack = onBack)
@@ -120,6 +123,37 @@ private fun placedRibbons(viewModel: ReaderViewModel, bookmarks: ReaderBookmarks
 }
 
 @Composable
+private fun ReaderDisplayEffects(keepScreenOn: Boolean, brightness: Float) {
+    val view = LocalView.current
+    DisposableEffect(view, keepScreenOn) {
+        val prev = view.keepScreenOn
+        view.keepScreenOn = keepScreenOn
+        onDispose { view.keepScreenOn = prev }
+    }
+    val context = LocalContext.current
+    DisposableEffect(context, brightness) {
+        val window = (context as? android.app.Activity)?.window
+        if (window != null) {
+            val attrs = window.attributes
+            attrs.screenBrightness = if (brightness >= 0f) {
+                brightness.coerceIn(0.05f, 1f)
+            } else {
+                android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+            }
+            window.attributes = attrs
+        }
+        onDispose {
+            val w = (context as? android.app.Activity)?.window
+            if (w != null) {
+                val attrs = w.attributes
+                attrs.screenBrightness = android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
+                w.attributes = attrs
+            }
+        }
+    }
+}
+
+@Composable
 private fun ReaderRoot(
     state: ReaderState,
     images: Map<Int, ImageBitmap>,
@@ -135,7 +169,7 @@ private fun ReaderRoot(
         LaunchedEffect(viewport) { viewModel.onViewport(viewport) }
 
         when (val s = state) {
-            ReaderState.Loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+            ReaderState.Loading -> RelayoutHourglass(visible = true)
             is ReaderState.NeedsPassword -> PasswordPrompt(s.wrongPassword, viewModel::submitPassword, onBack)
             is ReaderState.Failed -> ReaderNotice(s, onBack)
             is ReaderState.Ready -> ReadyReader(s, images, navigation, viewModel, bookmarks, marks, onBack)

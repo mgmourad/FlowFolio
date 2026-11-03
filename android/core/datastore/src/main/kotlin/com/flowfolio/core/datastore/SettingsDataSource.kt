@@ -9,8 +9,10 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
 import com.flowfolio.core.model.AppStyle
+import com.flowfolio.core.model.Atmosphere
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.LibrarySort
@@ -48,6 +50,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             paperStyle = p[PAPER_STYLE].toEnum(defaults.paperStyle),
             pageTurn = p[PAGE_TURN].toEnum(defaults.pageTurn),
             neonGlow = p[NEON_GLOW] ?: defaults.neonGlow,
+            autoUpdate = p[AUTO_UPDATE] ?: defaults.autoUpdate,
             onlineLookup = p[ONLINE_LOOKUP] ?: defaults.onlineLookup,
             onlineLookupAsked = p[ONLINE_LOOKUP_ASKED] ?: defaults.onlineLookupAsked,
             translateTo = p[TRANSLATE_TO],
@@ -57,10 +60,17 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             turnSound = p[TURN_SOUND] ?: defaults.turnSound,
             turnVolume = p[TURN_VOLUME]?.coerceIn(0f, 1f) ?: defaults.turnVolume,
             scrubHaptics = p[SCRUB_HAPTICS] ?: defaults.scrubHaptics,
+            readerBrightness = p[READER_BRIGHTNESS]?.let { if (it < 0f) -1f else it.coerceIn(0f, 1f) }
+                ?: defaults.readerBrightness,
+            keepScreenOn = p[KEEP_SCREEN_ON] ?: defaults.keepScreenOn,
             text = readerText(p),
             appStyle = p[APP_STYLE].toEnum(defaults.appStyle),
             dynamicFlowOnOpen = p[FLOW_ON_OPEN] ?: defaults.dynamicFlowOnOpen,
             flowCarry = p[FLOW_CARRY].toEnum(defaults.flowCarry),
+            atmosphereOn = p[ATMOSPHERE_ON] ?: defaults.atmosphereOn,
+            atmosphereName = p[ATMOSPHERE_NAME],
+            atmospheres = AtmosphereCodec.decode(p[ATMOSPHERES]),
+            seenGuides = p[SEEN_GUIDES].orEmpty(),
             materialSeed = p[MATERIAL_SEED].toEnum(defaults.materialSeed)
         )
     }
@@ -161,6 +171,14 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         store.edit { it[SCRUB_HAPTICS] = on }
     }
 
+    suspend fun setReaderBrightness(brightness: Float) {
+        store.edit { it[READER_BRIGHTNESS] = if (brightness < 0f) -1f else brightness.coerceIn(0f, 1f) }
+    }
+
+    suspend fun setKeepScreenOn(on: Boolean) {
+        store.edit { it[KEEP_SCREEN_ON] = on }
+    }
+
     suspend fun setTranslateTo(language: String) {
         store.edit { it[TRANSLATE_TO] = language }
     }
@@ -173,7 +191,38 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         store.edit { it[FLOW_CARRY] = carry.name }
     }
 
+    /** Puts the chosen Reading Atmosphere on, or takes it off, for every book (owner, M5). */
+    suspend fun setAtmosphereOn(on: Boolean) {
+        store.edit { it[ATMOSPHERE_ON] = on }
+    }
+
+    /** Chooses the atmosphere by name; null forgets the choice. */
+    suspend fun setAtmosphereName(name: String?) {
+        store.edit { prefs ->
+            if (name == null) prefs.remove(ATMOSPHERE_NAME) else prefs[ATMOSPHERE_NAME] = name
+        }
+    }
+
+    /** Replaces the reader's own saved atmospheres. */
+    suspend fun setAtmospheres(list: List<Atmosphere>) {
+        store.edit { it[ATMOSPHERES] = AtmosphereCodec.encode(list) }
+    }
+
+    /** Remembers that a first-run splash or tip has been seen (owner, M5). */
+    suspend fun markGuideSeen(id: String) {
+        store.edit { it[SEEN_GUIDES] = it[SEEN_GUIDES].orEmpty() + id }
+    }
+
+    /** Forgets every guide, so the app introduces itself again. */
+    suspend fun clearGuidesSeen() {
+        store.edit { it.remove(SEEN_GUIDES) }
+    }
+
     /** Turning the lookup on or off also counts as having been asked. */
+    suspend fun setAutoUpdate(on: Boolean) {
+        store.edit { it[AUTO_UPDATE] = on }
+    }
+
     suspend fun setOnlineLookup(on: Boolean) {
         store.edit {
             it[ONLINE_LOOKUP] = on
@@ -195,6 +244,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val PAPER_STYLE = stringPreferencesKey("reader_paper")
         val PAGE_TURN = stringPreferencesKey("reader_page_turn")
         val NEON_GLOW = booleanPreferencesKey("neon_glow")
+        val AUTO_UPDATE = booleanPreferencesKey("auto_update")
         val ONLINE_LOOKUP = booleanPreferencesKey("online_lookup")
         val ONLINE_LOOKUP_ASKED = booleanPreferencesKey("online_lookup_asked")
         val TRANSLATE_TO = stringPreferencesKey("translate_to")
@@ -206,6 +256,8 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val TURN_SOUND = booleanPreferencesKey("turn_sound")
         val TURN_VOLUME = floatPreferencesKey("turn_volume")
         val SCRUB_HAPTICS = booleanPreferencesKey("scrub_haptics")
+        val READER_BRIGHTNESS = floatPreferencesKey("reader_brightness")
+        val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val APP_STYLE = stringPreferencesKey("app_style")
         val FLOW_ON_OPEN = booleanPreferencesKey("dynamic_flow_on_open")
         val FLOW_CARRY = stringPreferencesKey("flow_carry")
@@ -216,6 +268,10 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val TEXT_MARGINS = stringPreferencesKey("text_margins")
         val TEXT_JUSTIFY = booleanPreferencesKey("text_justify")
         val TEXT_HYPHENATE = booleanPreferencesKey("text_hyphenate")
+        val ATMOSPHERE_ON = booleanPreferencesKey("atmosphere_on")
+        val ATMOSPHERE_NAME = stringPreferencesKey("atmosphere_name")
+        val ATMOSPHERES = stringPreferencesKey("atmospheres")
+        val SEEN_GUIDES = stringSetPreferencesKey("seen_guides")
     }
 }
 

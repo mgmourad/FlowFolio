@@ -33,11 +33,28 @@ data class AnnotationEntity(
     @ColumnInfo(name = "created_at") val createdAt: Long,
     @ColumnInfo(name = "updated_at") val updatedAt: Long,
     /** An EPUB highlight's `chapter:offset` (ADR-0040; char_start and char_end are chapter offsets). Added in v14. */
-    val locator: String? = null
+    val locator: String? = null,
+    /**
+     * A voice note recorded against this highlight (owner, M5). Added in v20.
+     *
+     * [audioPath] is the file inside the app's own `voice/` directory, [audioMillis] how long it runs, and
+     * [audioWave] the levels drawn as the playback bar's waveform -- sampled while recording, because reading them
+     * back out of the file afterwards would mean decoding the whole thing to draw one small picture.
+     */
+    @ColumnInfo(name = "audio_path") val audioPath: String? = null,
+    @ColumnInfo(name = "audio_millis") val audioMillis: Long? = null,
+    @ColumnInfo(name = "audio_wave") val audioWave: String? = null
 )
 
 @Dao
+@Suppress("TooManyFunctions") // one query per operation; grouping them would only hide them
 interface AnnotationDao {
+    @Query("UPDATE annotations SET audio_path = :path, audio_millis = :millis, audio_wave = :wave WHERE id = :id")
+    suspend fun setVoice(id: Long, path: String?, millis: Long?, wave: String?)
+
+    @Query("SELECT * FROM annotations WHERE id = :id")
+    suspend fun byId(id: Long): AnnotationEntity?
+
     /** How many of [bookId]'s highlights belong to its Dynamic Flow ([flow], those with a locator) or to its PDF. */
     @Query("SELECT COUNT(*) FROM annotations WHERE book_id = :bookId AND (locator IS NOT NULL) = :flow")
     suspend fun countInView(bookId: String, flow: Boolean): Int

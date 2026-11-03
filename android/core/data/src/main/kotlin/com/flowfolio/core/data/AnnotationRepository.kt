@@ -7,6 +7,7 @@ import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.HighlightColor
 import com.flowfolio.core.model.PageRect
 import com.flowfolio.core.model.Passage
+import com.flowfolio.core.model.VoiceNote
 import java.util.Locale
 import javax.inject.Inject
 import kotlinx.coroutines.CoroutineDispatcher
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 /** Highlights and notes. */
+@Suppress("TooManyFunctions") // one per thing that can be done to an annotation
 interface AnnotationRepository {
     /** A book's annotations, in page order. */
     fun observe(bookId: String): Flow<List<Annotation>>
@@ -35,6 +37,9 @@ interface AnnotationRepository {
     suspend fun setNote(id: Long, note: String?)
 
     suspend fun remove(id: Long)
+
+    /** Keeps a voice note with a highlight, or (null) takes it off and deletes its file (owner, M5). */
+    suspend fun setVoice(id: Long, voice: VoiceNote?) = Unit
 
     /** Where EPUB highlights now start after a re-layout, by id (not a change by the reader). */
     suspend fun setPages(pages: Map<Long, Int>) = Unit
@@ -109,9 +114,36 @@ class DefaultAnnotationRepository @Inject constructor(
         note = e.note,
         createdAtMillis = e.createdAt,
         updatedAtMillis = e.updatedAt,
-        locator = e.locator
+        locator = e.locator,
+        voice = e.audioPath?.let { path ->
+            VoiceNote(path = path, millis = e.audioMillis ?: 0L, levels = decodeLevels(e.audioWave))
+        }
     )
+
+    override suspend fun setVoice(id: Long, voice: VoiceNote?) = withContext(io) {
+        if (voice == null) {
+            val existing = dao.byId(id)?.audioPath
+            if (existing != null) runCatching { java.io.File(existing).delete() }
+            dao.setVoice(id, null, null, null)
+        } else {
+            dao.setVoice(id, voice.path, voice.millis, encodeLevels(voice.levels))
+        }
+    }
 }
+
+/** The waveform as two hex digits a sample: small enough for a row, and exact enough to draw. */
+internal fun encodeLevels(levels: List<Float>): String =
+    levels.joinToString("") { "%02x".format((it.coerceIn(0f, 1f) * HEX_MAX).toInt()) }
+
+internal fun decodeLevels(raw: String?): List<Float> {
+    if (raw.isNullOrEmpty()) return emptyList()
+    return raw.chunked(2).mapNotNull { pair ->
+        pair.toIntOrNull(HEX_RADIX)?.let { it / HEX_MAX.toFloat() }
+    }
+}
+
+private const val HEX_MAX = 255
+private const val HEX_RADIX = 16
 
 /** "l,t,r,b;l,t,r,b" with four decimals: about a tenth of a pixel on a phone, and compact. */
 internal fun encode(rects: List<PageRect>): String = rects.joinToString(";") { r ->

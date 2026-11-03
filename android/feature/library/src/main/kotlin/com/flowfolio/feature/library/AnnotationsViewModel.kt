@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.AnnotationRepository
 import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.data.ReaderRepository
+import com.flowfolio.core.data.VoicePlayer
 import com.flowfolio.core.data.flow.ReadingViews
 import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.Book
@@ -69,7 +70,9 @@ class AnnotationsViewModel @Inject constructor(
     private val repository: AnnotationRepository,
     library: LibraryRepository,
     private val reader: ReaderRepository,
-    views: ReadingViews = ReadingViews.ShowAll
+    views: ReadingViews = ReadingViews.ShowAll,
+    /** Plays a highlight's voice note on this page too (owner, M5). */
+    private val voice: VoicePlayer = VoicePlayer()
 ) : ViewModel() {
     private val onlyBook: String? = saved[ARG_BOOK_ID]
 
@@ -133,6 +136,21 @@ class AnnotationsViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), AnnotationsUiState())
 
     fun setNote(a: Annotation, note: String?) = viewModelScope.launch { repository.setNote(a.id, note) }
+
+    /** The voice note playing now, or null (owner, M5). */
+    val voicePlaying: StateFlow<String?> get() = voice.playing
+
+    /** How far that note has got. */
+    val voiceMillis: Int get() = voice.positionMillis
+
+    /** Plays a voice note, or pauses the one already playing. */
+    fun playVoice(path: String) {
+        if (voice.playing.value == path) voice.pause() else voice.play(path)
+    }
+
+    override fun onCleared() {
+        voice.stop()
+    }
 
     fun remove(a: Annotation) = viewModelScope.launch { repository.remove(a.id) }
 

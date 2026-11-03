@@ -3,6 +3,7 @@ package com.flowfolio
 import com.flowfolio.feature.library.AnnotationsViewModel
 import com.flowfolio.feature.library.BookmarksViewModel
 import com.flowfolio.feature.library.DetailsViewModel
+import com.flowfolio.feature.library.DictionaryViewModel
 import com.flowfolio.feature.library.ShelfPageViewModel
 
 internal object Routes {
@@ -18,10 +19,13 @@ internal object Routes {
 
     const val BOOK_BOOKMARKS = "book/{${BookmarksViewModel.ARG_BOOK_ID}}/bookmarks"
     const val BOOK_ANNOTATIONS = "book/{${AnnotationsViewModel.ARG_BOOK_ID}}/annotations"
+    const val BOOK_DICTIONARY = "book/{${DictionaryViewModel.ARG_BOOK_ID}}/dictionary"
 
     fun bookAnnotations(bookId: String) = "book/$bookId/annotations"
 
     fun bookBookmarks(bookId: String) = "book/$bookId/bookmarks"
+
+    fun bookDictionary(bookId: String) = "book/$bookId/dictionary"
 
     const val SHELF = "shelf/{${ShelfPageViewModel.ARG_SHELF_ID}}"
 

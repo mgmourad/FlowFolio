@@ -1,16 +1,13 @@
 package com.flowfolio.feature.reader
 
-import android.graphics.Bitmap
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -18,19 +15,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.color
-import com.flowfolio.core.designsystem.coverColors
 import com.flowfolio.core.designsystem.glass
 import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.BookmarkColor
 import com.flowfolio.core.model.PixelSize
-import com.flowfolio.core.model.UserSettings
 import com.flowfolio.feature.reader.layout.ReaderLayout
 import com.flowfolio.feature.reader.layout.Spreads
 import com.flowfolio.feature.reader.riffle.BoardColors
@@ -43,12 +36,9 @@ import com.flowfolio.feature.reader.riffle.RiffleFlag
 import com.flowfolio.feature.reader.riffle.RiffleHaptic
 import com.flowfolio.feature.reader.riffle.RiffleHaptics
 import com.flowfolio.feature.reader.riffle.RiffleScrubberState
-import com.flowfolio.feature.reader.riffle.RiffleSounds
 import com.flowfolio.feature.reader.riffle.ScrubSpeed
 import com.flowfolio.feature.reader.riffle.Section
 import com.flowfolio.feature.reader.riffle.SectionKind
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /** The open book as the riffle scrubber sees it (ADR-0022): the reader's units, its contents and printed numbers. */
 internal class ReaderBook(
@@ -125,6 +115,10 @@ internal fun RiffleBar(
     val book = riffling.book
     val settings by viewModel.userSettings.collectAsStateWithLifecycle()
     val state = remember(book) { RiffleScrubberState(book, s.unit) }
+    // The mark is kept at the reader's level; the scrubber's copy follows it, so clearing it from beside the page
+    // number also clears the notch on the bar (owner, M5 round).
+    val detourState = LocalDetour.current
+    LaunchedEffect(detourState.unit) { state.detourUnit = detourState.unit }
     LaunchedEffect(state, s.unit) { state.currentUnit = s.unit }
     val flagColors = BookmarkColor.entries.associateWith { flagColor(it) }
     LaunchedEffect(state, marks, flagColors) {
@@ -136,8 +130,7 @@ internal fun RiffleBar(
         val height = with(density) { LOUPE_PAGE_HEIGHT.dp.roundToPx() }
         thumbnails?.use(PixelSize((height * s.pageAspect).toInt().coerceAtLeast(1), height), s.tone)
     }
-    val cover by viewModel.cover.collectAsStateWithLifecycle()
-    val boards = boardColors(cover)
+    val boards = remember(s.tone) { boardColors(s.tone) }
     val events = rememberReaderEvents(state, settings.scrubHaptics, chrome, riffling.sounds, riffling.land)
     // The glass is drawn behind the dock rather than on it: glass clips, and the loupe rises above the dock.
     Box(Modifier.navigationBarsPadding().padding(horizontal = 12.dp).padding(bottom = 8.dp).fillMaxWidth()) {
@@ -172,9 +165,10 @@ private fun rememberReaderEvents(
 ): RiffleEvents {
     val view = LocalView.current
     val scope = rememberCoroutineScope()
+    val detour = LocalDetour.current
     // The reader's state moves on; the events are kept, so they call the latest landing.
     val landing by rememberUpdatedState(onLand)
-    return remember(state, haptics, chrome, sounds) {
+    return remember(state, haptics, chrome, sounds, detour) {
         object : RiffleEvents {
             override fun onRelease(unit: Int) {
                 sounds.stopRiffle()
@@ -182,6 +176,10 @@ private fun rememberReaderEvents(
             }
 
             override fun onGoTo(unit: Int) = land(unit)
+
+            override fun onDetour(unit: Int?) {
+                if (unit == null) detour.clear() else detour.mark(unit)
+            }
 
             override fun onFlag(flag: RiffleFlag) {
                 val unit = state.book.unitOf(flag.page)
@@ -213,15 +211,50 @@ private fun rememberReaderEvents(
     }
 }
 
-/** The boards in the cover's colours (spec 4.1), else the theme's accent. */
-@Composable
-private fun boardColors(cover: Bitmap?): BoardColors {
-    val accent = FlowFolio.palette.glyph
-    val fromCover by produceState<BoardColors?>(null, cover) {
-        value = cover?.let { bmp -> withContext(Dispatchers.Default) { coverColors(bmp) } }
-            ?.let { BoardColors(it.start, it.end) }
-    }
-    return fromCover ?: BoardColors(accent, lerp(accent, Color.Black, DARK_SHADE))
+/**
+ * Book covers and riffled pages match the page colour chosen for reading:
+ * - On dark reading paper (Rustic, Night, Black), covers match the paper colour and riffled pages are a lighter shade
+ *   of that paper colour (not cream/beige).
+ * - On light reading paper (Printed, Paper, Sepia), the opposite applies: covers match the light paper colour and
+ *   riffled pages are a darker shade of that paper colour.
+ */
+@Suppress("MagicNumber")
+internal fun boardColors(tone: PageTone): BoardColors = when (tone) {
+    PageTone.RUSTIC -> BoardColors(
+        main = Color(0xFF5A160C),
+        dark = Color(0xFF2E0904),
+        pageColor = Color(0xFF8C3528)
+    )
+
+    PageTone.NIGHT -> BoardColors(
+        main = Color(0xFF241063),
+        dark = Color(0xFF100433),
+        pageColor = Color(0xFF4E3596)
+    )
+
+    PageTone.BLACK -> BoardColors(
+        main = Color(0xFF1C1721),
+        dark = Color(0xFF080408),
+        pageColor = Color(0xFF433C4C)
+    )
+
+    PageTone.SEPIA -> BoardColors(
+        main = Color(0xFFF7E3C6),
+        dark = Color(0xFFCFA878),
+        pageColor = Color(0xFFD1B086)
+    )
+
+    PageTone.PAPER -> BoardColors(
+        main = Color(0xFFFFFBEF),
+        dark = Color(0xFFD9CEB8),
+        pageColor = Color(0xFFDCCEB4)
+    )
+
+    PageTone.PRINTED -> BoardColors(
+        main = Color(0xFFF7F5F0),
+        dark = Color(0xFFD5CFC4),
+        pageColor = Color(0xFFD8D0C5)
+    )
 }
 
 /** A bookmark's flag colour; the default red is the ribbon's, so the strip draws it lighter (owner decision 3). */
@@ -230,5 +263,4 @@ private fun flagColor(color: BookmarkColor): Color =
     if (color == BookmarkColor.SUB_ITEM) lerp(color.color, Color.White, LIGHTER) else color.color
 
 private const val LOUPE_PAGE_HEIGHT = 162
-private const val DARK_SHADE = 0.45f
 private const val LIGHTER = 0.45f

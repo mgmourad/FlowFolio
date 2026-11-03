@@ -38,15 +38,29 @@ import androidx.compose.ui.unit.dp
 import com.flowfolio.core.designsystem.FlatCover
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioAlertDialog
+import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioType
+import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.Shelf
 
 /** One entry of a press-and-hold menu; [warn] entries (removing) are in the warning colour. */
 @Composable
-internal fun HoldEntry(label: Int, warn: Boolean = false, onClick: () -> Unit) {
+internal fun HoldEntry(label: Int, warn: Boolean = false, glyph: Glyph? = null, onClick: () -> Unit) {
     DropdownMenuItem(
         text = { Text(stringResource(label), style = if (warn) FlowFolio.subItem else FlowFolio.title) },
+        // A glyph where one says the action plainer than the words do (owner, M5 round: the bin on Remove).
+        leadingIcon = glyph?.let {
+            {
+                FlowFolioGlyph(
+                    it,
+                    contentDescription = null,
+                    color = if (warn) FlowFolio.palette.subItem else FlowFolio.palette.glyph,
+                    size = 18.dp,
+                    glow = false
+                )
+            }
+        },
         onClick = onClick
     )
 }

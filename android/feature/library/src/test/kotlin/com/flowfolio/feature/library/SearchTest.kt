@@ -6,9 +6,11 @@ import com.flowfolio.core.model.BookDetails
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.BookmarkColor
+import com.flowfolio.core.model.DictionaryWord
 import com.flowfolio.core.model.HighlightColor
 import com.flowfolio.core.model.Shelf
 import com.flowfolio.core.model.Translation
+import com.flowfolio.core.model.WordDefinition
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -83,6 +85,44 @@ class SearchTest {
         assertEquals(1, SearchViewModel.search("whaling", sources).groups.getValue(SearchGroup.BOOKS).size)
         assertEquals(1, SearchViewModel.search("sea classics", sources).groups.getValue(SearchGroup.BOOKS).size)
         assertTrue(SearchViewModel.search("  ", sources).empty)
+    }
+
+    @Test
+    fun `definitions are searched and dictionary groups by book`() {
+        val moby = book("m", "Moby-Dick")
+        val def = WordDefinition(1, "ephemeral", "adj.", "Lasting for a very short time.", "m", 12, null, 100L)
+        val sources = SearchViewModel.Sources(
+            books = listOf(moby),
+            shelves = emptyList(),
+            annotations = emptyList(),
+            bookmarks = emptyList(),
+            words = emptyList(),
+            definitions = listOf(def)
+        )
+        val hit = SearchViewModel.search("ephemeral", sources)
+            .groups.getValue(SearchGroup.DICTIONARY).single() as SearchHit.OfDefinition
+        assertEquals("ephemeral", hit.definition.word)
+        assertEquals(moby, hit.book)
+
+        val dictWords = listOf(
+            DictionaryWord(
+                key = "m:ephemeral",
+                word = "ephemeral",
+                partOfSpeech = "adj.",
+                definition = "Lasting for a very short time.",
+                translation = "éphémère",
+                fromLang = "en",
+                toLang = "fr",
+                bookId = "m",
+                page = 12,
+                locator = null,
+                updatedAtMillis = 100L
+            )
+        )
+        val state = DictionaryViewModel.buildState(dictWords, listOf(moby), "short time")
+        assertEquals(1, state.groups.size)
+        assertEquals(moby, state.groups.single().book)
+        assertEquals("ephemeral", state.groups.single().words.single().word)
     }
 
     private fun book(

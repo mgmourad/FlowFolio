@@ -1,7 +1,9 @@
 package com.flowfolio.core.data
 
+import com.flowfolio.core.database.DefinitionDao
 import com.flowfolio.core.database.TranslationDao
 import com.flowfolio.core.database.TranslationEntity
+import com.flowfolio.core.model.ReadingPlace
 import com.flowfolio.core.model.Translation
 import com.google.android.gms.tasks.Task
 import com.google.mlkit.common.model.DownloadConditions
@@ -17,6 +19,7 @@ import javax.inject.Singleton
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -103,7 +106,10 @@ interface TranslationRepository {
     fun observeDictionaryCount(bookId: String): Flow<Int> = flowOf(0)
 
     /** Translates and remembers it. */
-    suspend fun translate(text: String, from: String, to: String, bookId: String?): Translation
+    suspend fun translate(text: String, from: String, to: String, bookId: String?, at: ReadingPlace): Translation
+
+    /** Forgets one translation (owner, M5 round); the passage it was made from is untouched. */
+    suspend fun remove(id: Long) {}
 
     suspend fun clearHistory()
 
@@ -113,20 +119,51 @@ interface TranslationRepository {
 }
 
 @Singleton
-class DefaultTranslationRepository @Inject constructor(
+class DefaultTranslationRepository(
     override val translator: Translator,
     private val dao: TranslationDao,
-    private val clock: Clock
+    private val clock: Clock,
+    private val definitions: DefinitionDao? = null
 ) : TranslationRepository {
+    @Inject
+    constructor(
+        translator: Translator,
+        dao: TranslationDao,
+        definitions: DefinitionDao,
+        clock: Clock
+    ) : this(translator, dao, clock, definitions)
+
     override fun history(limit: Int): Flow<List<Translation>> = dao.observeRecent(limit).map { list ->
-        list.map { Translation(it.id, it.source, it.translated, it.from, it.to, it.bookId, it.createdAt) }
+        list.map {
+            Translation(
+                it.id,
+                it.source,
+                it.translated,
+                it.from,
+                it.to,
+                it.bookId,
+                it.createdAt,
+                it.page,
+                it.locator
+            )
+        }
     }
 
-    override fun wordCount(): Flow<Int> = dao.observeWordCount()
+    override fun wordCount(): Flow<Int> = definitions?.let { defs ->
+        combine(dao.observeWordCount(), defs.observeWordCount()) { a, b -> a + b }
+    } ?: dao.observeWordCount()
 
-    override fun observeDictionaryCount(bookId: String): Flow<Int> = dao.observeCount(bookId)
+    override fun observeDictionaryCount(bookId: String): Flow<Int> = definitions?.let { defs ->
+        combine(dao.observeCount(bookId), defs.observeCount(bookId)) { a, b -> a + b }
+    } ?: dao.observeCount(bookId)
 
-    override suspend fun translate(text: String, from: String, to: String, bookId: String?): Translation {
+    override suspend fun translate(
+        text: String,
+        from: String,
+        to: String,
+        bookId: String?,
+        at: ReadingPlace
+    ): Translation {
         val result = translator.translate(text, from, to)
         val now = clock.now()
         val id = dao.insert(
@@ -136,11 +173,15 @@ class DefaultTranslationRepository @Inject constructor(
                 from = from,
                 to = to,
                 bookId = bookId,
-                createdAt = now
+                createdAt = now,
+                page = at.page,
+                locator = at.locator
             )
         )
-        return Translation(id, text, result, from, to, bookId, now)
+        return Translation(id, text, result, from, to, bookId, now, at.page, at.locator)
     }
+
+    override suspend fun remove(id: Long) = dao.delete(id)
 
     override suspend fun clearHistory() = dao.clear()
 }

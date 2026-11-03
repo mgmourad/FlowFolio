@@ -38,6 +38,8 @@ data class Book(
     val flowLocator: String? = null,
     /** A favourite (owner, M3T2). */
     val favorite: Boolean = false,
+    /** The reader's own intention for this book (owner, M5); null when they have not said. */
+    val intent: ReadingIntent? = null,
     /** When the reader marked it finished (epoch millis); null while not finished. */
     val finishedAtMillis: Long? = null
 ) {
@@ -99,6 +101,8 @@ data class UserSettings(
     val appStyle: AppStyle = AppStyle.FLOWFOLIO,
     /** Material You's colours, when [appStyle] is Material. */
     val materialSeed: MaterialSeed = MaterialSeed.WALLPAPER,
+    /** Fetch a newer build when one is published; Android still asks before installing (ADR-0048). */
+    val autoUpdate: Boolean = false,
     /** Look book details up online (Open Library, ADR-0017). Off until the reader agrees. */
     val onlineLookup: Boolean = false,
     /** Whether the first import has asked about the online lookup yet. */
@@ -117,12 +121,27 @@ data class UserSettings(
     val turnVolume: Float = DEFAULT_SOUND_VOLUME,
     /** Haptic ticks while riffling (ADR-0023). */
     val scrubHaptics: Boolean = true,
+    /** Screen brightness override in the reader (-1 follows system brightness; 0..1 overrides). */
+    val readerBrightness: Float = DEFAULT_BRIGHTNESS,
+    /** Keep the screen on while reading a book. */
+    val keepScreenOn: Boolean = false,
     /** How EPUB text is set: font, size, spacing, margins (M3). */
     val text: ReaderText = ReaderText(),
     /** "Turn on Dynamic Flow upon opening" (ADR-0045): PDFs whose view was never chosen open in Dynamic Flow. */
     val dynamicFlowOnOpen: Boolean = false,
     /** What switching views does with the highlights, notes and bookmarks made in the view being left. */
-    val flowCarry: FlowCarry = FlowCarry.ASK
+    val flowCarry: FlowCarry = FlowCarry.ASK,
+    /** Reading Atmosphere (owner, M5): whether the chosen atmosphere is put on for every book. */
+    val atmosphereOn: Boolean = false,
+    /** The atmosphere in force, by name; null means none has been chosen. */
+    val atmosphereName: String? = null,
+    /** The atmospheres the reader has saved, over and above [AtmospherePresets.all]. */
+    val atmospheres: List<Atmosphere> = emptyList(),
+    /**
+     * Which first-run splashes and tips have been seen (owner, M5), by [Guide] name. A guide is shown once and
+     * then never again, so this only ever grows; "Show me around again" in Settings empties it.
+     */
+    val seenGuides: Set<String> = emptySet()
 )
 
 /** Switching between a PDF and its Dynamic Flow: ask, or (once "don't show again" was chosen) the remembered answer. */
@@ -130,6 +149,7 @@ enum class FlowCarry { ASK, CONVERT, SKIP }
 
 /** The paper sounds' loudness until the reader moves the sliders. */
 const val DEFAULT_SOUND_VOLUME = 0.7f
+const val DEFAULT_BRIGHTNESS = -1f
 
 /** The reader's auto-hide delays (the riffle scrubber's spec 5.7); [NEVER] keeps the controls up. */
 enum class ControlsAutoHide { S3, S5, S8, S15, NEVER }
@@ -141,7 +161,7 @@ enum class ControlsAutoHide { S3, S5, S8, S15, NEVER }
 enum class PaperStyle { AUTO, PAPER, SEPIA, NIGHT, BLACK, RUSTIC }
 
 /** The app's look (ADR-0028): the mock's neon FlowFolio design, classic wood, or Material You. */
-enum class AppStyle { FLOWFOLIO, RUSTIC, MATERIAL }
+enum class AppStyle { FLOWFOLIO, RUSTIC, MATERIAL, AMOLED }
 
 /** Material You's colours: from the wallpaper (Android 12 and later), or one of these seeds' hues (CIE LCh degrees). */
 @Suppress("MagicNumber") // Each seed is its hue; naming the numbers would only repeat the entries' names.
