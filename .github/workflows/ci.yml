@@ -62,7 +62,15 @@ jobs:
           BASE: ${{ needs.changes.outputs.base }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
-          range="$HEAD_SHA"; [ -n "$BASE" ] && range="$BASE..$HEAD_SHA"
+          # A manual run (workflow_dispatch) gets no base, and an empty base would walk the whole
+          # history -- which starts with GitHub's own "Initial commit" and so could never pass. The
+          # history was gated commit by commit when it was pushed, so check only the head commit.
+          range="$HEAD_SHA"
+          if [ -n "$BASE" ]; then
+            range="$BASE..$HEAD_SHA"
+          elif git rev-parse -q --verify "$HEAD_SHA^" >/dev/null 2>&1; then
+            range="$HEAD_SHA^..$HEAD_SHA"
+          fi
           pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9._/-]+\))?!?: .+'
           bad=$(git log --no-merges --format='%s' "$range" | grep -Ev "$pattern" || true)
           if [ -n "$bad" ]; then
