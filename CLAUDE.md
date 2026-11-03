@@ -402,10 +402,13 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     emu-crash-*.db`, delete any `*.lock` under the AVD, and start with `-no-metrics`. Do not change
     `hw.gpu.mode` in `config.ini` (known issue 39) -- pass `-gpu` on the command line if you must. `emu fold` does
     not reliably move a running activity to the cover panel; capture on the inner panel instead.
-42. **No release signing key, and the repository is private.** ADR-0042 expects `flowfolio.releaseSigning.*` in
-    `~/.gradle/gradle.properties` pointing at a keystore in `~/.flowfolio`; only the dev key (ADR-0036) is there, so
-    `assembleRelease` produces an unsigned APK. **Do not create one without the owner**: it is the app's permanent
-    identity, and signing with a different key than v0.3.0-alpha.1 used would stop every existing install upgrading.
+42. **The release signing key is missing from this machine, and the repository is private.** ADR-0042 expects
+    `flowfolio.releaseSigning.*` in `~/.gradle/gradle.properties` pointing at a keystore in `~/.flowfolio`; only the
+    dev key is there, so `assembleRelease` produces an unsigned APK. The key itself **exists** -- the published
+    v0.3.0-alpha.1 APK is signed `CN=FlowFolio Release, O=FlowFolio`, SHA-256
+    `560eb00ca346b33a79d9d9fdd465b0762a8d0d9662b4145406b19e9e06bb7d0d` -- so it has to be restored here, not made
+    again. **Never sign a release with the dev key** (`CN=FlowFolio Dev`, SHA-256 `bf34f1e7...`): Android would
+    treat it as a different app and no existing install could upgrade.
     Separately, `api.github.com/repos/mgmourad/FlowFolio/releases` answers 404 while the repository is private, so
     the in-app update check (ADR-0048) reports "Could not reach the releases page" however correct the code is.
 43. **Tour screenshots are real and go stale.** `feature/library/src/main/res/drawable-nodpi/tour_*.webp` are
