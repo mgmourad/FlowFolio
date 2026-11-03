@@ -266,7 +266,10 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
    importing, or `openBookId` shows "File not found".
 5. Gradle prints "deprecated features ... incompatible with Gradle 10", coming from plugins. Track it.
 6. Branch protection needs a paid plan while the repo is private; `ci-gate` is advisory until then.
-7. Local git identity is the machine's global config (owner chose to keep it).
+7. **Git identity is pinned per repository** (2026-11-03). The machine's global config is a personal address;
+   `git config user.email` in this checkout is the GitHub noreply one, so commits here never carry the
+   personal address again. A fresh clone has to set it again -- the setting lives in `.git/config`, which is
+   not cloned.
 8. PDFium license texts ship as assets but there is no in-app licenses screen yet (needed before release).
 9. Reference Fold: `wm size` reports the inner screen even when folded (use `wm size -d 0`); folders created by adb
    under `Android/data/<pkg>` are invisible to the app; restart adb if the device shows `unauthorized`.
@@ -435,14 +438,19 @@ and `SECURITY.md` are written, issue templates are in place, the README leads wi
 `docs/plans/README.md` explains why the sign-off reports are addressed to the owner. Gitleaks and
 `detect-private-key` pass over the whole tree; nothing tracked is a key, an environment file or a credential.
 
-One thing is the owner's to settle first: **the commit history carries a personal address**
-(`the personal address`) beside the GitHub noreply one. Known issue 7 recorded the choice to keep the machine's git
-identity while the repository was private; a public repository publishes it to anyone who clones. Changing it for
-future commits is one `git config user.email`; changing the past means rewriting history that a release and two
-tags already point at, so it is not something to do casually.
+**The history was rewritten on 2026-11-03** (owner's decision), while the repository was still private and nobody
+else had cloned it. `git-filter-repo` with a mailmap replaced the personal address in all 10 commits that carried
+it with the GitHub noreply one; the last two commits were squashed into one first. The tree came out byte-identical
+(same tree hash), 146 commits, both tags re-pointed and force-pushed, and both GitHub pre-releases kept their APK
+and `.sha256` assets. Known issue 7 now pins the identity per checkout.
 
 The bundled audio is settled (owner, 2026-11-03): the eight ambience beds and the four page-turn `.wav`s are
 royalty-free and are not attributed in the repository. Nothing further to do.
+
+One judgement is still the owner's: **`owlcapone <a second identity>` authored the 14 scaffolding commits of
+2026-10-16** and was left alone, because reassigning authorship that may belong to someone else is not a guess to
+make. If that identity is the owner's own, a second mailmap pass folds it in; if it is a second contributor, their
+address publishes with the repository unless they would rather it did not. Nothing else blocks going public.
 
 ## Decision log
 
