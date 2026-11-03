@@ -394,8 +394,11 @@ class LibraryViewModel @Inject constructor(
             )
         }
         outcome.linkRefused?.let { showDialog(LibraryDialog.LinkNotPossible(it)) }
-        if (outcome.imported.isNotEmpty()) lookUp(outcome.imported)
-        offerShelves(outcome.imported)
+        // Both of these want the screen. The shelves offer waits its turn rather than being painted over by the
+        // lookup question, which is what happened when they were simply shown one after the other.
+        pendingShelves = shelvesOffer(outcome.imported)
+        val asked = outcome.imported.isNotEmpty() && lookUp(outcome.imported)
+        if (!asked) showPendingShelves()
     }
 
     /**
@@ -405,11 +408,18 @@ class LibraryViewModel @Inject constructor(
      * again -- which is remembered like any other thing the app shows once, so "Introduce features again" brings
      * the offer back.
      */
-    private suspend fun offerShelves(books: List<Book>) {
-        if (FOLDER_SHELVES in settingsRepo.settings.first().seenGuides) return
+    private suspend fun shelvesOffer(books: List<Book>): LibraryDialog.FoldersToShelvesAsk? {
+        if (FOLDER_SHELVES in settingsRepo.settings.first().seenGuides) return null
         val plan = FoldersToShelves.plan(books)
-        if (plan.isEmpty()) return
-        showDialog(LibraryDialog.FoldersToShelvesAsk(books, plan.size))
+        return if (plan.isEmpty()) null else LibraryDialog.FoldersToShelvesAsk(books, plan.size)
+    }
+
+    /** Shows the shelves offer if one is waiting and nothing else is on the screen. */
+    private fun showPendingShelves() {
+        pendingShelves?.let {
+            pendingShelves = null
+            showDialog(it)
+        }
     }
 
     /** Makes the shelves the reader agreed to, reusing any that are already there by that name. */
@@ -426,11 +436,16 @@ class LibraryViewModel @Inject constructor(
         if (never) settingsRepo.markGuideSeen(FOLDER_SHELVES)
     }
 
-    /** The online lookup for new books: runs when allowed, or asks once (off until agreed, ADR-0017). */
-    private fun lookUp(books: List<Book>) = viewModelScope.launch {
+    /**
+     * The online lookup for new books: runs when allowed, or asks once (off until agreed, ADR-0017).
+     *
+     * Answers whether it put a question on the screen, so whatever else wanted the screen knows to wait.
+     */
+    private suspend fun lookUp(books: List<Book>): Boolean {
         val enricher = BookEnricher(lookup, library)
         val ask = books.map { enricher.afterImport(it, settingsRepo) }.firstOrNull() ?: false
         if (ask) showDialog(LibraryDialog.AskLookup(books))
+        return ask
     }
 
     /** A file handed over by another app ("Open with", share sheet): always copied. */
@@ -488,11 +503,16 @@ class LibraryViewModel @Inject constructor(
 
     fun onBookOpened(bookId: String) = viewModelScope.launch { library.markOpened(bookId) }
 
+    /** A shelves offer held back while another question has the screen (owner, M5 round 4). */
+    private var pendingShelves: LibraryDialog.FoldersToShelvesAsk? = null
+
     fun dismissDialog() = transient.update { it.copy(dialog = null) }
 
     /** The answer to [LibraryDialog.AskLookup]: remembered, and on yes the new book is looked up straight away. */
     fun onLookupAnswer(dialog: LibraryDialog.AskLookup, allow: Boolean) = viewModelScope.launch {
         dismissDialog()
+        // Whatever was waiting behind this question gets its turn now (owner, M5 round 4: the shelves offer).
+        showPendingShelves()
         settingsRepo.setOnlineLookup(allow)
         if (allow) dialog.books.forEach { BookEnricher(lookup, library).enrich(it) }
     }
