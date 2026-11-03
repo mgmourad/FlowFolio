@@ -265,7 +265,8 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
    go back to the library and wake the device (`input keyevent KEYCODE_WAKEUP; wm dismiss-keyguard`) before
    importing, or `openBookId` shows "File not found".
 5. Gradle prints "deprecated features ... incompatible with Gradle 10", coming from plugins. Track it.
-6. Branch protection needs a paid plan while the repo is private; `ci-gate` is advisory until then.
+6. **Branch protection is now available** (the repo went public 2026-11-03; GitHub gives it free on public
+   repositories). `ci-gate` is still only advisory -- nobody has made it a required check yet.
 7. **Git identity is pinned per repository** (2026-11-03). The machine's global config is a personal address;
    `git config user.email` in this checkout is the GitHub noreply one, so commits here never carry a personal
    address again. A fresh clone has to set it again -- the setting lives in `.git/config`, which is not cloned.
@@ -422,17 +423,16 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     treat it as a different app and no existing install could upgrade. 0.3.0-alpha.2 was signed that way once, by
     the owner's decision; `checkReleaseSigning` in `app/build.gradle.kts` now makes it impossible to repeat by
     accident.
-    Separately, `api.github.com/repos/mgmourad/FlowFolio/releases` answers 404 while the repository is private, so
-    the in-app update check (ADR-0048) can never find anything however correct the code is. Since M5 round 6 it at
-    least says so accurately: `UpdateFailure` carries the reason (`MISSING` for the 404, `OFFLINE`, `BUSY`,
-    `UNEXPECTED`, `DOWNLOAD`) instead of one `offline` flag that reported every failure as an unreachable page.
-    Making the repository public is still the only thing that makes the check *work*.
+    The update check is **resolved** (2026-11-03): the repository is public, the releases API answers 200, and the
+    app reports "You are on the newest build" (checked on `fold8_api37` against the installed 300002). While it was
+    private the API answered 404 and the app reported every failure as an unreachable page; `UpdateFailure` now
+    carries the reason (`OFFLINE`, `MISSING`, `BUSY`, `UNEXPECTED`, `DOWNLOAD`) so the message matches the cause.
 43. **Tour screenshots are real and go stale.** `feature/library/src/main/res/drawable-nodpi/tour_*.webp` are
     screenshots of an actual build at 900 px wide (about 1 MB in all), with larger copies in `docs/screenshots/`
     for the README. Retake both whenever the screens they show change; a tour that shows something the app no
     longer looks like is worse than none.
 
-## Before the repository is made public
+## The repository is public (2026-11-03)
 
 Most of the work is done (2026-11-03): `CLAUDE.md` carries no personal paths or private workflow, `CONTRIBUTING.md`
 and `SECURITY.md` are written, issue templates are in place, the README leads with what the app does, and
@@ -456,8 +456,14 @@ Two things worth knowing about that rewrite:
 The bundled audio is settled (owner, 2026-11-03): the eight ambience beds and the four page-turn `.wav`s are
 royalty-free and are not attributed in the repository. Nothing further to do.
 
-**Nothing now blocks making the repository public.** Doing so is also what makes the in-app update check work
-(known issue 42).
+**The repository was made public on 2026-11-03**, after a final sweep: gitleaks over every commit reports no
+leaks, no absolute personal paths are tracked, `android/gradle.properties` carries only build config and the
+ADR-0042 version, and no commit *tree* contains a personal address either -- an earlier draft of this very section
+quoted the two addresses it had just removed, which a third `--replace-text` pass redacted from the four commits
+that carried them. The in-app update check works from that moment (known issue 42).
+
+Worth doing now that it is public: branch protection on `main` is free on public repositories, so `ci-gate` can
+become a required check (known issue 6), and F-Droid submission is possible whenever the owner wants it.
 
 ## Decision log
 
