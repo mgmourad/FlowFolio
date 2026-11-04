@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -247,6 +248,20 @@ class ShelvesViewModel @Inject constructor(
 
     /** Stands [bookIds] on [shelfId] in this order (drag and drop). */
     fun setOrder(shelfId: Long, bookIds: List<String>) = viewModelScope.launch { shelves.setOrder(shelfId, bookIds) }
+
+    /**
+     * Makes a shelf per folder for [books], reusing any shelf already named after one (owner, 2026-11-03).
+     *
+     * This is the folder's own press-and-hold entry, so it acts at once rather than offering; the offer after a
+     * folder import is [LibraryViewModel]'s. Books inside nested folders land on a shelf named after the folder
+     * they actually sit in, so one call makes the whole tree.
+     */
+    fun foldersToShelves(books: List<Book>) = viewModelScope.launch {
+        val plan = FoldersToShelves.plan(books)
+        if (plan.isEmpty()) return@launch
+        val existing = shelves.observeShelves().first().associate { it.name to it.id }
+        FoldersToShelves.apply(plan, shelves, existing)
+    }
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L

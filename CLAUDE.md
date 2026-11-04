@@ -75,6 +75,13 @@ version parsing and the comparison all work together.
 
 **The launch posts are written and not yet sent**; the owner held them until alpha.3 shipped, which it now has.
 
+**Released as FlowFolio 0.3.0-alpha.4 (build 300004) on 2026-11-03**: three fixes from the owner's own books --
+code listings that came out as columns of single letters, letter-spaced text read as one word per letter, and the
+three bundled ambiences no atmosphere offered -- plus "Make shelves from this folder" in a folder's menu. Engine
+1.2.3, so Dynamic Flow bundles rebuild on first open. All three verified on `fold8_api37`: the DevOps book's
+listings read properly, the atmosphere list offers all eight, and the folder menu made "Career Books" and
+"Programming" from one nested folder.
+
 **Released as FlowFolio 0.3.0-alpha.2 (build 300002) on 2026-11-03**, tag `v0.3.0-alpha.2`, GitHub pre-release.
 Green CI on `c7b2c00`; the minified release APK was installed on `fold8_api37` and checked, extractor included, so
 R8 is not stripping the Chaquopy bridge.
@@ -447,6 +454,18 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     app reports "You are on the newest build" (checked on `fold8_api37` against the installed 300002). While it was
     private the API answered 404 and the app reported every failure as an unreachable page; `UpdateFailure` now
     carries the reason (`OFFLINE`, `MISSING`, `BUSY`, `UNEXPECTED`, `DOWNLOAD`) so the message matches the cause.
+46. **Some PDFs report a font size of 1.** A Packt *Learning DevOps* PDF sets its fonts at size 1 and scales them
+    through the text matrix, so `StyleKey.size` is 1.0 for every style in the book. Anything that derives a length
+    from `size` is then ten times out: it put every character of every code listing in its own column until
+    `Blocks.advanceFor` started measuring the listing instead (2026-11-03). **Heading ranking, the body-style
+    choice and anything else keyed on size are untested against such a book** -- the prose read correctly, but
+    nobody has checked whether its headings are found. Suspect this whenever one book misbehaves and others do
+    not; the debug line to add is in that commit's history.
+47. **A new entry in an actions data class defaults to doing nothing.** `LibraryActions` and `FolderActions` give
+    every handler a `{}` default, so adding one and forgetting to wire it at the construction site compiles,
+    renders the menu entry, and silently does nothing when tapped -- which is exactly what happened to "Make
+    shelves from this folder" first time (2026-11-03). Tap the new entry on a device before believing it.
+
 43. **Tour screenshots are real and go stale.** `feature/library/src/main/res/drawable-nodpi/tour_*.webp` are
     screenshots of an actual build at 900 px wide (about 1 MB in all), with larger copies in `docs/screenshots/`
     for the README. Retake both whenever the screens they show change; a tour that shows something the app no

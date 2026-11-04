@@ -18,7 +18,7 @@ import com.flowfolio.core.conversion.ir.PageKind
 /** `flowfolio.json` for a converted [Document] (`docs/conversion-spec.md` section 3). */
 object SidecarBuilder {
     /** The converter's version, raised whenever its output could change. */
-    const val ENGINE_VERSION = "1.2.2"
+    const val ENGINE_VERSION = "1.2.3"
 
     // One field per section of flowfolio.json, in the spec's order.
     @Suppress("LongMethod")

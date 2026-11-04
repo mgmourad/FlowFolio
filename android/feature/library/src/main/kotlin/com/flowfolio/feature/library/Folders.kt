@@ -97,7 +97,14 @@ internal fun LazyListScope.folderRoots(state: LibraryUiState, actions: LibraryAc
     }
     itemsIndexed(roots, key = { _, f -> "folder-" + f.path }) { i, folder ->
         Box(Modifier.padding(horizontal = 18.dp, vertical = 5.dp).animateItem().reveal(2 + i)) {
-            FolderRow(folder, FolderActions(onOpen = actions.onOpenFolder, onRemove = actions.onRemoveFolder))
+            FolderRow(
+                folder,
+                FolderActions(
+                    onOpen = actions.onOpenFolder,
+                    onRemove = actions.onRemoveFolder,
+                    onMakeShelves = actions.onFolderToShelves
+                )
+            )
         }
     }
 }
@@ -107,6 +114,8 @@ internal data class FolderActions(
     val onOpen: (String) -> Unit,
     /** Asks to remove the folder's books from the library. */
     val onRemove: (FolderEntry) -> Unit,
+    /** Makes a shelf from this folder and from every folder inside it. */
+    val onMakeShelves: (FolderEntry) -> Unit = {},
     val selection: Selection? = null
 )
 
@@ -208,6 +217,13 @@ private fun FolderPress(folder: FolderEntry, actions: FolderActions, content: @C
                 onClick = {
                     menu = false
                     actions.onOpen(folder.path)
+                }
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.action_folder_to_shelves), style = FlowFolio.title) },
+                onClick = {
+                    menu = false
+                    actions.onMakeShelves(folder)
                 }
             )
             DropdownMenuItem(

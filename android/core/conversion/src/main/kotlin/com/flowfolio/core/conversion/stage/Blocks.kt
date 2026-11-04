@@ -297,7 +297,7 @@ class Blocks(styles: List<Style>) {
      * edge in character widths), and the blank lines the gaps between rows leave.
      */
     private fun codeText(lines: List<Line>): String {
-        val advance = (byKey[lines.first().style]?.advance ?: 0f).takeIf { it > 0f } ?: estimatedAdvance(lines)
+        val advance = advanceFor(lines)
         val left = lines.minOf { it.box.left }
         val rows = rowsOf(lines)
         val step = lineStep(rows)
@@ -352,8 +352,24 @@ class Blocks(styles: List<Style>) {
         return steps.sorted().getOrNull(steps.size / 2) ?: (first.box.height * DEFAULT_LINE_STEP)
     }
 
-    /** A character width from the lines themselves, when the style has none measured. */
-    private fun estimatedAdvance(lines: List<Line>): Float {
+    /**
+     * The character cell to lay this listing out on.
+     *
+     * The listing's own spacing comes first, because it is measured from these very glyphs; the style's width is
+     * an inference across the book and only stands in when this listing offers nothing to measure. Preferring the
+     * style was what broke a Packt DevOps PDF (owner, 2026-11-03): it sets its fonts at size 1 and scales them
+     * through the text matrix, so every style came through as `size=1.0`, and the width fell back to
+     * `size * TYPICAL_MONO_EMS` = 0.6pt against a real cell of 6pt. Ten times too narrow puts every character in
+     * its own column, which is how whole listings came out as vertical columns of single letters.
+     */
+    internal fun advanceFor(lines: List<Line>): Float {
+        estimatedAdvance(lines)?.let { return it }
+        val style = (byKey[lines.first().style]?.advance ?: 0f).takeIf { it > 0f }
+        return style ?: (lines.first().style.size * TYPICAL_MONO_EMS)
+    }
+
+    /** The median distance between neighbouring characters here, or null when there is no pair to measure. */
+    private fun estimatedAdvance(lines: List<Line>): Float? {
         val advances = lines.flatMap { l ->
             l.spans.flatMap { s ->
                 (0 until minOf(s.text.length, s.lefts.size) - 1)
@@ -361,7 +377,7 @@ class Blocks(styles: List<Style>) {
                     .map { s.lefts[it + 1] - s.lefts[it] }
             }
         }.filter { it > 0f }.sorted()
-        return advances.getOrNull(advances.size / 2) ?: (lines.first().style.size * TYPICAL_MONO_EMS)
+        return advances.getOrNull(advances.size / 2)
     }
 
     private fun regionBlock(page: Page, region: Region): Block {

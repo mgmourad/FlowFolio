@@ -112,6 +112,7 @@ object Extraction {
     private fun lineOf(raw: RawPage, chars: List<Int>): Line? {
         val boxed = chars.filter { raw.hasBox(it) }
         if (boxed.none { !raw.text[it].isWhitespace() }) return null
+        val typicalGap = typicalGap(raw, chars)
         val spans = ArrayList<Span>()
         val text = StringBuilder()
         var box: Box? = null
@@ -139,9 +140,10 @@ object Extraction {
             val key = styleOf(raw, i)
             if (style != null && key != style && !raw.text[i].isWhitespace()) close()
             if (!raw.text[i].isWhitespace()) style = key
-            // A gap of a quarter em or more is a word space the PDF left out.
+            // A quarter em *more than this line's usual gap* is a word space the PDF left out. On ordinary text
+            // the usual gap is nil and this is the plain quarter-em rule; [typicalGap] explains the rest.
             val gap = b.left - lastRight
-            if (!lastRight.isNaN() && gap > raw.fontSizes[i] * WORD_GAP_EMS && text.isNotEmpty() &&
+            if (!lastRight.isNaN() && gap > typicalGap + raw.fontSizes[i] * WORD_GAP_EMS && text.isNotEmpty() &&
                 text.last() != ' '
             ) {
                 space()
@@ -157,6 +159,43 @@ object Extraction {
         if (spans.isEmpty()) return null
         val lineBox = spans.map { it.box }.reduce(Box::union)
         return Line(spans, lineBox)
+    }
+
+    /**
+     * The gap this line leaves between characters *within* a word, which a word space has to beat.
+     *
+     * The plain rule -- a quarter em of empty space means a word space the PDF left out -- reads two common
+     * layouts as all spaces. Letter-spaced display text ("w w w . p a c k t . c o m" set with tracking) stands
+     * every glyph a quarter em from the next, and monospaced code does the same by accident, because PDFium
+     * reports each glyph's tight bounding box while the font advances a full, wider cell: `.` and `i` leave most
+     * of their cell empty. Both came out of a Packt PDF as one word per character (owner, 2026-11-03).
+     *
+     * What separates them from real spacing is the *distribution*: ordinary text has gaps near nil and a few wide
+     * ones, while these have nearly every gap wide and alike. The low quartile of the gaps is therefore what a
+     * within-word pair costs on this line, and a word space has to clear it by the usual quarter em -- roughly a
+     * space's own width, which is what a real space adds on top of any tracking. On ordinary text the quartile is
+     * nil and the rule is exactly the old one.
+     *
+     * The quartile rather than the median, because a line of short words ("I am a cat") is half word gaps, and a
+     * median would land on one and merge the lot. A quarter still lands among the within-word gaps unless nearly
+     * every word is a single letter, which is indistinguishable from tracking anyway.
+     */
+    private fun typicalGap(raw: RawPage, chars: List<Int>): Float {
+        val gaps = ArrayList<Float>()
+        var lastRight = Float.NaN
+        for (i in chars) {
+            if (!raw.hasBox(i)) {
+                lastRight = Float.NaN
+                continue
+            }
+            val b = raw.box(i)
+            if (!lastRight.isNaN() && !raw.text[i].isWhitespace()) gaps += b.left - lastRight
+            lastRight = b.right
+        }
+        // Too few gaps to tell a habit from an accident; fall back to the plain rule.
+        if (gaps.size < MIN_GAPS_FOR_QUARTILE) return 0f
+        gaps.sort()
+        return gaps[gaps.size / QUARTILE].coerceAtLeast(0f)
     }
 
     /** The style key of character [i]. */
@@ -180,6 +219,8 @@ object Extraction {
     private const val MIN_LINE_OVERLAP = 0.5f
     private const val JOIN_GAP_EMS = 1f
     private const val WORD_GAP_EMS = 0.25f
+    private const val MIN_GAPS_FOR_QUARTILE = 3
+    private const val QUARTILE = 4
     private const val BOLD_WEIGHT = 600
     private const val SCANNED_MAX_CHARS = 20
     private const val SCANNED_IMAGE_SHARE = 0.5f

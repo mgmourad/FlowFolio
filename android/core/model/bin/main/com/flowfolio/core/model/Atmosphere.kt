@@ -91,7 +91,44 @@ object AtmospherePresets {
         builtIn = true
     )
 
-    val all = listOf(RainyAfternoon, Fireside, GardenMorning, MidnightReading, MinimalFocus)
+    // The first five left Ocean, Stream and Cafe with no atmosphere of their own, so three of the eight bundled
+    // recordings could only be reached by building a custom atmosphere -- which looked, reasonably, like the
+    // sounds were missing from the app (owner, 2026-11-03). Every bundled ambience now has one.
+
+    val Seaside = Atmosphere(
+        name = "Seaside",
+        text = ReaderText(lineSpacing = LineSpacing.RELAXED, margins = PageMargins.WIDE),
+        paper = PaperStyle.PAPER,
+        ambient = Ambient.OCEAN,
+        builtIn = true
+    )
+
+    val Streamside = Atmosphere(
+        name = "Streamside",
+        text = ReaderText(font = ReadingFont.LITERATA, lineSpacing = LineSpacing.RELAXED),
+        paper = PaperStyle.PAPER,
+        ambient = Ambient.STREAM,
+        builtIn = true
+    )
+
+    val CornerCafe = Atmosphere(
+        name = "Corner Café",
+        text = ReaderText(margins = PageMargins.WIDE),
+        paper = PaperStyle.SEPIA,
+        ambient = Ambient.CAFE,
+        builtIn = true
+    )
+
+    val all = listOf(
+        RainyAfternoon,
+        Fireside,
+        GardenMorning,
+        MidnightReading,
+        MinimalFocus,
+        Seaside,
+        Streamside,
+        CornerCafe
+    )
 }
 
 /**

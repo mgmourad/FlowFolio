@@ -30,6 +30,7 @@
     <string name="folders_empty">Folders you import show here, with every folder inside them.</string>
     <string name="action_open">Open</string>
     <string name="action_remove_folder">Remove from library</string>
+    <string name="action_folder_to_shelves">Make shelves from this folder</string>
     <string name="remove_folder_body">“%1$s” and every folder in it leave the library. FlowFolio’s copies of their books, ribbons and annotations are deleted; original files you read in place are not affected.</string>
     <plurals name="folder_count">
         <item quantity="one">%d folder</item>
@@ -88,6 +89,10 @@
     <plurals name="msg_added_books">
         <item quantity="one">Added %d book</item>
         <item quantity="other">Added %d books</item>
+    </plurals>
+    <plurals name="msg_shelves_made">
+        <item quantity="one">Made 1 shelf from this folder</item>
+        <item quantity="other">Made %1$d shelves from this folder</item>
     </plurals>
     <plurals name="book_count">
         <item quantity="one">%d book</item>

@@ -5,6 +5,34 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [0.3.0-alpha.4] - 2026-11-03
+
+### Fixed
+- **Code listings came out as columns of single letters** in some books (owner, reported on a Packt *Learning
+  DevOps* PDF). A listing is laid out on a character cell, each glyph placed at `(x - left) / cell` so that code
+  indented or drawn with characters keeps its shape. The cell came from the book's code *style* in preference to
+  the listing itself, and that book sets its fonts at size 1 and scales them through the text matrix -- so every
+  style arrived as `size=1.0` and the cell fell back to `size * 0.6` = 0.6pt against a real cell of 6pt. Ten
+  times too narrow gives every character a column of its own. The listing's own spacing, measured from the very
+  glyphs being laid out, now comes first; the style only stands in when a listing has no pair to measure
+  (`Blocks.advanceFor`, `CodeAdvanceTest`).
+- **Letter-spaced text was read as one word per letter.** A quarter em of space meant a word space on its own,
+  which is true of ordinary text but not of text set with tracking, where *every* glyph stands that far from the
+  next. A word space now has to clear the line's own low-quartile gap by a quarter em, which leaves ordinary text
+  exactly as it was (`Extraction.typicalGap`, `WordSpacingTest`).
+- **Three of the eight bundled ambiences had no atmosphere.** Ocean, Stream and Café could only be reached by
+  building a custom atmosphere, so they looked like sounds that were never added. **Seaside**, **Streamside** and
+  **Corner Café** join the five presets, and `AtmospherePresetsTest` fails if a bundled recording is ever left
+  without one again.
+
+### Added
+- **"Make shelves from this folder"** in a folder's press-and-hold menu, in the Folders view and on a folder's own
+  page. It acts at once rather than offering, since the reader went looking for it, and folders inside it get
+  their own shelves too. The offer after a folder import is unchanged.
+
+> Dynamic Flow books convert again on first open: the converter's output changed, so engine 1.2.3 supersedes
+> 1.2.2 and existing bundles are rebuilt. Highlights follow (`FlowCarrier.reanchor`).
+
 ## [0.3.0-alpha.3] - 2026-11-03
 
 > **The first release of FlowFolio that anyone can install.** The two earlier pre-releases were withdrawn on

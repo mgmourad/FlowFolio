@@ -162,7 +162,14 @@ fun ShelfPageScreen(
         onFinished = viewModel::toggleFinished,
         selection = selection,
         onDeleteChosen = { confirmBulk = true },
-        folders = FolderActions(onOpen = onOpenFolder, onRemove = { removing = it }, selection = selection),
+        folders = FolderActions(
+            onOpen = onOpenFolder,
+            onRemove = { removing = it },
+            onMakeShelves = { folder ->
+                shelvesVm.foldersToShelves(state.items.map { it.book }.filter { it.isUnder(folder.path) })
+            },
+            selection = selection
+        ),
         onAddBooks = state.shelf?.let { { adding = true } },
         onReorder = when {
             state.shelf != null -> { ids: List<String> ->

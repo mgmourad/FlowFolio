@@ -66,6 +66,8 @@ data class LibraryActions(
     val onImport: () -> Unit = {},
     /** Picks a folder to import, with every folder inside it. */
     val onImportFolder: () -> Unit = {},
+    /** Makes a shelf from a folder and from every folder inside it. */
+    val onFolderToShelves: (FolderEntry) -> Unit = {},
     val onOpen: (LibraryItem, String) -> Unit = { _, _ -> },
     val onResume: (LibraryItem) -> Unit = {},
     val onDelete: (Book) -> Unit = {},
@@ -151,6 +153,7 @@ fun LibraryScreen(
         LibraryActions(
             onImport = { importPicker.launch(PDF_TYPES) },
             onImportFolder = { folderPicker.launch(null) },
+            onFolderToShelves = viewModel::onFolderToShelves,
             onOpen = { item, origin ->
                 if (item.availability == Availability.MISSING) locate(item.book) else onOpenDetails(item.book, origin)
             },
@@ -449,4 +452,7 @@ internal fun LibraryMessage.text(context: android.content.Context): String = whe
     LibraryMessage.RelinkFailed -> context.getString(R.string.msg_relink_failed)
 
     is LibraryMessage.Deleted -> context.getString(R.string.msg_deleted, title)
+
+    is LibraryMessage.ShelvesMade ->
+        context.resources.getQuantityString(R.plurals.msg_shelves_made, shelves, shelves)
 }

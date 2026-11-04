@@ -194,6 +194,9 @@ sealed interface LibraryMessage {
 
     data class NotEnoughSpace(val bytes: Long) : LibraryMessage
 
+    /** Shelves made from a folder the reader picked, rather than from a whole import. */
+    data class ShelvesMade(val shelves: Int) : LibraryMessage
+
     data object Relinked : LibraryMessage
 
     data object RelinkDifferentFile : LibraryMessage
@@ -428,6 +431,21 @@ class LibraryViewModel @Inject constructor(
         if (never) settingsRepo.markGuideSeen(FOLDER_SHELVES)
         val existing = shelfRepo.observeShelves().first().associate { it.name to it.id }
         FoldersToShelves.apply(FoldersToShelves.plan(dialog.books), shelfRepo, existing)
+    }
+
+    /**
+     * Makes shelves from one folder, asked for from its own menu rather than offered after an import.
+     *
+     * Every folder *inside* it gets its own shelf too, because [FoldersToShelves.plan] groups each book by the
+     * folder it actually sits in. No dialog and no "don't ask again": the reader went looking for this.
+     */
+    fun onFolderToShelves(folder: FolderEntry) = viewModelScope.launch {
+        val books = library.observeBooks(LibrarySort.RECENT).first().filter { it.isUnder(folder.path) }
+        val plan = FoldersToShelves.plan(books)
+        if (plan.isEmpty()) return@launch
+        val existing = shelfRepo.observeShelves().first().associate { it.name to it.id }
+        FoldersToShelves.apply(plan, shelfRepo, existing)
+        messageChannel.send(LibraryMessage.ShelvesMade(plan.size))
     }
 
     /** "No thanks", with or without "and don't ask again". */
