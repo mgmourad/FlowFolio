@@ -63,12 +63,17 @@ Two new ADRs: **0047** (yt-dlp on embedded CPython for audio out of video pages;
 and **0048** (updating from the releases page; proposed). All verified on `fold8_api37` except where the
 emulator cannot: see known issues 40 and 41.
 
-**0.3.0-alpha.3 is prepared but not built** (2026-11-03): `android/gradle.properties` is at `0.3.0-alpha.3` /
-`300003`, the CHANGELOG section is cut, and draft notes are in `docs/plans/alpha3-release-notes.md`. The rest of
-the ADR-0042 checklist waits on **a release key that no longer exists** -- the owner confirmed on 2026-11-03 that
-it is lost (known issue 42). ADR-0049 proposes generating a new one now, while both pre-releases still have zero
-downloads. `:app:checkReleaseSigning` fails until `flowfolio.releaseSigning.*` is set, which is the point. Do not
-announce the app before alpha.3 ships under the new key.
+**Released as FlowFolio 0.3.0-alpha.3 (build 300003) on 2026-11-03**, tag `v0.3.0-alpha.3`, GitHub pre-release,
+APK SHA-256 `091ab24d3598d27ae7e78b6b7d2228e9a9e6bfdd2f79b9efbf025b18494fcd38`. **The first build anyone can
+install**: the two earlier pre-releases were deleted the same day, tags and all, having never been downloaded
+(ADR-0049). Signed with the **new** release key, `CN=FlowFolio Release` SHA-256 `59fbae55...`, scheme v3 only
+(v1 off, minSdk 29; AGP signs with the highest applicable scheme). Green CI on `2899725` with Android and the
+converter corpus both run; the APK verifies across `--min-sdk-version 29 --max-sdk-version 37`, installs and
+launches on `fold8_api37`. Checked end to end afterwards: a 300002 build on the emulator reports
+"0.3.0-alpha.3 is available" and offers Download, so the public repository, the releases API, the filename
+version parsing and the comparison all work together.
+
+**The launch posts are written and not yet sent**; the owner held them until alpha.3 shipped, which it now has.
 
 **Released as FlowFolio 0.3.0-alpha.2 (build 300002) on 2026-11-03**, tag `v0.3.0-alpha.2`, GitHub pre-release.
 Green CI on `c7b2c00`; the minified release APK was installed on `fold8_api37` and checked, extractor included, so
