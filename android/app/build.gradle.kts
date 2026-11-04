@@ -44,6 +44,13 @@ android {
             storePassword = providers.gradleProperty("flowfolio.releaseSigning.storePassword").get()
             keyAlias = providers.gradleProperty("flowfolio.releaseSigning.keyAlias").get()
             keyPassword = providers.gradleProperty("flowfolio.releaseSigning.keyPassword").get()
+            // v1 (JAR signing) is only needed below API 24 and minSdk is 29, so it is dead weight.
+            // v3 is the one that matters here: it is the only scheme that can carry a rotation lineage,
+            // so an APK without it can never nominate a successor key even while we still hold this one.
+            // The first release key was lost with no way back (ADR-0049); this is what keeps that door open.
+            enableV1Signing = false
+            enableV2Signing = true
+            enableV3Signing = true
         }
     }
 

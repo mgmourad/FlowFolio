@@ -14,6 +14,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 > release key is the only one that ships, so this is the last time.
 
 ### Changed
+- **Release APKs are signed with APK Signature Scheme v3** (ADR-0049). v3 is the only scheme that can carry a
+  rotation lineage, so a build without it could never nominate a successor key even while the current key was in
+  hand. v1 is switched off: it is only needed below API 24 and minSdk is 29. Verified with `apksigner verify
+  --min-sdk-version 29 --max-sdk-version 37`, and the signed build installs and runs on `fold8_api37`.
 - **Release builds are signed with the release key, or they fail** (ADR-0042). `checkReleaseSigning` in
   `app/build.gradle.kts` now fails `packageRelease` when `flowfolio.releaseSigning.*` is missing, rather than
   quietly emitting an unsigned APK as it did for alpha.2. The dev key signs sideloaded development builds only:
