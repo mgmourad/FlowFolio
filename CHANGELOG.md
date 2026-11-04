@@ -5,13 +5,15 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
-## [0.3.0-alpha.3] - 2026-11-__
+## [0.3.0-alpha.3] - 2026-11-03
 
-> **This build needs one last clean install.** It is the first signed with the project's **release key**
-> (`CN=FlowFolio Release`), where `0.3.0-alpha.2` was signed with the development key. Android treats a
-> differently signed APK as a different app, so it will refuse to install over alpha.2: uninstall first, and
-> expect to lose the library, highlights and reading positions in that install. From this build onwards the
-> release key is the only one that ships, so this is the last time.
+> **The first release of FlowFolio that anyone can install.** The two earlier pre-releases were withdrawn on
+> 2026-11-03: the repository was private for their whole life, neither was ever downloaded, and neither can be
+> updated from. See them below for the record.
+>
+> If you sideloaded one of them, **uninstall it before installing this** — it is signed with a different key, so
+> Android treats it as a different app and will refuse to replace it. Anything in that install goes with it.
+> From here on the signing key does not change, so every later build updates in place.
 
 ### Changed
 - **Release APKs are signed with APK Signature Scheme v3** (ADR-0049). v3 is the only scheme that can carry a
@@ -34,7 +36,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   connection up to the screen, and each gets its own sentence. `UpdateFailureTest` holds the mapping. This makes
   the message honest; only making the repository public makes the check find anything.
 
-## [0.3.0-alpha.2] - 2026-11-03
+## [0.3.0-alpha.2] - 2026-11-03 — WITHDRAWN
+
+> Withdrawn 2026-11-03, never downloaded. It was signed with the development key rather than a release key
+> (ADR-0042), so nothing can update over it. Kept here for the record only.
 
 > Signed with the **dev** key rather than the release key (owner's decision, 2026-11-03: the release key was not on
 > the build machine). It therefore cannot install over 0.3.0-alpha.1 -- Android sees a different app -- so this
@@ -231,7 +236,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   software rendering (`swangle` + `lavapipe`) on Apple Silicon, which could not keep up with the design's blurs and
   glows at 2256x2504. The AVD now pins `hw.gpu.mode=host`, which selects Metal.
 
-## [0.3.0-alpha.1] - 2026-10-28
+## [0.3.0-alpha.1] - 2026-10-28 — WITHDRAWN
+
+> Withdrawn 2026-11-03, never downloaded. It was signed with the original release key, which was lost
+> (ADR-0049); with no key there is no rotation lineage, so nothing can ever update over it. Kept for the record.
 
 Phase 3 (the converter on the phone and Dynamic Flow), the first published build (ADR-0042); it also
 holds Phases 0 to 2.
