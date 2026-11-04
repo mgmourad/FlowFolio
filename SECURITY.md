@@ -38,10 +38,14 @@ installing:
 shasum -a 256 flowfolio-*.apk
 ```
 
-Release APKs are signed with the project's release key (`CN=FlowFolio Release`). **One exception:**
-`0.3.0-alpha.2` was signed with the development key because the release key was not available on the build
-machine; its release notes say so, and later builds return to the release key. An APK that does not install over
-a previous one is signed differently — treat that as a reason to check where it came from.
+**The signing key changed at `0.3.0-alpha.3`.** The key that signed `0.3.0-alpha.1`
+(`CN=FlowFolio Release`, SHA-256 `560eb00ca346b33a79d9d9fdd465b0762a8d0d9662b4145406b19e9e06bb7d0d`) was lost
+and is **permanently retired**; an APK presenting it is not from this project. `0.3.0-alpha.2` was signed with
+the development key. Neither of those pre-releases can be updated from, and both are being withdrawn.
+
+From `0.3.0-alpha.3` onward, every release is signed with one new key, and that key will not change again
+without a note here. Android refuses to install an APK over one signed differently, so **an update that will not
+install is a reason to check where the file came from** rather than to work around it.
 
 FlowFolio is not on the Play Store and never asks for a password, an account or a payment. Anything claiming
 otherwise is not FlowFolio.

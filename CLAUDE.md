@@ -65,9 +65,10 @@ emulator cannot: see known issues 40 and 41.
 
 **0.3.0-alpha.3 is prepared but not built** (2026-11-03): `android/gradle.properties` is at `0.3.0-alpha.3` /
 `300003`, the CHANGELOG section is cut, and draft notes are in `docs/plans/alpha3-release-notes.md`. The rest of
-the ADR-0042 checklist waits on **the release key**, which is still not on this machine (known issue 42):
-`:app:checkReleaseSigning` fails until `flowfolio.releaseSigning.*` is set, which is the point. Do not announce
-the app before this ships -- alpha.2 is dev-signed, so everyone who installs it must wipe and reinstall.
+the ADR-0042 checklist waits on **a release key that no longer exists** -- the owner confirmed on 2026-11-03 that
+it is lost (known issue 42). ADR-0049 proposes generating a new one now, while both pre-releases still have zero
+downloads. `:app:checkReleaseSigning` fails until `flowfolio.releaseSigning.*` is set, which is the point. Do not
+announce the app before alpha.3 ships under the new key.
 
 **Released as FlowFolio 0.3.0-alpha.2 (build 300002) on 2026-11-03**, tag `v0.3.0-alpha.2`, GitHub pre-release.
 Green CI on `c7b2c00`; the minified release APK was installed on `fold8_api37` and checked, extractor included, so
@@ -423,15 +424,20 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     `-no-metrics`. Do not change
     `hw.gpu.mode` in `config.ini` (known issue 39) -- pass `-gpu` on the command line if you must. `emu fold` does
     not reliably move a running activity to the cover panel; capture on the inner panel instead.
-42. **The release signing key is missing from this machine, and the repository is private.** ADR-0042 expects
-    `flowfolio.releaseSigning.*` in `~/.gradle/gradle.properties` pointing at a keystore in `~/.flowfolio`; only the
-    dev key is there, so `assembleRelease` produces an unsigned APK. The key itself **exists** -- the published
-    v0.3.0-alpha.1 APK is signed `CN=FlowFolio Release, O=FlowFolio`, SHA-256
-    `560eb00ca346b33a79d9d9fdd465b0762a8d0d9662b4145406b19e9e06bb7d0d` -- so it has to be restored here, not made
-    again. **Never sign a release with the dev key** (`CN=FlowFolio Dev`, SHA-256 `bf34f1e7...`): Android would
-    treat it as a different app and no existing install could upgrade. 0.3.0-alpha.2 was signed that way once, by
-    the owner's decision; `checkReleaseSigning` in `app/build.gradle.kts` now makes it impossible to repeat by
-    accident.
+42. **The release signing key is LOST** (owner, 2026-11-03), not merely missing from this machine. There is no
+    recovery: Android's key rotation signs a lineage *with the old key* to authorise a new one, so without it no
+    build can ever install over `v0.3.0-alpha.1`, which that key signed. `CN=FlowFolio Release, O=FlowFolio`,
+    SHA-256 `560eb00ca346b33a79d9d9fdd465b0762a8d0d9662b4145406b19e9e06bb7d0d`, is **permanently retired** -- an
+    APK presenting it is not ours.
+    The cost is near zero and only while the launch is held: **both pre-releases have 0 downloads** (the repository
+    was private until 2026-11-03). **ADR-0049 proposes generating a new release key now**, before any
+    announcement, with custody written down -- a password manager entry *and* GitHub Actions secrets -- because the
+    old key was lost precisely because nothing said where it had to live. It also proposes deleting
+    `v0.3.0-alpha.1` and `v0.3.0-alpha.2`, which nobody can update from.
+    **Never sign a release with the dev key** (`CN=FlowFolio Dev`, SHA-256 `bf34f1e7...`): it signs every
+    sideloaded build and is handed around, so making it the update identity lets anyone holding it publish over a
+    reader's install. 0.3.0-alpha.2 was signed that way once, by the owner's decision; `checkReleaseSigning` in
+    `app/build.gradle.kts` now makes it impossible to repeat by accident.
     The update check is **resolved** (2026-11-03): the repository is public, the releases API answers 200, and the
     app reports "You are on the newest build" (checked on `fold8_api37` against the installed 300002). While it was
     private the API answered 404 and the app reported every failure as an unreachable page; `UpdateFailure` now
@@ -485,10 +491,10 @@ become a required check (known issue 6), and F-Droid submission is possible when
 
 ## Decision log
 
-ADRs 0001–0048 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0049 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
 Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026), reading fonts (0027), app themes (0028), Rustic without texture (0029), the book's own fonts (0030), EPUB memory and island stand-ins (0031), page sounds on the media stream (0032), the motion system (0033), element entrances and edge fades (0034), edge fades blurring behind the bars only (0035), the fixed signing key for sideloaded dev builds (0036), Google Books as a second details source (0037, its Google part superseded by 0039), multi-file and folder imports with folders as book paths (0038), book details from Open Library only (0039), EPUB highlights and ribbons stored by locator (0040), chapters on their own spread and the reader's chapter laid out first (0041), release channels and versioning (0042), retiring the Python converter (0043), the conversion engine as a plain JVM module with JNA in desktop tooling only (0044, proposed for the M1+M2 sign-off; would supersede the KMP part of 0009), Dynamic Flow (0045, the owner's design), the offline Wiktionary dictionary (0046),
 audio extraction with yt-dlp embedded (0047, accepted 2026-11-03: Unlicense source on MIT Chaquopy and PSF CPython,
-no ffmpeg because only an address is extracted), updating from the releases page (0048, proposed).
+no ffmpeg because only an address is extracted), updating from the releases page (0048, proposed), re-keying the release identity after the signing key was lost (0049, proposed; supersedes the key-custody part of 0042).
