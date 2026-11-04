@@ -63,6 +63,12 @@ Two new ADRs: **0047** (yt-dlp on embedded CPython for audio out of video pages;
 and **0048** (updating from the releases page; proposed). All verified on `fold8_api37` except where the
 emulator cannot: see known issues 40 and 41.
 
+**0.3.0-alpha.3 is prepared but not built** (2026-11-03): `android/gradle.properties` is at `0.3.0-alpha.3` /
+`300003`, the CHANGELOG section is cut, and draft notes are in `docs/plans/alpha3-release-notes.md`. The rest of
+the ADR-0042 checklist waits on **the release key**, which is still not on this machine (known issue 42):
+`:app:checkReleaseSigning` fails until `flowfolio.releaseSigning.*` is set, which is the point. Do not announce
+the app before this ships -- alpha.2 is dev-signed, so everyone who installs it must wipe and reinstall.
+
 **Released as FlowFolio 0.3.0-alpha.2 (build 300002) on 2026-11-03**, tag `v0.3.0-alpha.2`, GitHub pre-release.
 Green CI on `c7b2c00`; the minified release APK was installed on `fold8_api37` and checked, extractor included, so
 R8 is not stripping the Chaquopy bridge.
@@ -434,6 +440,15 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     screenshots of an actual build at 900 px wide (about 1 MB in all), with larger copies in `docs/screenshots/`
     for the README. Retake both whenever the screens they show change; a tour that shows something the app no
     longer looks like is worse than none.
+
+44. **The converter overflows a full-page cover image** (2026-11-03). On the reflowed title page of
+    *Introduction to Python Programming* (OpenStax) the cover artwork is laid out wider than the column and is
+    clipped mid-word ("Progra..."). Body pages are fine, including code panels, lists and headings; it is the
+    full-bleed title graphic that is not fitted to the column. Found while capturing launch screenshots.
+45. **Taps did not turn pages in the reflowed view** on `fold8_api37`, 2026-11-03: 26 taps near the right edge
+    did nothing, while a drag turned the page every time. Known issue 16 says a single tap turns a page, so
+    either that is wrong for Dynamic Flow books or the turn style defaults to one that needs a drag.
+    **Observed, not diagnosed** -- check before trusting either reading.
 
 ## The repository is public (2026-11-03)
 

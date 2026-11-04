@@ -15,6 +15,10 @@ Built foldable-first: one page folded, a two-page spread unfolded.
 [![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
 [![No trackers](https://img.shields.io/badge/trackers-none-success?style=flat-square)](#privacy)
 
+<img src="docs/screenshots/dynamic-flow-before-after.webp" width="92%" alt="The same two pages of a textbook, as a PDF and reflowed by Dynamic Flow" />
+
+<br><br>
+
 <img src="docs/screenshots/library.webp" width="30%" alt="The library" />
 <img src="docs/screenshots/reading.webp" width="30%" alt="A two-page spread" />
 <img src="docs/screenshots/atmosphere.webp" width="30%" alt="Making a reading atmosphere" />

@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [0.3.0-alpha.3] - 2026-11-__
+
+> **This build needs one last clean install.** It is the first signed with the project's **release key**
+> (`CN=FlowFolio Release`), where `0.3.0-alpha.2` was signed with the development key. Android treats a
+> differently signed APK as a different app, so it will refuse to install over alpha.2: uninstall first, and
+> expect to lose the library, highlights and reading positions in that install. From this build onwards the
+> release key is the only one that ships, so this is the last time.
+
+### Changed
+- **Release builds are signed with the release key, or they fail** (ADR-0042). `checkReleaseSigning` in
+  `app/build.gradle.kts` now fails `packageRelease` when `flowfolio.releaseSigning.*` is missing, rather than
+  quietly emitting an unsigned APK as it did for alpha.2. The dev key signs sideloaded development builds only:
+  it lives on a development machine, so making it the identity readers update against would let anyone holding
+  it publish an update straight over an install.
+- **The repository is public**, so **Settings &rarr; Updates** works for the first time. While the repository
+  was private the releases API answered 404 and no check could ever find a build.
+
 ### Fixed
 - **A failed update check says which failure it was** (owner, 2026-11-03). `UpdateState.Failed` carried a single
   `offline` flag, and every non-200 from the releases API collapsed into it, so a prompt, correct `404` was
