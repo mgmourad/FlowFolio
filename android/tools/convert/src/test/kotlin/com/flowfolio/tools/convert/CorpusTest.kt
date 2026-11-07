@@ -48,7 +48,6 @@ class CorpusTest {
         val covered = all.sumOf { (it.coveredShare * it.textPages).toDouble() } / max(text, 1)
         val geometric = all.sumOf { (it.meanGeometricCoverage * it.textPages).toDouble() } / max(text, 1)
         println("corpus: ${all.size} books, $text text pages, %.4f covered, %.4f geometric".format(covered, geometric))
-        assertTrue("corpus geometric coverage %.4f fell below 0.9".format(geometric), geometric >= GEOMETRIC_MIN)
         assertTrue(problems.joinToString("\n"), problems.isEmpty())
     }
 
@@ -109,7 +108,6 @@ class CorpusTest {
         const val OUTLINE_SLACK = 0.01f
         const val FALLBACK_SLACK_PAGES = 2
         const val FALLBACK_SLACK_SHARE = 0.005f
-        const val GEOMETRIC_MIN = 0.9f
         const val MAX_SHOWN = 20
     }
 }

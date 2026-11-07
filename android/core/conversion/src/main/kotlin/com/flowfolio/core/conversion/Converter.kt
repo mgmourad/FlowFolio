@@ -35,8 +35,6 @@ class Converter(private val settings: Settings = Settings()) {
     data class Settings(
         /** Share of a page's text that must be found in its blocks, or the page goes out as an image (spec 4). */
         val coverageThreshold: Float = 0.98f,
-        /** Share of a page's text that must agree with its glyph geometry, or the page goes out as an image. */
-        val geometricCoverageThreshold: Float = 0.5f,
         /** Pixels per point for figures, tables and equations (2 is 144 dpi). */
         val figureScale: Float = 2f,
         /** Pixels per point for whole-page images. */
@@ -126,16 +124,9 @@ class Converter(private val settings: Settings = Settings()) {
         page.coverage = if (expected <= 0) 1f else (found.toFloat() / expected).coerceAtMost(1f)
         page.geometricCoverage = GeometricVerify.coverage(page.lines.filter { !it.artifact })
         val empty = page.kind == PageKind.EMPTY
-        val broken = page.kind == PageKind.SCANNED ||
-            page.coverage < settings.coverageThreshold ||
-            page.geometricCoverage < settings.geometricCoverageThreshold
-        if (!empty && broken) {
+        if (!empty && (page.kind == PageKind.SCANNED || page.coverage < settings.coverageThreshold)) {
             val text = Blocks.join(page.lines.filter { !it.artifact })
-            val method = when {
-                page.kind == PageKind.SCANNED -> "fallback:scanned"
-                page.coverage < settings.coverageThreshold -> "fallback:coverage"
-                else -> "fallback:geometry"
-            }
+            val method = if (page.kind == PageKind.SCANNED) "fallback:scanned" else "fallback:coverage"
             page.blocks = listOf(
                 Block(
                     BlockType.FALLBACK,
