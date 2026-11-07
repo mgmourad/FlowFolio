@@ -127,6 +127,14 @@ PDFium reloaded every 100 renders, gradient curl shading, gradient-only page sha
 opening reflowed. ADR-0044, 0048 and 0049 accepted with the sign-off; the licences screen (known issue 8) landed with
 this close-out. Next: Phase 4.
 
+**Phase 4 signed off by the owner 2026-11-06** (`docs/plans/phase4-signoff.md`) and **released as FlowFolio
+0.3.0-alpha.6 (build 300006)**, tag `v0.3.0-alpha.6`. Delivered: fallbacks worth keeping (full-page covers, sharper
+crops, captions with equations, full-width tables, a tap hint), syntax highlighting for code, the update check with a
+"What's new" link, the folded-turn back-of-page fix, and the spurious-spaces fix. The pixel-verification core ended up
+**diagnostic-only** — `geometricCoverage` is recorded but not gated (the geometric signal false-positives on
+text-matrix-scaled PDFs), and the real pixel diff (mechanism B) is deferred. ADR-0050 (release-channel renumbering) is
+proposed with this sign-off. Next: Phase 5.
+
 ## Product direction (owner decisions, 2026-10-16)
 
 - **Foldables first** (reference device: Galaxy Z Fold 8 Ultra): single page on the cover screen,
