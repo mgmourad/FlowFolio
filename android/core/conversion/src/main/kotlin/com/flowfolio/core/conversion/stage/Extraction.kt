@@ -218,7 +218,13 @@ object Extraction {
     private const val LINE_END_HYPHEN = '\u0002'
     private const val MIN_LINE_OVERLAP = 0.5f
     private const val JOIN_GAP_EMS = 1f
-    private const val WORD_GAP_EMS = 0.25f
+
+    /**
+     * How much wider than a within-word gap a real word space is. Raised from the plain quarter em (2026-11-06) so a
+     * justified line that stretches its within-word gaps unevenly does not read some of them as spaces ("ver y").
+     * Untested against the DevOps book the owner reported it from; revisit with that book to hand.
+     */
+    private const val WORD_GAP_EMS = 0.32f
     private const val MIN_GAPS_FOR_QUARTILE = 3
     private const val QUARTILE = 4
     private const val BOLD_WEIGHT = 600
