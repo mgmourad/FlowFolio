@@ -71,6 +71,22 @@ class PageLookupTest {
     }
 
     @Test
+    fun subtitleIsTheSectionThePageIsIn() {
+        val outline = listOf(
+            OutlineEntry(0, 0, "Preface"),
+            OutlineEntry(0, 10, "Chapter 1"),
+            OutlineEntry(1, 12, "1.1 Conditions"),
+            OutlineEntry(1, 20, "1.2 Loops"),
+            OutlineEntry(0, 30, "Chapter 2")
+        )
+        assertNull(PageLookup.subtitleAt(outline, 5)) // before any section
+        assertNull(PageLookup.subtitleAt(outline, 11)) // a chapter, not a section
+        assertEquals("1.1 Conditions", PageLookup.subtitleAt(outline, 15))
+        assertEquals("1.2 Loops", PageLookup.subtitleAt(outline, 25))
+        assertNull(PageLookup.subtitleAt(outline, 31)) // a chapter again
+    }
+
+    @Test
     fun labelFallsBackToNumber() {
         assertEquals("ii", PageLookup.labelOf(2, labels))
         assertEquals("7", PageLookup.labelOf(6, labels))

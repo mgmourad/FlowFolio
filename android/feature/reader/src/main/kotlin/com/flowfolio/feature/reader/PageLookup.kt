@@ -43,6 +43,14 @@ internal object PageLookup {
         return title
     }
 
+    /** The section (depth >= 1) [page] is in, or null when the page sits in no section. */
+    fun subtitleAt(outline: List<OutlineEntry>, page: Int): String? {
+        val i = chapterAt(outline, page)
+        if (i < 0) return null
+        val entry = outline[i]
+        return entry.title.takeIf { entry.depth > 0 }
+    }
+
     /** The page's printed label, or its 1-based number when the PDF has none. */
     fun labelOf(page: Int, labels: List<String?>): String = labels.getOrNull(page) ?: (page + 1).toString()
 }

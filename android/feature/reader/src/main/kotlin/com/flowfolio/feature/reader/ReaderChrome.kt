@@ -141,7 +141,7 @@ internal fun BoxScope.ReaderChrome(
     // In Scroll the number would float over the text; the bars show the page there. Whenever the riffle bar is not
     // showing -- hidden with the rest of the chrome, or dismissed on its own -- the page number stands in for it, and
     // carries the way back from a detour with it (owner, M5 round 3).
-    if (!bottomBarVisible && state.turn != PageTurn.SCROLL) PageNumber(state, navigation, flow)
+    if (!bottomBarVisible && state.turn != PageTurn.SCROLL) PageNumber(state, navigation, flow, actions)
 }
 
 /**
@@ -242,7 +242,12 @@ private fun TitlePill(title: String, wide: Boolean, modifier: Modifier) {
 
 /** The print-style page number at the foot of the page while the bars are hidden. */
 @Composable
-private fun BoxScope.PageNumber(state: ReaderState.Ready, navigation: BookNavigation, flow: FlowState) {
+private fun BoxScope.PageNumber(
+    state: ReaderState.Ready,
+    navigation: BookNavigation,
+    flow: FlowState,
+    actions: ChromeActions
+) {
     val spread = state.layout == ReaderLayout.SPREAD
     val pages = if (spread) Spreads.pagesOf(state.unit, state.pageCount, state.coverAlone) else listOf(state.anchorPage)
     // Two screen pages of one printed page (a reflowed book's page list) show its number once.
@@ -253,7 +258,8 @@ private fun BoxScope.PageNumber(state: ReaderState.Ready, navigation: BookNaviga
         Modifier
             .align(if (spread) Alignment.BottomStart else Alignment.BottomCenter)
             .navigationBarsPadding()
-            .padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN),
+            .padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN)
+            .clickable { actions.onPanel(Panel.GO_TO) },
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -264,24 +270,59 @@ private fun BoxScope.PageNumber(state: ReaderState.Ready, navigation: BookNaviga
         DetourReturn()
         FlowProgressBar(flow)
     }
-    // The chapter the reader is in, in the opposite corner from the page number: the right page's foot in a spread,
-    // the top right when folded (owner, 2026-11-07). Reflowed books only -- a PDF already carries its running heads.
+    // The chapter and its section, reflowed books only (a PDF already carries its own running heads). In a spread the
+    // chapter heads the left page and the section sits at the right page's foot; folded, the section (else the chapter)
+    // sits at the top right, pushed to the screen's edge rather than the book's margin (owner, 2026-11-07).
     if (state.reflowable) {
-        val chapterPage = if (spread) pages.lastOrNull() ?: state.anchorPage else state.anchorPage
-        PageLookup.chapterTitleAt(navigation.outline, chapterPage)?.let { title ->
-            Text(
-                title,
-                style = PrintStyle.copy(color = LocalTone.current.folioInk),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .align(if (spread) Alignment.BottomEnd else Alignment.TopEnd)
-                    .then(if (spread) Modifier.navigationBarsPadding() else Modifier.statusBarsPadding())
-                    .padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN)
-                    .testTag(ReaderTestTags.CHAPTER_TITLE)
-            )
+        val leftPage = pages.firstOrNull() ?: state.anchorPage
+        val rightPage = pages.lastOrNull() ?: state.anchorPage
+        val chapter = PageLookup.chapterTitleAt(navigation.outline, leftPage)
+        val section = PageLookup.subtitleAt(navigation.outline, rightPage)
+        if (spread) {
+            chapter?.let {
+                ChapterLabel(
+                    it,
+                    Modifier.align(
+                        Alignment.TopStart
+                    ).statusBarsPadding().padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN),
+                    actions
+                )
+            }
+            section?.let {
+                ChapterLabel(
+                    it,
+                    Modifier.align(
+                        Alignment.BottomEnd
+                    ).navigationBarsPadding().padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN),
+                    actions
+                )
+            }
+        } else {
+            (section ?: chapter)?.let {
+                ChapterLabel(
+                    it,
+                    Modifier.align(
+                        Alignment.TopEnd
+                    ).statusBarsPadding().padding(horizontal = TITLE_MARGIN, vertical = FOOTER_MARGIN),
+                    actions
+                )
+            }
         }
     }
+}
+
+/** A chapter or section heading in folio ink; tapping it opens the contents, which jumps to the current entry. */
+@Composable
+private fun BoxScope.ChapterLabel(text: String, modifier: Modifier, actions: ChromeActions) {
+    Text(
+        text,
+        style = PrintStyle.copy(color = LocalTone.current.folioInk),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = modifier
+            .clickable { actions.onPanel(Panel.CONTENTS) }
+            .testTag(ReaderTestTags.CHAPTER_TITLE)
+    )
 }
 
 /**
@@ -383,6 +424,7 @@ private val TOP_FADE_TAIL = 36.dp
 private val BAR_ROW_GAP = 10.dp
 private val PAGE_MARGIN = 32.dp
 private val FOOTER_MARGIN = 14.dp
+private val TITLE_MARGIN = 12.dp
 private val TITLE_MAX_WIDTH = 520.dp
 internal val TITLE_BESIDE_BACK = 600.dp
 
