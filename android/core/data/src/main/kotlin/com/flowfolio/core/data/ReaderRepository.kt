@@ -115,7 +115,7 @@ class DefaultReaderRepository @Inject constructor(
 
     override suspend fun openFlow(bookId: String): OpenedEpub = withContext(io) {
         val book = dao.get(bookId)?.toBook() ?: throw FileNotFoundException("no book $bookId")
-        val file = flow.bundle(bookId) ?: throw FileNotFoundException("no Dynamic Flow for $bookId")
+        val file = flow.readableBundle(bookId) ?: throw FileNotFoundException("no Dynamic Flow for $bookId")
         val archive = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { EpubArchive.open(it) }
         try {
             OpenedEpub(book.copy(lastLocator = book.flowLocator), archive, EpubParser.parse(archive))
@@ -162,7 +162,7 @@ class DefaultReaderRepository @Inject constructor(
         val fd = when (book.format) {
             BookFormat.EPUB -> descriptorOf(book)
 
-            BookFormat.PDF -> flow.bundle(bookId)?.let {
+            BookFormat.PDF -> flow.readableBundle(bookId)?.let {
                 ParcelFileDescriptor.open(it, ParcelFileDescriptor.MODE_READ_ONLY)
             }
         } ?: return@withContext emptyList()

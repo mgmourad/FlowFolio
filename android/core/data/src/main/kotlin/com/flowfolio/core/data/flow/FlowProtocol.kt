@@ -19,13 +19,24 @@ internal object FlowProtocol {
     const val EXTRA_FRACTION = "fraction"
     const val EXTRA_PAUSE = "pause"
     const val EXTRA_FAILURE = "failure"
+    const val EXTRA_CHAPTERS = "chapters"
+    const val EXTRA_TOTAL_CHAPTERS = "totalChapters"
 
     /** [fraction] done (0 to 1), or -1 while the book waits for another; [pause] when it is waiting for the phone. */
-    fun progress(pkg: String, bookId: String, fraction: Float, pause: FlowPause?): Intent = Intent(ACTION_PROGRESS)
+    fun progress(
+        pkg: String,
+        bookId: String,
+        fraction: Float,
+        pause: FlowPause?,
+        readableChapters: Int = 0,
+        totalChapters: Int = 0
+    ): Intent = Intent(ACTION_PROGRESS)
         .setPackage(pkg)
         .putExtra(EXTRA_BOOK_ID, bookId)
         .putExtra(EXTRA_FRACTION, fraction)
         .putExtra(EXTRA_PAUSE, pause?.name)
+        .putExtra(EXTRA_CHAPTERS, readableChapters)
+        .putExtra(EXTRA_TOTAL_CHAPTERS, totalChapters)
 
     /** The book finished: converted when [failure] is null. */
     fun done(pkg: String, bookId: String, failure: FlowFailure?): Intent = Intent(ACTION_DONE)

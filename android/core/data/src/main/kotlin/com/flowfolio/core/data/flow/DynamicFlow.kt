@@ -54,6 +54,12 @@ interface DynamicFlow {
     /** The converted EPUB when the book has one, else null. */
     fun bundle(bookId: String): File?
 
+    /**
+     * What the reader may open now: the complete EPUB when the book is converted, else the partial bundle while it is
+     * still converting (progressive delivery). Null when nothing is readable yet.
+     */
+    fun readableBundle(bookId: String): File?
+
     /** Converts [bookId] in the background unless it is converted or converting already. */
     suspend fun convert(bookId: String)
 
@@ -90,6 +96,8 @@ interface DynamicFlow {
         override fun status(bookId: String): Flow<FlowStatus> = kotlinx.coroutines.flow.flowOf(FlowStatus.None)
 
         override fun bundle(bookId: String): File? = null
+
+        override fun readableBundle(bookId: String): File? = null
 
         override suspend fun convert(bookId: String) = Unit
 
@@ -148,7 +156,16 @@ class DefaultDynamicFlow @Inject constructor(
                                 p
                         }
                     }
-                    set(bookId, if (fraction < 0f) FlowStatus.Queued else FlowStatus.Converting(fraction, pause))
+                    val readable = intent.getIntExtra(FlowProtocol.EXTRA_CHAPTERS, 0)
+                    val total = intent.getIntExtra(FlowProtocol.EXTRA_TOTAL_CHAPTERS, 0)
+                    set(
+                        bookId,
+                        if (fraction < 0f) {
+                            FlowStatus.Queued
+                        } else {
+                            FlowStatus.Converting(fraction, pause, readable, total)
+                        }
+                    )
                 }
 
                 FlowProtocol.ACTION_DONE -> {
@@ -190,6 +207,8 @@ class DefaultDynamicFlow @Inject constructor(
         .distinctUntilChanged()
 
     override fun bundle(bookId: String): File? = files.epub(bookId).takeIf { files.ready(bookId) }
+
+    override fun readableBundle(bookId: String): File? = files.readable(bookId)
 
     override suspend fun convert(bookId: String) {
         val current = _statuses.value[bookId]

@@ -10,9 +10,15 @@ sealed interface FlowStatus {
 
     /**
      * Being converted: [fraction] done, 0 to 1. [paused] says why it is waiting (the phone is hot, the battery is low)
-     * or is null while it runs.
+     * or is null while it runs. [readableChapters] of [totalChapters] are finished and readable (progressive delivery);
+     * both are 0 before the first chapter lands.
      */
-    data class Converting(val fraction: Float, val paused: FlowPause? = null) : FlowStatus
+    data class Converting(
+        val fraction: Float,
+        val paused: FlowPause? = null,
+        val readableChapters: Int = 0,
+        val totalChapters: Int = 0
+    ) : FlowStatus
 
     /** Converted: the book can be read in Dynamic Flow. */
     data object Ready : FlowStatus
