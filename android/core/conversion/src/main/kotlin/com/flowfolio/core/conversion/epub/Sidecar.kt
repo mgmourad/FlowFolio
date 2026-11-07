@@ -11,6 +11,8 @@ data class Sidecar(
     val specVersion: String,
     val bookId: String,
     val complete: Boolean,
+    /** The chapter files finished so far (spec 6), when the bundle is partial; absent when complete. */
+    val finishedSpineItems: List<String>? = null,
     val source: SourceInfo,
     val pages: List<SidecarPage>,
     val blocks: List<SidecarBlock>,

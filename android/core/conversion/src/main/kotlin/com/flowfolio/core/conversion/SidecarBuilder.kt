@@ -22,7 +22,13 @@ object SidecarBuilder {
 
     // One field per section of flowfolio.json, in the spec's order.
     @Suppress("LongMethod")
-    fun build(doc: Document, source: SourceInfo, threshold: Float): Sidecar {
+    fun build(
+        doc: Document,
+        source: SourceInfo,
+        threshold: Float,
+        complete: Boolean = true,
+        finishedSpineItems: List<String>? = null
+    ): Sidecar {
         val fileOf = doc.chapters.flatMap { c -> c.pages.map { it to c.file } }.toMap()
         val blockFile = doc.chapters.flatMap { c -> c.blocks.map { it.id to c.file } }.toMap()
         val pages = doc.pages.map { p ->
@@ -80,7 +86,8 @@ object SidecarBuilder {
         return Sidecar(
             specVersion = EpubWriter.SPEC_VERSION,
             bookId = source.bookId(),
-            complete = true,
+            complete = complete,
+            finishedSpineItems = finishedSpineItems,
             source = source,
             pages = pages,
             blocks = blocks,
