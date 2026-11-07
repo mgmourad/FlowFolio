@@ -47,6 +47,8 @@ object LibraryTestTags {
     const val CONFIRM_BULK_DELETE = "confirm_bulk_delete"
     const val TEXT_FONT = "settings_text_font"
     const val TEXT_SAMPLE = "settings_text_sample"
+    const val TEXT_SMALLER = "settings_text_smaller"
+    const val TEXT_LARGER = "settings_text_larger"
     const val SEED_PREFIX = "settings_seed_"
     const val SETTINGS = "settings"
     const val EDIT_MENU = "details_edit"

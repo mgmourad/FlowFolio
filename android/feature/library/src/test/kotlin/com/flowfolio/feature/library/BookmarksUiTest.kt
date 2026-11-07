@@ -78,6 +78,7 @@ class BookmarksUiTest {
         compose.setContent {
             FlowFolioTheme { SettingsContent(UserSettings(), SettingsActions(onGlow = { glow = it })) }
         }
+        compose.onNodeWithText(res.getString(R.string.settings_appearance)).performClick()
         compose.onNodeWithText(res.getString(R.string.settings_glow)).performScrollTo().performClick()
         assertEquals(false, glow)
     }

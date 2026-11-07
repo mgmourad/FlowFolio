@@ -113,7 +113,7 @@ private fun SizeStepper(sizeSp: Int, onSize: (Int) -> Unit) {
         val larger = stringResource(R.string.settings_text_larger)
         FlowFolioIconButton(
             onClick = { onSize((sizeSp - 1).coerceAtLeast(ReaderText.MIN_SIZE_SP)) },
-            modifier = Modifier.semantics { contentDescription = smaller }
+            modifier = Modifier.semantics { contentDescription = smaller }.testTag(LibraryTestTags.TEXT_SMALLER)
         ) { Text("A", style = TextStyle(fontSize = 13.sp), color = p.item) }
         Text(
             "$sizeSp",
@@ -123,7 +123,7 @@ private fun SizeStepper(sizeSp: Int, onSize: (Int) -> Unit) {
         )
         FlowFolioIconButton(
             onClick = { onSize((sizeSp + 1).coerceAtMost(ReaderText.MAX_SIZE_SP)) },
-            modifier = Modifier.semantics { contentDescription = larger }
+            modifier = Modifier.semantics { contentDescription = larger }.testTag(LibraryTestTags.TEXT_LARGER)
         ) { Text("A", style = TextStyle(fontSize = 21.sp), color = p.item) }
     }
 }

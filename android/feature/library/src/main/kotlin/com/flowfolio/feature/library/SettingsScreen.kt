@@ -1,5 +1,15 @@
+@file:Suppress("TooManyFunctions") // one group or row per setting, and the menu and page screens
+
 package com.flowfolio.feature.library
 
+import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +32,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
@@ -37,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
@@ -55,6 +67,7 @@ import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalChromePadding
+import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.ScrollToTopOnTab
 import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.reveal
@@ -127,10 +140,155 @@ fun SettingsScreen(
 /** What Settings needs beyond the stored settings: the build it is running, and what the cache weighs. */
 data class Housekeeping(val version: String = "", val update: UpdateState = UpdateState.Idle, val cacheBytes: Long = 0L)
 
+/** One settings page behind the main menu (M3): its icon and name. */
+private enum class SettingsPage(val glyph: Glyph, @StringRes val title: Int) {
+    Appearance(Glyph.Paper, R.string.settings_appearance),
+    Text(Glyph.TextSize, R.string.settings_text),
+    Reading(Glyph.OpenBook, R.string.settings_reading),
+    Atmosphere(Glyph.Sound, R.string.settings_atmosphere),
+    Library(Glyph.Library, R.string.settings_library),
+    Flow(Glyph.DynamicFlow, R.string.settings_conversion),
+    Updates(Glyph.Bell, R.string.settings_updates),
+    Storage(Glyph.Trash, R.string.settings_housekeeping)
+}
+
+/** The Settings menu (M3): one row per page, with About and "Show me around" kept here. */
+@Composable
+private fun SettingsMenu(
+    settings: UserSettings,
+    actions: SettingsActions,
+    onOpenLicenses: () -> Unit,
+    onPage: (SettingsPage) -> Unit
+) {
+    val chrome = LocalChromePadding.current
+    val insets = WindowInsets.safeDrawing.asPaddingValues()
+    Column(
+        Modifier
+            .fillMaxSize()
+            .chromeStart()
+            .verticalScroll(rememberScrollState())
+            .testTag(LibraryTestTags.SETTINGS)
+            .padding(top = insets.calculateTopPadding())
+            .padding(horizontal = 18.dp)
+    ) {
+        ScreenHeader(
+            title = stringResource(R.string.settings_title),
+            slogan = stringResource(R.string.settings_sub),
+            modifier = Modifier.reveal(0)
+        )
+        SettingsPage.entries.forEachIndexed { i, page ->
+            SettingsMenuItem(page, Modifier.reveal(1 + i)) { onPage(page) }
+        }
+        Spacer(Modifier.height(16.dp))
+        AboutGroup(onOpenLicenses)
+        GuideTip(Guide.Atmosphere, settings, actions.onGuideSeen, Modifier.padding(top = 8.dp))
+        GuidesResetRow(actions.onGuidesReset)
+        Spacer(
+            Modifier.height(
+                insets.calculateBottomPadding() + chrome.calculateBottomPadding() + HELP_SIZE + HELP_CLEARANCE
+            )
+        )
+    }
+}
+
+/** One menu row: a glowing icon plate, the page's name, and a chevron. */
+@Composable
+private fun SettingsMenuItem(page: SettingsPage, modifier: Modifier, onClick: () -> Unit) {
+    val p = FlowFolio.palette
+    FlowFolioCard(
+        modifier.fillMaxWidth().padding(vertical = 5.dp).clickable(onClick = onClick),
+        radius = 20.dp,
+        padding = PaddingValues(0.dp)
+    ) {
+        Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(
+                    42.dp
+                ).clip(
+                    RoundedCornerShape(14.dp)
+                ).background(Brush.verticalGradient(listOf(p.buttonTop, p.buttonBottom))),
+                contentAlignment = Alignment.Center
+            ) {
+                FlowFolioGlyph(page.glyph, contentDescription = null, color = p.buttonInk, size = 22.dp)
+            }
+            Text(
+                stringResource(page.title),
+                style = FlowFolioType.rowLabel.merge(FlowFolio.item),
+                modifier = Modifier.weight(1f).padding(start = 14.dp)
+            )
+            FlowFolioGlyph(
+                Glyph.Back,
+                contentDescription = null,
+                color = p.hint,
+                size = 16.dp,
+                glow = false,
+                modifier = Modifier.graphicsLayer { rotationZ = 180f }
+            )
+        }
+    }
+}
+
+/** A dedicated settings page: back, a piece of art (the page's own icon), then its settings. */
+@Composable
+private fun SettingsPageScreen(
+    page: SettingsPage,
+    settings: UserSettings,
+    actions: SettingsActions,
+    audition: Audition,
+    housekeeping: Housekeeping,
+    onBack: () -> Unit
+) {
+    val insets = WindowInsets.safeDrawing.asPaddingValues()
+    Column(
+        Modifier
+            .fillMaxSize()
+            .chromeStart()
+            .verticalScroll(rememberScrollState())
+            .padding(top = insets.calculateTopPadding())
+            .padding(horizontal = 18.dp)
+    ) {
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            FlowFolioIconButton(onClick = onBack, glass = true, modifier = Modifier.padding(end = 12.dp)) {
+                FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = FlowFolio.palette.text)
+            }
+            Text(
+                stringResource(page.title),
+                style = FlowFolioType.screenTitle.merge(FlowFolio.title),
+                modifier = Modifier.weight(1f)
+            )
+        }
+        // The art: the page's icon on a glowing, gradient plate, centred (M3).
+        Box(Modifier.fillMaxWidth().padding(vertical = 18.dp), contentAlignment = Alignment.Center) {
+            val p = FlowFolio.palette
+            Box(
+                Modifier
+                    .size(104.dp)
+                    .clip(RoundedCornerShape(32.dp))
+                    .softShadow(RoundedCornerShape(32.dp), p.title.copy(alpha = 0.35f), blur = 28.dp)
+                    .background(Brush.linearGradient(listOf(p.buttonTop, p.buttonBottom, p.buttonTop)))
+                    .reveal(0),
+                contentAlignment = Alignment.Center
+            ) {
+                FlowFolioGlyph(page.glyph, contentDescription = null, color = p.buttonInk, size = 52.dp)
+            }
+        }
+        when (page) {
+            SettingsPage.Appearance -> AppearanceGroup(settings, actions)
+            SettingsPage.Text -> TextGroup(settings.text, 2, actions.onReaderText)
+            SettingsPage.Reading -> ReadingGroup(settings, actions)
+            SettingsPage.Atmosphere -> AtmosphereGroup(settings, actions, audition)
+            SettingsPage.Library -> LibraryGroup(settings, actions)
+            SettingsPage.Flow -> ConversionGroup(settings, actions)
+            SettingsPage.Updates -> UpdatesGroup(settings, housekeeping.version, housekeeping.update, actions)
+            SettingsPage.Storage -> HousekeepingGroup(housekeeping.cacheBytes, actions)
+        }
+        Spacer(Modifier.height(insets.calculateBottomPadding() + HELP_SIZE + HELP_CLEARANCE))
+    }
+}
+
 /**
- * The mock's Settings (`#s-settings`): headed groups on cards. Appearance (theme, Neon glow, page turn), Text (how
- * EPUBs are set, M3), Reading (the spread layout), Library (how imports are stored) and Conversion (where it
- * happens). Unfolded, the groups sit in two columns. The mock's notification settings stay hidden until they exist.
+ * The mock's Settings (`#s-settings`): a menu of pages (M3). About and "Show me around" stay on the menu; the rest
+ * each open a page of their own, behind a shared art header. The help button floats over the menu.
  */
 @Suppress("LongMethod")
 @Composable
@@ -146,71 +304,32 @@ fun SettingsContent(
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     var tutorial by rememberSaveable { mutableStateOf(false) }
     if (tutorial) TutorialSheet { tutorial = false }
-    BoxWithConstraints(Modifier.fillMaxSize().chromeStart().testTag(LibraryTestTags.SETTINGS)) {
-        val twoColumns = maxWidth >= TWO_COLUMNS
-        val settingsScroll = rememberScrollState()
-        var updatesTop by remember { mutableIntStateOf(0) }
-        var columnTop by remember { mutableIntStateOf(0) }
-        LaunchedEffect(scrollToUpdates) {
-            if (scrollToUpdates > 0) settingsScroll.animateScrollTo((updatesTop - columnTop).coerceAtLeast(0))
-        }
-        ScrollToTopOnTab("settings", settingsScroll)
-        Column(
-            Modifier
-                .fillMaxSize()
-                // The scrolling area stops above the floating help button, so no setting can end up underneath it
-                // where a tap would hit the button instead (owner, M5 round).
-                .padding(bottom = HELP_SIZE + HELP_CLEARANCE)
-                .verticalScroll(settingsScroll)
-                .onGloballyPositioned { columnTop = it.boundsInRoot().top.roundToInt() }
-                .padding(top = insets.calculateTopPadding())
-                .padding(horizontal = 18.dp)
-        ) {
-            ScreenHeader(
-                title = stringResource(R.string.settings_title),
-                slogan = stringResource(R.string.settings_sub),
-                modifier = Modifier.reveal(0)
-            )
-            if (twoColumns) {
-                Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                    Column(Modifier.weight(1f)) {
-                        AppearanceGroup(settings, actions)
-                        ReadingGroup(settings, actions)
-                        AtmosphereGroup(settings, actions, audition)
-                    }
-                    Column(Modifier.weight(1f)) {
-                        TextGroup(settings.text, 2, actions.onReaderText)
-                        LibraryGroup(settings, actions)
-                        ConversionGroup(settings, actions)
-                        Box(Modifier.onGloballyPositioned { updatesTop = it.boundsInRoot().top.roundToInt() }) {
-                            UpdatesGroup(settings, housekeeping.version, housekeeping.update, actions)
-                        }
-                        HousekeepingGroup(housekeeping.cacheBytes, actions)
-                    }
-                }
+    var page by rememberSaveable { mutableStateOf<SettingsPage?>(null) }
+    // A banner tap opens the Updates page directly (ADR-0048).
+    LaunchedEffect(scrollToUpdates) {
+        if (scrollToUpdates > 0) page = SettingsPage.Updates
+    }
+    Box(Modifier.fillMaxSize().chromeStart().testTag(LibraryTestTags.SETTINGS)) {
+        AnimatedContent(
+            targetState = page,
+            transitionSpec = {
+                val way = if (targetState == null) -1 else 1
+                (
+                    slideInHorizontally(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { it * way } +
+                        fadeIn(tween(Motion.MEDIUM_MS))
+                    )
+                    .togetherWith(
+                        slideOutHorizontally(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { -it * way } +
+                            fadeOut(tween(Motion.MEDIUM_MS))
+                    )
+            },
+            label = "settingsPage"
+        ) { p ->
+            if (p == null) {
+                SettingsMenu(settings, actions, onOpenLicenses) { page = it }
             } else {
-                AppearanceGroup(settings, actions)
-                TextGroup(settings.text, 2, actions.onReaderText)
-                ReadingGroup(settings, actions)
-                AtmosphereGroup(settings, actions, audition)
-                LibraryGroup(settings, actions)
-                ConversionGroup(settings, actions)
-                Box(Modifier.onGloballyPositioned { updatesTop = it.boundsInRoot().top.roundToInt() }) {
-                    UpdatesGroup(settings, housekeeping.version, housekeeping.update, actions)
-                }
-                HousekeepingGroup(housekeeping.cacheBytes, actions)
+                SettingsPageScreen(p, settings, actions, audition, housekeeping) { page = null }
             }
-            AboutGroup(onOpenLicenses)
-            // A tip beside the setting it is about, once (owner, M5).
-            GuideTip(
-                Guide.Atmosphere,
-                settings,
-                actions.onGuideSeen,
-                Modifier.padding(top = 8.dp)
-            )
-            GuidesResetRow(actions.onGuidesReset)
-            // Room for the floating help button, so no setting ever rests underneath it (owner, M5 round).
-            Spacer(Modifier.height(insets.calculateBottomPadding() + chrome.calculateBottomPadding() + 24.dp))
         }
         // The help button floats over the page rather than sitting in a group, so the tour is reachable from
         // anywhere in Settings (owner, M5).
@@ -412,8 +531,6 @@ internal fun Group(title: Int, order: Int, content: @Composable ColumnScope.() -
         }
     }
 }
-
-private val TWO_COLUMNS = 600.dp
 
 /** The floating help button: big and solid, so the tour is never hidden behind a faint outline. */
 private val HELP_SIZE = 62.dp

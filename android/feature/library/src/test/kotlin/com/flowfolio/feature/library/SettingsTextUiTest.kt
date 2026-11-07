@@ -1,11 +1,13 @@
 package com.flowfolio.feature.library
 
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.flowfolio.core.designsystem.FlowFolioTheme
@@ -33,14 +35,17 @@ class SettingsTextUiTest {
                 SettingsContent(UserSettings(text = text), SettingsActions(onReaderText = { changed = it }))
             }
         }
+        // Settings > Text now lives behind the menu (M3).
+        compose.onNodeWithText(res.getString(R.string.settings_text)).performClick()
         return { changed }
     }
 
     @Test
     fun largerTextStepsOneSize() {
         val changed = show()
-        compose.onNodeWithContentDescription(res.getString(R.string.settings_text_larger)).performScrollTo()
-            .performClick()
+        compose.onNodeWithTag(
+            LibraryTestTags.TEXT_LARGER
+        ).performScrollTo().performSemanticsAction(SemanticsActions.OnClick)
         assertEquals(ReaderText(sizeSp = ReaderText.DEFAULT_SIZE_SP + 1), changed())
     }
 

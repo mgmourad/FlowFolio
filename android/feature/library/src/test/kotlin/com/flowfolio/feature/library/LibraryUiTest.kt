@@ -133,8 +133,9 @@ class LibraryUiTest {
         compose.setContent {
             FlowFolioTheme { SettingsContent(UserSettings(), SettingsActions()) }
         }
+        // Storage options and "ask each time" live on the Library page (M3).
+        compose.onNodeWithText(res.getString(R.string.settings_library)).performClick()
         compose.onNodeWithText(res.getString(R.string.storage_copy)).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(res.getString(R.string.settings_ask_each)).performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText(res.getString(R.string.theme_dark)).performScrollTo().assertIsDisplayed()
     }
 }
