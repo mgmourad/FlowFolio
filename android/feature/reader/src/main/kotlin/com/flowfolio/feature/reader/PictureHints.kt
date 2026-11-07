@@ -52,7 +52,7 @@ internal fun BoxScope.PictureHints(links: Map<Int, List<ReaderLink>>, framesFor:
                     .size(HINT_BOX)
                     .background(
                         FlowFolio.palette.backgroundDeep.copy(alpha = HINT_BG_ALPHA),
-                        RoundedCornerShape(HINT_RADIUS)
+                        RoundedCornerShape(topStart = HINT_RADIUS, topEnd = 0.dp, bottomEnd = 0.dp, bottomStart = 0.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
