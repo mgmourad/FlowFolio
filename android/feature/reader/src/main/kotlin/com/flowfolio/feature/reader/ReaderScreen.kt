@@ -180,6 +180,7 @@ private fun ReaderRoot(
 @Composable
 internal fun SinglePageReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap>, onUnitShown: (Int) -> Unit) {
     val curl = rememberReaderCurlState(state.unit)
+    val latestImages by rememberUpdatedState(images)
     ReportUnit(curl, onUnitShown)
     FollowJumps(curl, state.unit)
     PageCurl(
@@ -187,7 +188,10 @@ internal fun SinglePageReader(state: ReaderState.Ready, images: Map<Int, ImageBi
         state = curl,
         gradientShadow = true,
         config = swipeAnywhereConfig(),
-        modifier = Modifier.fillMaxSize().testTag(ReaderTestTags.PAGE)
+        modifier = Modifier.fillMaxSize().testTag(ReaderTestTags.PAGE),
+        // A real book: the back of the turning sheet is the next page (the other side of the same leaf), not a tinted
+        // mirror of the front. Null (the last page) falls back to the translucent mirror, as there is no next page.
+        backPage = { unit -> latestImages[unit + 1] }
     ) { page ->
         // Single page: bound on the left like a book, with a lighter gutter than an open spread.
         PagePane(page, images[page], Alignment.Center, Spine.LEFT, SINGLE_PAGE_GUTTER_STRENGTH)
