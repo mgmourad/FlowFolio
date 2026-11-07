@@ -223,9 +223,12 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { repo.markGuideSeen(id) }
     }
 
-    /** Lets every feature introduce itself again. */
+    /** Lets every feature introduce itself again, and turns tips back on after "never show tips again". */
     fun resetGuides() {
-        viewModelScope.launch { repo.clearGuidesSeen() }
+        viewModelScope.launch {
+            repo.clearGuidesSeen()
+            repo.setTipsEnabled(true)
+        }
     }
 
     /** Turns the chosen atmosphere on or off for every book. */
