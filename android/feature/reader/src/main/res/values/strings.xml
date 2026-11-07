@@ -135,6 +135,10 @@
     <string name="flow_status_off">Reflow this book to fit your screen</string>
     <string name="flow_status_converting">Preparing… %1$d%%</string>
     <string name="flow_status_chapters">Chapter %1$d of %2$d ready</string>
+    <!-- The conversion health badge (M2). -->
+    <string name="flow_health_good">Converted well · %1$d%% text</string>
+    <string name="flow_health_fair">A few pages are pictures · %1$d%% text</string>
+    <string name="flow_health_poor">Many pages are pictures · %1$d%% text</string>
     <!-- The first-book demo (owner, 2026-11-07). -->
     <string name="reader_demo_title">Your first book</string>
     <string name="reader_demo_body">Tap the sides to turn pages, the middle for the menus, and drag the bar at the bottom to riffle through.</string>

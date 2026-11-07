@@ -187,6 +187,8 @@ class ReaderFlowTest {
 
         override fun readableBundle(bookId: String): File? = readable
 
+        override fun health(bookId: String): com.flowfolio.core.model.BookHealth? = null
+
         override suspend fun convert(bookId: String) {
             convertCalled = true
         }

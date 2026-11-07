@@ -42,9 +42,11 @@ import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.INDETERMINATE
 import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.softShadow
+import com.flowfolio.core.model.BookHealth
 import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.FlowPause
 import com.flowfolio.core.model.FlowStatus
+import com.flowfolio.core.model.HealthGrade
 
 /**
  * The "Aa" sheet's Dynamic Flow card (ADR-0045): the glyph, what the book's Dynamic Flow is doing, and the switch,
@@ -104,6 +106,13 @@ private fun FlowCard(flow: FlowState, onSwitch: (Boolean) -> Unit) {
             ) { line ->
                 Text(line, style = FlowFolioType.rowDetail.merge(FlowFolio.hint), maxLines = 2)
             }
+            flow.health?.let { health ->
+                Text(
+                    healthLine(health),
+                    style = FlowFolioType.rowDetail.merge(FlowFolio.subItem),
+                    maxLines = 1
+                )
+            }
         }
         FlowFolioToggle(flow.wanted, onCheckedChange = null, progress = ringOf(flow))
     }
@@ -136,6 +145,17 @@ private fun statusLine(flow: FlowState): String = when (val s = flow.status) {
     FlowStatus.Ready -> stringResource(if (flow.reading) R.string.flow_status_on else R.string.flow_status_ready)
 
     FlowStatus.None -> stringResource(R.string.flow_status_off)
+}
+
+/** How well the book converted, in one line (M2): the grade plus the share of text found. */
+@Composable
+private fun healthLine(health: BookHealth): String {
+    val text = (health.textCoverage * PERCENT).toInt()
+    return when (health.grade) {
+        HealthGrade.GOOD -> stringResource(R.string.flow_health_good, text)
+        HealthGrade.FAIR -> stringResource(R.string.flow_health_fair, text)
+        HealthGrade.POOR -> stringResource(R.string.flow_health_poor, text)
+    }
 }
 
 /** The switch's ring: how far the conversion is, turning while it waits; none otherwise. */

@@ -11,6 +11,7 @@ import com.flowfolio.core.database.BookDao
 import com.flowfolio.core.database.BookReadingDao
 import com.flowfolio.core.database.BookmarkDao
 import com.flowfolio.core.model.BookFormat
+import com.flowfolio.core.model.BookHealth
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.FlowFailure
 import com.flowfolio.core.model.FlowNotice
@@ -41,6 +42,7 @@ import kotlinx.coroutines.withContext
  * broadcasts, and keeps each PDF's view. [statuses] holds every book this run knows about; [notices] tells the app what
  * to show.
  */
+@Suppress("TooManyFunctions") // one function per thing the app asks Dynamic Flow about.
 interface DynamicFlow {
     val statuses: StateFlow<Map<String, FlowStatus>>
 
@@ -59,6 +61,9 @@ interface DynamicFlow {
      * still converting (progressive delivery). Null when nothing is readable yet.
      */
     fun readableBundle(bookId: String): File?
+
+    /** The conversion's health for the book (M2), or null when it has no bundle. */
+    fun health(bookId: String): BookHealth?
 
     /** Converts [bookId] in the background unless it is converted or converting already. */
     suspend fun convert(bookId: String)
@@ -88,6 +93,7 @@ interface DynamicFlow {
     fun delete(bookId: String)
 
     /** No Dynamic Flow: for tests, and fakes that don't need it. */
+    @Suppress("TooManyFunctions")
     object None : DynamicFlow {
         override val statuses: StateFlow<Map<String, FlowStatus>> = MutableStateFlow(emptyMap())
         override val notices: SharedFlow<FlowNotice> = MutableSharedFlow()
@@ -98,6 +104,8 @@ interface DynamicFlow {
         override fun bundle(bookId: String): File? = null
 
         override fun readableBundle(bookId: String): File? = null
+
+        override fun health(bookId: String): BookHealth? = null
 
         override suspend fun convert(bookId: String) = Unit
 
@@ -210,6 +218,8 @@ class DefaultDynamicFlow @Inject constructor(
 
     override fun readableBundle(bookId: String): File? =
         files.readable(bookId, converting = _statuses.value[bookId] is FlowStatus.Converting)
+
+    override fun health(bookId: String): BookHealth? = files.health(bookId)
 
     override suspend fun convert(bookId: String) {
         val current = _statuses.value[bookId]

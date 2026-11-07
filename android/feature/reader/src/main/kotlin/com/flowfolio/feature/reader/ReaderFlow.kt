@@ -115,7 +115,8 @@ internal class ReaderFlow(
             dynamicFlow.status(bookId).collect { status ->
                 val readingFlow = _state.value.reading
                 val wanted = _state.value.wanted
-                _state.update { it.copy(status = status) }
+                val health = if (status == FlowStatus.Ready) dynamicFlow.health(bookId) else null
+                _state.update { it.copy(status = status, health = health) }
                 if (!wanted || !host.showing) return@collect
                 val finishedNow = when (status) {
                     is FlowStatus.Converting -> status.readableChapters

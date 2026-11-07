@@ -18,6 +18,7 @@ import com.flowfolio.core.designsystem.fontRes
 import com.flowfolio.core.epub.EpubException
 import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.AppStyle
+import com.flowfolio.core.model.BookHealth
 import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.FlowStatus
 import com.flowfolio.core.model.PageLabels
@@ -98,7 +99,9 @@ data class FlowState(
     val available: Boolean = false,
     val reading: Boolean = false,
     val wanted: Boolean = false,
-    val status: FlowStatus = FlowStatus.None
+    val status: FlowStatus = FlowStatus.None,
+    /** The conversion's health once the book is converted (M2); null before then. */
+    val health: BookHealth? = null
 )
 
 /** Window in pixels and dp, as measured by the reader's root layout, and whether the app is showing dark mode. */

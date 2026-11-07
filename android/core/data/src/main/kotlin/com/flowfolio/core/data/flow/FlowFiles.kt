@@ -1,7 +1,11 @@
 package com.flowfolio.core.data.flow
 
 import com.flowfolio.core.conversion.SidecarBuilder
+import com.flowfolio.core.conversion.epub.Sidecar
+import com.flowfolio.core.model.BookHealth
 import java.io.File
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 
 /**
  * A PDF's Dynamic Flow bundle (ADR-0045): `files/flow/<bookId>/book.epub` and `flowfolio.json`. Private to the app,
@@ -31,6 +35,26 @@ class FlowFiles(private val root: File) {
     fun ready(bookId: String): Boolean = epub(bookId).isFile && !outdated(bookId)
 
     /**
+     * The conversion's health from the sidecar (M2): how many pages fell back and how well the text and glyphs
+     * measured. Null when the book has no bundle or its sidecar cannot be read.
+     */
+    fun health(bookId: String): BookHealth? {
+        val sidecar = sidecar(bookId)
+        if (!sidecar.isFile) return null
+        return runCatching {
+            val h = HEALTH_JSON.decodeFromString<Sidecar>(sidecar.readText()).health
+            BookHealth(
+                pages = h.summary.pages,
+                pagesBelowThreshold = h.summary.pagesBelowThreshold,
+                fallbackPages = h.summary.fallbackPages,
+                scannedPages = h.summary.scannedPages,
+                textCoverage = h.pages.map { it.textCoverage }.average().toFloat(),
+                geometricCoverage = h.pages.map { it.geometricCoverage }.average().toFloat()
+            )
+        }.getOrNull()
+    }
+
+    /**
      * A bundle made by an earlier converter: it is converted again on the book's next opening, so improvements reach
      * books converted before them.
      */
@@ -56,6 +80,9 @@ class FlowFiles(private val root: File) {
     private companion object {
         const val EPUB = "book.epub"
         const val SIDECAR = "flowfolio.json"
+
+        /** The sidecar is a few hundred kB; its unknown future fields must not fail the health read. */
+        private val HEALTH_JSON = Json { ignoreUnknownKeys = true }
 
         /** The converter's version in a sidecar's `recipe.engine` (the sidecar is a few hundred kB: no full parse). */
         val ENGINE_VERSION_IN = Regex("\"engine\"\\s*:\\s*\\{[^}]*\"version\"\\s*:\\s*\"([^\"]+)\"")
