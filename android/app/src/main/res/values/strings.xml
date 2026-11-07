@@ -9,6 +9,10 @@
     <string name="tab_dictionary">Dictionary</string>
     <string name="tab_settings">Settings</string>
     <string name="splash_tagline">Every textbook, reflowed. Every page, kept.</string>
+    <!-- The automatic update check's notice (Phase 4 M5). -->
+    <string name="update_banner_title">Update available</string>
+    <string name="update_banner_text">%1$s · tap to open Settings</string>
+    <string name="update_banner_dismiss">Dismiss</string>
     <!-- Dynamic Flow notices in the app (ADR-0045). -->
     <string name="flow_notice_started">Preparing Dynamic Flow</string>
     <string name="flow_notice_started_text">%1$s keeps converting while you read.</string>

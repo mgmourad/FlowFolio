@@ -85,12 +85,25 @@ class MainActivity : ComponentActivity() {
                             spread = { w, h -> reading.opensAsSpread(w, h) }
                         ) { CoverFlightHost { FlowFolioApp(appViewModel) } }
                         FlowNoticeHost(appViewModel.flowNotices, appViewModel::onNotificationOpen)
+                        val update by appViewModel.updateAvailable.collectAsStateWithLifecycle()
+                        update?.let { release ->
+                            UpdateBanner(
+                                release,
+                                onOpen = appViewModel::onUpdateOpen,
+                                onDismiss = appViewModel::dismissUpdate
+                            )
+                        }
                         AskNotificationsOnce()
                         if (splash) FlowFolioSplash(stringResource(R.string.splash_tagline)) { splash = false }
                     }
                 }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        appViewModel.checkForUpdates()
     }
 
     private val notificationPermission =

@@ -64,6 +64,7 @@ import com.flowfolio.feature.reader.ReaderScreen
 fun FlowFolioApp(appViewModel: AppViewModel) {
     val nav = rememberNavController()
     LaunchedEffect(nav) { appViewModel.directOpens.collect { (id, layout) -> nav.navigate(Routes.reader(id, layout)) } }
+    LaunchedEffect(nav) { appViewModel.updatesOpened.collect { nav.switchTo(TopLevel.Settings) } }
     val entry by nav.currentBackStackEntryAsState()
     // A shelf tapped on the Shelves tab: the library scrolls to its row.
     var shelfToShow by rememberSaveable { mutableStateOf<Long?>(null) }

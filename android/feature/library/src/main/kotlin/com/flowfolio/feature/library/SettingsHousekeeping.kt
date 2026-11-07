@@ -63,6 +63,7 @@ internal fun UpdatesGroup(settings: UserSettings, version: String, state: Update
 /** Where the last check got to, in a line, and the buttons that follow from it. */
 @Composable
 private fun UpdateRow(state: UpdateState, actions: SettingsActions) {
+    var showingNotes by remember { mutableStateOf(false) }
     Column(
         Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp).testTag(LibraryTestTags.UPDATE_ROW),
         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -77,6 +78,42 @@ private fun UpdateRow(state: UpdateState, actions: SettingsActions) {
             )
         }
         UpdateButtons(state, actions)
+        if (state is UpdateState.Available) {
+            FlowFolioGhostButton(
+                text = stringResource(R.string.settings_update_whats_new),
+                onClick = { showingNotes = true }
+            )
+        }
+    }
+    if (showingNotes && state is UpdateState.Available) {
+        ReleaseNotes(state.release.notes, onDismiss = { showingNotes = false })
+    }
+}
+
+/** What a newer build changed, from its own release notes (Phase 4 M5). */
+@Composable
+private fun ReleaseNotes(notes: String, onDismiss: () -> Unit) {
+    val p = FlowFolio.palette
+    val shape = RoundedCornerShape(24.dp)
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(p.background, shape)
+                .border(1.dp, p.edge, shape)
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                stringResource(R.string.settings_update_whats_new),
+                style = FlowFolioType.sectionTitle.merge(FlowFolio.title)
+            )
+            Text(notes, style = FlowFolioType.rowDetail.merge(FlowFolio.item))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.End)) {
+                FlowFolioGhostButton(text = stringResource(R.string.action_close), onClick = onDismiss)
+            }
+        }
     }
 }
 
