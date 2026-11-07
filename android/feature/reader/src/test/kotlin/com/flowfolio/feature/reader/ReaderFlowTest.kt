@@ -80,6 +80,59 @@ class ReaderFlowTest {
         assertTrue("a stale partial is cleaned up by a fresh conversion", flow.convertCalled)
     }
 
+    @Test
+    fun watchPicksUpChaptersAsTheyLandWhileReading() = runTest(UnconfinedTestDispatcher()) {
+        val statuses = MutableStateFlow<FlowStatus>(FlowStatus.None)
+        val host = FakeHost()
+        var clock = 1_000L
+        val readerFlow = ReaderFlow(
+            "book",
+            backgroundScope,
+            FakeRepository(),
+            FakeDynamicFlow(statusFlow = statuses),
+            host,
+            now = { clock }
+        )
+        assertFalse(readerFlow.opensFlow(true))
+        host.isShowing = true
+        statuses.value = FlowStatus.Converting(0.5f, null, readableChapters = 1, totalChapters = 5)
+        readerFlow.shown(true)
+        host.reopenedToFlow = false
+        host.savedPlace = false
+        clock += 20_000L
+        statuses.value = FlowStatus.Converting(0.6f, null, readableChapters = 2, totalChapters = 5)
+        assertTrue("picks up the new chapter", host.reopenedToFlow)
+        assertTrue("flushes the place first", host.savedPlace)
+    }
+
+    @Test
+    fun watchThrottlesRapidReopens() = runTest(UnconfinedTestDispatcher()) {
+        val statuses = MutableStateFlow<FlowStatus>(FlowStatus.None)
+        val host = FakeHost()
+        var clock = 1_000L
+        val readerFlow = ReaderFlow(
+            "book",
+            backgroundScope,
+            FakeRepository(),
+            FakeDynamicFlow(statusFlow = statuses),
+            host,
+            now = { clock }
+        )
+        assertFalse(readerFlow.opensFlow(true))
+        host.isShowing = true
+        statuses.value = FlowStatus.Converting(0.5f, null, readableChapters = 1, totalChapters = 5)
+        readerFlow.shown(true)
+        host.reopenedToFlow = false
+        // A chapter lands soon after the first: throttled, so no reopen yet.
+        clock += 1_000L
+        statuses.value = FlowStatus.Converting(0.6f, null, readableChapters = 2, totalChapters = 5)
+        assertFalse("throttled", host.reopenedToFlow)
+        // Enough time passes: the next chapter is picked up.
+        clock += 20_000L
+        statuses.value = FlowStatus.Converting(0.7f, null, readableChapters = 3, totalChapters = 5)
+        assertTrue("reopens after the throttle", host.reopenedToFlow)
+    }
+
     private class FakeHost : ReaderFlow.Host {
         var isShowing = false
         var reopenedToFlow = false

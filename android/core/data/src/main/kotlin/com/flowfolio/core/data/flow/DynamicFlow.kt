@@ -208,7 +208,8 @@ class DefaultDynamicFlow @Inject constructor(
 
     override fun bundle(bookId: String): File? = files.epub(bookId).takeIf { files.ready(bookId) }
 
-    override fun readableBundle(bookId: String): File? = files.readable(bookId)
+    override fun readableBundle(bookId: String): File? =
+        files.readable(bookId, converting = _statuses.value[bookId] is FlowStatus.Converting)
 
     override suspend fun convert(bookId: String) {
         val current = _statuses.value[bookId]

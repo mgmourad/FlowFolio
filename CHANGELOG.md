@@ -10,9 +10,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   whole book is done, instead of only at the end. The converter renders each chapter's images and rewrites the EPUB
   after every chapter — a valid EPUB of only the finished chapters — and the sidecar carries `complete: false` and a
   `finishedSpineItems` list while partial. The service writes each partial atomically and reports "chapter N of M
-  readable"; the reader opens the first chapter as soon as it lands and reopens to the whole book when conversion
-  finishes. Intermediate chapters are counted as they land and all appear at the finish. A complete conversion is
-  byte-for-byte unchanged, so the engine version is not bumped and no book re-converts.
+  readable"; the reader opens the first chapter as soon as it lands, then picks up further chapters as they land
+  (throttled so reading isn't interrupted every chapter), and reopens to the whole book when conversion finishes. A
+  complete conversion is byte-for-byte unchanged, so the engine version is not bumped and no book re-converts.
 
 ## [0.3.0-alpha.6] - 2026-11-06
 

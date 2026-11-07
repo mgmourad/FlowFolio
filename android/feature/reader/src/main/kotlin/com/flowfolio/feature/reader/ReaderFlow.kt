@@ -21,7 +21,8 @@ internal class ReaderFlow(
     private val scope: CoroutineScope,
     private val repository: ReaderRepository,
     private val dynamicFlow: DynamicFlow,
-    private val host: Host
+    private val host: Host,
+    private val now: () -> Long = System::currentTimeMillis
 ) {
     /** What the reader does for Dynamic Flow. */
     interface Host {
@@ -52,6 +53,10 @@ internal class ReaderFlow(
     /** A PDF page to open Dynamic Flow at (a switch from the PDF), used once by the next flow opening. */
     private var sourcePage: Int? = null
     private var watching: Job? = null
+
+    /** Chapters the open Dynamic Flow session has, and when it was last refreshed (progressive delivery). */
+    private var openedChapters = 0
+    private var lastRefresh = 0L
 
     /**
      * Whether to open the book's Dynamic Flow: the reader's choice [view] when switching, else the book's own, else the
@@ -99,7 +104,11 @@ internal class ReaderFlow(
         }
     }
 
-    /** Follows the book's conversion: opens the first chapter when readable, and the whole book when done. */
+    /**
+     * Follows the book's conversion: opens the first chapter when readable, then picks up further chapters as they land
+     * (throttled so it doesn't flicker per chapter), and reopens to the whole book when done.
+     */
+    @Suppress("CyclomaticComplexMethod") // One branch per transition (first chapter, new chapter, done).
     private fun watch() {
         if (watching != null) return
         watching = scope.launch {
@@ -108,19 +117,30 @@ internal class ReaderFlow(
                 val wanted = _state.value.wanted
                 _state.update { it.copy(status = status) }
                 if (!wanted || !host.showing) return@collect
-                // Open the partial when the first chapter lands (still on the PDF), or reopen to the full book when
-                // conversion finishes (from the PDF or from the partial). A single-chapter book's only emit is already
-                // the whole book, so it opens once, on Ready.
-                val shouldOpen = when (status) {
-                    is FlowStatus.Converting -> status.readableChapters in 1 until status.totalChapters && !readingFlow
-                    FlowStatus.Ready -> true
-                    else -> false
+                val finishedNow = when (status) {
+                    is FlowStatus.Converting -> status.readableChapters
+                    FlowStatus.Ready -> Int.MAX_VALUE
+                    else -> 0
                 }
-                if (shouldOpen) {
+                // A single-chapter book's only emit is already the whole book, so it opens once, on Ready.
+                val firstChapter = status is FlowStatus.Converting && !readingFlow &&
+                    status.readableChapters in 1 until status.totalChapters
+                // Chapters arrived since the last open, and the last open is old enough not to be a flicker.
+                val newChapters = status is FlowStatus.Converting && readingFlow &&
+                    status.readableChapters > openedChapters && now() - lastRefresh >= REFRESH_MS
+                val finished = status == FlowStatus.Ready
+                if (firstChapter || newChapters || finished) {
                     if (readingFlow) host.savePlace() else sourcePage = host.anchorPage
                     host.reopen(true)
+                    openedChapters = finishedNow
+                    lastRefresh = now()
                 }
             }
         }
+    }
+
+    private companion object {
+        /** Reopen at most this often while chapters land, so reading is not interrupted every chapter. */
+        const val REFRESH_MS = 15_000L
     }
 }

@@ -20,9 +20,12 @@ class FlowFiles(private val root: File) {
 
     /**
      * What the reader may open now: the complete EPUB when it is current, else the partial bundle while it is still
-     * being written (progressive delivery, spec 6). Null when nothing is readable yet.
+     * being written (progressive delivery, spec 6). A partial is only readable while [converting] is true — a stale
+     * `.part` left by a killed conversion must not strand the reader on a truncated book. Null when nothing is
+     * readable yet.
      */
-    fun readable(bookId: String): File? = epub(bookId).takeIf { ready(bookId) } ?: partial(bookId).takeIf { it.isFile }
+    fun readable(bookId: String, converting: Boolean): File? =
+        epub(bookId).takeIf { ready(bookId) } ?: partial(bookId).takeIf { converting && it.isFile }
 
     /** A whole bundle made by this version of the converter. */
     fun ready(bookId: String): Boolean = epub(bookId).isFile && !outdated(bookId)
