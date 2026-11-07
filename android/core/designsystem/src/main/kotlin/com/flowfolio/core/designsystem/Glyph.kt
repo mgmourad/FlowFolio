@@ -224,6 +224,25 @@ enum class Glyph(internal val pathData: String, internal val stroke: Float = 2f,
         "M12 3a2.8 2.8 0 0 1 2.8 2.8v6a2.8 2.8 0 0 1-5.6 0v-6A2.8 2.8 0 0 1 12 3z " +
             "M5.8 11.5a6.2 6.2 0 0 0 12.4 0 M12 17.8V21 M9 21h6",
         stroke = 1.9f
+    ),
+
+    /** Two chasing arrows: checking for an update (owner, 2026-11-07). */
+    Refresh("M21 12a9 9 0 1 1-2.6-6.4 M21 3v5h-5", stroke = 2f),
+
+    /** A face with headphones: the reading atmosphere (owner, 2026-11-07). */
+    Smile(
+        "M12 5a8 8 0 1 1 0 16a8 8 0 1 1 0-16z M9 10h.01 M15 10h.01 " +
+            "M8.5 13.5c.9 1.3 2.1 2 3.5 2s2.6-.7 3.5-2 " +
+            "M2.5 12a9.5 9.5 0 0 1 19 0 M2.5 12v2.5a2 2 0 0 0 2 2h.5a2 2 0 0 0 2-2V12 " +
+            "M21.5 12v2.5a2 2 0 0 1-2 2h-.5a2 2 0 0 1-2-2V12",
+        stroke = 2f
+    ),
+
+    /** A stacked cylinder: storage (owner, 2026-11-07). */
+    Storage(
+        "M12 3c4.4 0 8 1.3 8 3s-3.6 3-8 3-8-1.3-8-3 3.6-3 8-3z " +
+            "M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6 M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3",
+        stroke = 1.9f
     )
 }
 

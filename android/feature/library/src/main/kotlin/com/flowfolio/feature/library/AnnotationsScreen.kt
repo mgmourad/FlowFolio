@@ -227,6 +227,7 @@ private fun AnnotatedBookItem(item: AnnotatedBook, chapter: String?, selection: 
  * A book with annotations: its cover, title and author, the counts, its colours, and the latest passage under the
  * chapter it is in.
  */
+@Suppress("LongMethod")
 @Composable
 private fun AnnotatedBookCard(
     item: AnnotatedBook,
@@ -251,6 +252,15 @@ private fun AnnotatedBookCard(
                     minLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
+                item.book.author?.let {
+                    Text(
+                        it,
+                        style = FlowFolioType.sub.merge(FlowFolio.hint),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
                 Row(
                     Modifier.padding(top = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,

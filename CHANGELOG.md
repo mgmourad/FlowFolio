@@ -29,8 +29,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   metrics already in `flowfolio.json`: "Converted well · 98% text", or "A few/Many pages are pictures" when pages fell
   back, graded good/fair/poor from the fallback count.
 - **The reader's chapter and section** (owner, 2026-11-07). In Dynamic Flow a spread shows the chapter at the top left
-  and the section at the right page's foot; folded it shows the section (or the chapter) at the top right. Tapping
-  either opens the contents; tapping the page number opens "Go to page".
+  and the section at the right page's foot, each kept to its own page's column; folded it shows the section (or the
+  chapter) at the top left, cut at half the screen so the front camera never clips it. Tapping either opens the
+  contents; tapping the page number opens "Go to page".
 - **Settings as a menu of pages** (Phase 5 M3). Settings is now a menu — Appearance, Text, Reading, Atmosphere,
   Library, Dynamic Flow, Updates and Storage each open a page of their own behind a shared piece of art (the page's
   icon on a glowing plate), with a slide-and-fade transition; About and "Show me around" stay on the menu.

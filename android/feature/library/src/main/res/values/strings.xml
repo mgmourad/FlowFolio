@@ -320,7 +320,7 @@
     <!-- Annotations tab -->
     <string name="annotations_title">Annotations</string>
     <string name="annotations_notes">Notes</string>
-    <string name="annotations_voicemarks">Voicemarks</string>
+    <string name="annotations_voicemarks">VoiceMarks</string>
     <plurals name="highlight_count">
         <item quantity="one">%d highlight</item>
         <item quantity="other">%d highlights</item>
@@ -390,6 +390,9 @@
     <string name="shelf_favorites">Favorites</string>
     <string name="action_favorite_add">Add to favorites</string>
     <string name="action_favorite_remove">Remove from favorites</string>
+    <string name="action_remove_from_library">Remove from library</string>
+    <string name="search_favorites_hint">Search favorites</string>
+    <string name="favorites_remove_body">Unfavorite to keep them in your library, or remove them from your library entirely.</string>
     <string name="action_mark_finished">Mark as finished</string>
     <string name="action_mark_unfinished">Mark as not finished</string>
     <string name="library_finished">%d finished</string>
@@ -482,7 +485,7 @@
     <string name="finished_slogan">Books you saw through</string>
     <string name="shelf_slogan">What is on this shelf</string>
     <!-- Reading Atmosphere (owner, M5). -->
-    <string name="settings_atmosphere">Reading Atmosphere</string>
+    <string name="settings_atmosphere">Atmosphere</string>
     <string name="settings_atmosphere_on">Set the mood</string>
     <string name="settings_atmosphere_on_detail">Page and sound together, for every book</string>
     <string name="settings_atmosphere_pick">Atmosphere</string>

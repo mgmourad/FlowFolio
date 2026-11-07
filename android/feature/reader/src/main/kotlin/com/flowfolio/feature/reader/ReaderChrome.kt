@@ -279,7 +279,7 @@ private fun BoxScope.PageNumber(
         // The chapter and its section, reflowed books only (a PDF already carries its own running heads). In a spread
         // the chapter heads the left page and the section the right page's foot, each kept to its own page's column
         // (the title ends at the left page's inner margin, the section starts at the right page's). Folded, the section
-        // (else the chapter) sits at the top right, cut at half the screen so the front camera never clips it (owner,
+        // (else the chapter) sits at the top left, cut at half the screen so the front camera never clips it (owner,
         // 2026-11-07).
         if (state.reflowable) {
             val leftPage = pages.firstOrNull() ?: state.anchorPage
@@ -310,8 +310,8 @@ private fun BoxScope.PageNumber(
                 (section ?: chapter)?.let {
                     ChapterLabel(
                         it,
-                        Modifier.align(Alignment.TopEnd).statusBarsPadding()
-                            .padding(horizontal = TITLE_MARGIN, vertical = FOOTER_MARGIN)
+                        Modifier.align(Alignment.TopStart).statusBarsPadding()
+                            .padding(start = PAGE_MARGIN, top = FOOTER_MARGIN)
                             .widthIn(max = half),
                         actions
                     )
@@ -434,7 +434,6 @@ private val TOP_FADE_TAIL = 36.dp
 private val BAR_ROW_GAP = 10.dp
 private val PAGE_MARGIN = 32.dp
 private val FOOTER_MARGIN = 14.dp
-private val TITLE_MARGIN = 12.dp
 private val TITLE_MAX_WIDTH = 520.dp
 internal val TITLE_BESIDE_BACK = 600.dp
 

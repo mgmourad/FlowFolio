@@ -1,9 +1,18 @@
+@file:Suppress("TooManyFunctions") // a header, a dialog and a row per action
+
 package com.flowfolio.feature.library
 
 import android.text.format.Formatter
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -72,6 +81,7 @@ import com.flowfolio.core.designsystem.FlowFolioProgressBar
 import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.Selection
 import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.designsystem.reveal
@@ -201,7 +211,13 @@ fun ShelfPageScreen(
             selection.done()
         }
     }
-    if (confirmBulk) ConfirmShelfBooksDelete(selection, state, viewModel) { confirmBulk = false }
+    if (confirmBulk) {
+        if (state.special == ShelfPageViewModel.FAVORITES) {
+            ConfirmFavoritesDelete(selection, viewModel) { confirmBulk = false }
+        } else {
+            ConfirmShelfBooksDelete(selection, state, viewModel) { confirmBulk = false }
+        }
+    }
     removing?.let { folder -> RemoveFolderDialog(folder, { viewModel.removeFolder(folder.path) }) { removing = null } }
     BackHandler(selection.active) { selection.done() }
     BookPromptDialogs(prompt, state, viewModel, shelvesVm) { prompt = null }
@@ -241,6 +257,40 @@ private fun ConfirmShelfBooksDelete(
             onClose()
         },
         onDismiss = onClose
+    )
+}
+
+/** The Favourites page's select-mode delete: take the books off Favourites, or remove them from the library. */
+@Composable
+private fun ConfirmFavoritesDelete(selection: Selection, viewModel: ShelfPageViewModel, onClose: () -> Unit) {
+    val n = selection.chosen.size
+    FlowFolioAlertDialog(
+        onDismissRequest = onClose,
+        title = { Text(pluralStringResource(R.plurals.delete_books_title, n, n)) },
+        text = { Text(stringResource(R.string.favorites_remove_body)) },
+        confirmButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = {
+                    viewModel.unfavoriteChosen(selection.chosen.toSet())
+                    selection.done()
+                    onClose()
+                }) {
+                    Text(stringResource(R.string.action_favorite_remove), style = FlowFolio.subItem)
+                }
+                TextButton(onClick = {
+                    viewModel.deleteChosen(selection.chosen.toSet())
+                    selection.done()
+                    onClose()
+                }) {
+                    Text(stringResource(R.string.action_remove_from_library), style = FlowFolio.subItem)
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onClose) {
+                Text(stringResource(R.string.action_cancel), style = FlowFolio.hint)
+            }
+        }
     )
 }
 
@@ -292,9 +342,13 @@ private fun BookPromptDialogs(
     }
 }
 
+@Suppress("LongMethod")
 @Composable
 internal fun ShelfPageContent(state: ShelfPageUiState, onBack: (() -> Unit)?, actions: BookRowActions) {
     var view by rememberSaveable { mutableIntStateOf(0) }
+    var searching by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
+    val favorites = state.special == ShelfPageViewModel.FAVORITES
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     val padding = PaddingValues(
         start = 18.dp,
@@ -302,23 +356,58 @@ internal fun ShelfPageContent(state: ShelfPageUiState, onBack: (() -> Unit)?, ac
         top = insets.calculateTopPadding(),
         bottom = insets.calculateBottomPadding() + 24.dp
     )
-    // Select mode chooses folders as well as books on a folder's page.
-    val keys = state.subfolders.map { it.selectionId } + state.items.map { item -> item.book.id }
-    val header: @Composable () -> Unit = {
-        ShelfPageHeader(
-            state = state,
-            view = view,
-            onView = { view = it },
-            onBack = onBack,
-            onSort = actions.onSort,
-            selectionRow = {
-                actions.selection?.let {
-                    SelectionRow(it, keys, actions.onDeleteChosen, onAddToShelf = actions.onShelveChosen)
-                }
+    // The Favourites page searches its books by title and author (owner, 2026-11-07); every other page shows all.
+    val shown = remember(state.items, query) {
+        if (!favorites) {
+            state.items
+        } else {
+            val q = query.trim()
+            if (q.isEmpty()) {
+                state.items
+            } else {
+                state.items.mapNotNull { item ->
+                    val score = maxOf(Fuzzy.score(q, item.book.title), Fuzzy.score(q, item.book.author))
+                    if (score > 0) item to score else null
+                }.sortedByDescending { it.second }.map { it.first }
             }
-        ) {
-            actions.selection?.let {
-                SelectControls(it, keys) { actions.onAddBooks?.let { add -> AddBooksButton(add) } }
+        }
+    }
+    val shownState = if (favorites) state.copy(items = shown) else state
+    // Select mode chooses folders as well as books on a folder's page.
+    val keys = state.subfolders.map { it.selectionId } + shown.map { item -> item.book.id }
+    val header: @Composable () -> Unit = {
+        if (favorites) {
+            FavoritesHeader(
+                state = state,
+                view = view,
+                onView = { view = it },
+                onBack = onBack,
+                searching = searching,
+                onToggleSearch = {
+                    searching = !searching
+                    if (!searching) query = ""
+                },
+                query = query,
+                onQuery = { query = it },
+                actions = actions,
+                keys = keys
+            )
+        } else {
+            ShelfPageHeader(
+                state = state,
+                view = view,
+                onView = { view = it },
+                onBack = onBack,
+                onSort = actions.onSort,
+                selectionRow = {
+                    actions.selection?.let {
+                        SelectionRow(it, keys, actions.onDeleteChosen, onAddToShelf = actions.onShelveChosen)
+                    }
+                }
+            ) {
+                actions.selection?.let {
+                    SelectControls(it, keys) { actions.onAddBooks?.let { add -> AddBooksButton(add) } }
+                }
             }
         }
     }
@@ -326,9 +415,82 @@ internal fun ShelfPageContent(state: ShelfPageUiState, onBack: (() -> Unit)?, ac
     val canReorder =
         actions.onReorder != null && actions.selection?.active != true && state.sort == ShelfSort.CUSTOM
     if (view == 0) {
-        ShelfTiles(state, padding, header, actions, canReorder)
+        ShelfTiles(shownState, padding, header, actions, canReorder)
     } else {
-        ShelfList(state, padding, header, actions, canReorder)
+        ShelfList(shownState, padding, header, actions, canReorder)
+    }
+}
+
+/** The Favourites page's header (owner, 2026-11-07): a top-level page's left title and slogan, search and select. */
+@Suppress("LongMethod", "LongParameterList")
+@Composable
+private fun FavoritesHeader(
+    state: ShelfPageUiState,
+    view: Int,
+    onView: (Int) -> Unit,
+    onBack: (() -> Unit)?,
+    searching: Boolean,
+    onToggleSearch: () -> Unit,
+    query: String,
+    onQuery: (String) -> Unit,
+    actions: BookRowActions,
+    keys: List<String>
+) {
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
+        val searchBtn: @Composable () -> Unit = {
+            FlowFolioIconButton(onClick = onToggleSearch, modifier = Modifier.testTag(LibraryTestTags.SEARCH)) {
+                FlowFolioGlyph(Glyph.Search, stringResource(R.string.action_search))
+            }
+        }
+        ScreenHeader(
+            title = stringResource(R.string.shelf_favorites),
+            slogan = stringResource(R.string.favourites_slogan),
+            leading = onBack?.let { back ->
+                {
+                    FlowFolioIconButton(onClick = back, glass = true, modifier = Modifier.padding(end = 14.dp)) {
+                        FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = FlowFolio.palette.text)
+                    }
+                }
+            },
+            actions = {
+                actions.selection?.let { sel -> SelectControls(sel, keys, normal = searchBtn) } ?: searchBtn()
+            }
+        )
+        AnimatedVisibility(
+            visible = searching,
+            enter = expandVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) +
+                slideInVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { -it / SEARCH_SLIDE } +
+                fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)),
+            exit = shrinkVertically(tween(Motion.FAST_MS, easing = Motion.EaseInOut)) +
+                fadeOut(tween(Motion.FAST_MS, easing = Motion.EaseInOut))
+        ) {
+            SearchField(
+                query = query,
+                onQuery = onQuery,
+                hintRes = R.string.search_favorites_hint,
+                autoFocus = true
+            )
+        }
+        actions.selection?.let {
+            SelectionRow(it, keys, actions.onDeleteChosen)
+        }
+        Row(
+            Modifier.fillMaxWidth().padding(top = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                pluralStringResource(R.plurals.book_count, state.items.size, state.items.size),
+                style = FlowFolioType.sub.merge(FlowFolio.hint),
+                modifier = Modifier.weight(1f)
+            )
+            FlowFolioSegmented(
+                listOf(stringResource(R.string.view_tiles), stringResource(R.string.view_list)),
+                view,
+                onView,
+                modifier = Modifier.testTag(LibraryTestTags.SHELF_VIEW)
+            )
+        }
     }
 }
 
@@ -476,6 +638,9 @@ private fun ShelfSort.labelRes(): Int = when (this) {
 }
 
 internal const val SHELF_PAGE_ORIGIN = "shelfpage"
+
+/** How far the search field rises from when it opens (the same drop as the other pages, owner 2026-11-07). */
+private const val SEARCH_SLIDE = 3
 
 /** 30% bigger than the shelf page's first tiles (96 x 136 dp; owner, 2026-10-26). */
 internal val TILE_BOOK_WIDTH = 125.dp

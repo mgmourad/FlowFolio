@@ -71,6 +71,7 @@ internal fun ThemeCards(selected: AppStyle, seed: MaterialSeed, onSelect: (AppSt
                 val shape = RoundedCornerShape(18.dp)
                 Column(
                     Modifier
+                        .widthIn(max = THEME_MAX_WIDTH)
                         .weight(1f)
                         .selectable(on, role = Role.RadioButton) { onSelect(style) }
                         .testTag(LibraryTestTags.THEME_PREFIX + style.name),
@@ -219,6 +220,7 @@ private val MaterialSeed.label: Int
 
 private val SWATCH = 40.dp
 private const val PREVIEW_ASPECT = 0.78f
+private val THEME_MAX_WIDTH = 180.dp
 private const val PAD = 0.08f
 private const val CARD_TOP = 0.12f
 

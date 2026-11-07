@@ -220,6 +220,11 @@ class ShelfPageViewModel @Inject constructor(
     /** Removes every book in the folder [path] and the folders inside it. */
     fun removeFolder(path: String) = deleteChosen(setOf(FolderEntry.FOLDER_PREFIX + path))
 
+    /** Takes the chosen books off the Favourites page without removing them from the library (owner, 2026-11-07). */
+    fun unfavoriteChosen(keys: Set<String>) = viewModelScope.launch {
+        keys.forEach { library.setFavorite(it, false) }
+    }
+
     fun relink(bookId: String, uri: String) = viewModelScope.launch {
         if (library.relink(bookId, uri) == RelinkResult.Relinked) {
             availability.update { it + (bookId to Availability.AVAILABLE) }

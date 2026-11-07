@@ -2,6 +2,7 @@
 
 package com.flowfolio.feature.library
 
+import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -145,11 +146,11 @@ private enum class SettingsPage(val glyph: Glyph, @StringRes val title: Int) {
     Appearance(Glyph.Paper, R.string.settings_appearance),
     Text(Glyph.TextSize, R.string.settings_text),
     Reading(Glyph.OpenBook, R.string.settings_reading),
-    Atmosphere(Glyph.Sound, R.string.settings_atmosphere),
+    Atmosphere(Glyph.Smile, R.string.settings_atmosphere),
     Library(Glyph.Library, R.string.settings_library),
     Flow(Glyph.DynamicFlow, R.string.settings_conversion),
-    Updates(Glyph.Bell, R.string.settings_updates),
-    Storage(Glyph.Trash, R.string.settings_housekeeping)
+    Updates(Glyph.Refresh, R.string.settings_updates),
+    Storage(Glyph.Storage, R.string.settings_housekeeping)
 }
 
 /** The Settings menu (M3): one row per page, with About and "Show me around" kept here. */
@@ -162,6 +163,8 @@ private fun SettingsMenu(
 ) {
     val chrome = LocalChromePadding.current
     val insets = WindowInsets.safeDrawing.asPaddingValues()
+    var tutorial by rememberSaveable { mutableStateOf(false) }
+    if (tutorial) TutorialSheet { tutorial = false }
     Column(
         Modifier
             .fillMaxSize()
@@ -174,6 +177,7 @@ private fun SettingsMenu(
         ScreenHeader(
             title = stringResource(R.string.settings_title),
             slogan = stringResource(R.string.settings_sub),
+            actions = { HelpButton { tutorial = true } },
             modifier = Modifier.reveal(0)
         )
         SettingsPage.entries.forEachIndexed { i, page ->
@@ -184,10 +188,16 @@ private fun SettingsMenu(
         GuideTip(Guide.Atmosphere, settings, actions.onGuideSeen, Modifier.padding(top = 8.dp))
         GuidesResetRow(actions.onGuidesReset)
         Spacer(
-            Modifier.height(
-                insets.calculateBottomPadding() + chrome.calculateBottomPadding() + HELP_SIZE + HELP_CLEARANCE
-            )
+            Modifier.height(insets.calculateBottomPadding() + chrome.calculateBottomPadding() + 24.dp)
         )
+    }
+}
+
+/** The "?" help button, at the top right of the Settings menu only (owner, 2026-11-07). */
+@Composable
+private fun HelpButton(onClick: () -> Unit) {
+    FlowFolioIconButton(onClick = onClick, modifier = Modifier.testTag(LibraryTestTags.HELP_BUTTON)) {
+        FlowFolioGlyph(Glyph.Help, stringResource(R.string.action_help))
     }
 }
 
@@ -203,13 +213,13 @@ private fun SettingsMenuItem(page: SettingsPage, modifier: Modifier, onClick: ()
         Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
                 Modifier.size(
-                    42.dp
+                    48.dp
                 ).clip(
-                    RoundedCornerShape(14.dp)
+                    RoundedCornerShape(16.dp)
                 ).background(Brush.verticalGradient(listOf(p.buttonTop, p.buttonBottom))),
                 contentAlignment = Alignment.Center
             ) {
-                FlowFolioGlyph(page.glyph, contentDescription = null, color = p.buttonInk, size = 22.dp)
+                FlowFolioGlyph(page.glyph, contentDescription = null, color = p.buttonInk, size = 28.dp)
             }
             Text(
                 stringResource(page.title),
@@ -238,6 +248,7 @@ private fun SettingsPageScreen(
     housekeeping: Housekeeping,
     onBack: () -> Unit
 ) {
+    val chrome = LocalChromePadding.current
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     Column(
         Modifier
@@ -247,14 +258,14 @@ private fun SettingsPageScreen(
             .padding(top = insets.calculateTopPadding())
             .padding(horizontal = 18.dp)
     ) {
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.fillMaxWidth().padding(top = 8.dp)) {
             FlowFolioIconButton(onClick = onBack, glass = true, modifier = Modifier.padding(end = 12.dp)) {
                 FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = FlowFolio.palette.text)
             }
             Text(
                 stringResource(page.title),
                 style = FlowFolioType.screenTitle.merge(FlowFolio.title),
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.align(Alignment.Center)
             )
         }
         // The art: the page's icon on a glowing, gradient plate, centred (M3).
@@ -282,13 +293,13 @@ private fun SettingsPageScreen(
             SettingsPage.Updates -> UpdatesGroup(settings, housekeeping.version, housekeeping.update, actions)
             SettingsPage.Storage -> HousekeepingGroup(housekeeping.cacheBytes, actions)
         }
-        Spacer(Modifier.height(insets.calculateBottomPadding() + HELP_SIZE + HELP_CLEARANCE))
+        Spacer(Modifier.height(insets.calculateBottomPadding() + chrome.calculateBottomPadding() + 24.dp))
     }
 }
 
 /**
  * The mock's Settings (`#s-settings`): a menu of pages (M3). About and "Show me around" stay on the menu; the rest
- * each open a page of their own, behind a shared art header. The help button floats over the menu.
+ * each open a page of their own, behind a shared art header. The help button sits at the menu's top right.
  */
 @Suppress("LongMethod")
 @Composable
@@ -300,15 +311,13 @@ fun SettingsContent(
     onOpenLicenses: () -> Unit = {},
     scrollToUpdates: Int = 0
 ) {
-    val chrome = LocalChromePadding.current
-    val insets = WindowInsets.safeDrawing.asPaddingValues()
-    var tutorial by rememberSaveable { mutableStateOf(false) }
-    if (tutorial) TutorialSheet { tutorial = false }
     var page by rememberSaveable { mutableStateOf<SettingsPage?>(null) }
     // A banner tap opens the Updates page directly (ADR-0048).
     LaunchedEffect(scrollToUpdates) {
         if (scrollToUpdates > 0) page = SettingsPage.Updates
     }
+    // System Back on a dedicated page returns to the menu, not out to the Library (owner, 2026-11-07).
+    BackHandler(enabled = page != null) { page = null }
     Box(Modifier.fillMaxSize().chromeStart().testTag(LibraryTestTags.SETTINGS)) {
         AnimatedContent(
             targetState = page,
@@ -330,33 +339,6 @@ fun SettingsContent(
             } else {
                 SettingsPageScreen(p, settings, actions, audition, housekeeping) { page = null }
             }
-        }
-        // The help button floats over the page rather than sitting in a group, so the tour is reachable from
-        // anywhere in Settings (owner, M5).
-        val p = FlowFolio.palette
-        Box(
-            Modifier
-                .align(Alignment.BottomEnd)
-                .padding(
-                    end = 20.dp,
-                    bottom = insets.calculateBottomPadding() + chrome.calculateBottomPadding() + 20.dp
-                )
-                .size(HELP_SIZE)
-                .softShadow(CircleShape, p.title.copy(alpha = HELP_GLOW), blur = 22.dp)
-                .clip(CircleShape)
-                // Solid, in the primary button's own gradient: a help button nobody can miss (owner, M5 round).
-                .background(Brush.verticalGradient(listOf(p.buttonTop, p.buttonBottom)), CircleShape)
-                .clickable { tutorial = true }
-                .testTag(LibraryTestTags.HELP_BUTTON),
-            contentAlignment = Alignment.Center
-        ) {
-            FlowFolioGlyph(
-                Glyph.Help,
-                stringResource(R.string.action_help),
-                color = p.buttonInk,
-                size = HELP_GLYPH,
-                glow = false
-            )
         }
     }
 }
@@ -531,11 +513,3 @@ internal fun Group(title: Int, order: Int, content: @Composable ColumnScope.() -
         }
     }
 }
-
-/** The floating help button: big and solid, so the tour is never hidden behind a faint outline. */
-private val HELP_SIZE = 62.dp
-private val HELP_GLYPH = 32.dp
-private const val HELP_GLOW = 0.65f
-
-/** The gap kept between the last setting and the help button. */
-private val HELP_CLEARANCE = 28.dp

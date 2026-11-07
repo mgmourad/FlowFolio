@@ -5,6 +5,7 @@ import android.content.Intent
 import android.text.format.DateFormat
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -38,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -55,7 +58,6 @@ import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioMenuDivider
-import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Selection
@@ -174,12 +176,7 @@ fun BookAnnotationsContent(
                         modifier = Modifier.padding(top = 6.dp)
                     )
                 }
-                FlowFolioSegmented(
-                    listOf(stringResource(R.string.annotations_notes), stringResource(R.string.annotations_voicemarks)),
-                    tab,
-                    { tab = it },
-                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
-                )
+                NotesTabs(tab) { tab = it }
                 SelectionRow(selection, visible.map { it.id.toString() }, onDeleteChosen)
             }
         }
@@ -199,6 +196,55 @@ fun BookAnnotationsContent(
         }
     }
 }
+
+/** Notes / VoiceMarks, right-aligned with a small glyph beside each (owner, 2026-11-07). */
+@Composable
+private fun NotesTabs(tab: Int, onTab: (Int) -> Unit) {
+    val p = FlowFolio.palette
+    val track = RoundedCornerShape(12.dp)
+    Row(
+        Modifier.fillMaxWidth().padding(top = 10.dp),
+        horizontalArrangement = Arrangement.End
+    ) {
+        Row(
+            Modifier.clip(track).background(p.background.copy(alpha = TRACK_ALPHA)).padding(3.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            NotesTab(Glyph.Edit, stringResource(R.string.annotations_notes), tab == 0) { onTab(0) }
+            NotesTab(Glyph.Mic, stringResource(R.string.annotations_voicemarks), tab == 1) { onTab(1) }
+        }
+    }
+}
+
+@Composable
+private fun NotesTab(glyph: Glyph, label: String, on: Boolean, onClick: () -> Unit) {
+    val p = FlowFolio.palette
+    val chip = RoundedCornerShape(9.dp)
+    Row(
+        Modifier
+            .clip(chip)
+            .then(if (on) Modifier.background(p.selected, chip) else Modifier)
+            .clickable { onClick() }
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        FlowFolioGlyph(
+            glyph,
+            contentDescription = null,
+            color = if (on) p.title else p.hint,
+            size = 14.dp,
+            glow = false
+        )
+        Text(
+            label,
+            style = FlowFolioType.pill.copy(fontSize = FlowFolioType.chip.fontSize)
+                .merge(if (on) FlowFolio.title else FlowFolio.hint)
+        )
+    }
+}
+
+private const val TRACK_ALPHA = 0.5f
 
 @Composable
 private fun AnnotationRow(a: Annotation, chapter: String?, actions: AnnotationActions) {
