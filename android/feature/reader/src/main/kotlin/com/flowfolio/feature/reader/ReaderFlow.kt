@@ -98,7 +98,7 @@ internal class ReaderFlow(
         }
     }
 
-    /** Follows the book's conversion: opens its first chapter as soon as it is readable, and the whole book when done. */
+    /** Follows the book's conversion: opens the first chapter when readable, and the whole book when done. */
     private fun watch() {
         if (watching != null) return
         watching = scope.launch {

@@ -54,7 +54,7 @@ and reopens to the full book on completion. Complete output stays byte-identical
 - Produces: `Sidecar.finishedSpineItems: List<String>?` (null default); `SidecarBuilder.build(doc, source, threshold,
   complete: Boolean = true, finishedSpineItems: List<String>? = null): Sidecar`.
 
-- [ ] **Step 1: Write the failing test** — `SidecarBuilderTest`:
+- [x] **Step 1: Write the failing test** — `SidecarBuilderTest`:
 
 ```kotlin
 class SidecarBuilderTest {
@@ -74,16 +74,16 @@ class SidecarBuilderTest {
 }
 ```
 
-- [ ] **Step 2: Run to verify it fails** — `./gradlew :core:conversion:test --tests "*SidecarBuilderTest*"`
+- [x] **Step 2: Run to verify it fails** — `./gradlew :core:conversion:test --tests "*SidecarBuilderTest*"`
   Expected: compile failure (`finishedSpineItems` unresolved; `build` has no such parameter).
 
-- [ ] **Step 3: Implement** — add `val finishedSpineItems: List<String>? = null` to `Sidecar` (after `complete`); add the
+- [x] **Step 3: Implement** — add `val finishedSpineItems: List<String>? = null` to `Sidecar` (after `complete`); add the
   two parameters to `SidecarBuilder.build` and pass them through to the `Sidecar(...)` call (use named args so the
   positional construction stays clear).
 
-- [ ] **Step 4: Run to verify it passes** — `./gradlew :core:conversion:test --tests "*SidecarBuilderTest*"` Expected: PASS.
+- [x] **Step 4: Run to verify it passes** — `./gradlew :core:conversion:test --tests "*SidecarBuilderTest*"` Expected: PASS.
 
-- [ ] **Step 5: Commit** — `git add` the three files; `git commit -m "feat: sidecar records finished spine items"`.
+- [x] **Step 5: Commit** — `git add` the three files; `git commit -m "feat: sidecar records finished spine items"`.
 
 ### Task 2: EpubWriter writes a chapter subset
 
@@ -96,22 +96,22 @@ class SidecarBuilderTest {
 - Produces: `EpubWriter.write(out: OutputStream, images: Map<String, ByteArray>, chapters: List<Chapter> = doc.chapters)`.
   Thread `chapters` through `opf`, `nav`, `tocList`, `target`, `hrefAt`; the `pages` map stays the full `doc.pages`.
 
-- [ ] **Step 1: Write the failing test** — `EpubWriterTest`: build a `Document` with 3 chapters (hand-built blocks, then
+- [x] **Step 1: Write the failing test** — `EpubWriterTest`: build a `Document` with 3 chapters (hand-built blocks, then
   `Linking.apply` or set `doc.chapters` directly), write with `chapters.subList(0, 1)` to a `ByteArrayOutputStream`,
   open the ZIP, and assert: exactly one `ch0*.xhtml` entry; `content.opf` has one spine `<itemref>` and one chapter
   manifest item; the page-list (`nav.xhtml`) lists only that chapter's pages; the full write (`doc.chapters`) has three.
   Assert the full write is byte-identical when called with the default argument.
 
-- [ ] **Step 2: Run to verify it fails** — `./gradlew :core:conversion:test --tests "*EpubWriterTest*"`
+- [x] **Step 2: Run to verify it fails** — `./gradlew :core:conversion:test --tests "*EpubWriterTest*"`
   Expected: compile failure (`write` has no `chapters` parameter).
 
-- [ ] **Step 3: Implement** — add the `chapters` parameter and thread it; `write`'s chapter loop, `opf`'s manifest+spine,
+- [x] **Step 3: Implement** — add the `chapters` parameter and thread it; `write`'s chapter loop, `opf`'s manifest+spine,
   `nav`'s `chapterOfPage`/landmarks, and `tocList`'s fallback all use the passed `chapters`; `target`/`hrefAt` take
   `chapters` so outline entries pointing into unfinished chapters are dropped.
 
-- [ ] **Step 4: Run to verify it passes** — `./gradlew :core:conversion:test --tests "*EpubWriterTest*"` Expected: PASS.
+- [x] **Step 4: Run to verify it passes** — `./gradlew :core:conversion:test --tests "*EpubWriterTest*"` Expected: PASS.
 
-- [ ] **Step 5: Commit** — `git commit -m "feat: epub writer emits a chapter subset"`.
+- [x] **Step 5: Commit** — `git commit -m "feat: epub writer emits a chapter subset"`.
 
 ### Task 3: Converter renders chapter-by-chapter and emits progressively
 
@@ -126,23 +126,23 @@ class SidecarBuilderTest {
   finished: Int, total: Int) -> Unit): Result`; private `renderChapter(pdf, doc, chapter, out: MutableMap<String, ByteArray>,
   onPage: (Int) -> Unit)` shared by `convert` and `convertProgressively`.
 
-- [ ] **Step 1: Write the failing test** — `ConverterProgressiveTest`:
+- [x] **Step 1: Write the failing test** — `ConverterProgressiveTest`:
   - `emitsOneBundlePerChapterInOrder`: collect `emit` calls; assert `finished` goes `1..total`, `total == doc.chapters.size`.
   - `partialIsAValidEpubOfFinishedChapters`: for the first emit, open the ZIP and assert only `ch001.xhtml` is present and
     the spine has one item; the sidecar has `complete == false` and `finishedSpineItems == ["ch001.xhtml"]`.
   - `finalEmitMatchesConvert`: the last emit's `epub` bytes equal `Converter().convert(...)` written to a buffer, and its
     sidecar equals the complete sidecar (no `finishedSpineItems`).
 
-- [ ] **Step 2: Run to verify it fails** — `./gradlew :core:conversion:test --tests "*ConverterProgressiveTest*"`
+- [x] **Step 2: Run to verify it fails** — `./gradlew :core:conversion:test --tests "*ConverterProgressiveTest*"`
   Expected: compile failure (`convertProgressively` unresolved).
 
-- [ ] **Step 3: Implement** — extract the per-page crop/render body of `images()` into `renderChapter`; rewrite `images()`
+- [x] **Step 3: Implement** — extract the per-page crop/render body of `images()` into `renderChapter`; rewrite `images()`
   to loop `doc.chapters` + `renderChapter`; add `convertProgressively` per the design (emit after each chapter, then
   `progress(Progress("writing", 1, 1))` at the end); leave `convert` streaming and unchanged.
 
-- [ ] **Step 4: Run to verify it passes** — `./gradlew :core:conversion:test` Expected: PASS (all converter tests).
+- [x] **Step 4: Run to verify it passes** — `./gradlew :core:conversion:test` Expected: PASS (all converter tests).
 
-- [ ] **Step 5: Commit** — `git commit -m "feat: converter emits chapters progressively"`.
+- [x] **Step 5: Commit** — `git commit -m "feat: converter emits chapters progressively"`.
 
 ### Task 4: Protocol, status and the readable bundle
 
@@ -158,19 +158,19 @@ class SidecarBuilderTest {
   `EXTRA_CHAPTERS = "chapters"`, `EXTRA_TOTAL_CHAPTERS = "totalChapters"`;
   `DynamicFlow.readableBundle(bookId: String): File?` (complete epub when ready, else the `.part` if it exists).
 
-- [ ] **Step 1: Write the failing test** — extend `DefaultDynamicFlow` tests if present (else a small `FlowProtocolTest`
+- [x] **Step 1: Write the failing test** — extend `DefaultDynamicFlow` tests if present (else a small `FlowProtocolTest`
   asserting the new extras round-trip on an `Intent`, and `FlowStatusTest` for equality/copy). Assert `readableBundle`
   returns the partial when `book.epub` is absent but `book.epub.part` exists, and null when neither exists.
 
-- [ ] **Step 2: Run to verify it fails** — `./gradlew :core:data:testDebugUnitTest` (or the module's test task) Expected: compile failure.
+- [x] **Step 2: Run to verify it fails** — `./gradlew :core:data:testDebugUnitTest` (or the module's test task) Expected: compile failure.
 
-- [ ] **Step 3: Implement** — add the fields/extras; map `ACTION_PROGRESS` → `Converting(fraction, pause, readable, total)`;
+- [x] **Step 3: Implement** — add the fields/extras; map `ACTION_PROGRESS` → `Converting(fraction, pause, readable, total)`;
   add `readableBundle()` to the interface + `None` + `DefaultDynamicFlow`; switch `ReaderRepository.openFlow` and
   `epubChapterTitles` to `readableBundle`.
 
-- [ ] **Step 4: Run to verify it passes** — `./gradlew :core:data:testDebugUnitTest` Expected: PASS.
+- [x] **Step 4: Run to verify it passes** — `./gradlew :core:data:testDebugUnitTest` Expected: PASS.
 
-- [ ] **Step 5: Commit** — `git commit -m "feat: expose readable chapter count and partial bundle"`.
+- [x] **Step 5: Commit** — `git commit -m "feat: expose readable chapter count and partial bundle"`.
 
 ### Task 5: FlowService writes partials atomically and reports chapters
 
@@ -182,20 +182,20 @@ class SidecarBuilderTest {
 - Produces: an atomic write helper (`writeAtomically(target: File, bytes: ByteArray)` via a sibling `.tmp` + `renameTo`);
   `Progress.chapter(finished, total)` broadcasting the chapter counts with the current fraction.
 
-- [ ] **Step 1: Write the failing test** — extend `FlowServiceOnDeviceTest` (androidTest, emulator) to assert the progress
+- [x] **Step 1: Write the failing test** — extend `FlowServiceOnDeviceTest` (androidTest, emulator) to assert the progress
   broadcasts include `EXTRA_CHAPTERS`/`EXTRA_TOTAL_CHAPTERS` and that the partial `.part` exists mid-run and is renamed to
   `book.epub` on completion. (This is an on-device test; the JVM part is covered by Tasks 1–3.)
 
-- [ ] **Step 2: Run to verify it fails** — on `fold8_api37`: `./gradlew :core:data:connectedDebugAndroidTest` (or the
+- [x] **Step 2: Run to verify it fails** — on `fold8_api37`: `./gradlew :core:data:connectedDebugAndroidTest` (or the
   `am instrument` form in CLAUDE.md) Expected: FAIL (extras not sent / partial never present).
 
-- [ ] **Step 3: Implement** — switch `convert` to `convertProgressively`; in `emit` write the partial and sidecar
+- [x] **Step 3: Implement** — switch `convert` to `convertProgressively`; in `emit` write the partial and sidecar
   atomically and call `progress.chapter(finished, total)`; keep the final `.part → book.epub` rename and the complete
   sidecar write.
 
-- [ ] **Step 4: Run to verify it passes** — on `fold8_api37`, the same test Expected: PASS.
+- [x] **Step 4: Run to verify it passes** — on `fold8_api37`, the same test Expected: PASS.
 
-- [ ] **Step 5: Commit** — `git commit -m "feat: flow service delivers chapters progressively"`.
+- [x] **Step 5: Commit** — `git commit -m "feat: flow service delivers chapters progressively"`.
 
 ### Task 6: Reader opens the partial and follows completion
 
@@ -210,17 +210,17 @@ class SidecarBuilderTest {
   `wants && readableBundle != null`; `watch` reopens on `Converting(readableChapters > 0)` **or** `Ready`; `switch`'s
   "later" uses `readableBundle == null`.
 
-- [ ] **Step 1: Write the failing test** — `ReaderFlowTest` (new, with a fake `DynamicFlow`/`Host`): `watch` reopens when
+- [x] **Step 1: Write the failing test** — `ReaderFlowTest` (new, with a fake `DynamicFlow`/`Host`): `watch` reopens when
   status becomes `Converting(readableChapters = 1)`; `opensFlow` returns true when `readableBundle` is non-null even while
   `bundle` is null.
 
-- [ ] **Step 2: Run to verify it fails** — `./gradlew :feature:reader:testDebugUnitTest --tests "*ReaderFlowTest*"` Expected: FAIL.
+- [x] **Step 2: Run to verify it fails** — `./gradlew :feature:reader:testDebugUnitTest --tests "*ReaderFlowTest*"` Expected: FAIL.
 
-- [ ] **Step 3: Implement** — the three `ReaderFlow` changes and the `statusLine`/`ringOf` copy for "chapter N of M".
+- [x] **Step 3: Implement** — the three `ReaderFlow` changes and the `statusLine`/`ringOf` copy for "chapter N of M".
 
-- [ ] **Step 4: Run to verify it passes** — `./gradlew :feature:reader:testDebugUnitTest` Expected: PASS.
+- [x] **Step 4: Run to verify it passes** — `./gradlew :feature:reader:testDebugUnitTest` Expected: PASS.
 
-- [ ] **Step 5: Commit** — `git commit -m "feat: reader opens chapters as they finish"`.
+- [x] **Step 5: Commit** — `git commit -m "feat: reader opens chapters as they finish"`.
 
 ### Task 7: Schema, strings, docs
 
@@ -230,19 +230,19 @@ class SidecarBuilderTest {
   "Chapter %1$d of %2$d ready")
 - Modify: `docs/plans/phase5-design.md` (mark M1 status as built)
 
-- [ ] **Step 1: Implement** — schema (optional `"finishedSpineItems": { "type": "array", "items": { "type": "string" } }`
+- [x] **Step 1: Implement** — schema (optional `"finishedSpineItems": { "type": "array", "items": { "type": "string" } }`
   with `"nullable"`-free JSON Schema — omit the key entirely when complete, so no null handling is needed); string; doc note.
 
-- [ ] **Step 2: Verify** — `./gradlew :core:conversion:test` and a manual `SchemaCheck` smoke (the corpus gate's
+- [x] **Step 2: Verify** — `./gradlew :core:conversion:test` and a manual `SchemaCheck` smoke (the corpus gate's
   `SchemaCheck` accepts the optional property).
 
-- [ ] **Step 3: Commit** — `git commit -m "docs: schema and strings for progressive delivery"`.
+- [x] **Step 3: Commit** — `git commit -m "docs: schema and strings for progressive delivery"`.
 
 ### Task 8: Local verification gate
 
-- [ ] **Step 1:** `./gradlew spotlessApply`
-- [ ] **Step 2:** `./gradlew :core:conversion:test` (converter JVM tests; `:tools:convert:test` cannot run on macOS arm64 — known issue 37)
-- [ ] **Step 3:** `./gradlew spotlessCheck detekt lintDebug testDebugUnitTest -x :tools:convert:test`
-- [ ] **Step 4:** `./gradlew :app:assembleDebug`; install on `fold8_api37`, convert a multi-chapter PDF, and confirm: the
+- [x] **Step 1:** `./gradlew spotlessApply`
+- [x] **Step 2:** `./gradlew :core:conversion:test` (converter JVM tests; `:tools:convert:test` cannot run on macOS arm64 — known issue 37)
+- [x] **Step 3:** `./gradlew spotlessCheck detekt lintDebug testDebugUnitTest -x :tools:convert:test`
+- [x] **Step 4:** `./gradlew :app:assembleDebug`; install on `fold8_api37`, convert a multi-chapter PDF, and confirm: the
   first chapter is readable in Dynamic Flow before conversion finishes; "chapter N of M" shows; the full book opens on completion.
-- [ ] **Step 5:** Commit any fixes; note in the hand-back that CI (corpus gate) has **not** run for this milestone work.
+- [x] **Step 5:** Commit any fixes; note in the hand-back that CI (corpus gate) has **not** run for this milestone work.

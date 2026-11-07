@@ -3,6 +3,17 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- **Progressive delivery** (Phase 5 M1). Chapters of a converting PDF become readable in Dynamic Flow as they finish,
+  instead of only when the whole book is done. The converter renders each chapter's images and rewrites the EPUB after
+  every chapter — a valid EPUB of only the finished chapters — and the sidecar carries `complete: false` and a
+  `finishedSpineItems` list while partial. The service writes each partial atomically and reports "chapter N of M
+  readable"; the reader opens the first chapter as soon as it lands and reopens to the whole book when conversion
+  finishes. A complete conversion is byte-for-byte unchanged, so the engine version is not bumped and no book
+  re-converts.
+
 ## [0.3.0-alpha.6] - 2026-11-06
 
 > **Phase 4 (trust the conversion) is closed.** `docs/plans/phase4-signoff.md` records it. The honest summary: the

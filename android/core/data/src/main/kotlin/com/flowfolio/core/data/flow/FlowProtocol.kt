@@ -23,6 +23,7 @@ internal object FlowProtocol {
     const val EXTRA_TOTAL_CHAPTERS = "totalChapters"
 
     /** [fraction] done (0 to 1), or -1 while the book waits for another; [pause] when it is waiting for the phone. */
+    @Suppress("LongParameterList") // One parameter per value the app needs from the conversion process.
     fun progress(
         pkg: String,
         bookId: String,
