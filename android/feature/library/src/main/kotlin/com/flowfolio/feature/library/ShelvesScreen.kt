@@ -63,6 +63,7 @@ import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioMenu
+import com.flowfolio.core.designsystem.FlowFolioMenuDivider
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalChromePadding
@@ -391,18 +392,22 @@ private fun ShelfCardView(
                 menu = false
                 actions.onSelect()
             }
+            FlowFolioMenuDivider()
             HoldEntry(R.string.action_add_books) {
                 menu = false
                 actions.onAddBooks(card.shelf)
             }
+            FlowFolioMenuDivider()
             HoldEntry(R.string.action_batch_flow) {
                 menu = false
                 actions.onBatchFlow(card.shelf)
             }
+            FlowFolioMenuDivider()
             HoldEntry(R.string.action_edit) {
                 menu = false
                 actions.onRename(card.shelf)
             }
+            FlowFolioMenuDivider()
             HoldEntry(R.string.action_remove, warn = true) {
                 menu = false
                 actions.onDelete(card.shelf)

@@ -76,6 +76,7 @@ import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioMenu
+import com.flowfolio.core.designsystem.FlowFolioMenuDivider
 import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.FlowFolioUnderlineTabs
@@ -434,13 +435,17 @@ private fun TopButtons(state: DetailsUiState, actions: DetailsActions) {
                     }
                 if (book?.storage is BookStorage.Linked) {
                     entry(R.string.action_locate, FlowFolio.title, actions.onLocate, Modifier)
+                    FlowFolioMenuDivider()
                 }
                 val editMod = Modifier.testTag(LibraryTestTags.EDIT_MENU)
                 entry(R.string.action_edit_details, FlowFolio.item, actions.onEdit, editMod)
+                FlowFolioMenuDivider()
                 val fav = if (book?.favorite == true) R.string.action_favorite_remove else R.string.action_favorite_add
                 entry(fav, FlowFolio.item, actions.onFavorite, Modifier)
+                FlowFolioMenuDivider()
                 val fin = if (book?.finished == true) R.string.action_mark_unfinished else R.string.action_mark_finished
                 entry(fin, FlowFolio.item, actions.onFinished, Modifier)
+                FlowFolioMenuDivider()
                 entry(R.string.action_delete, FlowFolio.subItem, actions.onDelete, Modifier)
             }
         }

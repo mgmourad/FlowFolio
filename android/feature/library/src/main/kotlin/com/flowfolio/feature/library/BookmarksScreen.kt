@@ -79,6 +79,7 @@ import com.flowfolio.core.designsystem.FlowFolioChip
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioMenu
+import com.flowfolio.core.designsystem.FlowFolioMenuDivider
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalBookOpener
@@ -392,6 +393,7 @@ private fun BookmarkRow(item: BookmarkItem, actions: BookmarkActions, uniform: B
                         menu = false
                         it.startWith(item.bookmark.id.toString())
                     }
+                    FlowFolioMenuDivider()
                 }
                 HoldEntry(R.string.action_remove, warn = true, glyph = Glyph.Trash) {
                     menu = false

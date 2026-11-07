@@ -52,6 +52,7 @@ import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioMenu
+import com.flowfolio.core.designsystem.FlowFolioMenuDivider
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalChromePadding
@@ -212,6 +213,7 @@ private fun AnnotatedBookItem(item: AnnotatedBook, chapter: String?, selection: 
                 menu = false
                 selection.startWith(key)
             }
+            FlowFolioMenuDivider()
             HoldEntry(R.string.action_open) {
                 menu = false
                 onOpenBook(item.book)

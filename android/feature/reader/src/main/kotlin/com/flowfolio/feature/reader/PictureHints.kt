@@ -6,10 +6,15 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.stringResource
@@ -23,7 +28,8 @@ import kotlin.math.roundToInt
 
 /**
  * A pulsing magnifier at the bottom-right of each picture, so a reader sees that a picture opens when tapped
- * (Phase 4 M3 item 4). The tap is the picture's own link; this is only the affordance, drawn over the pages.
+ * (Phase 4 M3 item 4). It sits on a rounded, semi-opaque square for contrast. The tap is the picture's own link;
+ * this is only the affordance, drawn over the pages.
  */
 @Composable
 internal fun BoxScope.PictureHints(links: Map<Int, List<ReaderLink>>, framesFor: (IntSize) -> List<PageFrames.Frame>) {
@@ -40,21 +46,32 @@ internal fun BoxScope.PictureHints(links: Map<Int, List<ReaderLink>>, framesFor:
             if (link.target !is LinkTarget.Picture) continue
             val x = frame.x + link.right * frame.w
             val y = frame.y + link.bottom * frame.h
-            FlowFolioGlyph(
-                Glyph.Search,
-                stringResource(R.string.reader_picture_hint),
-                color = FlowFolio.palette.hint.copy(alpha = pulse),
-                size = HINT_GLYPH,
-                glow = false,
-                modifier = Modifier.offset {
-                    IntOffset((x - HINT_GLYPH.toPx()).roundToInt(), (y - HINT_GLYPH.toPx()).roundToInt())
-                }
-            )
+            Box(
+                Modifier
+                    .offset { IntOffset((x - HINT_BOX.toPx()).roundToInt(), (y - HINT_BOX.toPx()).roundToInt()) }
+                    .size(HINT_BOX)
+                    .background(
+                        FlowFolio.palette.backgroundDeep.copy(alpha = HINT_BG_ALPHA),
+                        RoundedCornerShape(HINT_RADIUS)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                FlowFolioGlyph(
+                    Glyph.Search,
+                    stringResource(R.string.reader_picture_hint),
+                    color = FlowFolio.palette.item.copy(alpha = pulse),
+                    size = HINT_GLYPH,
+                    glow = false
+                )
+            }
         }
     }
 }
 
-private val HINT_GLYPH = 16.dp
+private val HINT_GLYPH = 24.dp
+private val HINT_BOX = 38.dp
+private val HINT_RADIUS = 11.dp
 private const val HINT_PULSE_MS = 900
-private const val HINT_ALPHA_LO = 0.3f
-private const val HINT_ALPHA_HI = 0.85f
+private const val HINT_ALPHA_LO = 0.4f
+private const val HINT_ALPHA_HI = 1f
+private const val HINT_BG_ALPHA = 0.72f

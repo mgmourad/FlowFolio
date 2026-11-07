@@ -54,6 +54,7 @@ import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioMenu
+import com.flowfolio.core.designsystem.FlowFolioMenuDivider
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Selection
@@ -218,6 +219,7 @@ private fun AnnotationRow(a: Annotation, chapter: String?, actions: AnnotationAc
                         menu = false
                         select(a)
                     }
+                    FlowFolioMenuDivider()
                 }
                 HoldEntry(R.string.action_delete, warn = true) {
                     menu = false

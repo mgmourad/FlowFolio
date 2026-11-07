@@ -65,6 +65,7 @@ import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioMenu
+import com.flowfolio.core.designsystem.FlowFolioMenuDivider
 import com.flowfolio.core.designsystem.FlowFolioProgressBar
 import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioType
@@ -431,7 +432,8 @@ private fun ShelfSortButton(current: ShelfSort, onSelect: (ShelfSort) -> Unit) {
             )
         }
         FlowFolioMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            ShelfSort.entries.forEach { sort ->
+            ShelfSort.entries.forEachIndexed { i, sort ->
+                if (i > 0) FlowFolioMenuDivider()
                 DropdownMenuItem(
                     text = {
                         Text(
