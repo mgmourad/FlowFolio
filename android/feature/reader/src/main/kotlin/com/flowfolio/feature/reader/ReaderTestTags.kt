@@ -9,6 +9,7 @@ object ReaderTestTags {
     const val NOTICE = "reader_notice"
     const val ISLAND_ZOOM = "reader_island_zoom"
     const val INDICATOR = "reader_indicator"
+    const val CHAPTER_TITLE = "reader_chapter_title"
     const val TITLE = "reader_title"
     const val CONTENTS = "reader_contents"
     const val CONTENTS_LIST = "reader_contents_list"

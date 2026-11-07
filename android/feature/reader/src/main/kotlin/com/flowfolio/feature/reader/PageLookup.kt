@@ -34,6 +34,15 @@ internal object PageLookup {
         return best
     }
 
+    /** The top-level (depth 0) outline entry [page] falls under, or null when the book has no such chapter. */
+    fun chapterTitleAt(outline: List<OutlineEntry>, page: Int): String? {
+        var title: String? = null
+        for (entry in outline) {
+            if (entry.depth == 0 && entry.pageIndex in 0..page) title = entry.title
+        }
+        return title
+    }
+
     /** The page's printed label, or its 1-based number when the PDF has none. */
     fun labelOf(page: Int, labels: List<String?>): String = labels.getOrNull(page) ?: (page + 1).toString()
 }

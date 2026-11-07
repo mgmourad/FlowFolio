@@ -57,6 +57,20 @@ class PageLookupTest {
     }
 
     @Test
+    fun chapterTitleIsTheTopLevelEntryAtOrBeforeThePage() {
+        val outline = listOf(
+            OutlineEntry(0, 0, "Preface"),
+            OutlineEntry(0, 10, "Chapter 1"),
+            OutlineEntry(1, 12, "1.1 Conditions"),
+            OutlineEntry(0, 30, "Chapter 2")
+        )
+        assertEquals("Preface", PageLookup.chapterTitleAt(outline, 5))
+        assertEquals("Chapter 1", PageLookup.chapterTitleAt(outline, 20)) // a section does not win
+        assertEquals("Chapter 2", PageLookup.chapterTitleAt(outline, 30))
+        assertNull(PageLookup.chapterTitleAt(emptyList(), 3))
+    }
+
+    @Test
     fun labelFallsBackToNumber() {
         assertEquals("ii", PageLookup.labelOf(2, labels))
         assertEquals("7", PageLookup.labelOf(6, labels))

@@ -141,7 +141,7 @@ internal fun BoxScope.ReaderChrome(
     // In Scroll the number would float over the text; the bars show the page there. Whenever the riffle bar is not
     // showing -- hidden with the rest of the chrome, or dismissed on its own -- the page number stands in for it, and
     // carries the way back from a detour with it (owner, M5 round 3).
-    if (!bottomBarVisible && state.turn != PageTurn.SCROLL) PageNumber(state, navigation.labels, flow)
+    if (!bottomBarVisible && state.turn != PageTurn.SCROLL) PageNumber(state, navigation, flow)
 }
 
 /**
@@ -242,13 +242,13 @@ private fun TitlePill(title: String, wide: Boolean, modifier: Modifier) {
 
 /** The print-style page number at the foot of the page while the bars are hidden. */
 @Composable
-private fun BoxScope.PageNumber(state: ReaderState.Ready, labels: List<String?>, flow: FlowState) {
+private fun BoxScope.PageNumber(state: ReaderState.Ready, navigation: BookNavigation, flow: FlowState) {
     val spread = state.layout == ReaderLayout.SPREAD
     val pages = if (spread) Spreads.pagesOf(state.unit, state.pageCount, state.coverAlone) else listOf(state.anchorPage)
     // Two screen pages of one printed page (a reflowed book's page list) show its number once.
-    val shown = pages.map { PageLookup.labelOf(it, labels) }.distinct().joinToString("–")
+    val shown = pages.map { PageLookup.labelOf(it, navigation.labels) }.distinct().joinToString("–")
     // The book's own numbers stand alone ("48–49"); counting from the cover, "62–63 of 959".
-    val printed = pages.any { labels.getOrNull(it) != null }
+    val printed = pages.any { navigation.labels.getOrNull(it) != null }
     Row(
         Modifier
             .align(if (spread) Alignment.BottomStart else Alignment.BottomCenter)
@@ -263,6 +263,24 @@ private fun BoxScope.PageNumber(state: ReaderState.Ready, labels: List<String?>,
         )
         DetourReturn()
         FlowProgressBar(flow)
+    }
+    // The chapter the reader is in, in the opposite corner from the page number: the right page's foot in a spread,
+    // the top right when folded (owner, 2026-11-07). Reflowed books only -- a PDF already carries its running heads.
+    if (state.reflowable) {
+        val chapterPage = if (spread) pages.lastOrNull() ?: state.anchorPage else state.anchorPage
+        PageLookup.chapterTitleAt(navigation.outline, chapterPage)?.let { title ->
+            Text(
+                title,
+                style = PrintStyle.copy(color = LocalTone.current.folioInk),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .align(if (spread) Alignment.BottomEnd else Alignment.TopEnd)
+                    .then(if (spread) Modifier.navigationBarsPadding() else Modifier.statusBarsPadding())
+                    .padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN)
+                    .testTag(ReaderTestTags.CHAPTER_TITLE)
+            )
+        }
     }
 }
 
