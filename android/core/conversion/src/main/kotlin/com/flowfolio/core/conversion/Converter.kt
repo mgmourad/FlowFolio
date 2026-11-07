@@ -82,7 +82,12 @@ class Converter(private val settings: Settings = Settings()) {
         }
         val pages = (0 until pdf.pageCount).map { i ->
             progress(Progress("reading", i, pdf.pageCount))
-            Extraction.page(pdf.page(i)).also { it.label = pdf.pageLabel(i) }
+            Extraction.page(pdf.page(i)).also {
+                it.label = pdf.pageLabel(i)
+                // The front and back covers are full-page designs, not reading text: keep each as one image.
+                val edge = i == 0 || i == pdf.pageCount - 1
+                it.cover = edge && (it.images.isNotEmpty() || it.paths.isNotEmpty())
+            }
         }
         val title = pdf.metadata("Title") ?: source.fileName.substringBeforeLast('.')
         val outline = pdf.outline().map { OutlineEntry(it.depth, it.title, it.page) }
