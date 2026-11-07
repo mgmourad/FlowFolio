@@ -18,6 +18,8 @@ data class Metrics(
     /** Born-digital pages with text: the pages coverage is measured on. */
     val textPages: Int,
     val meanCoverage: Float,
+    /** Mean geometric coverage across text pages (Phase 4); the pixel analogue of [meanCoverage]. */
+    val meanGeometricCoverage: Float = 1f,
     /** Share of [textPages] at or above the coverage threshold (exit criterion: at least 0.95 across the corpus). */
     val coveredShare: Float,
     val fallbackPages: List<Int>,
@@ -67,6 +69,13 @@ data class Metrics(
                 pages = doc.pages.size,
                 textPages = text.size,
                 meanCoverage = if (text.isEmpty()) 1f else text.map { it.coverage }.average().toFloat(),
+                meanGeometricCoverage = if (text.isEmpty()) {
+                    1f
+                } else {
+                    text.map {
+                        it.geometricCoverage
+                    }.average().toFloat()
+                },
                 coveredShare = if (text.isEmpty()) {
                     1f
                 } else {

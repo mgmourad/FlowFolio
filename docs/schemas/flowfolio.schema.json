@@ -116,10 +116,11 @@
           "items": {
             "type": "object",
             "additionalProperties": false,
-            "required": ["page", "textCoverage", "status", "drawingsAsImages"],
+            "required": ["page", "textCoverage", "geometricCoverage", "status", "drawingsAsImages"],
             "properties": {
               "page": { "type": "integer", "minimum": 1 },
               "textCoverage": { "type": "number", "minimum": 0, "maximum": 1 },
+              "geometricCoverage": { "type": "number", "minimum": 0, "maximum": 1 },
               "status": { "enum": ["ok", "degraded", "scanned"] },
               "drawingsAsImages": { "type": "integer", "minimum": 0 }
             }

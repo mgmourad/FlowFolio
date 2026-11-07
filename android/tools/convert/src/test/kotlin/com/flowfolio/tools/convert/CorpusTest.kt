@@ -79,6 +79,7 @@ class CorpusTest {
         }
         less("coveredShare", was.coveredShare, now.coveredShare, COVERAGE_SLACK)
         less("meanCoverage", was.meanCoverage, now.meanCoverage, COVERAGE_SLACK)
+        less("meanGeometricCoverage", was.meanGeometricCoverage, now.meanGeometricCoverage, COVERAGE_SLACK)
         less("outlineMatched", was.outlineMatched, now.outlineMatched, OUTLINE_SLACK)
         if (was.labelledHeadings >= 0) less("labelledHeadings", was.labelledHeadings, now.labelledHeadings, 0f)
         if (was.labelledOrder >= 0) less("labelledOrder", was.labelledOrder, now.labelledOrder, 0f)

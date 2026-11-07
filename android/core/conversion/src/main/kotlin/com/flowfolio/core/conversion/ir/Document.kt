@@ -47,6 +47,13 @@ class Page(
     /** Share of the page's text found in [blocks] (Stage I's check); 1 when the page has no text. */
     var coverage: Float = 1f
 
+    /**
+     * Share of the page's text in lines whose glyph geometry agrees with their declared size (Phase 4,
+     * [com.flowfolio.core.conversion.stage.GeometricVerify]); 1 when the page has no text. The pixel analogue of
+     * [coverage]: it catches text that is present but laid out from a misread font size (the Packt bug).
+     */
+    var geometricCoverage: Float = 1f
+
     /** The whole page went out as an image: its text could not be accounted for, or it is scanned. */
     var fallback: Boolean = false
 

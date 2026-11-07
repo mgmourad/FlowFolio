@@ -79,6 +79,8 @@ data class HealthSummary(
 data class PageHealth(
     val page: Int,
     val textCoverage: Float,
+    /** Share of the page's text whose glyphs agree with their declared size (Phase 4's pixel analogue). */
+    val geometricCoverage: Float,
     /** `ok`, `degraded` (went out as an image) or `scanned`. */
     val status: String,
     /** Text and equations drawn as vector shapes, shown as images (Phase 5 converts them). */
