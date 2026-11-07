@@ -17,12 +17,15 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -241,6 +244,7 @@ private fun TitlePill(title: String, wide: Boolean, modifier: Modifier) {
 }
 
 /** The print-style page number at the foot of the page while the bars are hidden. */
+@Suppress("LongMethod")
 @Composable
 private fun BoxScope.PageNumber(
     state: ReaderState.Ready,
@@ -254,58 +258,64 @@ private fun BoxScope.PageNumber(
     val shown = pages.map { PageLookup.labelOf(it, navigation.labels) }.distinct().joinToString("–")
     // The book's own numbers stand alone ("48–49"); counting from the cover, "62–63 of 959".
     val printed = pages.any { navigation.labels.getOrNull(it) != null }
-    Row(
-        Modifier
-            .align(if (spread) Alignment.BottomStart else Alignment.BottomCenter)
-            .navigationBarsPadding()
-            .padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN)
-            .clickable { actions.onPanel(Panel.GO_TO) },
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            if (printed) shown else stringResource(R.string.reader_page_of, shown, state.pageCount),
-            style = PrintStyle.copy(color = LocalTone.current.folioInk),
-            modifier = Modifier.testTag(ReaderTestTags.INDICATOR)
-        )
-        DetourReturn()
-        FlowProgressBar(flow)
-    }
-    // The chapter and its section, reflowed books only (a PDF already carries its own running heads). In a spread the
-    // chapter heads the left page and the section sits at the right page's foot; folded, the section (else the chapter)
-    // sits at the top right, pushed to the screen's edge rather than the book's margin (owner, 2026-11-07).
-    if (state.reflowable) {
-        val leftPage = pages.firstOrNull() ?: state.anchorPage
-        val rightPage = pages.lastOrNull() ?: state.anchorPage
-        val chapter = PageLookup.chapterTitleAt(navigation.outline, leftPage)
-        val section = PageLookup.subtitleAt(navigation.outline, rightPage)
-        if (spread) {
-            chapter?.let {
-                ChapterLabel(
-                    it,
-                    Modifier.align(
-                        Alignment.TopStart
-                    ).statusBarsPadding().padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN),
-                    actions
-                )
-            }
-            section?.let {
-                ChapterLabel(
-                    it,
-                    Modifier.align(
-                        Alignment.BottomEnd
-                    ).navigationBarsPadding().padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN),
-                    actions
-                )
-            }
-        } else {
-            (section ?: chapter)?.let {
-                ChapterLabel(
-                    it,
-                    Modifier.align(
-                        Alignment.TopEnd
-                    ).statusBarsPadding().padding(horizontal = TITLE_MARGIN, vertical = FOOTER_MARGIN),
-                    actions
-                )
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val half = maxWidth / 2
+        Row(
+            Modifier
+                .align(if (spread) Alignment.BottomStart else Alignment.BottomCenter)
+                .navigationBarsPadding()
+                .padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN)
+                .clickable { actions.onPanel(Panel.GO_TO) },
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                if (printed) shown else stringResource(R.string.reader_page_of, shown, state.pageCount),
+                style = PrintStyle.copy(color = LocalTone.current.folioInk),
+                modifier = Modifier.testTag(ReaderTestTags.INDICATOR)
+            )
+            DetourReturn()
+            FlowProgressBar(flow)
+        }
+        // The chapter and its section, reflowed books only (a PDF already carries its own running heads). In a spread
+        // the chapter heads the left page and the section the right page's foot, each kept to its own page's column
+        // (the title ends at the left page's inner margin, the section starts at the right page's). Folded, the section
+        // (else the chapter) sits at the top right, cut at half the screen so the front camera never clips it (owner,
+        // 2026-11-07).
+        if (state.reflowable) {
+            val leftPage = pages.firstOrNull() ?: state.anchorPage
+            val rightPage = pages.lastOrNull() ?: state.anchorPage
+            val chapter = PageLookup.chapterTitleAt(navigation.outline, leftPage)
+            val section = PageLookup.subtitleAt(navigation.outline, rightPage)
+            if (spread) {
+                chapter?.let {
+                    ChapterLabel(
+                        it,
+                        Modifier.align(Alignment.TopStart).statusBarsPadding()
+                            .padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN)
+                            .widthIn(max = half - PAGE_MARGIN * 2),
+                        actions
+                    )
+                }
+                section?.let {
+                    ChapterLabel(
+                        it,
+                        Modifier.align(Alignment.BottomStart).navigationBarsPadding()
+                            .offset(x = half + PAGE_MARGIN)
+                            .padding(vertical = FOOTER_MARGIN)
+                            .widthIn(max = half - PAGE_MARGIN * 2),
+                        actions
+                    )
+                }
+            } else {
+                (section ?: chapter)?.let {
+                    ChapterLabel(
+                        it,
+                        Modifier.align(Alignment.TopEnd).statusBarsPadding()
+                            .padding(horizontal = TITLE_MARGIN, vertical = FOOTER_MARGIN)
+                            .widthIn(max = half),
+                        actions
+                    )
+                }
             }
         }
     }
