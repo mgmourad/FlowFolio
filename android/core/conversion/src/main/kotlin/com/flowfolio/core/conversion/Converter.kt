@@ -84,9 +84,12 @@ class Converter(private val settings: Settings = Settings()) {
             progress(Progress("reading", i, pdf.pageCount))
             Extraction.page(pdf.page(i)).also {
                 it.label = pdf.pageLabel(i)
-                // The front and back covers are full-page designs, not reading text: keep each as one image.
+                // The front and back covers are full-page designs, not reading text: keep each as one image. The
+                // first/last page counts only when it is a design (any image or path) with little text — a title,
+                // index or colophon page that happens to sit on an edge and carries a rule or logo is reading text,
+                // not a cover.
                 val edge = i == 0 || i == pdf.pageCount - 1
-                it.cover = edge && (it.images.isNotEmpty() || it.paths.isNotEmpty())
+                it.cover = edge && (it.images.isNotEmpty() || it.paths.isNotEmpty()) && it.sourceChars < COVER_MAX_CHARS
             }
         }
         val title = pdf.metadata("Title") ?: source.fileName.substringBeforeLast('.')
@@ -202,3 +205,6 @@ class Converter(private val settings: Settings = Settings()) {
 fun SourceInfo.bookId(): String = sha256.take(BOOK_ID_CHARS)
 
 private const val BOOK_ID_CHARS = 32
+
+/** A cover is a design: a first/last page with graphics but little text (a title or index page has far more). */
+private const val COVER_MAX_CHARS = 300
