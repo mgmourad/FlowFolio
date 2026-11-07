@@ -1,6 +1,7 @@
 # Phase 5 design: the product flow around conversion
 
-- **Status:** Draft for owner sign-off; **M1 built** (progressive delivery), M2 pending.
+- **Status:** Draft for owner sign-off; **M1 built** (progressive delivery, including per-chapter pickup and the
+  stale-partial guard), M2 pending.
 - **Date:** 2026-11-07.
 - **Scope:** M1 (progressive delivery) + M2 (health badge). F-Droid self-hosted repo is deferred to the end of
   Phase 9. Mechanism B (the real pixel diff) is redefined as a failover and deferred out of this phase. Pacing on
@@ -102,8 +103,8 @@ batched), which is also where pacing on slower phones lives.
 
 ## Release
 
-Phase 5 ships **canary**. Proposed first release **0.5.0-canary.1** (build 500001), to be confirmed with the owner
-before `gradle.properties` is touched — Phase 4 shipped as `0.3.0-alpha.6`, so "phase = minor" has already drifted once.
+Phase 5 ships **canary**. First release **0.5.0-canary.1** (build 500001), approved by the owner 2026-11-07; set it in
+`android/gradle.properties` at the phase sign-off.
 
 ## Deferred (recorded, not lost)
 
