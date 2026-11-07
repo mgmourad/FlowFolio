@@ -1,7 +1,6 @@
 # Phase 5 design: the product flow around conversion
 
-- **Status:** Draft for owner sign-off; **M1 built** (progressive delivery, including per-chapter pickup and the
-  stale-partial guard), M2 pending.
+- **Status:** Draft for owner sign-off; **M1 and M2 built** (progressive delivery and the health badge).
 - **Date:** 2026-11-07.
 - **Scope:** M1 (progressive delivery) + M2 (health badge). F-Droid self-hosted repo is deferred to the end of
   Phase 9. Mechanism B (the real pixel diff) is redefined as a failover and deferred out of this phase. Pacing on

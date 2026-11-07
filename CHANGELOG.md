@@ -25,6 +25,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   it.
 - **The update banner opens Settings at the update section** (owner, 2026-11-07), not just the Settings tab.
 - **A "what's new" window after an update** (owner, 2026-11-07), shown once per update and dismissed only by "Ok".
+- **The conversion health badge** (Phase 5 M2). The reader's "Aa" sheet now says how well a book converted, from the
+  metrics already in `flowfolio.json`: "Converted well · 98% text", or "A few/Many pages are pictures" when pages fell
+  back, graded good/fair/poor from the fallback count.
+- **The reader's chapter and section** (owner, 2026-11-07). In Dynamic Flow a spread shows the chapter at the top left
+  and the section at the right page's foot; folded it shows the section (or the chapter) at the top right. Tapping
+  either opens the contents; tapping the page number opens "Go to page".
 
 ## [0.3.0-alpha.6] - 2026-11-06
 
