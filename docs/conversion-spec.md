@@ -146,12 +146,14 @@ quote match within `page` ± 1 → fuzzy quote match book-wide → orphaned (sho
 
 ## 6. Progressive output
 
-During conversion the bundle may be partial. *(Phase 6)* exposes chapters as they are finished; the sidecar then
-carries `"complete": false` and lists the finished spine items. A partial bundle must still be a valid EPUB containing
-only finished chapters. Phase 3 writes complete bundles only (`complete: true`).
+During conversion the bundle may be partial. *(Phase 5)* exposes chapters as they are finished: the converter rewrites
+one EPUB after each chapter's images are rendered — a **single EPUB, progressively rewritten** (the open question below
+is decided) — and the sidecar then carries `"complete": false` and `"finishedSpineItems"` (the finished chapter files;
+the field is absent when complete). A partial bundle must still be a valid EPUB containing only finished chapters.
 
 ## Open questions
 
-1. Single EPUB with progressive delivery vs. chapter fragments merged at the end (decide in Phase 6).
+1. ~~Single EPUB with progressive delivery vs. chapter fragments merged at the end~~ — decided in Phase 5: a single EPUB,
+   progressively rewritten (section 6).
 2. The coverage threshold (0.98) is reviewed once Phase 4 adds pixel coverage.
 3. Vector figures as SVG instead of images (EPUBCheck and reader performance to decide, Phase 4).
