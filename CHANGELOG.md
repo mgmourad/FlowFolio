@@ -3,7 +3,11 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.5.0-canary.1] - 2026-11-07
+
+> **Phase 5 (the product flow around conversion) is closed.** `docs/plans/phase5-signoff.md` records it. This is the
+> first canary release under the renumbered channels (ADR-0050: 3–4 alpha, 5–6 canary, 7 beta). The release is gated on
+> green CI, including the converter corpus gate.
 
 ### Added
 - **Progressive delivery** (Phase 5 M1). A converting book's first chapter is readable in Dynamic Flow long before the
@@ -17,9 +21,6 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   the sides for page turns, the middle for the menus, the bottom for the riffle bar — with "Got it" and
   **"Never show tips again"**, which turns all first-use tips off. "Introduce features again" in Settings turns them
   back on.
-- **The current chapter title in the reader** (owner, 2026-11-07). In Dynamic Flow, the chapter the reader is in shows
-  at the foot of the right page in a spread (beside the page number on the left), and top right when folded, in the
-  page number's own folio ink so it reads on every paper.
 - **The shelf page header** (owner, 2026-11-07). Back, import (+) and select sit on one line; the shelf name moves to
   its own line below (a little smaller) so a long name has the full width; the sorting and tiles/list line sits under
   it.
@@ -35,6 +36,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - **Settings as a menu of pages** (Phase 5 M3). Settings is now a menu — Appearance, Text, Reading, Atmosphere,
   Library, Dynamic Flow, Updates and Storage each open a page of their own behind a shared piece of art (the page's
   icon on a glowing plate), with a slide-and-fade transition; About and "Show me around" stay on the menu.
+- **Annotations: counts, VoiceMark tabs and the author** (owner, 2026-11-07). Each book's card on the Annotations page
+  shows its highlight, note and VoiceMark counts beside its cover, with the author under the title; the Notes and
+  VoiceMarks tabs sit on the right with a glyph each.
+- **The Favourites page header** (owner, 2026-11-07). Favourites matches the other top-level pages — the title on the
+  left with its slogan underneath, and Search and Select on the right; in select mode, Delete asks whether to remove
+  the chosen books from Favourites or from the library.
 
 ## [0.3.0-alpha.6] - 2026-11-06
 
