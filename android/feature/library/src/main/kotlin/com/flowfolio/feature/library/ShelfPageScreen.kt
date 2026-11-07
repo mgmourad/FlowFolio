@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -357,21 +358,27 @@ private fun ShelfPageHeader(
             else -> R.string.shelf_loose
         }
     )
-    // The page's name, the line under it saying what it holds, and the + / Select controls on the slogan's line
-    // (owner, M4b/M4c), as every other top-level page wears it.
-    val slogan = stringResource(state.sloganRes())
+    // Back on the left and the + / Select controls on the right sit on one line; the name moves below them so it has
+    // the whole width for a long shelf name (owner, 2026-11-07). It is a little smaller than a top-level page's title.
     Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
-        ScreenHeader(
-            title = name,
-            slogan = slogan,
-            leading = onBack?.let { back ->
-                {
-                    FlowFolioIconButton(onClick = back, modifier = Modifier.padding(end = 10.dp)) {
-                        FlowFolioGlyph(Glyph.Back, contentDescription = stringResource(R.string.action_back))
-                    }
+        Row(
+            Modifier.fillMaxWidth().padding(start = 4.dp, top = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            onBack?.let { back ->
+                FlowFolioIconButton(onClick = back, modifier = Modifier.padding(end = 10.dp)) {
+                    FlowFolioGlyph(Glyph.Back, contentDescription = stringResource(R.string.action_back))
                 }
-            },
-            actions = select
+            }
+            Spacer(Modifier.weight(1f))
+            select()
+        }
+        Text(
+            name,
+            style = FlowFolioType.bookTitle.merge(FlowFolio.title),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(start = 4.dp, top = 6.dp)
         )
         selectionRow()
         Row(
@@ -471,13 +478,3 @@ internal val TILE_CELL = TILE_BOOK_WIDTH + BOOK_SPINE_ROOM
 
 internal val TILE_COLUMN_GAP = 12.dp
 internal val TILE_ROW_GAP = 28.dp
-
-/** The line under a shelf page's name, saying what the page holds (owner, M4b). */
-private fun ShelfPageUiState.sloganRes(): Int = when {
-    folder != null -> R.string.folder_slogan
-    special == ShelfPageViewModel.FINISHED -> R.string.finished_slogan
-    special == ShelfPageViewModel.FAVORITES -> R.string.favourites_slogan
-    noShelves -> R.string.all_books_slogan
-    shelf != null -> R.string.shelf_slogan
-    else -> R.string.loose_slogan
-}
