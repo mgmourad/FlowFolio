@@ -57,6 +57,29 @@ class ReaderFlowTest {
         assertTrue("flushes the reading place first", host.savedPlace)
     }
 
+    @Test
+    fun aSingleChapterBookOpensOnceOnReady() = runTest(UnconfinedTestDispatcher()) {
+        val statuses = MutableStateFlow<FlowStatus>(FlowStatus.None)
+        val host = FakeHost()
+        val readerFlow =
+            ReaderFlow("book", backgroundScope, FakeRepository(), FakeDynamicFlow(statusFlow = statuses), host)
+        assertFalse(readerFlow.opensFlow(true))
+        host.isShowing = true
+        // Its only chapter is already the whole book, so no partial open.
+        statuses.value = FlowStatus.Converting(0.9f, null, readableChapters = 1, totalChapters = 1)
+        assertFalse("no partial open for a single-chapter book", host.reopenedToFlow)
+        statuses.value = FlowStatus.Ready
+        assertTrue(host.reopenedToFlow)
+    }
+
+    @Test
+    fun opensFlowRestartsAStalePartial() = runTest(UnconfinedTestDispatcher()) {
+        val flow = FakeDynamicFlow(readable = File("partial.epub"))
+        val readerFlow = ReaderFlow("book", backgroundScope, FakeRepository(), flow, FakeHost())
+        assertTrue(readerFlow.opensFlow(true))
+        assertTrue("a stale partial is cleaned up by a fresh conversion", flow.convertCalled)
+    }
+
     private class FakeHost : ReaderFlow.Host {
         var isShowing = false
         var reopenedToFlow = false
@@ -99,6 +122,8 @@ class ReaderFlowTest {
         private val statusFlow: MutableStateFlow<FlowStatus> = MutableStateFlow(FlowStatus.None),
         private val readable: File? = null
     ) : DynamicFlow {
+        var convertCalled = false
+
         override val statuses: StateFlow<Map<String, FlowStatus>> = MutableStateFlow(emptyMap())
         override val notices: SharedFlow<FlowNotice> = MutableSharedFlow()
         override val wantsNotificationPermission: StateFlow<Boolean> = MutableStateFlow(false)
@@ -109,7 +134,9 @@ class ReaderFlowTest {
 
         override fun readableBundle(bookId: String): File? = readable
 
-        override suspend fun convert(bookId: String) = Unit
+        override suspend fun convert(bookId: String) {
+            convertCalled = true
+        }
 
         override suspend fun setFlowMode(bookId: String, on: Boolean, carry: Boolean) = Unit
 

@@ -64,9 +64,10 @@ internal class ReaderFlow(
         if (wants && book.flowMode == null) dynamicFlow.setFlowMode(bookId, true)
         _state.update { it.copy(available = true, wanted = wants) }
         watch()
-        val converted = wants && dynamicFlow.readableBundle(bookId) != null
-        if (wants && !converted) dynamicFlow.convert(bookId)
-        return converted
+        val readable = wants && dynamicFlow.readableBundle(bookId) != null
+        // Idempotent: a no-op while converting or ready, but restarts a stale partial left by a killed conversion.
+        if (wants) dynamicFlow.convert(bookId)
+        return readable
     }
 
     /** The reader now shows Dynamic Flow ([reading]) or not (the PDF, or nothing while switching). */
@@ -108,9 +109,10 @@ internal class ReaderFlow(
                 _state.update { it.copy(status = status) }
                 if (!wanted || !host.showing) return@collect
                 // Open the partial when the first chapter lands (still on the PDF), or reopen to the full book when
-                // conversion finishes (from the PDF or from the partial).
+                // conversion finishes (from the PDF or from the partial). A single-chapter book's only emit is already
+                // the whole book, so it opens once, on Ready.
                 val shouldOpen = when (status) {
-                    is FlowStatus.Converting -> status.readableChapters > 0 && !readingFlow
+                    is FlowStatus.Converting -> status.readableChapters in 1 until status.totalChapters && !readingFlow
                     FlowStatus.Ready -> true
                     else -> false
                 }

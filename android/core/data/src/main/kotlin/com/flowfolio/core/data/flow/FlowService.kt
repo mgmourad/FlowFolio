@@ -21,6 +21,8 @@ import com.flowfolio.core.pdf.PdfException
 import com.flowfolio.core.pdf.pdfium.PdfiumConversionSource
 import java.io.File
 import java.io.FileNotFoundException
+import java.nio.file.Files
+import java.nio.file.StandardCopyOption
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.Executors
@@ -137,34 +139,32 @@ class FlowService : Service() {
         val fd = open(job) ?: throw FileNotFoundException("no file for ${job.bookId}")
         files.dir(job.bookId).mkdirs()
         val progress = Progress(job)
-        fd.use { pfd ->
+        val result = fd.use { pfd ->
             PdfiumConversionSource.open(pfd).use { pdf ->
                 Converter().convertProgressively(
                     pdf,
                     SourceInfo(job.title.ifBlank { job.bookId }, job.bookId, pdf.pageCount, pdf.metadata("Title")),
                     Instant.now().truncatedTo(ChronoUnit.SECONDS).toString(),
                     progress::on
-                ) { epub, sidecar, finished, total ->
+                ) { epub, _, finished, total ->
                     progress.chapter(finished, total)
                     writeAtomically(files.partial(job.bookId), epub)
-                    writeAtomically(files.sidecar(job.bookId), JSON.encodeToString(sidecar).toByteArray())
                 }
             }
         }
-        // The last emit wrote the complete bundle and sidecar; the partial now becomes the finished EPUB.
+        // The sidecar is written only once the EPUB is in place: a re-converting book whose old bundle is still on
+        // disk must not read as `ready()` on the strength of a partial sidecar carrying the new engine version.
         if (!files.partial(job.bookId).renameTo(files.epub(job.bookId))) {
             throw FileNotFoundException("could not finish ${job.bookId}")
         }
+        writeAtomically(files.sidecar(job.bookId), JSON.encodeToString(result.sidecar).toByteArray())
     }
 
-    /** Writes [bytes] to [target] without ever leaving it half-written: a sibling temp, then a rename over it. */
+    /** Writes [bytes] to [target] without leaving it half-written: a sibling temp, then an atomic rename over it. */
     private fun writeAtomically(target: File, bytes: ByteArray) {
         val tmp = File(target.path + ".tmp")
         tmp.writeBytes(bytes)
-        if (!tmp.renameTo(target)) {
-            target.writeBytes(bytes)
-            tmp.delete()
-        }
+        Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
     }
 
     private fun open(job: Job): ParcelFileDescriptor? = when {
