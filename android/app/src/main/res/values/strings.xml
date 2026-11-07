@@ -13,6 +13,10 @@
     <string name="update_banner_title">Update available</string>
     <string name="update_banner_text">%1$s · tap to open Settings</string>
     <string name="update_banner_dismiss">Dismiss</string>
+    <!-- The "what's new" window shown once after an update. -->
+    <string name="whats_new_title">What\'s new</string>
+    <string name="whats_new_body">FlowFolio %1$s is installed. Here is what changed:</string>
+    <string name="whats_new_ok">Ok</string>
     <!-- Dynamic Flow notices in the app (ADR-0045). -->
     <string name="flow_notice_started">Preparing Dynamic Flow</string>
     <string name="flow_notice_started_text">%1$s keeps converting while you read.</string>

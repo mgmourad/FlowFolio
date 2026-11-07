@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStoreFile
@@ -71,7 +72,8 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             atmosphereName = p[ATMOSPHERE_NAME],
             atmospheres = AtmosphereCodec.decode(p[ATMOSPHERES]),
             seenGuides = p[SEEN_GUIDES].orEmpty(),
-            materialSeed = p[MATERIAL_SEED].toEnum(defaults.materialSeed)
+            materialSeed = p[MATERIAL_SEED].toEnum(defaults.materialSeed),
+            lastSeenVersionCode = p[LAST_SEEN_VERSION_CODE] ?: defaults.lastSeenVersionCode
         )
     }
 
@@ -218,6 +220,11 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         store.edit { it.remove(SEEN_GUIDES) }
     }
 
+    /** Remembers the build whose "what's new" was shown, so the popup comes once per update. */
+    suspend fun setLastSeenVersionCode(code: Long) {
+        store.edit { it[LAST_SEEN_VERSION_CODE] = code }
+    }
+
     /** Turning the lookup on or off also counts as having been asked. */
     suspend fun setAutoUpdate(on: Boolean) {
         store.edit { it[AUTO_UPDATE] = on }
@@ -272,6 +279,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val ATMOSPHERE_NAME = stringPreferencesKey("atmosphere_name")
         val ATMOSPHERES = stringPreferencesKey("atmospheres")
         val SEEN_GUIDES = stringSetPreferencesKey("seen_guides")
+        val LAST_SEEN_VERSION_CODE = longPreferencesKey("last_seen_version_code")
     }
 }
 

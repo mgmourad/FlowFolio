@@ -21,6 +21,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -65,6 +66,7 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
     val nav = rememberNavController()
     LaunchedEffect(nav) { appViewModel.directOpens.collect { (id, layout) -> nav.navigate(Routes.reader(id, layout)) } }
     LaunchedEffect(nav) { appViewModel.updatesOpened.collect { nav.switchTo(TopLevel.Settings) } }
+    val updatesFocus by appViewModel.updatesFocus.collectAsStateWithLifecycle()
     val entry by nav.currentBackStackEntryAsState()
     // A shelf tapped on the Shelves tab: the library scrolls to its row.
     var shelfToShow by rememberSaveable { mutableStateOf<Long?>(null) }
@@ -114,7 +116,11 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                         ScreenEntrance { DictionaryScreen(onRead = { nav.navigate(Routes.reader(it.id)) }) }
                     }
                     destination(TopLevel.Settings.route) {
-                        ScreenEntrance { SettingsScreen(onOpenLicenses = { nav.navigate(Routes.LICENSES) }) }
+                        ScreenEntrance {
+                            SettingsScreen(onOpenLicenses = {
+                                nav.navigate(Routes.LICENSES)
+                            }, scrollToUpdates = updatesFocus)
+                        }
                     }
                     detailsDestination(nav)
                     editDestination(nav)

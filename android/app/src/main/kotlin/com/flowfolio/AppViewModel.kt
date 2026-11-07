@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -35,7 +36,7 @@ data class AppLook(
 /** Activity-scoped state: app theme, and files shared into the app waiting for the library to import them. */
 @HiltViewModel
 class AppViewModel @Inject constructor(
-    settings: SettingsRepository,
+    private val settings: SettingsRepository,
     private val reader: ReaderRepository,
     private val flow: DynamicFlow,
     private val updates: Updates
@@ -50,6 +51,10 @@ class AppViewModel @Inject constructor(
     /** A banner tap: open Settings at the update section. */
     private val goToUpdates = Channel<Unit>(Channel.BUFFERED)
     val updatesOpened: Flow<Unit> = goToUpdates.receiveAsFlow()
+
+    /** Increments each time Settings should open scrolled to the update section (a banner or notification tap). */
+    private val _updatesFocus = MutableStateFlow(0)
+    val updatesFocus: StateFlow<Int> = _updatesFocus.asStateFlow()
 
     private var lastCheck = 0L
 
@@ -71,8 +76,35 @@ class AppViewModel @Inject constructor(
         _updateAvailable.value = null
     }
 
-    /** The banner was tapped: take the reader to Settings. */
+    /** The release whose "what's new" notes are owed after an update; null once shown, or on a first install. */
+    private val _whatsNew = MutableStateFlow<Release?>(null)
+    val whatsNew: StateFlow<Release?> = _whatsNew.asStateFlow()
+
+    /** Whether the app was just updated, and if so holds the new release's notes for the "what's new" popup. */
+    fun checkWhatsNew() {
+        viewModelScope.launch {
+            val current = updates.installedCode()
+            val seen = settings.settings.first().lastSeenVersionCode
+            if (seen == 0L) {
+                // First install: remember this build and show nothing.
+                settings.setLastSeenVersionCode(current)
+                return@launch
+            }
+            if (current > seen) updates.latestRelease()?.let { _whatsNew.value = it }
+        }
+    }
+
+    /** The reader pressed "Ok": remember this build and put the popup away. */
+    fun dismissWhatsNew() {
+        viewModelScope.launch {
+            settings.setLastSeenVersionCode(updates.installedCode())
+            _whatsNew.value = null
+        }
+    }
+
+    /** The banner was tapped: take the reader to Settings at the update section. */
     fun onUpdateOpen() {
+        _updatesFocus.value++
         goToUpdates.trySend(Unit)
         dismissUpdate()
     }

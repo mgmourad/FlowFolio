@@ -42,6 +42,9 @@ interface SettingsRepository {
 
     suspend fun clearGuidesSeen() = Unit
 
+    /** Remembers the build whose "what's new" was shown, so the popup comes once per update. */
+    suspend fun setLastSeenVersionCode(code: Long) = Unit
+
     suspend fun setReaderSpreads(on: Boolean)
 
     suspend fun setSpreadCoverAlone(on: Boolean)
@@ -131,6 +134,10 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun clearGuidesSeen() {
         source.clearGuidesSeen()
+    }
+
+    override suspend fun setLastSeenVersionCode(code: Long) {
+        source.setLastSeenVersionCode(code)
     }
 
     override suspend fun setReaderSpreads(on: Boolean) {

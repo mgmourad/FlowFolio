@@ -93,6 +93,8 @@ class MainActivity : ComponentActivity() {
                                 onDismiss = appViewModel::dismissUpdate
                             )
                         }
+                        val whatsNew by appViewModel.whatsNew.collectAsStateWithLifecycle()
+                        whatsNew?.let { release -> WhatsNewDialog(release, onOk = appViewModel::dismissWhatsNew) }
                         AskNotificationsOnce()
                         if (splash) FlowFolioSplash(stringResource(R.string.splash_tagline)) { splash = false }
                     }
@@ -104,6 +106,7 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         appViewModel.checkForUpdates()
+        appViewModel.checkWhatsNew()
     }
 
     private val notificationPermission =

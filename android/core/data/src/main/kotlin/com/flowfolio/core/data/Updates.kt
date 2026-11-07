@@ -105,6 +105,12 @@ class Updates @Inject constructor(
     /** What this build calls itself, for the line in Settings that says which one you are on. */
     fun installedName(): String = installed().first
 
+    /** The running build's number, to tell an update apart from a first install. */
+    fun installedCode(): Long = installed().second
+
+    /** The newest published build, whatever its number; its notes back the "what's new" popup after an update. */
+    suspend fun latestRelease(): Release? = withContext(io) { newest(JSONArray(get(RELEASES))) }
+
     /** The running build's name and number, straight from the package manager rather than passed down. */
     private fun installed(): Pair<String, Long> = runCatching {
         val info = context.packageManager.getPackageInfo(context.packageName, 0)

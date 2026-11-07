@@ -141,7 +141,9 @@ data class UserSettings(
      * Which first-run splashes and tips have been seen (owner, M5), by [Guide] name. A guide is shown once and
      * then never again, so this only ever grows; "Show me around again" in Settings empties it.
      */
-    val seenGuides: Set<String> = emptySet()
+    val seenGuides: Set<String> = emptySet(),
+    /** The build number whose "what's new" notes were last shown, so the popup appears once after each update. */
+    val lastSeenVersionCode: Long = 0
 )
 
 /** Switching between a PDF and its Dynamic Flow: ask, or (once "don't show again" was chosen) the remembered answer. */

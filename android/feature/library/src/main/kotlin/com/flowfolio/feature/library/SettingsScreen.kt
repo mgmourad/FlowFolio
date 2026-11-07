@@ -26,14 +26,19 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.layout.boundsInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -61,9 +66,14 @@ import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
+import kotlin.math.roundToInt
 
 @Composable
-fun SettingsScreen(onOpenLicenses: () -> Unit = {}, viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(
+    onOpenLicenses: () -> Unit = {},
+    scrollToUpdates: Int = 0,
+    viewModel: SettingsViewModel = hiltViewModel()
+) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val audition by viewModel.audition.collectAsStateWithLifecycle()
     val cacheBytes by viewModel.cacheBytes.collectAsStateWithLifecycle()
@@ -109,7 +119,8 @@ fun SettingsScreen(onOpenLicenses: () -> Unit = {}, viewModel: SettingsViewModel
         ),
         audition,
         Housekeeping(viewModel.installedVersion, update, cacheBytes),
-        onOpenLicenses
+        onOpenLicenses,
+        scrollToUpdates
     )
 }
 
@@ -128,7 +139,8 @@ fun SettingsContent(
     actions: SettingsActions,
     audition: Audition = Audition.IDLE,
     housekeeping: Housekeeping = Housekeeping(),
-    onOpenLicenses: () -> Unit = {}
+    onOpenLicenses: () -> Unit = {},
+    scrollToUpdates: Int = 0
 ) {
     val chrome = LocalChromePadding.current
     val insets = WindowInsets.safeDrawing.asPaddingValues()
@@ -137,6 +149,11 @@ fun SettingsContent(
     BoxWithConstraints(Modifier.fillMaxSize().chromeStart().testTag(LibraryTestTags.SETTINGS)) {
         val twoColumns = maxWidth >= TWO_COLUMNS
         val settingsScroll = rememberScrollState()
+        var updatesTop by remember { mutableIntStateOf(0) }
+        var columnTop by remember { mutableIntStateOf(0) }
+        LaunchedEffect(scrollToUpdates) {
+            if (scrollToUpdates > 0) settingsScroll.animateScrollTo((updatesTop - columnTop).coerceAtLeast(0))
+        }
         ScrollToTopOnTab("settings", settingsScroll)
         Column(
             Modifier
@@ -145,6 +162,7 @@ fun SettingsContent(
                 // where a tap would hit the button instead (owner, M5 round).
                 .padding(bottom = HELP_SIZE + HELP_CLEARANCE)
                 .verticalScroll(settingsScroll)
+                .onGloballyPositioned { columnTop = it.boundsInRoot().top.roundToInt() }
                 .padding(top = insets.calculateTopPadding())
                 .padding(horizontal = 18.dp)
         ) {
@@ -164,7 +182,9 @@ fun SettingsContent(
                         TextGroup(settings.text, 2, actions.onReaderText)
                         LibraryGroup(settings, actions)
                         ConversionGroup(settings, actions)
-                        UpdatesGroup(settings, housekeeping.version, housekeeping.update, actions)
+                        Box(Modifier.onGloballyPositioned { updatesTop = it.boundsInRoot().top.roundToInt() }) {
+                            UpdatesGroup(settings, housekeeping.version, housekeeping.update, actions)
+                        }
                         HousekeepingGroup(housekeeping.cacheBytes, actions)
                     }
                 }
@@ -175,7 +195,9 @@ fun SettingsContent(
                 AtmosphereGroup(settings, actions, audition)
                 LibraryGroup(settings, actions)
                 ConversionGroup(settings, actions)
-                UpdatesGroup(settings, housekeeping.version, housekeeping.update, actions)
+                Box(Modifier.onGloballyPositioned { updatesTop = it.boundsInRoot().top.roundToInt() }) {
+                    UpdatesGroup(settings, housekeeping.version, housekeeping.update, actions)
+                }
                 HousekeepingGroup(housekeeping.cacheBytes, actions)
             }
             AboutGroup(onOpenLicenses)
