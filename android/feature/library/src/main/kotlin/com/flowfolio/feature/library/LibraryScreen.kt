@@ -105,7 +105,11 @@ data class LibraryActions(
     /** Select mode (owner, 2026-10-22); null where books cannot be selected. */
     val selection: Selection? = null,
     /** Asks to remove the chosen books. */
-    val onDeleteChosen: () -> Unit = {}
+    val onDeleteChosen: () -> Unit = {},
+    /** Whether the welcome coach mark should point at the import button, and its actions. */
+    val welcomeVisible: Boolean = false,
+    val onWelcomeSeen: () -> Unit = {},
+    val onNeverShowTips: () -> Unit = {}
 )
 
 /** Library route: wires the ViewModels, file pickers, snackbar messages and shelf dialogs to [LibraryContent]. */
@@ -131,8 +135,8 @@ fun LibraryScreen(
     // The app introduces itself once, when the library first opens (owner, M5). The one-line welcome stays out of
     // the way while the full tour is still owed, so the two never stack on top of each other (owner, M5 round 4).
     val guideSettings by viewModel.guideSettings.collectAsStateWithLifecycle()
-    guideSettings?.takeIf { TOUR_SEEN in it.seenGuides }
-        ?.let { GuideSplash(Guide.Welcome, it, viewModel::markGuideSeen) { viewModel.disableTips(Guide.Welcome.id) } }
+    // The welcome coach mark points at the import button once, after the full tour (owner, 2026-11-07).
+    val welcome = guideSettings?.takeIf { TOUR_SEEN in it.seenGuides }?.let { Guide.Welcome.unseen(it) } == true
     val found by searchViewModel.results.collectAsStateWithLifecycle()
     var shelving by remember { mutableStateOf<Book?>(null) }
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
@@ -185,7 +189,10 @@ fun LibraryScreen(
             onShelfSort = viewModel::onShelfSortChange,
             onFilter = viewModel::onFilter,
             onQuery = viewModel::onQuery,
-            heroSpot = heroSpot
+            heroSpot = heroSpot,
+            welcomeVisible = welcome,
+            onWelcomeSeen = { viewModel.markGuideSeen(Guide.Welcome.id) },
+            onNeverShowTips = { viewModel.disableTips(Guide.Welcome.id) }
         ),
         found,
         scrollToShelf,

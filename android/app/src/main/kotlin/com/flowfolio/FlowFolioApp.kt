@@ -38,6 +38,7 @@ import com.flowfolio.core.designsystem.LocalDestinationScope
 import com.flowfolio.core.designsystem.LocalSharedTransition
 import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.ScreenEntrance
+import com.flowfolio.core.designsystem.SpotlightHost
 import com.flowfolio.core.designsystem.clearOfChrome
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.feature.library.AnnotationsScreen
@@ -134,6 +135,7 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
             }
         }
     }
+    SpotlightHost()
 }
 
 /** A top-level destination whose content can take part in shared-element transitions. */

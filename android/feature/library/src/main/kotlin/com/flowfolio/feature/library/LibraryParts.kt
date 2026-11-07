@@ -58,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.flowfolio.core.designsystem.Book3D
+import com.flowfolio.core.designsystem.CoachMark
 import com.flowfolio.core.designsystem.CoverSpot
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioCard
@@ -148,7 +149,17 @@ private fun HeaderButtons(state: LibraryUiState, searching: Boolean, onSearch: (
         }
         SortMenu(state.shelfSort, actions.onShelfSort)
     }
-    ImportMenu(actions)
+    CoachMark(
+        visible = actions.welcomeVisible,
+        title = stringResource(R.string.guide_welcome_title),
+        body = stringResource(R.string.guide_welcome_body),
+        dismissLabel = stringResource(R.string.guide_got_it),
+        neverLabel = stringResource(R.string.guide_never_show),
+        onDismiss = actions.onWelcomeSeen,
+        onNeverShow = actions.onNeverShowTips
+    ) {
+        ImportMenu(actions)
+    }
 }
 
 /**
