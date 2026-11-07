@@ -3,6 +3,41 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/).
 
+## [0.3.0-alpha.6] - 2026-11-06
+
+> **Phase 4 (trust the conversion) is closed.** `docs/plans/phase4-signoff.md` records it. The honest summary: the
+> "fallbacks worth keeping" work and the owner's tweaks (code highlighting, the update check) landed fully; the pixel
+> verification that was the phase's core ended up diagnostic-only — `geometricCoverage` is recorded but not gated,
+> because the geometric signal false-positives on text-matrix-scaled PDFs. A real pixel diff is deferred. ADR-0050 is
+> proposed with this sign-off (release-channel renumbering).
+
+### Added
+- **Syntax highlighting for code in Dynamic Flow** (owner, on-the-fly tweak). `CodeHighlighter` (pure JVM) detects the
+  language of a code listing from its keywords and comment markers across seven languages — Python, JavaScript, Java,
+  Kotlin, Shell, SQL, C/C++ — and tokenises keywords, strings, comments and numbers; the reader colours a whole
+  `<pre>` listing automatically. An unrecognised listing keeps the plain code face, so nothing is ever coloured wrong.
+- **The app checks for updates when it opens or returns to the foreground** (throttled to ten minutes), and drops an
+  in-app banner when a newer build exists. Tapping it opens Settings at the update section, which now has a
+  **"What's new"** link for the release's own notes.
+- **Geometric coverage in the sidecar** (Phase 4 M1+M2). `geometricCoverage` records, per page, the share of text whose
+  glyph boxes agree with their declared size — the check that would have caught the Packt bug (fonts reported as
+  `size=1.0` against ~10 pt glyphs). It is recorded and printed by the corpus gate, **not gated**, because the
+  size-vs-glyph signal false-positives on text-matrix-scaled PDFs.
+- **Fallbacks worth keeping** (Phase 4 M3): covers pass through as full-page images (detected by position, first/last
+  page, not by image area); fallback and figure crops are sharper (figure 216 dpi, page 144 dpi); captions pair with
+  equations as well as figures and tables; a table wider than the column spans the full width; and a pulsing magnifier
+  hint marks pictures that open when tapped. The long-press menus are themed to match the design system.
+
+### Fixed
+- **A folded (single-page) page turn did not show the back of the page** while curling (owner). The single-page reader
+  passed no `backPage` to the curl, so the back of the turning sheet fell back to a translucent mirror of the front.
+  It now shows the next page — the verso of the leaf — the same way the unfolded spread already did.
+- **Spurious spaces in justified text** ("ver y", "ser vice"; the DevOps book). The word-space threshold was raised
+  from 0.25 em to 0.32 em, so a justified line that stretches its within-word gaps unevenly is less likely to read
+  some of them as spaces. Untested against the DevOps book it was reported from; documented as such in the code.
+
+> The converter's engine version is bumped to **1.4.0**, so Dynamic Flow books are rebuilt on first open.
+
 ## [0.3.0-alpha.5] - 2026-11-06
 
 > **Phase 3 (converter v1 on the phone) is closed.** This is the sign-off release: every exit criterion is met,
