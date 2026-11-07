@@ -13,6 +13,18 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   readable"; the reader opens the first chapter as soon as it lands, then picks up further chapters as they land
   (throttled so reading isn't interrupted every chapter), and reopens to the whole book when conversion finishes. A
   complete conversion is byte-for-byte unchanged, so the engine version is not bumped and no book re-converts.
+- **The first-book demo** (owner, 2026-11-07). The first time a reader opens a book, an overlay marks the tap zones —
+  the sides for page turns, the middle for the menus, the bottom for the riffle bar — with "Got it" and
+  **"Never show tips again"**, which turns all first-use tips off. "Introduce features again" in Settings turns them
+  back on.
+- **The current chapter title in the reader** (owner, 2026-11-07). In Dynamic Flow, the chapter the reader is in shows
+  at the foot of the right page in a spread (beside the page number on the left), and top right when folded, in the
+  page number's own folio ink so it reads on every paper.
+- **The shelf page header** (owner, 2026-11-07). Back, import (+) and select sit on one line; the shelf name moves to
+  its own line below (a little smaller) so a long name has the full width; the sorting and tiles/list line sits under
+  it.
+- **The update banner opens Settings at the update section** (owner, 2026-11-07), not just the Settings tab.
+- **A "what's new" window after an update** (owner, 2026-11-07), shown once per update and dismissed only by "Ok".
 
 ## [0.3.0-alpha.6] - 2026-11-06
 
