@@ -271,6 +271,14 @@ class LibraryViewModel @Inject constructor(
         viewModelScope.launch { settingsRepo.markGuideSeen(id) }
     }
 
+    /** "Never show tips again": turns first-use tips off and marks this one seen. */
+    fun disableTips(id: String) {
+        viewModelScope.launch {
+            settingsRepo.setTipsEnabled(false)
+            settingsRepo.markGuideSeen(id)
+        }
+    }
+
     private val books: Flow<List<Book>> = settingsRepo.settings
         .map { it.librarySort }
         .distinctUntilChanged()

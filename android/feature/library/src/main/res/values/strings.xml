@@ -525,6 +525,7 @@
     <string name="intent_with_someone">Read with someone</string>
     <!-- Tutorial, first-run splashes and tips (owner, M5). -->
     <string name="guide_got_it">Got it</string>
+    <string name="guide_never_show">Never show tips again</string>
     <string name="tutorial_title">Show me around</string>
     <string name="tutorial_intro">A quick tour of what FlowFolio can do. Nothing here is required reading.</string>
     <string name="guide_welcome_title">Welcome to FlowFolio</string>

@@ -30,7 +30,15 @@ import androidx.compose.ui.window.Dialog
  * by remembering what has been seen, so this only draws.
  */
 @Composable
-fun FeatureSplash(glyph: Glyph, title: String, body: String, dismiss: String, onDismiss: () -> Unit) {
+fun FeatureSplash(
+    glyph: Glyph,
+    title: String,
+    body: String,
+    dismiss: String,
+    onDismiss: () -> Unit,
+    neverShow: String? = null,
+    onNeverShow: (() -> Unit)? = null
+) {
     val p = FlowFolio.palette
     val shape = RoundedCornerShape(28.dp)
     Dialog(onDismissRequest = onDismiss) {
@@ -65,6 +73,9 @@ fun FeatureSplash(glyph: Glyph, title: String, body: String, dismiss: String, on
                 textAlign = TextAlign.Center
             )
             FlowFolioPrimaryButton(text = dismiss, onClick = onDismiss)
+            if (neverShow != null && onNeverShow != null) {
+                FlowFolioGhostButton(text = neverShow, onClick = onNeverShow)
+            }
         }
     }
 }

@@ -66,14 +66,21 @@ enum class Guide(
  * once it has been seen is the whole point, so this is safe to leave in place permanently.
  */
 @Composable
-internal fun GuideSplash(guide: Guide, settings: UserSettings, onSeen: (String) -> Unit) {
+internal fun GuideSplash(
+    guide: Guide,
+    settings: UserSettings,
+    onSeen: (String) -> Unit,
+    onNeverShow: (() -> Unit)? = null
+) {
     if (!guide.unseen(settings)) return
     FeatureSplash(
         glyph = guide.glyph,
         title = stringResource(guide.title),
         body = stringResource(guide.body),
         dismiss = stringResource(R.string.guide_got_it),
-        onDismiss = { onSeen(guide.id) }
+        onDismiss = { onSeen(guide.id) },
+        neverShow = stringResource(R.string.guide_never_show),
+        onNeverShow = onNeverShow
     )
 }
 

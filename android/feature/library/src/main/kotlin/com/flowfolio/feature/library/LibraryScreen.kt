@@ -132,7 +132,7 @@ fun LibraryScreen(
     // the way while the full tour is still owed, so the two never stack on top of each other (owner, M5 round 4).
     val guideSettings by viewModel.guideSettings.collectAsStateWithLifecycle()
     guideSettings?.takeIf { TOUR_SEEN in it.seenGuides }
-        ?.let { GuideSplash(Guide.Welcome, it, viewModel::markGuideSeen) }
+        ?.let { GuideSplash(Guide.Welcome, it, viewModel::markGuideSeen) { viewModel.disableTips(Guide.Welcome.id) } }
     val found by searchViewModel.results.collectAsStateWithLifecycle()
     var shelving by remember { mutableStateOf<Book?>(null) }
     val importPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
