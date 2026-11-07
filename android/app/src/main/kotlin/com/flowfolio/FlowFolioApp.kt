@@ -51,6 +51,7 @@ import com.flowfolio.feature.library.DictionaryViewModel
 import com.flowfolio.feature.library.EditDetailsScreen
 import com.flowfolio.feature.library.LibraryScreen
 import com.flowfolio.feature.library.LibraryViewModel
+import com.flowfolio.feature.library.LicensesScreen
 import com.flowfolio.feature.library.SettingsScreen
 import com.flowfolio.feature.library.ShelfPageScreen
 import com.flowfolio.feature.library.ShelfPageViewModel
@@ -111,13 +112,16 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                     destination(TopLevel.Dictionary.route) {
                         ScreenEntrance { DictionaryScreen(onRead = { nav.navigate(Routes.reader(it.id)) }) }
                     }
-                    destination(TopLevel.Settings.route) { ScreenEntrance { SettingsScreen() } }
+                    destination(TopLevel.Settings.route) {
+                        ScreenEntrance { SettingsScreen(onOpenLicenses = { nav.navigate(Routes.LICENSES) }) }
+                    }
                     detailsDestination(nav)
                     editDestination(nav)
                     bookBookmarksDestination(nav)
                     bookAnnotationsDestination(nav)
                     bookDictionaryDestination(nav)
                     shelfPages(nav)
+                    licensesDestination(nav)
                     readerDestination(nav)
                 }
             }
@@ -196,6 +200,11 @@ private fun NavGraphBuilder.editDestination(nav: NavHostController) = composable
     arguments = listOf(navArgument(DetailsViewModel.ARG_BOOK_ID) { type = NavType.StringType })
 ) {
     ScreenEntrance(Modifier.clearOfChrome()) { EditDetailsScreen(onDone = { nav.popBackStack() }) }
+}
+
+/** The open-source licences for what ships in the app, from Settings (known issue 8). */
+private fun NavGraphBuilder.licensesDestination(nav: NavHostController) = composable(Routes.LICENSES) {
+    ScreenEntrance { LicensesScreen(onBack = { nav.popBackStack() }) }
 }
 
 /** The reader; `layout` (single or spread) is a debug override used by the measurement scripts. */

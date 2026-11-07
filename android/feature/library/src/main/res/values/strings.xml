@@ -604,4 +604,15 @@
     <string name="settings_guides_reset">Introduce features again</string>
     <string name="settings_guides_reset_detail">Show every first-run window and tip once more</string>
     <string name="action_help">Help</string>
+    <string name="settings_about">About</string>
+    <string name="settings_licenses">Open-source licences</string>
+    <string name="settings_licenses_detail">The software FlowFolio is built on</string>
+    <string name="licenses_title">Open-source licences</string>
+    <string name="licenses_sub">The third-party software that ships inside FlowFolio</string>
+    <string name="licenses_mit">FlowFolio itself is released under the MIT licence. The components below keep their own licences, shown here as they require.</string>
+    <string name="licenses_fonts">Fonts</string>
+    <string name="licenses_pdfium">PDF rendering</string>
+    <string name="licenses_shipped">Also included</string>
+    <string name="licenses_show">Show licence</string>
+    <string name="licenses_hide">Hide licence</string>
 </resources>

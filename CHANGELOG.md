@@ -3,7 +3,18 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/).
 
-## [Unreleased]
+## [0.3.0-alpha.5] - 2026-11-06
+
+> **Phase 3 (converter v1 on the phone) is closed.** This is the sign-off release: every exit criterion is met,
+> including the Fold timing — *University Physics* (959 pages) converts in **199.8 s** on the real Fold (target 5
+> minutes). `docs/plans/phase3-signoff.md` records it; ADR-0044, ADR-0048 and ADR-0049 are accepted with this sign-off.
+
+### Added
+- **An in-app licences screen** (known issue 8, "needed before release"). Settings &rarr; About &rarr; Open-source
+  licences lists everything that ships inside FlowFolio: the ten typefaces with their full SIL Open Font License
+  (or Bitstream Charter) texts, PDFium and its bundled third-party components, and the remaining libraries by name
+  and licence. The full texts are read from the very assets the app distributes
+  (`assets/third_party_licenses/`), so what is shown is what ships; tapping a row expands its text.
 
 ## [0.3.0-alpha.4] - 2026-11-03
 

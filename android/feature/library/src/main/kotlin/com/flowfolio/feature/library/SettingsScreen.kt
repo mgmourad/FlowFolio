@@ -63,7 +63,7 @@ import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
 
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
+fun SettingsScreen(onOpenLicenses: () -> Unit = {}, viewModel: SettingsViewModel = hiltViewModel()) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val audition by viewModel.audition.collectAsStateWithLifecycle()
     val cacheBytes by viewModel.cacheBytes.collectAsStateWithLifecycle()
@@ -108,7 +108,8 @@ fun SettingsScreen(viewModel: SettingsViewModel = hiltViewModel()) {
             onAutoUpdate = viewModel::setAutoUpdate
         ),
         audition,
-        Housekeeping(viewModel.installedVersion, update, cacheBytes)
+        Housekeeping(viewModel.installedVersion, update, cacheBytes),
+        onOpenLicenses
     )
 }
 
@@ -126,7 +127,8 @@ fun SettingsContent(
     settings: UserSettings,
     actions: SettingsActions,
     audition: Audition = Audition.IDLE,
-    housekeeping: Housekeeping = Housekeeping()
+    housekeeping: Housekeeping = Housekeeping(),
+    onOpenLicenses: () -> Unit = {}
 ) {
     val chrome = LocalChromePadding.current
     val insets = WindowInsets.safeDrawing.asPaddingValues()
@@ -176,6 +178,7 @@ fun SettingsContent(
                 UpdatesGroup(settings, housekeeping.version, housekeeping.update, actions)
                 HousekeepingGroup(housekeeping.cacheBytes, actions)
             }
+            AboutGroup(onOpenLicenses)
             // A tip beside the setting it is about, once (owner, M5).
             GuideTip(
                 Guide.Atmosphere,
@@ -222,6 +225,14 @@ fun SettingsContent(
 private fun GuidesResetRow(onReset: () -> Unit) {
     Group(R.string.settings_tutorial, 1) {
         ActionRow(R.string.settings_guides_reset, R.string.settings_guides_reset_detail, onReset)
+    }
+}
+
+/** The open-source licences for what ships in the app, one row opening the full list (known issue 8). */
+@Composable
+private fun AboutGroup(onOpenLicenses: () -> Unit) {
+    Group(R.string.settings_about, 6) {
+        ActionRow(R.string.settings_licenses, R.string.settings_licenses_detail, onOpenLicenses)
     }
 }
 

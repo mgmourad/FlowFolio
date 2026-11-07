@@ -1,6 +1,6 @@
 # ADR-0044: The conversion engine is a plain JVM module, with JNA only in desktop tooling
 
-- **Status:** Proposed (for the owner's acceptance with the Phase 3 M1+M2 sign-off)
+- **Status:** Accepted (product owner, 2026-11-06, with the Phase 3 sign-off)
 - **Date:** 2026-10-27
 - **Deciders:** product owner, lead engineer
 - **Phase:** 3

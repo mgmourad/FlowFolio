@@ -29,6 +29,8 @@ internal object Routes {
 
     const val SHELF = "shelf/{${ShelfPageViewModel.ARG_SHELF_ID}}"
 
+    const val LICENSES = "licenses"
+
     fun isReader(route: String?) = route?.startsWith("reader/") == true
 
     /**

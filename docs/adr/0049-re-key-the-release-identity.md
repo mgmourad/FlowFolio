@@ -1,6 +1,6 @@
 # ADR-0049: Re-key the release signing identity
 
-- **Status:** Proposed
+- **Status:** Accepted (product owner, 2026-11-06, with the Phase 3 sign-off)
 - **Date:** 2026-11-03
 - **Deciders:** product owner, lead engineer
 - **Phase:** 3

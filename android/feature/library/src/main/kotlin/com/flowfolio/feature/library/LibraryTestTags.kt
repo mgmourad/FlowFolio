@@ -96,6 +96,7 @@ object LibraryTestTags {
     const val ADD_GOAL = "details_add_goal"
     const val GOAL_EXCEEDED_TIP = "details_goal_exceeded_tip"
     const val DICTIONARY = "dictionary"
+    const val LICENSES = "licenses"
 
     fun dictionaryGroup(key: String) = "dictionary_group_$key"
 

@@ -16,7 +16,7 @@ app on the emulator, some on shelves.
 (`docs/plans/phase3-m1m2-signoff.md`). Next: the owner's tweaks to M3 in three milestones, M3T1 (polish and
 navigation), M3T2 (finished, favourites, search), M3T3 (Reading Goal, Dictionary from English Wiktionary): plan approved
 2026-10-28 (`docs/plans/phase3-m3-tweaks-plan.md`); M3T1 built 2026-10-29, M3T2 and M3T3 built 2026-11-01 (Room v16
-and v17, ADR-0046). ADR-0044 is still proposed until the owner accepts it.
+and v17, ADR-0046). ADR-0044 accepted by the owner 2026-11-06.
 
 **M1 and M2 built 2026-10-27.** The engine is a plain JVM module (ADR-0044), the Python server is retired (ADR-0043). On the
 `fold8_api37` emulator *University Physics* (959 pages) converts in about 58 s into a 40 MB EPUB and opens in the reader;
@@ -120,6 +120,11 @@ Spike done (docs/spikes/2026-10-pdf-renderer.md); ADR-0010 (PDFium via own JNI) 
 Build plan approved 2026-10-16: 5 milestones; check in with the product owner at milestone 3 with memory numbers.
 Memory design: render at displayed size, 16-bit HARDWARE page images, one byte budget, prompt release of evicted pages,
 PDFium reloaded every 100 renders, gradient curl shading, gradient-only page shading (`PageShading.kt`); create the curl state once per layout (pagecurl keys it on initialCurrent). Target (ADR-0013): reader <= floor + 110 MB, growth <= 10%.
+
+**Phase 3 signed off by the owner 2026-11-06** (`docs/plans/phase3-signoff.md`). All six exit criteria met, including
+the Fold timing: *University Physics* (959 pages) converts in **199.8 s** (target 5 min) on the real Fold, in the
+`:convert` process, opening reflowed. ADR-0044, 0048 and 0049 accepted with the sign-off; the licences screen (known
+issue 8) landed with this close-out.
 
 ## Product direction (owner decisions, 2026-10-16)
 
@@ -294,7 +299,12 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
    address again. A fresh clone has to set it again -- the setting lives in `.git/config`, which is not cloned.
    The owner intends to move to an address on their own domain once that is set up; that would be a third mailmap
    pass over the history, or simply a change from then on.
-8. PDFium license texts ship as assets but there is no in-app licenses screen yet (needed before release).
+8. ~~PDFium license texts ship as assets but there is no in-app licenses screen yet (needed before release).~~
+   Resolved 2026-11-06: an in-app licences screen (Settings → About → Open-source licences) reads the bundled
+   `third_party_licenses/` assets and shows the fonts' and PDFium's full texts (PDFium's third-party notices are
+   enumerated from the assets at runtime), and lists the remaining shipped components by name and licence. Full
+   texts for the non-bundled dependencies (Compose, Hilt, ML Kit, …) are named, not reproduced here; bundle them
+   as assets if that ever matters. Verified on `fold8_api37`.
 9. Reference Fold: `wm size` reports the inner screen even when folded (use `wm size -d 0`); folders created by adb
    under `Android/data/<pkg>` are invisible to the app; restart adb if the device shows `unauthorized`.
 10. OpenStax *University Physics* is CC BY-NC-SA: local testing only; prefer CC BY titles for anything committed.

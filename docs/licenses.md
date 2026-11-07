@@ -23,8 +23,8 @@ Release dates were checked on Maven Central, Google Maven, PyPI, or GitHub Relea
 | Navigation Compose | 2.10.2 | 2026-09-23 | Apache-2.0 | app | String routes (type-safe routes would need kotlinx-serialization, not approved) |
 | androidx.hilt:hilt-navigation-compose | 1.4.0 | 2026-07-01 | Apache-2.0 | app | Brings hilt-lifecycle-viewmodel-compose 1.4.0 transitively |
 | Turbine | 1.2.1 | 2025-06-11 | Apache-2.0 | test | |
-| pagecurl (vendored source, `:core:pagecurl`) | 1.5.1 | 2024-02-09 | Apache-2.0 | app | Modified copy (ADR-0011); LICENSE + NOTICE in the module; listed in the future in-app licenses screen |
-| **PDFium** via pdfium-binaries | chromium/8100 | 2026-10-12 | PDFium BSD-3/Apache-2.0; build scripts MIT; bundled FreeType (FTL), libjpeg-turbo (IJG/BSD), OpenJPEG (BSD-2), lcms (MIT), zlib, ICU (Unicode), HarfBuzz (MIT), abseil (Apache-2.0) | app | `:core:pdf` (ADR-0010). Downloaded at build time, SHA-256 pinned per ABI. License texts ship as assets under `third_party_licenses/pdfium/`; an in-app licenses screen is required before release. 6.3 MB (arm64), 4.3 MB (armv7), 6.8 MB (x86_64) |
+| pagecurl (vendored source, `:core:pagecurl`) | 1.5.1 | 2024-02-09 | Apache-2.0 | app | Modified copy (ADR-0011); LICENSE + NOTICE in the module; listed in the in-app licenses screen |
+| **PDFium** via pdfium-binaries | chromium/8100 | 2026-10-12 | PDFium BSD-3/Apache-2.0; build scripts MIT; bundled FreeType (FTL), libjpeg-turbo (IJG/BSD), OpenJPEG (BSD-2), lcms (MIT), zlib, ICU (Unicode), HarfBuzz (MIT), abseil (Apache-2.0) | app | `:core:pdf` (ADR-0010). Downloaded at build time, SHA-256 pinned per ABI. License texts ship as assets under `third_party_licenses/pdfium/`, shown in the in-app licenses screen. 6.3 MB (arm64), 4.3 MB (armv7), 6.8 MB (x86_64) |
 | Compose BOM (ui, material3, tooling) | 2026.09.00 | 2026-09-09 | Apache-2.0 | app | |
 | androidx.activity:activity-compose | 1.13.0 | 2026-03-11 | Apache-2.0 | app | |
 | androidx.lifecycle (runtime/viewmodel-compose) | 2.11.0 | 2026-06-17 | Apache-2.0 | app | |
