@@ -35,10 +35,10 @@ class Converter(private val settings: Settings = Settings()) {
     data class Settings(
         /** Share of a page's text that must be found in its blocks, or the page goes out as an image (spec 4). */
         val coverageThreshold: Float = 0.98f,
-        /** Pixels per point for figures, tables and equations (2 is 144 dpi). */
-        val figureScale: Float = 2f,
-        /** Pixels per point for whole-page images. */
-        val pageScale: Float = 1.5f
+        /** Pixels per point for figures, tables and equations (3 is 216 dpi, sharp when pinched). */
+        val figureScale: Float = 3f,
+        /** Pixels per point for whole-page images (2 is 144 dpi). */
+        val pageScale: Float = 2f
     )
 
     /** Progress: [stage] (`reading`, `layout`, `images`, `writing`) and how far into it. */

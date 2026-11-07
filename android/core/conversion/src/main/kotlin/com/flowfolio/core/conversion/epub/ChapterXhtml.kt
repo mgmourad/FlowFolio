@@ -253,7 +253,7 @@ internal class ChapterXhtml(
     }
 
     private companion object {
-        val PICTURES = setOf(BlockType.FIGURE, BlockType.TABLE)
+        val PICTURES = setOf(BlockType.FIGURE, BlockType.TABLE, BlockType.EQUATION)
         val PLAIN_BULLETS = setOf("•")
         const val MAX_HEADING = 6
         private const val CODE_END = "</code></pre>\n"
