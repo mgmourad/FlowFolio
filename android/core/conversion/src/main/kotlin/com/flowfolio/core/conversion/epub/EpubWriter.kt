@@ -2,6 +2,7 @@ package com.flowfolio.core.conversion.epub
 
 import com.flowfolio.core.conversion.ir.Block
 import com.flowfolio.core.conversion.ir.BlockType
+import com.flowfolio.core.conversion.ir.Chapter
 import com.flowfolio.core.conversion.ir.Document
 import com.flowfolio.core.conversion.stage.Linking
 import java.io.OutputStream
@@ -18,20 +19,20 @@ import java.util.zip.ZipOutputStream
 class EpubWriter(private val doc: Document, private val bookId: String, private val modified: String) {
     private val language = "en"
 
-    fun write(out: OutputStream, images: Map<String, ByteArray>) {
+    fun write(out: OutputStream, images: Map<String, ByteArray>, chapters: List<Chapter> = doc.chapters) {
         ZipOutputStream(out).use { zip ->
             stored(zip, "mimetype", "application/epub+zip".toByteArray())
             text(zip, "META-INF/container.xml", CONTAINER)
-            text(zip, "OEBPS/content.opf", opf(images.keys))
-            text(zip, "OEBPS/nav.xhtml", nav())
+            text(zip, "OEBPS/content.opf", opf(images.keys, chapters))
+            text(zip, "OEBPS/nav.xhtml", nav(chapters))
             text(zip, "OEBPS/book.css", CSS)
             val pages = doc.pages.associateBy { it.index }
-            doc.chapters.forEach { text(zip, "OEBPS/${it.file}", ChapterXhtml(it, pages, language).write()) }
+            chapters.forEach { text(zip, "OEBPS/${it.file}", ChapterXhtml(it, pages, language).write()) }
             images.forEach { (name, bytes) -> stored(zip, "OEBPS/$name", bytes) }
         }
     }
 
-    private fun opf(images: Set<String>): String = buildString {
+    private fun opf(images: Set<String>, chapters: List<Chapter>): String = buildString {
         append("""<?xml version="1.0" encoding="UTF-8"?>""").append('\n')
         append("""<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" """)
         append("""xml:lang="$language" """)
@@ -55,7 +56,7 @@ class EpubWriter(private val doc: Document, private val bookId: String, private 
         append("</metadata>\n<manifest>\n")
         append("""<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>""").append('\n')
         append("""<item id="css" href="book.css" media-type="text/css"/>""").append('\n')
-        doc.chapters.forEachIndexed { n, c ->
+        chapters.forEachIndexed { n, c ->
             append("""<item id="c${n + 1}" href="${c.file}" media-type="application/xhtml+xml"/>""").append('\n')
         }
         images.sorted().forEachIndexed { n, name ->
@@ -63,11 +64,11 @@ class EpubWriter(private val doc: Document, private val bookId: String, private 
             append("""<item id="i${n + 1}" href="$name" media-type="$type"/>""").append('\n')
         }
         append("</manifest>\n<spine>\n")
-        doc.chapters.indices.forEach { append("""<itemref idref="c${it + 1}"/>""").append('\n') }
+        chapters.indices.forEach { append("""<itemref idref="c${it + 1}"/>""").append('\n') }
         append("</spine>\n</package>\n")
     }
 
-    private fun nav(): String = buildString {
+    private fun nav(chapters: List<Chapter>): String = buildString {
         append("""<?xml version="1.0" encoding="UTF-8"?>""").append('\n')
         append("<!DOCTYPE html>\n")
         append(
@@ -76,10 +77,10 @@ class EpubWriter(private val doc: Document, private val bookId: String, private 
         )
         append("<head><meta charset=\"UTF-8\"/><title>${esc(doc.title)}</title></head><body>\n")
         append("""<nav epub:type="toc" id="toc" role="doc-toc"><h1>Contents</h1>""").append('\n')
-        append(tocList())
+        append(tocList(chapters))
         append("</nav>\n")
         append("""<nav epub:type="page-list" id="page-list" hidden=""><h2>Pages</h2><ol>""")
-        val chapterOfPage = doc.chapters.flatMap { c -> c.pages.map { it to c.file } }.toMap()
+        val chapterOfPage = chapters.flatMap { c -> c.pages.map { it to c.file } }.toMap()
         doc.pages.forEach { p ->
             chapterOfPage[p.index]?.let { file ->
                 append(
@@ -89,22 +90,22 @@ class EpubWriter(private val doc: Document, private val bookId: String, private 
         }
         append("</ol></nav>\n")
         append("""<nav epub:type="landmarks" id="landmarks" hidden=""><h2>Landmarks</h2><ol>""")
-        doc.chapters.firstOrNull()?.let {
+        chapters.firstOrNull()?.let {
             append("""<li><a epub:type="bodymatter" href="${it.file}">${esc(it.title)}</a></li>""")
         }
         append("</ol></nav>\n</body></html>\n")
     }
 
     /** The outline as nested lists, each entry linked to its heading (or its page); the chapters when there is none. */
-    private fun tocList(): String {
+    private fun tocList(chapters: List<Chapter>): String {
         // Reading systems expect the contents in reading order, so no entry may point before the one above it.
         var last = -1L
         val entries = doc.outline.filter { it.page >= 0 }.mapNotNull { e ->
-            target(e.page, e.title, last)?.let { (at, href) ->
+            target(chapters, e.page, e.title, last)?.let { (at, href) ->
                 last = maxOf(last, at)
                 Triple(e.depth, e.title, href)
             }
-        }.ifEmpty { doc.chapters.map { Triple(0, it.title, it.file) } }
+        }.ifEmpty { chapters.map { Triple(0, it.title, it.file) } }
         val sb = StringBuilder("<ol>")
         var depth = 0
         entries.forEachIndexed { n, (d0, title, href) ->
@@ -129,10 +130,10 @@ class EpubWriter(private val doc: Document, private val bookId: String, private 
      */
     // Each return is one fallback, best first.
     @Suppress("ReturnCount")
-    private fun target(page: Int, title: String, after: Long): Pair<Long, String>? {
-        val c = doc.chapters.indexOfFirst { page in it.pages }
+    private fun target(chapters: List<Chapter>, page: Int, title: String, after: Long): Pair<Long, String>? {
+        val c = chapters.indexOfFirst { page in it.pages }
         if (c < 0) return null
-        val chapter = doc.chapters[c]
+        val chapter = chapters[c]
         fun at(block: Int, heading: Boolean) = c * POSITIONS + block * 2L + if (heading) 1 else 0
         val heading = chapter.blocks.withIndex().firstOrNull { (i, b) ->
             b.page == page && b.type == BlockType.HEADING && at(i, true) >= after && Linking.matches(b.text, title)
@@ -141,14 +142,14 @@ class EpubWriter(private val doc: Document, private val bookId: String, private 
         val first = chapter.blocks.indexOfFirst { it.page >= page }.let { if (it < 0) chapter.blocks.size else it }
         val marker = at(first, false)
         if (marker >= after || after < 0) return marker to "${chapter.file}#page-${page + 1}"
-        return hrefAt(after)?.let { after to it }
+        return hrefAt(chapters, after)?.let { after to it }
     }
 
     /** The link for reading position [at], as [target] numbers them. */
     // Each return is one fallback, best first.
     @Suppress("ReturnCount")
-    private fun hrefAt(at: Long): String? {
-        val chapter = doc.chapters.getOrNull((at / POSITIONS).toInt()) ?: return null
+    private fun hrefAt(chapters: List<Chapter>, at: Long): String? {
+        val chapter = chapters.getOrNull((at / POSITIONS).toInt()) ?: return null
         val i = ((at % POSITIONS) / 2).toInt()
         val block = chapter.blocks.getOrNull(i) ?: return chapter.file
         return if (at % 2 == 1L) "${chapter.file}#${block.id}" else "${chapter.file}#page-${block.page + 1}"
