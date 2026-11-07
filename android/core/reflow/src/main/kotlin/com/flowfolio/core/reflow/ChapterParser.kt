@@ -284,8 +284,9 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
             return
         }
         flush()
-        val ink = "ff-equation" in p.getAttributeValue(null, "class").orEmpty().split(' ')
-        val block = Block.Image(here, target, p.getAttributeValue(null, "alt"), ink)
+        val cls = p.getAttributeValue(null, "class").orEmpty().split(' ')
+        val ink = "ff-equation" in cls
+        val block = Block.Image(here, target, p.getAttributeValue(null, "alt"), ink, fullWidth = "ff-table" in cls)
         blocks += block
         flushed += block.length
     }

@@ -235,8 +235,12 @@ class Paginator(private val spec: PageSpec, private val boxSize: (Block) -> Pair
 
         private fun box(index: Int, block: Block) {
             val (w0, h0) = boxSize(block) ?: (spec.width to (spec.bodyPx * PLACEHOLDER_EMS).toInt())
-            val scale =
+            val scale = if (block is Block.Image && block.fullWidth) {
+                // A table spans the column; its height may run past the page (it is zoomed to read).
+                minOf(1f, spec.width.toFloat() / w0.coerceAtLeast(1))
+            } else {
                 minOf(1f, spec.width.toFloat() / w0.coerceAtLeast(1), spec.height.toFloat() / h0.coerceAtLeast(1))
+            }
             val w = (w0 * scale).toInt()
             val h = (h0 * scale).toInt()
             if (y > 0f && y + h > spec.height) close(block.start)

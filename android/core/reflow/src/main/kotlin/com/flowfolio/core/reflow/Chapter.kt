@@ -29,9 +29,16 @@ sealed interface Block {
 
     /**
      * An image from the book; [path] is book-internal. [ink] marks line art drawn in ink on paper (a converted book's
-     * equations, `class="ff-equation"`): it is drawn in the page's text colour, its paper left clear.
+     * equations, `class="ff-equation"`): it is drawn in the page's text colour, its paper left clear. [fullWidth] marks
+     * a table (`class="ff-table"`): it spans the column even when taller than the page, since it is zoomed to read.
      */
-    class Image(override val start: Int, val path: String, val alt: String?, val ink: Boolean = false) : Block {
+    class Image(
+        override val start: Int,
+        val path: String,
+        val alt: String?,
+        val ink: Boolean = false,
+        val fullWidth: Boolean = false
+    ) : Block {
         override val length get() = 1
     }
 
