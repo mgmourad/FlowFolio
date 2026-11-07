@@ -9,9 +9,13 @@ import android.text.SpannableString
 import android.text.Spanned
 import android.text.StaticLayout
 import android.text.TextPaint
+import android.text.style.ForegroundColorSpan
 import android.text.style.LeadingMarginSpan
 import android.text.style.LineHeightSpan
 import java.util.Locale
+
+/** The colours for syntax-highlighted code (Phase 4 M4), as ARGB ints. */
+data class CodeColors(val keyword: Int, val string: Int, val comment: Int, val number: Int)
 
 /**
  * The page box text is laid out in (pixels, margins already removed), the body text size, and how text is set: the
@@ -29,7 +33,9 @@ data class PageSpec(
     val lineSpacing: Float = DEFAULT_LINE_SPACING,
     /** Paragraphs the book sets flush on both sides are justified; off sets every line ragged. */
     val justify: Boolean = true,
-    val hyphenate: Boolean = true
+    val hyphenate: Boolean = true,
+    /** The colours for syntax-highlighted code (Phase 4 M4); null draws code in one colour. */
+    val code: CodeColors? = null
 ) {
     companion object {
         /** Line height in ems: the distance from one line's baseline to the next, as a multiple of the text size. */
@@ -138,6 +144,7 @@ class Paginator(private val spec: PageSpec, private val boxSize: (Block) -> Pair
                 val hang = (p.measureText("m") * WRAP_INDENT_CHARS).toInt()
                 setSpan(LeadingMarginSpan.Standard(0, hang), 0, length, Spanned.SPAN_INCLUSIVE_INCLUSIVE)
             }
+            highlight(this)
         }
         return StaticLayout.Builder.obtain(text, 0, text.length, p, width)
             .setBreakStrategy(LineBreaker.BREAK_STRATEGY_SIMPLE)
@@ -146,6 +153,22 @@ class Paginator(private val spec: PageSpec, private val boxSize: (Block) -> Pair
             .setLineSpacing(0f, 1f)
             .setIncludePad(false)
             .build()
+    }
+
+    /** Colours [text]'s code tokens with [spec.code], when highlighting is on (Phase 4 M4). */
+    private fun highlight(text: SpannableString) {
+        val colors = spec.code ?: return
+        val source = text.toString()
+        val language = CodeHighlighter.detect(source) ?: return
+        for (token in CodeHighlighter.tokenize(source, language)) {
+            val color = when (token.type) {
+                CodeTokenType.KEYWORD -> colors.keyword
+                CodeTokenType.STRING -> colors.string
+                CodeTokenType.COMMENT -> colors.comment
+                CodeTokenType.NUMBER -> colors.number
+            }
+            text.setSpan(ForegroundColorSpan(color), token.start, token.end, Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
+        }
     }
 
     private fun lineHeightPx(textSize: Float): Int = (textSize * spec.lineSpacing).toInt().coerceAtLeast(1)

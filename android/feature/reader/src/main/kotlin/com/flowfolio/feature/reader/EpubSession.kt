@@ -18,6 +18,7 @@ import com.flowfolio.core.model.ReaderText
 import com.flowfolio.core.model.ReadingFont
 import com.flowfolio.core.model.chapterOfLocator
 import com.flowfolio.core.reflow.Block
+import com.flowfolio.core.reflow.CodeColors
 import com.flowfolio.core.reflow.Locator
 import com.flowfolio.core.reflow.PageColors
 import com.flowfolio.core.reflow.PageDrawer
@@ -160,7 +161,8 @@ internal class EpubSession private constructor(
                     },
                     lineSpacing = text.lineSpacing.factor,
                     justify = text.justify,
-                    hyphenate = text.hyphenate
+                    hyphenate = text.hyphenate,
+                    code = CODE_COLORS
                 )
                 val store = IslandStore(islandRoot, opened.book.id, bodyPx, spec.width)
                 val t1 = android.os.SystemClock.elapsedRealtime()
@@ -529,6 +531,14 @@ internal class EpubSession private constructor(
             val ink = (tone.ink ?: androidx.compose.ui.graphics.Color.Black).toArgb()
             return PageColors(paper = tone.paper.toArgb(), ink = ink, faint = (ink and RGB) or FAINT_ALPHA)
         }
+
+        /** Syntax-highlight colours (Phase 4 M4): editor-standard, readable on the dark papers the reader favours. */
+        private val CODE_COLORS = CodeColors(
+            keyword = 0xFFC586C0.toInt(),
+            string = 0xFFCE9178.toInt(),
+            comment = 0xFF6A9955.toInt(),
+            number = 0xFFB5CEA8.toInt()
+        )
 
         private const val TOP_DP = 56f
         private const val BOTTOM_DP = 64f
