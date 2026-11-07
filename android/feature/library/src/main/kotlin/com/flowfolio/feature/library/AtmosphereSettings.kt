@@ -21,7 +21,6 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -46,6 +45,7 @@ import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioChip
 import com.flowfolio.core.designsystem.FlowFolioGhostButton
 import com.flowfolio.core.designsystem.FlowFolioGlyph
+import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
 import com.flowfolio.core.designsystem.FlowFolioSlider
 import com.flowfolio.core.designsystem.FlowFolioType
@@ -177,7 +177,7 @@ private fun AtmosphereMenu(
     onCreate: () -> Unit,
     onEdit: (Atmosphere) -> Unit
 ) {
-    DropdownMenu(expanded = open, onDismissRequest = onClose) {
+    FlowFolioMenu(expanded = open, onDismissRequest = onClose) {
         // Silence first, so turning it all off is never a hunt (owner, M5).
         DropdownMenuItem(
             text = { Text(stringResource(R.string.atmosphere_none), style = FlowFolio.item) },

@@ -23,7 +23,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,6 +48,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioChip
+import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioSlider
 import com.flowfolio.core.designsystem.FlowFolioType
@@ -383,7 +383,7 @@ private fun AtmosphereRow(settings: UserSettings, onChoose: (String?) -> Unit) {
                 onClick = { open = true },
                 modifier = Modifier.testTag(ReaderTestTags.ATMOSPHERE)
             )
-            DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            FlowFolioMenu(expanded = open, onDismissRequest = { open = false }) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.reader_atmosphere_none), style = FlowFolio.item) },
                     onClick = {

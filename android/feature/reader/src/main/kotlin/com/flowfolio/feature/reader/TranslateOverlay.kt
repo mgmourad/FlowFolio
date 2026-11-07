@@ -20,7 +20,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
@@ -46,6 +45,7 @@ import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
+import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.glass
@@ -158,7 +158,7 @@ private fun LanguageChip(
                 )
             }
         }
-        DropdownMenu(expanded = open, onDismissRequest = {
+        FlowFolioMenu(expanded = open, onDismissRequest = {
             open = false
         }, modifier = Modifier.heightIn(max = MENU_HEIGHT)) {
             languages.sortedBy { languageName(it) }.forEach { code ->

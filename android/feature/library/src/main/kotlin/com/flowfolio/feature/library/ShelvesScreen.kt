@@ -32,7 +32,6 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -63,6 +62,7 @@ import com.flowfolio.core.designsystem.FlowFolioAlertDialog
 import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
+import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalChromePadding
@@ -386,7 +386,7 @@ private fun ShelfCardView(
                 ShelfStatsRow(card, Modifier.padding(top = 12.dp))
             }
         }
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+        FlowFolioMenu(expanded = menu, onDismissRequest = { menu = false }) {
             HoldEntry(R.string.action_select) {
                 menu = false
                 actions.onSelect()

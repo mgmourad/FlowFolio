@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,6 +53,7 @@ import com.flowfolio.core.designsystem.FlowFolioAlertDialog
 import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
+import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Selection
@@ -212,7 +212,7 @@ private fun AnnotationRow(a: Annotation, chapter: String?, actions: AnnotationAc
         var menu by remember { mutableStateOf(false) }
         Box {
             AnnotationCard(a, chapter, onHold = { menu = true }) { actions.onOpen(a) }
-            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            FlowFolioMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 actions.onSelect?.let { select ->
                     HoldEntry(R.string.action_select) {
                         menu = false

@@ -13,7 +13,6 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +38,7 @@ import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioAlertDialog
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
+import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.flowFolioRadioColors
@@ -190,7 +190,7 @@ internal fun ImportMenu(actions: LibraryActions) {
         FlowFolioIconButton(onClick = { open = true }, modifier = Modifier.testTag(LibraryTestTags.IMPORT)) {
             FlowFolioGlyph(Glyph.Add, contentDescription = stringResource(R.string.action_import))
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        FlowFolioMenu(expanded = open, onDismissRequest = { open = false }) {
             ImportEntry(R.string.import_files) {
                 open = false
                 actions.onImport()
@@ -263,7 +263,7 @@ internal fun SortMenu(current: ShelfSort, onSort: (ShelfSort) -> Unit) {
         FlowFolioIconButton(onClick = { open = true }) {
             FlowFolioGlyph(Glyph.Sort, contentDescription = stringResource(R.string.action_sort))
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+        FlowFolioMenu(expanded = open, onDismissRequest = { open = false }) {
             ShelfSort.entries.forEach { sort ->
                 DropdownMenuItem(
                     text = {

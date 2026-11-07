@@ -33,7 +33,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -65,6 +64,7 @@ import com.flowfolio.core.designsystem.FlowFolioAlertDialog
 import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
+import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioProgressBar
 import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioType
@@ -338,7 +338,7 @@ private fun BookRowCard(item: LibraryItem, actions: BookRowActions) {
 
 @Composable
 private fun BookRowMenu(book: Book, open: Boolean, actions: BookRowActions, onClose: () -> Unit) {
-    DropdownMenu(expanded = open, onDismissRequest = onClose) {
+    FlowFolioMenu(expanded = open, onDismissRequest = onClose) {
         val entry = @Composable { label: Int, warn: Boolean, run: () -> Unit ->
             DropdownMenuItem(
                 text = { Text(stringResource(label), style = if (warn) FlowFolio.subItem else FlowFolio.title) },

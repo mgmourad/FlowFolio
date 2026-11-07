@@ -37,7 +37,6 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -76,6 +75,7 @@ import com.flowfolio.core.designsystem.CoverSpot
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
+import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.FlowFolioUnderlineTabs
@@ -423,7 +423,7 @@ private fun TopButtons(state: DetailsUiState, actions: DetailsActions) {
             FlowFolioIconButton(onClick = { menu = true }, glass = true) {
                 FlowFolioGlyph(Glyph.More, stringResource(R.string.action_more), color = p.text)
             }
-            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            FlowFolioMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 val book = state.book
                 val entry: @Composable (Int, androidx.compose.ui.text.TextStyle, () -> Unit, Modifier) -> Unit =
                     { text, style, onClick, mod ->

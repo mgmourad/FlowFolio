@@ -40,7 +40,6 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -79,6 +78,7 @@ import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioChip
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
+import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalBookOpener
@@ -386,7 +386,7 @@ private fun BookmarkRow(item: BookmarkItem, actions: BookmarkActions, uniform: B
         var menu by remember { mutableStateOf(false) }
         Box {
             BookmarkCard(item, uniform, onHold = { menu = true }) { spot -> actions.onOpen(item, spot) }
-            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            FlowFolioMenu(expanded = menu, onDismissRequest = { menu = false }) {
                 selection?.let {
                     HoldEntry(R.string.action_select) {
                         menu = false

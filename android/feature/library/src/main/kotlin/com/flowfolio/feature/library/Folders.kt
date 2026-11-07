@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -37,6 +36,8 @@ import androidx.compose.ui.unit.dp
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioGlyph
+import com.flowfolio.core.designsystem.FlowFolioMenu
+import com.flowfolio.core.designsystem.FlowFolioMenuDivider
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Selection
@@ -205,12 +206,13 @@ private fun FolderPress(folder: FolderEntry, actions: FolderActions, content: @C
     ) {
         content()
         selection?.let { SelectionMark(it, folder.selectionId) }
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+        FlowFolioMenu(expanded = menu, onDismissRequest = { menu = false }) {
             selection?.let {
                 HoldEntry(R.string.action_select) {
                     menu = false
                     it.startWith(folder.selectionId)
                 }
+                FlowFolioMenuDivider()
             }
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_open), style = FlowFolio.title) },
@@ -219,6 +221,7 @@ private fun FolderPress(folder: FolderEntry, actions: FolderActions, content: @C
                     actions.onOpen(folder.path)
                 }
             )
+            FlowFolioMenuDivider()
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_folder_to_shelves), style = FlowFolio.title) },
                 onClick = {
@@ -226,6 +229,7 @@ private fun FolderPress(folder: FolderEntry, actions: FolderActions, content: @C
                     actions.onMakeShelves(folder)
                 }
             )
+            FlowFolioMenuDivider()
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.action_remove_folder), style = FlowFolio.subItem) },
                 onClick = {

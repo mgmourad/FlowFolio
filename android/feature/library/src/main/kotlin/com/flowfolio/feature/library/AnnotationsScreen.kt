@@ -29,7 +29,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -52,6 +51,7 @@ import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
+import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalChromePadding
@@ -207,7 +207,7 @@ private fun AnnotatedBookItem(item: AnnotatedBook, chapter: String?, selection: 
             if (selection.active) selection.toggle(key) else onOpenBook(item.book)
         }
         SelectionMark(selection, key)
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+        FlowFolioMenu(expanded = menu, onDismissRequest = { menu = false }) {
             HoldEntry(R.string.action_select) {
                 menu = false
                 selection.startWith(key)
