@@ -35,15 +35,20 @@ class FlowServiceOnDeviceTest {
     private lateinit var root: File
     private val done = ConcurrentHashMap<String, String>()
     private val progress = ConcurrentHashMap<String, MutableList<Float>>()
+    private val chapterTotals = ConcurrentHashMap<String, MutableList<Pair<Int, Int>>>()
     private val latches = ConcurrentHashMap<String, CountDownLatch>()
 
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val id = intent.getStringExtra(FlowProtocol.EXTRA_BOOK_ID) ?: return
             when (intent.action) {
-                FlowProtocol.ACTION_PROGRESS ->
+                FlowProtocol.ACTION_PROGRESS -> {
                     progress.getOrPut(id) { java.util.Collections.synchronizedList(ArrayList()) } +=
                         intent.getFloatExtra(FlowProtocol.EXTRA_FRACTION, 0f)
+                    chapterTotals.getOrPut(id) { java.util.Collections.synchronizedList(ArrayList()) } +=
+                        intent.getIntExtra(FlowProtocol.EXTRA_CHAPTERS, 0) to
+                        intent.getIntExtra(FlowProtocol.EXTRA_TOTAL_CHAPTERS, 0)
+                }
 
                 FlowProtocol.ACTION_DONE -> {
                     done[id] = intent.getStringExtra(FlowProtocol.EXTRA_FAILURE) ?: OK
@@ -94,6 +99,10 @@ class FlowServiceOnDeviceTest {
         // The progress the app shows only ever moves forward.
         val steps = progress[GOOD].orEmpty().filter { it >= 0f }
         assertEquals(steps.sorted(), steps)
+        // Chapters are reported as they finish, so the app can show "chapter N of M readable".
+        val totals = chapterTotals[GOOD].orEmpty()
+        assertTrue("chapter counts flow with progress", totals.isNotEmpty())
+        assertTrue("a total chapter count is reported", totals.any { it.second >= 1 })
 
         assertEquals(FlowFailure.DAMAGED.name, done["not-a-pdf"])
         assertEquals(FlowFailure.PASSWORD.name, done["encrypted"])

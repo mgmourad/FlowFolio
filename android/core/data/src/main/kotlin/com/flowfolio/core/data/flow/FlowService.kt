@@ -136,23 +136,35 @@ class FlowService : Service() {
     private fun convert(job: Job) {
         val fd = open(job) ?: throw FileNotFoundException("no file for ${job.bookId}")
         files.dir(job.bookId).mkdirs()
-        val partial = files.partial(job.bookId)
         val progress = Progress(job)
-        val result = fd.use { pfd ->
+        fd.use { pfd ->
             PdfiumConversionSource.open(pfd).use { pdf ->
-                partial.outputStream().buffered().use { out ->
-                    Converter().convert(
-                        pdf,
-                        SourceInfo(job.title.ifBlank { job.bookId }, job.bookId, pdf.pageCount, pdf.metadata("Title")),
-                        out,
-                        Instant.now().truncatedTo(ChronoUnit.SECONDS).toString(),
-                        progress::on
-                    )
+                Converter().convertProgressively(
+                    pdf,
+                    SourceInfo(job.title.ifBlank { job.bookId }, job.bookId, pdf.pageCount, pdf.metadata("Title")),
+                    Instant.now().truncatedTo(ChronoUnit.SECONDS).toString(),
+                    progress::on
+                ) { epub, sidecar, finished, total ->
+                    progress.chapter(finished, total)
+                    writeAtomically(files.partial(job.bookId), epub)
+                    writeAtomically(files.sidecar(job.bookId), JSON.encodeToString(sidecar).toByteArray())
                 }
             }
         }
-        files.sidecar(job.bookId).writeText(JSON.encodeToString(result.sidecar))
-        if (!partial.renameTo(files.epub(job.bookId))) throw FileNotFoundException("could not finish ${job.bookId}")
+        // The last emit wrote the complete bundle and sidecar; the partial now becomes the finished EPUB.
+        if (!files.partial(job.bookId).renameTo(files.epub(job.bookId))) {
+            throw FileNotFoundException("could not finish ${job.bookId}")
+        }
+    }
+
+    /** Writes [bytes] to [target] without ever leaving it half-written: a sibling temp, then a rename over it. */
+    private fun writeAtomically(target: File, bytes: ByteArray) {
+        val tmp = File(target.path + ".tmp")
+        tmp.writeBytes(bytes)
+        if (!tmp.renameTo(target)) {
+            target.writeBytes(bytes)
+            tmp.delete()
+        }
     }
 
     private fun open(job: Job): ParcelFileDescriptor? = when {
@@ -168,6 +180,9 @@ class FlowService : Service() {
     private inner class Progress(private val job: Job) {
         private var lastSent = 0L
         private var lastPercent = -1
+        private var lastFraction = 0f
+        private var chapters = 0
+        private var totalChapters = 0
 
         fun on(p: Converter.Progress) {
             var pause = pauseReason()
@@ -179,13 +194,21 @@ class FlowService : Service() {
             report(fraction(p), null, force = false)
         }
 
+        /** A chapter finished: the book is readable through [finished] of [total]; tell the app now. */
+        fun chapter(finished: Int, total: Int) {
+            chapters = finished
+            totalChapters = total
+            report(lastFraction, null, force = true)
+        }
+
         private fun report(fraction: Float, pause: FlowPause?, force: Boolean) {
             val now = SystemClock.elapsedRealtime()
             val percent = (fraction * PERCENT).toInt()
             if (!force && (percent == lastPercent || now - lastSent < REPORT_MS)) return
             lastSent = now
             lastPercent = percent
-            send(FlowProtocol.progress(packageName, job.bookId, fraction, pause))
+            lastFraction = fraction
+            send(FlowProtocol.progress(packageName, job.bookId, fraction, pause, chapters, totalChapters))
             val pausedText = pause?.let {
                 getString(
                     if (it ==
