@@ -1,10 +1,12 @@
 # Phase 5 design: the product flow around conversion
 
-- **Status:** Draft for owner sign-off; **M1 and M2 built** (progressive delivery and the health badge).
+- **Status:** Signed off by the product owner 2026-11-07 (`phase5-signoff.md`); **M1, M2 and M3 built** (progressive
+  delivery, the health badge, and Settings as a menu of pages).
 - **Date:** 2026-11-07.
-- **Scope:** M1 (progressive delivery) + M2 (health badge). F-Droid self-hosted repo is deferred to the end of
-  Phase 9. Mechanism B (the real pixel diff) is redefined as a failover and deferred out of this phase. Pacing on
-  slower phones folds into M1. The polish slot remains the standing end-of-phase owner slot.
+- **Scope:** M1 (progressive delivery) + M2 (health badge) + M3 (Settings as a menu of pages — the owner's
+  redefinition of "conversion on slower phones", whose pacing folded into M1). F-Droid self-hosted repo is deferred to
+  the end of Phase 9. Mechanism B (the real pixel diff) is redefined as a failover and deferred out of this phase. The
+  polish slot remains the standing end-of-phase owner slot.
 - **Spec:** `docs/conversion-spec.md` §6 (progressive output) and §3–4 (sidecar health), `docs/schemas/flowfolio.schema.json`.
 - **Plan:** `PLAN.local.md`, Phase 5.
 

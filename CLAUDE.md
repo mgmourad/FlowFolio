@@ -135,6 +135,13 @@ crops, captions with equations, full-width tables, a tap hint), syntax highlight
 text-matrix-scaled PDFs), and the real pixel diff (mechanism B) is deferred. ADR-0050 (release-channel renumbering) is
 proposed with this sign-off. Next: Phase 5.
 
+**Phase 5 signed off by the owner 2026-11-07** (`docs/plans/phase5-signoff.md`) and **released as FlowFolio
+0.5.0-canary.1 (build 500001)**, tag `v0.5.0-canary.1`. Delivered: progressive delivery (chapters readable as they
+finish converting), the conversion health badge, Settings as a menu of pages, and the owner's polish batch (the
+first-book demo with "Never show tips again", the reader's chapter-and-section running heads, the shelf-page header,
+annotation counts and VoiceMark tabs, and the Favourites page header). ADR-0050 (release-channel renumbering: 3–4
+alpha, 5–6 canary, 7 beta) is accepted with this sign-off. Next: Phase 6.
+
 ## Product direction (owner decisions, 2026-10-16)
 
 - **Foldables first** (reference device: Galaxy Z Fold 8 Ultra): single page on the cover screen,

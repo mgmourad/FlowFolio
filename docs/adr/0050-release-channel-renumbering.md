@@ -1,9 +1,9 @@
 # ADR-0050: Renumber the release channels
 
-- **Status:** Proposed
+- **Status:** Accepted (product owner, 2026-11-07, with the Phase 5 sign-off)
 - **Date:** 2026-11-06
 - **Deciders:** product owner, lead engineer
-- **Phase:** 4
+- **Phase:** 4 (proposed), accepted with the Phase 5 sign-off
 
 ## Context
 
