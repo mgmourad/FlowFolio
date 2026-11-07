@@ -5,6 +5,7 @@ import com.flowfolio.core.conversion.epub.Sidecar
 import com.flowfolio.core.conversion.epub.SourceInfo
 import com.flowfolio.core.conversion.ir.Block
 import com.flowfolio.core.conversion.ir.BlockType
+import com.flowfolio.core.conversion.ir.Chapter
 import com.flowfolio.core.conversion.ir.Document
 import com.flowfolio.core.conversion.ir.OutlineEntry
 import com.flowfolio.core.conversion.ir.Page
@@ -23,6 +24,7 @@ import com.flowfolio.core.conversion.stage.Linking
 import com.flowfolio.core.conversion.stage.ReadingOrder
 import com.flowfolio.core.conversion.stage.Regions
 import com.flowfolio.core.conversion.stage.Shapes
+import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 
 /**
@@ -61,6 +63,47 @@ class Converter(private val settings: Settings = Settings()) {
         val images = images(pdf, doc, progress)
         progress(Progress("writing", 0, 1))
         EpubWriter(doc, source.bookId(), modified).write(epub, images)
+        progress(Progress("writing", 1, 1))
+        return Result(doc, SidecarBuilder.build(doc, source, settings.coverageThreshold))
+    }
+
+    /**
+     * Converts [pdf] progressively (spec 6): [emit] is called after each chapter's images are rendered, with the EPUB
+     * bytes for the chapters finished so far (a valid EPUB of only those chapters), its sidecar (`complete: false` and
+     * [Sidecar.finishedSpineItems] until the last), and [finished] of [total] chapters done. The final emit is the
+     * complete bundle, byte-identical to [convert]'s.
+     */
+    fun convertProgressively(
+        pdf: PdfSource,
+        source: SourceInfo,
+        modified: String,
+        progress: (Progress) -> Unit = {},
+        emit: (epub: ByteArray, sidecar: Sidecar, finished: Int, total: Int) -> Unit
+    ): Result {
+        val doc = analyse(pdf, source, progress)
+        val images = LinkedHashMap<String, ByteArray>()
+        val total = doc.chapters.size
+        doc.chapters.forEachIndexed { i, chapter ->
+            renderChapter(pdf, doc, chapter, images) { page -> progress(Progress("images", page, doc.pages.size)) }
+            val finished = i + 1
+            val complete = finished == total
+            val epub = ByteArrayOutputStream().use { out ->
+                EpubWriter(doc, source.bookId(), modified).write(out, images, doc.chapters.subList(0, finished))
+                out.toByteArray()
+            }
+            emit(
+                epub,
+                SidecarBuilder.build(
+                    doc,
+                    source,
+                    settings.coverageThreshold,
+                    complete = complete,
+                    finishedSpineItems = if (complete) null else doc.chapters.subList(0, finished).map { it.file }
+                ),
+                finished,
+                total
+            )
+        }
         progress(Progress("writing", 1, 1))
         return Result(doc, SidecarBuilder.build(doc, source, settings.coverageThreshold))
     }
@@ -159,8 +202,23 @@ class Converter(private val settings: Settings = Settings()) {
     /** Every picture of the book (figures, tables, equations, inline drawings, page fallbacks), one render per page. */
     private fun images(pdf: PdfSource, doc: Document, progress: (Progress) -> Unit): Map<String, ByteArray> {
         val out = LinkedHashMap<String, ByteArray>()
-        doc.pages.forEachIndexed { n, page ->
-            progress(Progress("images", n, doc.pages.size))
+        doc.chapters.forEach { chapter ->
+            renderChapter(pdf, doc, chapter, out) { page -> progress(Progress("images", page, doc.pages.size)) }
+        }
+        return out
+    }
+
+    /** Renders [chapter]'s pictures into [out], reporting each page via [onPage] (its 0-based index, in order). */
+    private fun renderChapter(
+        pdf: PdfSource,
+        doc: Document,
+        chapter: Chapter,
+        out: MutableMap<String, ByteArray>,
+        onPage: (Int) -> Unit
+    ) {
+        for (pageIndex in chapter.pages) {
+            onPage(pageIndex)
+            val page = doc.pages[pageIndex]
             // Each crop: its file name (without extension), what it shows, and where its name goes once drawn.
             val crops = ArrayList<Triple<String, Crop, (String, EncodedImage) -> Unit>>()
             for (b in page.blocks) {
@@ -178,7 +236,7 @@ class Converter(private val settings: Settings = Settings()) {
                 }
             }
             val visible = crops.filter { it.second.box.width >= 1f && it.second.box.height >= 1f }
-            if (visible.isEmpty()) return@forEachIndexed
+            if (visible.isEmpty()) continue
             val scale = if (page.fallback) settings.pageScale else settings.figureScale
             val drawn = pdf.renderImages(page.index, visible.map { it.second }, scale)
             visible.forEachIndexed { k, (base, _, setName) ->
@@ -190,7 +248,6 @@ class Converter(private val settings: Settings = Settings()) {
                 }
             }
         }
-        return out
     }
 
     private fun clip(b: Box, page: Page) = Box(
