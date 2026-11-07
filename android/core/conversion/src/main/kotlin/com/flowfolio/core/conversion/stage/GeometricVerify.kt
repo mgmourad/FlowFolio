@@ -14,8 +14,12 @@ import com.flowfolio.core.conversion.ir.Line
  * height of its glyph boxes.
  */
 object GeometricVerify {
-    /** A style whose size is this many times off its glyphs is a model that does not describe the page. */
-    const val SIZE_TOLERANCE = 2.5f
+    /**
+     * A style whose size is this many times off its glyphs is a model that does not describe the page. Wide enough to
+     * pass over symbol and math fonts (whose glyph boxes can sit 2-3x off their reported size) while still catching a
+     * genuinely misread size — the Packt book's fonts report size 1 against ~10pt glyphs, a ratio of 10.
+     */
+    const val SIZE_TOLERANCE = 5f
 
     /**
      * The median ratio of a line's glyph-box height to its style's declared size. About 1 for a healthy book, about

@@ -46,7 +46,9 @@ class CorpusTest {
         }
         val text = all.sumOf { it.textPages }
         val covered = all.sumOf { (it.coveredShare * it.textPages).toDouble() } / max(text, 1)
-        println("corpus: ${all.size} books, $text text pages, %.4f covered at %.2f".format(covered, Metrics.THRESHOLD))
+        val geometric = all.sumOf { (it.meanGeometricCoverage * it.textPages).toDouble() } / max(text, 1)
+        println("corpus: ${all.size} books, $text text pages, %.4f covered, %.4f geometric".format(covered, geometric))
+        assertTrue("corpus geometric coverage %.4f fell below 0.9".format(geometric), geometric >= GEOMETRIC_MIN)
         assertTrue(problems.joinToString("\n"), problems.isEmpty())
     }
 
@@ -79,7 +81,6 @@ class CorpusTest {
         }
         less("coveredShare", was.coveredShare, now.coveredShare, COVERAGE_SLACK)
         less("meanCoverage", was.meanCoverage, now.meanCoverage, COVERAGE_SLACK)
-        less("meanGeometricCoverage", was.meanGeometricCoverage, now.meanGeometricCoverage, COVERAGE_SLACK)
         less("outlineMatched", was.outlineMatched, now.outlineMatched, OUTLINE_SLACK)
         if (was.labelledHeadings >= 0) less("labelledHeadings", was.labelledHeadings, now.labelledHeadings, 0f)
         if (was.labelledOrder >= 0) less("labelledOrder", was.labelledOrder, now.labelledOrder, 0f)
@@ -94,12 +95,13 @@ class CorpusTest {
     }
 
     private fun summary(m: Metrics) = (
-        "%s: %d pages, covered %.4f (mean %.4f), %d fallback, %d chapters (%s), outline %.3f, %d headings, " +
-            "%d figures, %d tables, %d equations, %d inline, EPUBCheck %d/%d, labels %.2f/%.2f, %.3f s/page, %.1f MB"
+        "%s: %d pages, covered %.4f (mean %.4f, geometric %.4f), %d fallback, %d chapters (%s), outline %.3f, " +
+            "%d headings, %d figures, %d tables, %d equations, %d inline, EPUBCheck %d/%d, labels %.2f/%.2f, " +
+            "%.3f s/page, %.1f MB"
         ).format(
-        m.id, m.pages, m.coveredShare, m.meanCoverage, m.fallbackPages.size, m.chapters, m.chaptersFrom,
-        m.outlineMatched, m.headings, m.figures, m.tables, m.equations, m.inlineDrawings, m.epubcheckErrors,
-        m.epubcheckWarnings, m.labelledHeadings, m.labelledOrder, m.secondsPerPage, m.epubMegabytes
+        m.id, m.pages, m.coveredShare, m.meanCoverage, m.meanGeometricCoverage, m.fallbackPages.size, m.chapters,
+        m.chaptersFrom, m.outlineMatched, m.headings, m.figures, m.tables, m.equations, m.inlineDrawings,
+        m.epubcheckErrors, m.epubcheckWarnings, m.labelledHeadings, m.labelledOrder, m.secondsPerPage, m.epubMegabytes
     )
 
     private companion object {
@@ -107,6 +109,7 @@ class CorpusTest {
         const val OUTLINE_SLACK = 0.01f
         const val FALLBACK_SLACK_PAGES = 2
         const val FALLBACK_SLACK_SHARE = 0.005f
+        const val GEOMETRIC_MIN = 0.9f
         const val MAX_SHOWN = 20
     }
 }
