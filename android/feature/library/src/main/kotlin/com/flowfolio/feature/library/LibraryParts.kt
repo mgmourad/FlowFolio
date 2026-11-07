@@ -65,6 +65,8 @@ import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioChip
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
+import com.flowfolio.core.designsystem.FlowFolioMenu
+import com.flowfolio.core.designsystem.FlowFolioMenuDivider
 import com.flowfolio.core.designsystem.FlowFolioPill
 import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
 import com.flowfolio.core.designsystem.FlowFolioProgressBar
@@ -485,77 +487,42 @@ private fun androidx.compose.foundation.layout.BoxScope.BookBadge(item: LibraryI
     }
 }
 
-@Suppress("LongMethod")
+@Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
 private fun BookMenu(item: LibraryItem, open: Boolean, actions: LibraryActions, onClose: () -> Unit) {
-    DropdownMenu(expanded = open, onDismissRequest = onClose) {
-        actions.selection?.let { selection ->
-            MenuEntry(R.string.action_select) {
+    FlowFolioMenu(expanded = open, onDismissRequest = onClose) {
+        val entries = ArrayList<Triple<Int, Boolean, () -> Unit>>()
+        fun add(label: Int, warn: Boolean = false, action: () -> Unit) = entries.add(
+            Triple(label, warn, {
                 onClose()
-                selection.startWith(item.book.id)
+                action()
+            })
+        )
+        actions.selection?.let { add(R.string.action_select) { it.startWith(item.book.id) } }
+        add(R.string.action_add_to_shelf) { actions.onAddToShelf(item.book) }
+        actions.onFavorite?.let {
+            add(if (item.book.favorite) R.string.action_favorite_remove else R.string.action_favorite_add) {
+                it(item.book)
             }
         }
-        MenuEntry(R.string.action_add_to_shelf) {
-            onClose()
-            actions.onAddToShelf(item.book)
-        }
-        actions.onFavorite?.let { favorite ->
-            MenuEntry(if (item.book.favorite) R.string.action_favorite_remove else R.string.action_favorite_add) {
-                onClose()
-                favorite(item.book)
+        actions.onFinished?.let {
+            add(if (item.book.finished) R.string.action_mark_unfinished else R.string.action_mark_finished) {
+                it(item.book)
             }
         }
-        actions.onFinished?.let { finished ->
-            MenuEntry(if (item.book.finished) R.string.action_mark_unfinished else R.string.action_mark_finished) {
-                onClose()
-                finished(item.book)
-            }
+        actions.onFlow?.takeIf { item.book.format == BookFormat.PDF }?.let {
+            add(if (item.book.flowMode == true) R.string.action_flow_off else R.string.action_flow_on) { it(item.book) }
         }
-        actions.onFlow?.takeIf { item.book.format == BookFormat.PDF }?.let { flow ->
-            MenuEntry(if (item.book.flowMode == true) R.string.action_flow_off else R.string.action_flow_on) {
-                onClose()
-                flow(item.book)
-            }
-        }
-        actions.onBookmarks?.let { bookmarks ->
-            MenuEntry(R.string.action_bookmarks) {
-                onClose()
-                bookmarks(item.book)
-            }
-        }
-        actions.onAnnotations?.let { annotations ->
-            MenuEntry(R.string.hero_annotations) {
-                onClose()
-                annotations(item.book)
-            }
-        }
-        actions.onDictionary?.let { dictionary ->
-            MenuEntry(R.string.dictionary_title) {
-                onClose()
-                dictionary(item.book)
-            }
-        }
-        actions.onSetBookGoal?.let { setGoal ->
-            MenuEntry(R.string.action_set_read_goal) {
-                onClose()
-                setGoal(item.book)
-            }
-        }
-        actions.onRename?.let { rename ->
-            MenuEntry(R.string.action_rename) {
-                onClose()
-                rename(item.book)
-            }
-        }
-        if (item.book.storage is BookStorage.Linked) {
-            MenuEntry(R.string.action_locate) {
-                onClose()
-                actions.onLocate(item.book)
-            }
-        }
-        MenuEntry(R.string.action_delete, warn = true) {
-            onClose()
-            actions.onDelete(item.book)
+        actions.onBookmarks?.let { add(R.string.action_bookmarks) { it(item.book) } }
+        actions.onAnnotations?.let { add(R.string.hero_annotations) { it(item.book) } }
+        actions.onDictionary?.let { add(R.string.dictionary_title) { it(item.book) } }
+        actions.onSetBookGoal?.let { add(R.string.action_set_read_goal) { it(item.book) } }
+        actions.onRename?.let { add(R.string.action_rename) { it(item.book) } }
+        if (item.book.storage is BookStorage.Linked) add(R.string.action_locate) { actions.onLocate(item.book) }
+        add(R.string.action_delete, warn = true) { actions.onDelete(item.book) }
+        entries.forEachIndexed { i, (label, warn, action) ->
+            if (i > 0) FlowFolioMenuDivider()
+            MenuEntry(label, warn, action)
         }
     }
 }

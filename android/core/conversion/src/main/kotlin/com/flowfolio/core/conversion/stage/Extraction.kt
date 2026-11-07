@@ -30,7 +30,11 @@ object Extraction {
             source < SCANNED_MAX_CHARS && imageArea > pageArea * SCANNED_IMAGE_SHARE -> PageKind.SCANNED
             else -> PageKind.BORN_DIGITAL
         }
-        return Page(raw.index, raw.width, raw.height, kind, lines, raw.images, raw.paths, source)
+        return Page(raw.index, raw.width, raw.height, kind, lines, raw.images, raw.paths, source).also {
+            // A cover: a full-page picture with only a title's worth of text on it. It is not converted (its text is
+            // decorative, not reading text); the whole page goes out as an image instead.
+            it.cover = imageArea > pageArea * COVER_IMAGE_SHARE && source > 0 && source < COVER_MAX_CHARS
+        }
     }
 
     // Page geometry: each early return or condition is one case of the layout, kept together to read as one rule.
@@ -224,5 +228,7 @@ object Extraction {
     private const val BOLD_WEIGHT = 600
     private const val SCANNED_MAX_CHARS = 20
     private const val SCANNED_IMAGE_SHARE = 0.5f
+    private const val COVER_IMAGE_SHARE = 0.5f
+    private const val COVER_MAX_CHARS = 300
     private val BOLD_NAMES = listOf("Bold", "Black", "Heavy", "Semibold", "SemiBold", "Demi")
 }

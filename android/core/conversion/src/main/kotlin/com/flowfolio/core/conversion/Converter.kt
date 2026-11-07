@@ -97,7 +97,7 @@ class Converter(private val settings: Settings = Settings()) {
         val chapterTitles = doc.outline.filter { it.depth == 0 }.groupBy({ it.page }, { it.title })
         doc.pages.forEachIndexed { n, page ->
             progress(Progress("layout", n, doc.pages.size))
-            if (page.kind == PageKind.BORN_DIGITAL) {
+            if (page.kind == PageKind.BORN_DIGITAL && !page.cover) {
                 val lines = page.lines.filter { !it.artifact }
                 val onPage = chapterTitles[page.index].orEmpty()
                 val regions = Regions.find(
@@ -124,9 +124,14 @@ class Converter(private val settings: Settings = Settings()) {
         page.coverage = if (expected <= 0) 1f else (found.toFloat() / expected).coerceAtMost(1f)
         page.geometricCoverage = GeometricVerify.coverage(page.lines.filter { !it.artifact })
         val empty = page.kind == PageKind.EMPTY
-        if (!empty && (page.kind == PageKind.SCANNED || page.coverage < settings.coverageThreshold)) {
+        val broken = page.kind == PageKind.SCANNED || page.cover || page.coverage < settings.coverageThreshold
+        if (!empty && broken) {
             val text = Blocks.join(page.lines.filter { !it.artifact })
-            val method = if (page.kind == PageKind.SCANNED) "fallback:scanned" else "fallback:coverage"
+            val method = when {
+                page.kind == PageKind.SCANNED -> "fallback:scanned"
+                page.cover -> "fallback:cover"
+                else -> "fallback:coverage"
+            }
             page.blocks = listOf(
                 Block(
                     BlockType.FALLBACK,

@@ -57,6 +57,9 @@ class Page(
     /** The whole page went out as an image: its text could not be accounted for, or it is scanned. */
     var fallback: Boolean = false
 
+    /** A cover: a full-page picture with a little text on it, kept as one image rather than converted (Phase 4 M3). */
+    var cover: Boolean = false
+
     /** Drawings shown as images in the text or as display equations ([com.flowfolio.core.conversion.stage.Shapes]). */
     var drawings: Int = 0
 }
