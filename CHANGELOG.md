@@ -23,8 +23,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   glyph boxes agree with their declared size — the check that would have caught the Packt bug (fonts reported as
   `size=1.0` against ~10 pt glyphs). It is recorded and printed by the corpus gate, **not gated**, because the
   size-vs-glyph signal false-positives on text-matrix-scaled PDFs.
-- **Fallbacks worth keeping** (Phase 4 M3): covers pass through as full-page images (detected by position, first/last
-  page, not by image area); fallback and figure crops are sharper (figure 216 dpi, page 144 dpi); captions pair with
+- **Fallbacks worth keeping** (Phase 4 M3): covers pass through as full-page images — a first/last page that is a
+  *design* (graphics with little text), not a title, index or colophon page that merely sits on an edge; fallback and
+  figure crops are sharper (figure 216 dpi, page 144 dpi); captions pair with
   equations as well as figures and tables; a table wider than the column spans the full width; and a pulsing magnifier
   hint marks pictures that open when tapped. The long-press menus are themed to match the design system.
 

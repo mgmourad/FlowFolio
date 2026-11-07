@@ -23,10 +23,11 @@ summarised by milestone.
   CI gate and the self-healing fallback it was meant to drive were removed during the build: the size-vs-glyph signal
   has false positives (text-matrix scaling in OpenStax PDFs), so it mis-flags healthy pages. A *real* pixel diff
   (mechanism B, a headless HTML render) is the honest version of this idea and is deferred. See "Exit criteria".
-- **M3 — fallbacks worth keeping.** Covers pass through as full-page images, detected by position (first/last page),
-  not image area; fallback and figure crops are sharper (figure 3 px/pt = 216 dpi, page 2 px/pt = 144 dpi); captions
-  pair with equations as well as figures and tables; a table wider than the column spans the full width; a pulsing
-  magnifier hint marks pictures that open when tapped. The converter is bumped to engine **1.4.0**.
+- **M3 — fallbacks worth keeping.** Covers pass through as full-page images: a first/last page that is a *design*
+  (graphics with little text), not a title, index or colophon page that merely sits on an edge. Fallback and figure
+  crops are sharper (figure 3 px/pt = 216 dpi, page 2 px/pt = 144 dpi); captions pair with equations as well as
+  figures and tables; a table wider than the column spans the full width; a pulsing magnifier hint marks pictures
+  that open when tapped. The converter is bumped to engine **1.4.0**.
 - **M4 — syntax highlighting** (the owner's tweak). `CodeHighlighter` (pure JVM) detects the language of a code
   listing from its keywords and comment markers across seven languages and tokenises keywords, strings, comments and
   numbers; the reader colours them.
