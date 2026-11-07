@@ -73,7 +73,8 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             atmospheres = AtmosphereCodec.decode(p[ATMOSPHERES]),
             seenGuides = p[SEEN_GUIDES].orEmpty(),
             materialSeed = p[MATERIAL_SEED].toEnum(defaults.materialSeed),
-            lastSeenVersionCode = p[LAST_SEEN_VERSION_CODE] ?: defaults.lastSeenVersionCode
+            lastSeenVersionCode = p[LAST_SEEN_VERSION_CODE] ?: defaults.lastSeenVersionCode,
+            tipsEnabled = p[TIPS_ENABLED] ?: defaults.tipsEnabled
         )
     }
 
@@ -225,6 +226,11 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         store.edit { it[LAST_SEEN_VERSION_CODE] = code }
     }
 
+    /** Turns first-use tips and the reader demo on or off ("never show tips again"). */
+    suspend fun setTipsEnabled(enabled: Boolean) {
+        store.edit { it[TIPS_ENABLED] = enabled }
+    }
+
     /** Turning the lookup on or off also counts as having been asked. */
     suspend fun setAutoUpdate(on: Boolean) {
         store.edit { it[AUTO_UPDATE] = on }
@@ -280,6 +286,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val ATMOSPHERES = stringPreferencesKey("atmospheres")
         val SEEN_GUIDES = stringSetPreferencesKey("seen_guides")
         val LAST_SEEN_VERSION_CODE = longPreferencesKey("last_seen_version_code")
+        val TIPS_ENABLED = booleanPreferencesKey("tips_enabled")
     }
 }
 

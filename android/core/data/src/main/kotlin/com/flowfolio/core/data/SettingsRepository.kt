@@ -45,6 +45,9 @@ interface SettingsRepository {
     /** Remembers the build whose "what's new" was shown, so the popup comes once per update. */
     suspend fun setLastSeenVersionCode(code: Long) = Unit
 
+    /** Turns first-use tips and the reader demo on or off ("never show tips again"). */
+    suspend fun setTipsEnabled(enabled: Boolean) = Unit
+
     suspend fun setReaderSpreads(on: Boolean)
 
     suspend fun setSpreadCoverAlone(on: Boolean)
@@ -138,6 +141,10 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setLastSeenVersionCode(code: Long) {
         source.setLastSeenVersionCode(code)
+    }
+
+    override suspend fun setTipsEnabled(enabled: Boolean) {
+        source.setTipsEnabled(enabled)
     }
 
     override suspend fun setReaderSpreads(on: Boolean) {

@@ -123,6 +123,19 @@ class ReaderSettingsViewModel @Inject constructor(
         viewModelScope.launch { repository.setKeepScreenOn(on) }
     }
 
+    /** Remembers that the first-book demo was shown. */
+    fun markGuideSeen(id: String) {
+        viewModelScope.launch { repository.markGuideSeen(id) }
+    }
+
+    /** "Never show tips again": turns first-use tips off and remembers the demo as seen. */
+    fun disableTips(id: String) {
+        viewModelScope.launch {
+            repository.setTipsEnabled(false)
+            repository.markGuideSeen(id)
+        }
+    }
+
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L
     }

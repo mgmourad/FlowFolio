@@ -143,7 +143,9 @@ data class UserSettings(
      */
     val seenGuides: Set<String> = emptySet(),
     /** The build number whose "what's new" notes were last shown, so the popup appears once after each update. */
-    val lastSeenVersionCode: Long = 0
+    val lastSeenVersionCode: Long = 0,
+    /** Whether first-use tips and the reader demo may appear; off means "never show tips again" (owner, 2026-11-07). */
+    val tipsEnabled: Boolean = true
 )
 
 /** Switching between a PDF and its Dynamic Flow: ask, or (once "don't show again" was chosen) the remembered answer. */

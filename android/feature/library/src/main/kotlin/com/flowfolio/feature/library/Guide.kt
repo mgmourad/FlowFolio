@@ -57,8 +57,8 @@ enum class Guide(
     VoiceNote("voice_note", Glyph.Mic, R.string.guide_voice_title, R.string.guide_voice_body),
     Detour("detour", Glyph.Detour, R.string.guide_detour_title, R.string.guide_detour_body);
 
-    /** Whether this one still has something to say. */
-    fun unseen(settings: UserSettings): Boolean = id !in settings.seenGuides
+    /** Whether this one still has something to say: tips are on, and this guide has not been seen. */
+    fun unseen(settings: UserSettings): Boolean = settings.tipsEnabled && id !in settings.seenGuides
 }
 
 /**

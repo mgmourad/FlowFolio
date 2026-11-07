@@ -101,7 +101,15 @@ fun ReaderScreen(
     ) {
         PaperRevealHost(FlowFolio.palette.dark, state, images) {
             StatusBarForPaper(LocalPaperReveal.current?.fromTone ?: tone)
-            ReaderRoot(state, images, navigation, viewModel, bookmarks, marks, onBack)
+            Box(Modifier.fillMaxSize()) {
+                ReaderRoot(state, images, navigation, viewModel, bookmarks, marks, onBack)
+                if (state is ReaderState.Ready && READER_DEMO !in userSettings.seenGuides && userSettings.tipsEnabled) {
+                    ReaderDemo(
+                        onDone = { direction.markGuideSeen(READER_DEMO) },
+                        onNeverShow = { direction.disableTips(READER_DEMO) }
+                    )
+                }
+            }
         }
     }
 }
