@@ -64,7 +64,7 @@ internal class ReaderFlow(
         if (wants && book.flowMode == null) dynamicFlow.setFlowMode(bookId, true)
         _state.update { it.copy(available = true, wanted = wants) }
         watch()
-        val converted = wants && dynamicFlow.bundle(bookId) != null
+        val converted = wants && dynamicFlow.readableBundle(bookId) != null
         if (wants && !converted) dynamicFlow.convert(bookId)
         return converted
     }
@@ -88,8 +88,8 @@ internal class ReaderFlow(
         scope.launch {
             val now = _state.value
             if (!now.available) return@launch
-            // Into a Dynamic Flow that doesn't exist yet: it opens, and the changes are carried, once it is converted.
-            val later = on && !now.reading && dynamicFlow.bundle(bookId) == null
+            // Into a Dynamic Flow that has nothing readable yet: it opens once the first chapter is.
+            val later = on && !now.reading && dynamicFlow.readableBundle(bookId) == null
             dynamicFlow.setFlowMode(bookId, on, carry)
             _state.update { it.copy(wanted = on) }
             if (on == now.reading || later) return@launch
@@ -98,15 +98,24 @@ internal class ReaderFlow(
         }
     }
 
-    /** Follows the book's conversion; when it finishes while the reader wants Dynamic Flow, moves there at its page. */
+    /** Follows the book's conversion: opens its first chapter as soon as it is readable, and the whole book when done. */
     private fun watch() {
         if (watching != null) return
         watching = scope.launch {
             dynamicFlow.status(bookId).collect { status ->
+                val readingFlow = _state.value.reading
+                val wanted = _state.value.wanted
                 _state.update { it.copy(status = status) }
-                val waiting = _state.value.let { it.wanted && !it.reading }
-                if (status == FlowStatus.Ready && waiting && host.showing) {
-                    sourcePage = host.anchorPage
+                if (!wanted || !host.showing) return@collect
+                // Open the partial when the first chapter lands (still on the PDF), or reopen to the full book when
+                // conversion finishes (from the PDF or from the partial).
+                val shouldOpen = when (status) {
+                    is FlowStatus.Converting -> status.readableChapters > 0 && !readingFlow
+                    FlowStatus.Ready -> true
+                    else -> false
+                }
+                if (shouldOpen) {
+                    if (readingFlow) host.savePlace() else sourcePage = host.anchorPage
                     host.reopen(true)
                 }
             }

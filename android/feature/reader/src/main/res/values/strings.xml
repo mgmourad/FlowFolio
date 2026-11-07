@@ -134,6 +134,7 @@
     <string name="flow_title">Dynamic Flow</string>
     <string name="flow_status_off">Reflow this book to fit your screen</string>
     <string name="flow_status_converting">Preparing… %1$d%%</string>
+    <string name="flow_status_chapters">Chapter %1$d of %2$d ready</string>
     <string name="flow_status_queued">Waiting for another book to finish</string>
     <string name="flow_status_hot">Paused while your phone cools down</string>
     <string name="flow_status_battery">Paused: the battery is low</string>

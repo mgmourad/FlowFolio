@@ -122,10 +122,11 @@ internal class FlowActions(
 /** The card's second line. */
 @Composable
 private fun statusLine(flow: FlowState): String = when (val s = flow.status) {
-    is FlowStatus.Converting -> when (s.paused) {
-        FlowPause.HOT -> stringResource(R.string.flow_status_hot)
-        FlowPause.BATTERY -> stringResource(R.string.flow_status_battery)
-        null -> stringResource(R.string.flow_status_converting, (s.fraction * PERCENT).toInt())
+    is FlowStatus.Converting -> when {
+        s.paused == FlowPause.HOT -> stringResource(R.string.flow_status_hot)
+        s.paused == FlowPause.BATTERY -> stringResource(R.string.flow_status_battery)
+        s.readableChapters > 0 -> stringResource(R.string.flow_status_chapters, s.readableChapters, s.totalChapters)
+        else -> stringResource(R.string.flow_status_converting, (s.fraction * PERCENT).toInt())
     }
 
     FlowStatus.Queued -> stringResource(R.string.flow_status_queued)
