@@ -55,6 +55,7 @@ import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioMenuDivider
+import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Selection
@@ -127,6 +128,7 @@ fun BookAnnotationsScreen(
     editing?.let { a -> NoteDialog(a, onSave = { viewModel.setNote(a, it) }) { editing = null } }
 }
 
+@Suppress("LongMethod")
 @Composable
 fun BookAnnotationsContent(
     state: AnnotationsUiState,
@@ -136,6 +138,11 @@ fun BookAnnotationsContent(
     onDeleteChosen: () -> Unit = {}
 ) {
     val insets = WindowInsets.safeDrawing.asPaddingValues()
+    var tab by rememberSaveable { mutableIntStateOf(0) }
+    // Notes (default) are the written ones; Voicemarks are the spoken ones (owner, 2026-11-07).
+    val visible = remember(state.annotations, tab) {
+        state.annotations.filter { a -> if (tab == 0) a.voice == null else a.voice != null }
+    }
     LazyColumn(
         Modifier.fillMaxSize().testTag(LibraryTestTags.BOOK_ANNOTATIONS),
         contentPadding = PaddingValues(
@@ -158,7 +165,7 @@ fun BookAnnotationsContent(
                         style = FlowFolioType.screenTitle.merge(FlowFolio.title),
                         modifier = Modifier.weight(1f)
                     )
-                    SelectControls(selection, state.annotations.map { it.id.toString() })
+                    SelectControls(selection, visible.map { it.id.toString() })
                 }
                 state.book?.let {
                     Text(
@@ -167,10 +174,16 @@ fun BookAnnotationsContent(
                         modifier = Modifier.padding(top = 6.dp)
                     )
                 }
-                SelectionRow(selection, state.annotations.map { it.id.toString() }, onDeleteChosen)
+                FlowFolioSegmented(
+                    listOf(stringResource(R.string.annotations_notes), stringResource(R.string.annotations_voicemarks)),
+                    tab,
+                    { tab = it },
+                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
+                )
+                SelectionRow(selection, visible.map { it.id.toString() }, onDeleteChosen)
             }
         }
-        itemsIndexed(state.annotations, key = { _, entry -> entry.id }) { i, a ->
+        itemsIndexed(visible, key = { _, entry -> entry.id }) { i, a ->
             Row(Modifier.animateItem().reveal(1 + i).widthIn(max = LIST_WIDTH).fillMaxWidth()) {
                 if (selection.active) {
                     // Select mode: a tap chooses the card (it stays still here); no swiping.

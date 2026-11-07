@@ -319,6 +319,8 @@
     <string name="bookmarks_of">Ribbons in %1$s</string>
     <!-- Annotations tab -->
     <string name="annotations_title">Annotations</string>
+    <string name="annotations_notes">Notes</string>
+    <string name="annotations_voicemarks">Voicemarks</string>
     <plurals name="highlight_count">
         <item quantity="one">%d highlight</item>
         <item quantity="other">%d highlights</item>
@@ -385,15 +387,15 @@
     <string name="hero_flow_off">Dynamic Flow is off</string>
     <string name="filter_finished">Finished</string>
     <string name="shelf_finished">Finished Books</string>
-    <string name="shelf_favorites">Favourites</string>
-    <string name="action_favorite_add">Add to favourites</string>
-    <string name="action_favorite_remove">Remove from favourites</string>
+    <string name="shelf_favorites">Favorites</string>
+    <string name="action_favorite_add">Add to favorites</string>
+    <string name="action_favorite_remove">Remove from favorites</string>
     <string name="action_mark_finished">Mark as finished</string>
     <string name="action_mark_unfinished">Mark as not finished</string>
     <string name="library_finished">%d finished</string>
     <plurals name="favorite_total">
-        <item quantity="one">%d favourite</item>
-        <item quantity="other">%d favourites</item>
+        <item quantity="one">%d favorite</item>
+        <item quantity="other">%d favorites</item>
     </plurals>
     <plurals name="word_total">
         <item quantity="one">%d dictionary word</item>
@@ -466,7 +468,7 @@
     <string name="goal_day_sun">Sunday</string>
     <string name="goal_reached">Reading goal reached</string>
     <string name="badge_flow">Dynamic Flow</string>
-    <string name="badge_favourite">Favourite</string>
+    <string name="badge_favourite">Favorite</string>
     <string name="badge_bookmarked">Bookmarked</string>
     <string name="action_search_close">Close search</string>
     <!-- Page slogans (owner, M4b). -->

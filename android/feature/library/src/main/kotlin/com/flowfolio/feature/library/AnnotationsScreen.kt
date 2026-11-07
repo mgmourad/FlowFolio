@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -250,17 +251,16 @@ private fun AnnotatedBookCard(
                     minLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    stringResource(
-                        R.string.annotations_counts,
-                        pluralStringResource(R.plurals.highlight_count, item.highlights, item.highlights),
-                        pluralStringResource(R.plurals.note_count, item.notes, item.notes)
-                    ),
-                    style = FlowFolioType.pill.merge(FlowFolio.subItem),
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-                Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    Modifier.padding(top = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     item.colours.forEach { c -> Dot(c.marker) }
+                    Spacer(Modifier.weight(1f))
+                    Count(Glyph.Highlight, item.highlights)
+                    Count(Glyph.Edit, item.notes)
+                    Count(Glyph.Mic, item.voicemarks)
                 }
                 chapter?.let {
                     Text(
@@ -290,6 +290,15 @@ private fun AnnotatedBookCard(
 @Composable
 private fun Dot(colour: Color) {
     Canvas(Modifier.size(10.dp)) { drawCircle(colour) }
+}
+
+/** A glyph with its count beside it (M2b): highlight, note and voicemark counts on a book's card. */
+@Composable
+private fun Count(glyph: Glyph, n: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        FlowFolioGlyph(glyph, contentDescription = null, color = FlowFolio.palette.hint, size = 14.dp, glow = false)
+        Text("$n", style = FlowFolioType.pill.merge(FlowFolio.subItem))
+    }
 }
 
 @Composable

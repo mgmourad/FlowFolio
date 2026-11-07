@@ -52,6 +52,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -339,7 +340,7 @@ private fun AddBooksButton(onClick: () -> Unit) {
     }
 }
 
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "LongMethod")
 @Composable
 private fun ShelfPageHeader(
     state: ShelfPageUiState,
@@ -373,12 +374,19 @@ private fun ShelfPageHeader(
             Spacer(Modifier.weight(1f))
             select()
         }
+        // The page's name centred under the buttons; the Favourites tab keeps the top-level pages' own size (owner,
+        // 2026-11-07), a folder or custom shelf is a little smaller.
         Text(
             name,
-            style = FlowFolioType.bookTitle.merge(FlowFolio.title),
+            style = if (state.special == ShelfPageViewModel.FAVORITES) {
+                FlowFolioType.screenTitle.merge(FlowFolio.title)
+            } else {
+                FlowFolioType.bookTitle.merge(FlowFolio.title)
+            },
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = 4.dp, top = 6.dp)
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
         )
         selectionRow()
         Row(

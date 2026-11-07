@@ -34,6 +34,7 @@ data class AnnotatedBook(
     val book: Book,
     val highlights: Int,
     val notes: Int,
+    val voicemarks: Int,
     val colours: List<HighlightColor>,
     val latest: Annotation
 )
@@ -116,6 +117,7 @@ class AnnotationsViewModel @Inject constructor(
                     book = byId.getValue(id),
                     highlights = list.size,
                     notes = list.count { it.note != null },
+                    voicemarks = list.count { it.voice != null },
                     colours = HighlightColor.entries.filter { c -> list.any { it.color == c } },
                     latest = list.maxBy { it.updatedAtMillis }
                 )
