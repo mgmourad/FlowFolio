@@ -121,10 +121,11 @@ Build plan approved 2026-10-16: 5 milestones; check in with the product owner at
 Memory design: render at displayed size, 16-bit HARDWARE page images, one byte budget, prompt release of evicted pages,
 PDFium reloaded every 100 renders, gradient curl shading, gradient-only page shading (`PageShading.kt`); create the curl state once per layout (pagecurl keys it on initialCurrent). Target (ADR-0013): reader <= floor + 110 MB, growth <= 10%.
 
-**Phase 3 signed off by the owner 2026-11-06** (`docs/plans/phase3-signoff.md`). All six exit criteria met, including
-the Fold timing: *University Physics* (959 pages) converts in **199.8 s** (target 5 min) on the real Fold, in the
-`:convert` process, opening reflowed. ADR-0044, 0048 and 0049 accepted with the sign-off; the licences screen (known
-issue 8) landed with this close-out.
+**Phase 3 signed off by the owner 2026-11-06** (`docs/plans/phase3-signoff.md`) and **released as FlowFolio
+0.3.0-alpha.5 (build 300005)**, tag `v0.3.0-alpha.5`. All six exit criteria met, including the Fold timing:
+*University Physics* (959 pages) converts in **199.8 s** (target 5 min) on the real Fold, in the `:convert` process,
+opening reflowed. ADR-0044, 0048 and 0049 accepted with the sign-off; the licences screen (known issue 8) landed with
+this close-out. Next: Phase 4.
 
 ## Product direction (owner decisions, 2026-10-16)
 
