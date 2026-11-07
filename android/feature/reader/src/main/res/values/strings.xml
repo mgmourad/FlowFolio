@@ -9,6 +9,7 @@
     <string name="reader_island_zoom">Zoomed equation or table</string>
     <string name="reader_picture_zoom">Zoomed picture</string>
     <string name="reader_island_zoom_hint">Pinch to zoom · Tap to close</string>
+    <string name="reader_picture_hint">Open picture</string>
     <string name="reader_damaged_epub">This EPUB is damaged or isn\'t a book FlowFolio can read. It stays in your library.</string>
     <string name="reader_password_title">This PDF is password-protected</string>
     <string name="reader_password_label">Password</string>

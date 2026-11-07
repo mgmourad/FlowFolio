@@ -187,6 +187,7 @@ internal fun BoxScope.ReadyReader(
             Book(s, images, viewModel, annotating, pageBounds)
         }
     }
+    if (overlay.zoom == null && overlay.figure == null) PictureHints(links, framesFor)
     RiffleLanding(s, riffling, images, viewModel.thumbnails)
     CompositionLocalProvider(LocalGlassState provides haze) { PageOverlays(s, overlay.textPinch, viewModel) }
     overlay.zoom?.let {
