@@ -36,7 +36,7 @@ class Converter(private val settings: Settings = Settings()) {
         /** Share of a page's text that must be found in its blocks, or the page goes out as an image (spec 4). */
         val coverageThreshold: Float = 0.98f,
         /** Share of a page's text that must agree with its glyph geometry, or the page goes out as an image. */
-        val geometricCoverageThreshold: Float = 0.9f,
+        val geometricCoverageThreshold: Float = 0.5f,
         /** Pixels per point for figures, tables and equations (2 is 144 dpi). */
         val figureScale: Float = 2f,
         /** Pixels per point for whole-page images. */
