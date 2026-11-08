@@ -1,13 +1,22 @@
 package com.flowfolio.core.voice
 
-/** A Narrator voice: a Kokoro speaker (its integer id in the model) with a stable name and a friendly label. */
-data class Voice(val id: Int, val name: String) {
+/** Which neural engine a voice comes from. */
+enum class VoiceSource { KOKORO, PIPER }
+
+/** A Narrator voice: its speaker, a stable name, a friendly label, and (for Piper) the model it loads. */
+data class Voice(
+    val id: Int,
+    val name: String,
+    val source: VoiceSource = VoiceSource.KOKORO,
+    val modelKey: String? = null
+) {
     val label: String = labelOf(name)
 }
 
 /**
- * The voices Narrator Mode offers, all speakers of the `kokoro-multi-lang-v1_0` model (one download, 53
- * speakers). The two defaults come first, then the rest of the English speakers, then the other languages.
+ * The voices Narrator Mode offers. Kokoro is one model with 53 speakers (a single download); Piper is a
+ * per-voice model, offered here as two opt-in voices (Amy, Alan). Both run through the same sherpa-onnx
+ * engine.
  */
 object VoiceSpeakers {
     val defaults: List<Voice> = listOf(Voice(id = 3, name = "af_heart"), Voice(id = 16, name = "am_michael"))
@@ -65,19 +74,30 @@ object VoiceSpeakers {
         Voice(49, "zm_yunjian"),
         Voice(50, "zm_yunxi"),
         Voice(51, "zm_yunxia"),
-        Voice(52, "zm_yunyang")
+        Voice(52, "zm_yunyang"),
+        Voice(0, "piper-amy", VoiceSource.PIPER, "amy"),
+        Voice(0, "piper-alan", VoiceSource.PIPER, "alan")
     )
 
-    /** The Kokoro speaker id for [name], or null if it is not a known voice. */
+    /** The Kokoro speaker id for [name], or null if it is not a Kokoro voice. */
     fun idOf(name: String): Int? = all.firstOrNull { it.name == name }?.id
+
+    /** The full [Voice] for [name], or null if unknown. */
+    fun voiceOf(name: String): Voice? = all.firstOrNull { it.name == name }
 }
 
-/** A friendly picker label: `af_heart` -> "Heart (US · female)", `zf_xiaobei` -> "Xiaobei". */
+/** A friendly picker label: `af_heart` -> "Heart (US · female)", `piper-amy` -> "Amy (Piper · female)". */
 private fun labelOf(name: String): String {
+    PIPER_LABELS[name]?.let { return it }
     val base = name.substringAfter('_', name).replaceFirstChar { it.uppercase() }
     val hint = LANGUAGE_HINTS[name.substringBefore('_', "")]
     return if (hint != null) "$base ($hint)" else base
 }
+
+private val PIPER_LABELS = mapOf(
+    "piper-amy" to "Amy (Piper · female)",
+    "piper-alan" to "Alan (Piper · male)"
+)
 
 private val LANGUAGE_HINTS = mapOf(
     "af" to "US · female",

@@ -8,6 +8,7 @@ import android.os.Looper
 import android.util.Log
 import com.flowfolio.core.voice.PcmAudio
 import com.flowfolio.core.voice.VoiceEngine
+import com.flowfolio.core.voice.VoiceSource
 import com.flowfolio.core.voice.VoiceSpeakers
 
 /**
@@ -16,7 +17,7 @@ import com.flowfolio.core.voice.VoiceSpeakers
  * interrupts a generation in flight, so pause takes effect at once. The engine is loaded once per reader
  * visit; [release] frees it.
  */
-internal class Narrator(private val engine: VoiceEngine) {
+internal class Narrator(private var engine: VoiceEngine) {
     private var speakerId: Int = VoiceSpeakers.defaults.first().id
     private var rate: Float = 1f
 
@@ -34,7 +35,15 @@ internal class Narrator(private val engine: VoiceEngine) {
     }
 
     fun setVoice(name: String) {
-        VoiceSpeakers.idOf(name)?.let { speakerId = it }
+        VoiceSpeakers.voiceOf(name)?.takeIf { it.source == VoiceSource.KOKORO }?.let { speakerId = it.id }
+    }
+
+    /** Swaps in a freshly loaded engine (a Piper voice), keeping the speed; the reader is paused first. */
+    fun swapEngine(newEngine: VoiceEngine, newSpeakerId: Int) {
+        stop()
+        engine.release()
+        engine = newEngine
+        speakerId = newSpeakerId
     }
 
     @Suppress("TooGenericExceptionCaught") // a synthesis/playback failure must never crash the reader

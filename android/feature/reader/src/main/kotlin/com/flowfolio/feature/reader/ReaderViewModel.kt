@@ -43,6 +43,7 @@ import com.flowfolio.core.voice.VoiceEngine
 import com.flowfolio.core.voice.VoicePackDownloader
 import com.flowfolio.core.voice.VoicePackState
 import com.flowfolio.core.voice.VoicePacks
+import com.flowfolio.core.voice.VoiceSource
 import com.flowfolio.core.voice.VoiceSpeakers
 import com.flowfolio.feature.reader.cache.PageCache
 import com.flowfolio.feature.reader.cache.PageKey
@@ -846,7 +847,25 @@ class ReaderViewModel @Inject constructor(
 
     fun setNarratorVoice(name: String) {
         _narratorVoice.value = name
-        narrator?.setVoice(name)
+        val voice = VoiceSpeakers.voiceOf(name) ?: return
+        when (voice.source) {
+            VoiceSource.KOKORO -> narrator?.setVoice(name)
+            VoiceSource.PIPER -> voice.modelKey?.let { switchToPiper(it, voice.id) }
+        }
+    }
+
+    private fun switchToPiper(key: String, speakerId: Int) {
+        val pack = VoicePacks.piper[key] ?: return
+        val dir = File(voiceDir, key)
+        viewModelScope.launch {
+            val dl = VoicePackDownloader(pack, dir)
+            dl.ensureDownloaded()
+            if (dl.state.value != VoicePackState.Ready) return@launch
+            val engine = withContext(Dispatchers.IO) {
+                runCatching { VoiceEngine.loadPiper(dir.absolutePath, pack.modelName) }.getOrNull()
+            }
+            if (engine != null) narrator?.swapEngine(engine, speakerId)
+        }
     }
 
     private fun startNarration() {

@@ -34,11 +34,11 @@ class VoicePackDownloader(private val pack: VoicePack, private val destDir: File
 
     suspend fun ensureDownloaded() = mutex.withLock {
         withContext(Dispatchers.IO) {
-            if (pack.isReady(destDir)) {
+            if (pack.isReady(destDir) && pack.lexiconReady(destDir)) {
                 _state.value = VoicePackState.Ready
                 return@withContext
             }
-            val archive = File(destDir, pack.archiveFileName)
+            val archive = File(destDir, pack.archive.fileName)
             try {
                 _state.value = VoicePackState.Downloading(0f)
                 download(pack.archiveUrl, archive) { p -> _state.value = VoicePackState.Downloading(p) }
@@ -48,7 +48,16 @@ class VoicePackDownloader(private val pack: VoicePack, private val destDir: File
                 }
                 extract(archive, destDir)
                 archive.delete()
-                _state.value = if (pack.isReady(destDir)) {
+                val lexicon = pack.lexicon
+                if (lexicon != null && !pack.lexiconReady(destDir)) {
+                    val file = File(destDir, lexicon.fileName)
+                    download(lexicon.url, file) {}
+                    if (Sha256.of(file) != lexicon.sha256) {
+                        file.delete()
+                        throw IOException("Voice lexicon checksum mismatch")
+                    }
+                }
+                _state.value = if (pack.isReady(destDir) && pack.lexiconReady(destDir)) {
                     VoicePackState.Ready
                 } else {
                     VoicePackState.Failed("Voice pack is incomplete")
@@ -61,7 +70,7 @@ class VoicePackDownloader(private val pack: VoicePack, private val destDir: File
     }
 
     private fun extract(archive: File, dir: File) {
-        when (pack.format) {
+        when (pack.archive.format) {
             VoicePackFormat.ZIP -> ZipExtract.extract(archive, dir)
             VoicePackFormat.TAR_BZ2 -> TarBz2Extract.extract(archive, dir, pack.requiredFiles.toSet())
         }

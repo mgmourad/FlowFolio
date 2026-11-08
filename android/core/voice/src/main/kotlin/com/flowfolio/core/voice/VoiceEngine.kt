@@ -47,5 +47,15 @@ class VoiceEngine private constructor(private val tts: com.k2fsa.sherpa.onnx.Off
             )
             return VoiceEngine(com.k2fsa.sherpa.onnx.OfflineTts(assetManager = null, config = config))
         }
+
+        /** Loads a Piper (VITS) voice: a per-voice model + tokens + the shared English lexicon, all in [modelDir]. */
+        fun loadPiper(modelDir: String, modelName: String): VoiceEngine {
+            val config = com.k2fsa.sherpa.onnx.getOfflineTtsConfig(
+                modelDir = modelDir,
+                modelName = modelName,
+                lexicon = "lexicon-en-us.txt"
+            )
+            return VoiceEngine(com.k2fsa.sherpa.onnx.OfflineTts(assetManager = null, config = config))
+        }
     }
 }

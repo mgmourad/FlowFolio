@@ -20,4 +20,12 @@ class VoiceSpeakersTest {
     fun `unknown speaker name resolves to null`() {
         assertNull(VoiceSpeakers.idOf("does_not_exist"))
     }
+
+    @Test
+    fun `offers Piper voices as a second source`() {
+        val amy = VoiceSpeakers.voiceOf("piper-amy")
+        assertEquals(VoiceSource.PIPER, amy?.source)
+        assertEquals("amy", amy?.modelKey)
+        assertEquals("Alan (Piper · male)", VoiceSpeakers.voiceOf("piper-alan")?.label)
+    }
 }
