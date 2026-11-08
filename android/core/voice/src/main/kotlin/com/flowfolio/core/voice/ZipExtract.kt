@@ -6,9 +6,10 @@ import java.util.zip.ZipInputStream
 
 /** Extracts a zip archive, flattening each entry to its file name (the voice pack is a flat zip). */
 object ZipExtract {
-    fun extract(zip: File, dir: File) {
+    fun extract(zip: File, dir: File, onProgress: (Float) -> Unit = {}) {
         dir.mkdirs()
-        ZipInputStream(zip.inputStream()).use { zin ->
+        val tracked = ProgressInputStream(zip.inputStream().buffered(), zip.length(), onProgress)
+        ZipInputStream(tracked).use { zin ->
             var entry = zin.nextEntry
             while (entry != null) {
                 writeEntry(zin, entry, dir)
@@ -16,6 +17,7 @@ object ZipExtract {
                 entry = zin.nextEntry
             }
         }
+        onProgress(1f)
     }
 
     private fun writeEntry(zin: ZipInputStream, entry: ZipEntry, dir: File) {

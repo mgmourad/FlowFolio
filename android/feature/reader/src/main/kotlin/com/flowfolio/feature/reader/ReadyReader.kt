@@ -231,13 +231,14 @@ private fun Book(
     pageBounds: PageBounds
 ) {
     val rtl = LocalRightToLeft.current
+    val narrating by viewModel.narrating.collectAsStateWithLifecycle()
     key(s.layout, s.coverAlone, s.tone, s.turn, rtl) {
         CompositionLocalProvider(
             LocalHighlights provides annotating.byPage(),
             LocalPageBounds provides pageBounds
         ) {
             MirroredBook(rtl && s.turn != PageTurn.SCROLL) {
-                BookPages(s, images, s.pageAspect, viewModel::onUnitShown)
+                BookPages(s, images, s.pageAspect, narrating, viewModel::onUnitShown)
             }
         }
     }

@@ -18,4 +18,14 @@ class PcmAudioTest {
         assertEquals(32767, pcm[0].toInt())
         assertEquals(-32767, pcm[1].toInt())
     }
+
+    @Test
+    fun `trims leading and trailing silence and appends exact trailing pause`() {
+        val sampleRate = 1000
+        val input = FloatArray(500) // 200ms silence + 100ms tone + 200ms silence
+        for (i in 200 until 300) input[i] = 0.5f
+        val trimmed = PcmAudio.toTrimmedPcm16(input, sampleRate, trailingPauseMs = 50)
+        // 100 tone samples + 12 leading margin + 12 trailing margin + 50 pause = 174 samples
+        assertEquals(174, trimmed.size)
+    }
 }

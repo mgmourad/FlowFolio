@@ -30,12 +30,24 @@ class TarBz2ExtractTest {
             out.closeArchiveEntry()
         }
         val dir = tmp.newFolder("out")
-        TarBz2Extract.extract(archive, dir, setOf("model.int8.onnx", "voices.bin"))
+        val progress = ArrayList<Float>()
+        TarBz2Extract.extract(archive, dir, setOf("model.int8.onnx", "voices.bin")) { progress += it }
 
         assertEquals("model", File(dir, "model.int8.onnx").readText())
         assertEquals("voices", File(dir, "voices.bin").readText())
         // The unwanted file and the root directory are not extracted.
         assertFalse(File(dir, "espeak-ng-data").exists())
         assertFalse(File(dir, "kokoro").exists())
+        assertEquals(1f, progress.last(), 0f)
+    }
+
+    @Test
+    fun `chunkCallback exposes the JNI-required invoke(float_array)Integer method`() {
+        val method = ChunkCallback::class.java.getDeclaredMethod("invoke", FloatArray::class.java)
+        assertEquals(Int::class.javaObjectType, method.returnType)
+        val keepGoing = ChunkCallback { true }
+        val stop = ChunkCallback { false }
+        assertEquals(1, keepGoing.invoke(floatArrayOf(0.1f)))
+        assertEquals(0, stop.invoke(floatArrayOf(0.1f)))
     }
 }

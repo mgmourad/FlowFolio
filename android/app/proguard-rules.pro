@@ -11,8 +11,13 @@
 -keep class com.k2fsa.sherpa.onnx.** { *; }
 -dontwarn com.k2fsa.sherpa.onnx.**
 
-# generateWithCallback invokes the Kotlin Function1 callback from native code by method name; R8's
-# renaming of the lambda's invoke method breaks that JNI callback (NoSuchMethodError), so keep it whole.
+# generateWithCallback invokes the Kotlin Function1 callback from native code by exact JNI signature
+# `invoke([F)Ljava/lang/Integer;`; keep ChunkCallback and all Function1 methods whole so R8 never strips
+# or renames the specialized method.
+-keep class com.flowfolio.core.voice.ChunkCallback {
+    public java.lang.Integer invoke(float[]);
+    public java.lang.Object invoke(java.lang.Object);
+}
 -keepclassmembers class * extends kotlin.jvm.functions.Function1 {
     <methods>;
 }

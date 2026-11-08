@@ -68,6 +68,11 @@
     <string name="reader_narrator_voice_default">Default voice</string>
     <string name="reader_narrator_downloading">Downloading voice… %1$d%%</string>
     <string name="reader_narrator_downloading_title">Downloading the Narrator voice</string>
+    <string name="reader_narrator_installing">Installing voice… %1$d%%</string>
+    <string name="reader_narrator_installing_title">Installing the Narrator voice</string>
+    <string name="reader_narrator_loading">Preparing voice…</string>
+    <string name="reader_narrator_ready_notice">Narrator voice is ready</string>
+    <string name="reader_narrator_no_text">This page has no readable text for the narrator.</string>
     <string name="reader_narrator_download_failed">Voice download failed: %1$s</string>
     <string name="reader_narrator_load_failed">Couldn\'t start the narrator. Check your connection and try again.</string>
     <string name="reader_go_to">Go to page</string>

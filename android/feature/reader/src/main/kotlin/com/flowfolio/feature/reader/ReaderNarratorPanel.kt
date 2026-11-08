@@ -13,6 +13,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,8 +32,10 @@ import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.glass
 import com.flowfolio.core.voice.Voice
 import com.flowfolio.core.voice.VoicePackState
+import com.flowfolio.core.voice.VoiceSource
+import kotlinx.coroutines.delay
 
-/** Narrator Mode's controls (Phase 6 M3): play/pause, speed, page turns, and the Kokoro voice. */
+/** Narrator Mode's controls (Phase 6 M3): play/pause, speed, page turns, and the Kokoro or Piper voice. */
 @Composable
 internal fun ReaderNarratorPanel(
     narrating: Boolean,
@@ -104,7 +107,7 @@ private fun PackStatus(packState: VoicePackState, error: String?) {
     when (packState) {
         is VoicePackState.Downloading -> {
             Text(
-                stringResource(R.string.reader_narrator_downloading, (packState.progress * 100).toInt()),
+                stringResource(R.string.reader_narrator_downloading, (packState.progress * PERCENT_SCALE).toInt()),
                 style = FlowFolioType.rowLabel.merge(FlowFolio.item),
                 modifier = Modifier.padding(top = 12.dp)
             )
@@ -113,6 +116,8 @@ private fun PackStatus(packState: VoicePackState, error: String?) {
                 modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
             )
         }
+
+        is VoicePackState.Installing -> InstallingStatus(packState.progress)
 
         is VoicePackState.Failed -> Text(
             stringResource(R.string.reader_narrator_download_failed, packState.message),
@@ -131,13 +136,87 @@ private fun PackStatus(packState: VoicePackState, error: String?) {
     }
 }
 
+@Composable
+private fun InstallingStatus(progress: Float) {
+    val label = if (progress >= 1f) {
+        stringResource(R.string.reader_narrator_loading)
+    } else {
+        stringResource(R.string.reader_narrator_installing, (progress * PERCENT_SCALE).toInt())
+    }
+    Text(
+        label,
+        style = FlowFolioType.rowLabel.merge(FlowFolio.item),
+        modifier = Modifier.padding(top = 12.dp)
+    )
+    if (progress >= 1f) {
+        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
+    } else {
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+        )
+    }
+}
+
 /**
- * A floating, non-modal pill at the foot of the page while the narrator's voice is downloading (owner,
- * 2026-11-08): the reader can keep reading, but the download is never silent.
+ * A floating, non-modal pill at the foot of the page while the narrator's voice is downloading or installing
+ * (owner, 2026-11-08): the reader can keep reading, and a brief in-app notice announces when the voice is ready.
  */
 @Composable
 internal fun BoxScope.VoiceDownloadOverlay(state: VoicePackState) {
-    val progress = (state as? VoicePackState.Downloading)?.progress ?: return
+    var sawActiveInstall by remember { mutableStateOf(false) }
+    var transientNotice by remember { mutableStateOf<String?>(null) }
+    val readyText = stringResource(R.string.reader_narrator_ready_notice)
+    val failedMessage = (state as? VoicePackState.Failed)?.let {
+        stringResource(R.string.reader_narrator_download_failed, it.message)
+    }
+    LaunchedEffect(state, readyText, failedMessage) {
+        when (state) {
+            is VoicePackState.Downloading, is VoicePackState.Installing -> {
+                sawActiveInstall = true
+                transientNotice = null
+            }
+
+            VoicePackState.Ready -> if (sawActiveInstall) {
+                sawActiveInstall = false
+                transientNotice = readyText
+                delay(NOTICE_DURATION_MS)
+                transientNotice = null
+            }
+
+            is VoicePackState.Failed -> {
+                sawActiveInstall = false
+                transientNotice = failedMessage
+                delay(ERROR_NOTICE_DURATION_MS)
+                transientNotice = null
+            }
+
+            VoicePackState.Idle -> Unit
+        }
+    }
+    when (state) {
+        is VoicePackState.Downloading -> VoiceProgressPill(
+            title = stringResource(R.string.reader_narrator_downloading_title),
+            detail = stringResource(R.string.reader_narrator_downloading, (state.progress * PERCENT_SCALE).toInt()),
+            progress = state.progress
+        )
+
+        is VoicePackState.Installing -> VoiceProgressPill(
+            title = stringResource(R.string.reader_narrator_installing_title),
+            detail = if (state.progress >= 1f) {
+                stringResource(R.string.reader_narrator_loading)
+            } else {
+                stringResource(R.string.reader_narrator_installing, (state.progress * PERCENT_SCALE).toInt())
+            },
+            progress = state.progress.takeIf { it < 1f }
+        )
+
+        else -> transientNotice?.let { notice -> VoiceNoticePill(notice) }
+    }
+}
+
+@Composable
+private fun BoxScope.VoiceProgressPill(title: String, detail: String, progress: Float?) {
     Column(
         Modifier
             .align(Alignment.BottomCenter)
@@ -147,15 +226,19 @@ internal fun BoxScope.VoiceDownloadOverlay(state: VoicePackState) {
             .padding(horizontal = 20.dp, vertical = 14.dp)
     ) {
         Text(
-            stringResource(R.string.reader_narrator_downloading_title),
+            title,
             style = FlowFolioType.rowLabel.merge(FlowFolio.title)
         )
-        LinearProgressIndicator(
-            progress = { progress },
-            modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
-        )
+        if (progress != null) {
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
+            )
+        } else {
+            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 10.dp))
+        }
         Text(
-            stringResource(R.string.reader_narrator_downloading, (progress * 100).toInt()),
+            detail,
             style = FlowFolioType.rowDetail.merge(FlowFolio.hint),
             modifier = Modifier.padding(top = 6.dp)
         )
@@ -163,19 +246,40 @@ internal fun BoxScope.VoiceDownloadOverlay(state: VoicePackState) {
 }
 
 @Composable
+private fun BoxScope.VoiceNoticePill(message: String) {
+    Column(
+        Modifier
+            .align(Alignment.BottomCenter)
+            .navigationBarsPadding()
+            .padding(start = 40.dp, end = 40.dp, bottom = 108.dp)
+            .glass(RoundedCornerShape(24.dp), tint = FlowFolio.palette.tabBar)
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+    ) {
+        Text(
+            message,
+            style = FlowFolioType.rowLabel.merge(FlowFolio.title)
+        )
+    }
+}
+
+@Composable
 private fun VoicePicker(voices: List<Voice>, current: String?, onVoice: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
-    val label = voices.firstOrNull { it.name == current }?.label
-        ?: stringResource(R.string.reader_narrator_voice_default)
+    val selected = voices.firstOrNull { it.name == current }
+    val label = selected?.let { v ->
+        val engineName = if (v.source == VoiceSource.PIPER) "Piper" else "Kokoro"
+        if (v.label.contains(engineName, ignoreCase = true)) v.label else "${v.label} ($engineName)"
+    } ?: stringResource(R.string.reader_narrator_voice_default)
     FlowFolioGhostButton(text = label, onClick = { open = true })
     FlowFolioMenu(expanded = open, onDismissRequest = { open = false }) {
         voices.forEach { v ->
+            val engineLabel = if (v.source == VoiceSource.PIPER) "Piper · sherpa-onnx" else "Kokoro · sherpa-onnx"
             DropdownMenuItem(
                 text = {
                     Column {
                         Text(v.label)
                         Text(
-                            v.name,
+                            "${v.name} · $engineLabel",
                             fontSize = 11.sp,
                             color = FlowFolio.palette.text.copy(alpha = 0.55f)
                         )
@@ -192,3 +296,6 @@ private fun VoicePicker(voices: List<Voice>, current: String?, onVoice: (String)
 
 private const val RATE_MIN = 0.5f
 private const val RATE_MAX = 2f
+private const val PERCENT_SCALE = 100
+private const val NOTICE_DURATION_MS = 2_500L
+private const val ERROR_NOTICE_DURATION_MS = 3_500L

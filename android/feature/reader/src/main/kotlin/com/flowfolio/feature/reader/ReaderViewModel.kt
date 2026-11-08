@@ -70,6 +70,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -669,10 +670,13 @@ class ReaderViewModel @Inject constructor(
     fun goToPage(page: Int) {
         lastTurnAt = android.os.SystemClock.uptimeMillis()
         val ready = _state.value as? ReaderState.Ready ?: return
-        anchorPage = page.coerceIn(0, (ready.pageCount - 1).coerceAtLeast(0))
+        val nextAnchor = page.coerceIn(0, (ready.pageCount - 1).coerceAtLeast(0))
+        val pageChanged = nextAnchor != anchorPage
+        anchorPage = nextAnchor
         publishReady()
         replan()
         saveProgress()
+        if (pageChanged && _narrating.value && narrator != null) readPage(anchorPage)
     }
 
     /** In-book search (Phase 6 M1): the hits for the query typed so far. */
@@ -800,17 +804,20 @@ class ReaderViewModel @Inject constructor(
         return out
     }
 
-    /** Narrator Mode (Phase 6 M3): reads the page aloud with Kokoro (sherpa-onnx), downloaded on first use. */
+    /** Narrator Mode (Phase 6 M3): reads the page aloud with Kokoro or Piper (sherpa-onnx), downloaded on first use. */
     private var narrator: Narrator? = null
 
-    // Set while the first-use download + engine load is in flight, so a second tap can't start another.
-    private var narratorLoading = false
+    private val narratorMutex = kotlinx.coroutines.sync.Mutex()
+    private var voiceLoadJob: Job? = null
+    private var pageReadJob: Job? = null
+    private var nextPrefetchJob: Job? = null
+    private var rateJob: Job? = null
 
     // External app-specific storage: private to the app, adb-pushable for testing, and the natural home
     // for a ~150 MB downloaded model (user-manageable, never backed up).
     private val voiceDir = File(context.getExternalFilesDir(null) ?: context.filesDir, "voice")
 
-    private val downloader = VoicePackDownloader(VoicePacks.kokoroMultiLang, voiceDir)
+    private val downloaders = HashMap<String, VoicePackDownloader>()
 
     private val _narrating = MutableStateFlow(false)
     internal val narrating: StateFlow<Boolean> = _narrating.asStateFlow()
@@ -824,9 +831,20 @@ class ReaderViewModel @Inject constructor(
     private val _narratorVoice = MutableStateFlow<String?>(VoiceSpeakers.defaults.first().name)
     internal val narratorVoice: StateFlow<String?> = _narratorVoice.asStateFlow()
 
-    internal val narratorVoices: List<Voice> get() = VoiceSpeakers.all
+    internal val narratorVoices: List<Voice> = (
+        VoiceSpeakers.defaults +
+            VoiceSpeakers.all.filter { it.source == VoiceSource.PIPER } +
+            VoiceSpeakers.all
+        ).distinctBy { it.name }
 
-    internal val voicePackState: StateFlow<VoicePackState> = downloader.state
+    @Volatile
+    private var currentSegmentPage: Int = -1
+
+    @Volatile
+    private var currentSegmentIndex: Int = 0
+
+    private val _voicePackState = MutableStateFlow<VoicePackState>(VoicePackState.Idle)
+    internal val voicePackState: StateFlow<VoicePackState> = _voicePackState.asStateFlow()
 
     /** A narrator failure the panel should tell the reader about (a download or model-load error). */
     private val _narratorError = MutableStateFlow<String?>(null)
@@ -839,95 +857,281 @@ class ReaderViewModel @Inject constructor(
     fun setNarratorRate(rate: Float) {
         _narratorRate.value = rate
         narrator?.setRate(rate)
+        if (_narrating.value && narrator != null) {
+            rateJob?.cancel()
+            rateJob = viewModelScope.launch {
+                delay(NARRATOR_RATE_DEBOUNCE_MS)
+                if (_narrating.value) narrator?.refreshConfig()
+            }
+        }
     }
 
     fun setNarratorContinuous(on: Boolean) {
         _narratorContinuous.value = on
-    }
-
-    fun setNarratorVoice(name: String) {
-        _narratorVoice.value = name
-        val voice = VoiceSpeakers.voiceOf(name) ?: return
-        when (voice.source) {
-            VoiceSource.KOKORO -> narrator?.setVoice(name)
-            VoiceSource.PIPER -> voice.modelKey?.let { switchToPiper(it, voice.id) }
+        if (!on) {
+            nextPrefetchJob?.cancel()
+            narrator?.setNextPage(null)
+        } else if (_narrating.value) {
+            prefetchNextNarratorPage(anchorPage)
         }
     }
 
-    private fun switchToPiper(key: String, speakerId: Int) {
-        val pack = VoicePacks.piper[key] ?: return
-        val dir = File(voiceDir, key)
-        viewModelScope.launch {
-            val dl = VoicePackDownloader(pack, dir)
-            dl.ensureDownloaded()
-            if (dl.state.value != VoicePackState.Ready) return@launch
-            val engine = withContext(Dispatchers.IO) {
-                runCatching { VoiceEngine.loadPiper(dir.absolutePath, pack.modelName) }.getOrNull()
+    fun setNarratorVoice(name: String) {
+        if (_narratorVoice.value == name && narrator != null && voiceLoadJob?.isActive != true) return
+        _narratorVoice.value = name
+        _narratorError.value = null
+        voiceLoadJob?.cancel()
+        val voice = VoiceSpeakers.voiceOf(name) ?: return
+        val targetKey = if (voice.source == VoiceSource.PIPER) voice.modelKey else null
+        val current = narrator
+        if (current != null && current.modelKey == targetKey) {
+            _voicePackState.value = VoicePackState.Ready
+            current.setVoice(name)
+            if (_narrating.value) current.refreshConfig()
+        } else {
+            current?.stop()
+            voiceLoadJob = viewModelScope.launch {
+                if (ensureNarratorReady() && _narrating.value) readPage(anchorPage, resumeSegment = true)
             }
-            if (engine != null) narrator?.swapEngine(engine, speakerId)
         }
     }
 
     private fun startNarration() {
-        if (narrator != null) {
-            _narrating.value = true
-            readPage(anchorPage)
-            return
-        }
-        if (narratorLoading) return
-        narratorLoading = true
         _narratorError.value = null
-        viewModelScope.launch {
-            downloader.ensureDownloaded()
-            if (downloader.state.value != VoicePackState.Ready) {
-                narratorLoading = false
-                _narratorError.value = context.getString(R.string.reader_narrator_load_failed)
-                return@launch
+        _narrating.value = true
+        voiceLoadJob?.cancel()
+        val current = narrator
+        val voice = VoiceSpeakers.voiceOf(_narratorVoice.value.orEmpty()) ?: VoiceSpeakers.defaults.first()
+        val targetKey = if (voice.source == VoiceSource.PIPER) voice.modelKey else null
+        if (current != null && current.modelKey == targetKey) {
+            _voicePackState.value = VoicePackState.Ready
+            current.setRate(_narratorRate.value)
+            current.setVoice(voice.name)
+            readPage(anchorPage, resumeSegment = true)
+        } else {
+            voiceLoadJob = viewModelScope.launch {
+                if (ensureNarratorReady() && _narrating.value) readPage(anchorPage, resumeSegment = true)
             }
-            // Loading the ~150 MB model is slow and native: do it off the main thread, and never crash on it.
-            val engine = withContext(Dispatchers.IO) {
-                runCatching { VoiceEngine.load(voiceDir.absolutePath) }.getOrNull()
-            }
-            if (engine == null) {
-                narratorLoading = false
-                _narratorError.value = context.getString(R.string.reader_narrator_load_failed)
-                return@launch
-            }
-            val n = Narrator(engine)
-            n.setRate(_narratorRate.value)
-            n.setVoice(_narratorVoice.value ?: VoiceSpeakers.defaults.first().name)
-            narrator = n
-            narratorLoading = false
-            _narrating.value = true
-            readPage(anchorPage)
         }
+    }
+
+    private suspend fun ensureNarratorReady(): Boolean = narratorMutex.withLock {
+        val voice = VoiceSpeakers.voiceOf(_narratorVoice.value.orEmpty()) ?: VoiceSpeakers.defaults.first()
+        val targetKey = if (voice.source == VoiceSource.PIPER) voice.modelKey else null
+        val existing = narrator
+        if (existing != null && existing.modelKey == targetKey) {
+            existing.setRate(_narratorRate.value)
+            existing.setVoice(voice.name)
+            _voicePackState.value = VoicePackState.Ready
+            return@withLock true
+        }
+        val engine = downloadAndLoadVoice(targetKey) ?: return@withLock false
+        val current = narrator
+        if (current == null) {
+            val created = Narrator(engine, targetKey)
+            created.setRate(_narratorRate.value)
+            created.setVoice(voice.name)
+            narrator = created
+        } else {
+            current.swapEngine(engine, voice.id, targetKey)
+            current.setRate(_narratorRate.value)
+        }
+        _voicePackState.value = VoicePackState.Ready
+        true
+    }
+
+    @Suppress("ReturnCount")
+    private suspend fun downloadAndLoadVoice(targetKey: String?): VoiceEngine? {
+        val pack = if (targetKey != null) {
+            VoicePacks.piper[targetKey] ?: return null
+        } else {
+            VoicePacks.kokoroMultiLang
+        }
+        val dir = if (targetKey != null) File(voiceDir, targetKey) else voiceDir
+        val dl = synchronized(downloaders) {
+            downloaders.getOrPut(targetKey ?: KOKORO_KEY) { VoicePackDownloader(pack, dir) }
+        }
+        val forwardJob = viewModelScope.launch {
+            dl.state.collect { state ->
+                if (state != VoicePackState.Idle && state != VoicePackState.Ready) {
+                    _voicePackState.value = state
+                }
+            }
+        }
+        try {
+            dl.ensureDownloaded()
+        } finally {
+            forwardJob.cancel()
+        }
+        if (dl.state.value != VoicePackState.Ready) {
+            _voicePackState.value = dl.state.value
+            if (dl.state.value !is VoicePackState.Failed) {
+                _narratorError.value = context.getString(R.string.reader_narrator_load_failed)
+            }
+            _narrating.value = false
+            return null
+        }
+        _voicePackState.value = VoicePackState.Installing(1f)
+        // Loading the model is slow and native: do it off the main thread, and never crash on it.
+        val engine = withContext(Dispatchers.IO) {
+            runCatching {
+                if (targetKey != null) {
+                    VoiceEngine.loadPiper(dir.absolutePath, pack.modelName)
+                } else {
+                    VoiceEngine.load(dir.absolutePath)
+                }
+            }.getOrNull()
+        }
+        if (engine == null) {
+            _voicePackState.value = VoicePackState.Idle
+            _narratorError.value = context.getString(R.string.reader_narrator_load_failed)
+            _narrating.value = false
+        }
+        return engine
     }
 
     private fun stopNarration() {
-        narrator?.stop()
         _narrating.value = false
+        voiceLoadJob?.cancel()
+        rateJob?.cancel()
+        pageReadJob?.cancel()
+        nextPrefetchJob?.cancel()
+        narrator?.stop()
     }
 
-    private fun readPage(page: Int) {
-        viewModelScope.launch {
-            val text = SpeechText.normalize(pageText(page)?.text.orEmpty())
-            if (text.isBlank()) {
-                advanceOrStop(page)
+    private fun readPage(page: Int, resumeSegment: Boolean = false) {
+        pageReadJob?.cancel()
+        nextPrefetchJob?.cancel()
+        pageReadJob = viewModelScope.launch {
+            val rawCurrent = pageText(page)?.text.orEmpty()
+            val nextPage = if (_narratorContinuous.value) findNextReadablePage(page + 1) else null
+            val rawNext = nextPage?.let { pageText(it)?.text.orEmpty() }
+            val (stitchedCurrent, stitchedNext) = SpeechText.stitchCrossPage(rawCurrent, rawNext)
+            val segments = SpeechText.segments(stitchedCurrent)
+            if (segments.isEmpty()) {
+                handleBlankNarratorPage(page)
                 return@launch
             }
-            narrator?.speak(text) { advanceOrStop(page) }
+            val startIndex = if (resumeSegment && currentSegmentPage == page) {
+                currentSegmentIndex.coerceIn(0, segments.lastIndex)
+            } else {
+                0
+            }
+            currentSegmentPage = page
+            currentSegmentIndex = startIndex
+            if (_narrating.value) {
+                narrator?.speak(
+                    page = page,
+                    segments = segments,
+                    startIndex = startIndex,
+                    onSegment = { segPage, index ->
+                        currentSegmentPage = segPage
+                        currentSegmentIndex = index
+                    },
+                    onPageAdvance = ::onNarratorPageAdvance,
+                    done = { finishedPage ->
+                        currentSegmentIndex = 0
+                        advanceOrStop(finishedPage)
+                    }
+                )
+                if (_narratorContinuous.value && nextPage != null && !stitchedNext.isNullOrBlank()) {
+                    val nextSegments = prepareStitchedSegments(nextPage, stitchedNext)
+                    narrator?.setNextPage(nextPage, nextSegments)
+                }
+            }
+        }
+    }
+
+    private fun onNarratorPageAdvance(newPage: Int) {
+        if (!_narrating.value) return
+        lastTurnAt = android.os.SystemClock.uptimeMillis()
+        val ready = _state.value as? ReaderState.Ready ?: return
+        anchorPage = newPage.coerceIn(0, (ready.pageCount - 1).coerceAtLeast(0))
+        currentSegmentPage = anchorPage
+        currentSegmentIndex = 0
+        publishReady()
+        replan()
+        saveProgress()
+        if (_narratorContinuous.value) {
+            prefetchNextNarratorPage(anchorPage)
+        }
+    }
+
+    private fun prefetchNextNarratorPage(currentPage: Int) {
+        nextPrefetchJob?.cancel()
+        nextPrefetchJob = viewModelScope.launch {
+            val nextPage = findNextReadablePage(currentPage + 1)
+            if (nextPage == null || !_narrating.value || !_narratorContinuous.value) {
+                narrator?.setNextPage(null)
+                return@launch
+            }
+            val rawNext = pageText(nextPage)?.text.orEmpty()
+            val segments = prepareStitchedSegments(nextPage, rawNext)
+            if (_narrating.value && _narratorContinuous.value) {
+                narrator?.setNextPage(nextPage, segments)
+            }
+        }
+    }
+
+    private suspend fun prepareStitchedSegments(
+        page: Int,
+        baseRawText: String
+    ): List<com.flowfolio.core.voice.SpeechSegment> {
+        val followingPage = findNextReadablePage(page + 1)
+        val followingRaw = followingPage?.let { pageText(it)?.text.orEmpty() }
+        val (stitched, _) = SpeechText.stitchCrossPage(baseRawText, followingRaw)
+        return SpeechText.segments(stitched)
+    }
+
+    private suspend fun handleBlankNarratorPage(page: Int) {
+        if (_narratorContinuous.value) {
+            val next = findNextReadablePage(page + 1)
+            if (next != null && _narrating.value) {
+                autoAdvanceToPage(next)
+            } else {
+                _narrating.value = false
+                _narratorError.value = context.getString(R.string.reader_narrator_no_text)
+            }
+        } else {
+            _narrating.value = false
+            _narratorError.value = context.getString(R.string.reader_narrator_no_text)
         }
     }
 
     private fun advanceOrStop(page: Int) {
         if (!_narrating.value) return
-        val count = (_state.value as? ReaderState.Ready)?.pageCount ?: 0
-        if (_narratorContinuous.value && page + 1 < count) {
-            goToPage(page + 1)
-            readPage(page + 1)
-        } else {
+        if (!_narratorContinuous.value) {
             _narrating.value = false
+            return
         }
+        pageReadJob?.cancel()
+        pageReadJob = viewModelScope.launch {
+            val next = findNextReadablePage(page + 1)
+            if (next != null && _narrating.value) {
+                autoAdvanceToPage(next)
+            } else {
+                _narrating.value = false
+            }
+        }
+    }
+
+    private suspend fun findNextReadablePage(startPage: Int): Int? {
+        val count = (_state.value as? ReaderState.Ready)?.pageCount ?: 0
+        for (candidate in startPage until count) {
+            val text = SpeechText.normalize(pageText(candidate)?.text.orEmpty())
+            if (text.isNotBlank()) return candidate
+        }
+        return null
+    }
+
+    private fun autoAdvanceToPage(page: Int) {
+        lastTurnAt = android.os.SystemClock.uptimeMillis()
+        val ready = _state.value as? ReaderState.Ready ?: return
+        anchorPage = page.coerceIn(0, (ready.pageCount - 1).coerceAtLeast(0))
+        publishReady()
+        replan()
+        saveProgress()
+        readPage(anchorPage)
     }
 
     /** The reader's root layout reports the window size whenever it changes (fold, unfold, rotation, resize). */
@@ -944,6 +1148,7 @@ class ReaderViewModel @Inject constructor(
         val ready = _state.value as? ReaderState.Ready ?: return
         if (unit == ready.unit) return
         val pageCount = ready.pageCount
+        val previousAnchor = anchorPage
         anchorPage = when (ready.layout) {
             ReaderLayout.SINGLE -> unit
 
@@ -956,6 +1161,9 @@ class ReaderViewModel @Inject constructor(
         publishReady(unit)
         replan()
         saveProgress()
+        if (anchorPage != previousAnchor && _narrating.value && narrator != null) {
+            readPage(anchorPage)
+        }
     }
 
     private fun saveProgress() {
@@ -1303,5 +1511,8 @@ class ReaderViewModel @Inject constructor(
 
         /** Covers are decoded at a quarter of their size: only their colours are needed. */
         private const val COVER_SAMPLE = 4
+
+        private const val KOKORO_KEY = "kokoro"
+        private const val NARRATOR_RATE_DEBOUNCE_MS = 90L
     }
 }

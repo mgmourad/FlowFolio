@@ -186,11 +186,16 @@ private fun ReaderRoot(
 }
 
 @Composable
-internal fun SinglePageReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap>, onUnitShown: (Int) -> Unit) {
+internal fun SinglePageReader(
+    state: ReaderState.Ready,
+    images: Map<Int, ImageBitmap>,
+    narrating: Boolean = false,
+    onUnitShown: (Int) -> Unit
+) {
     val curl = rememberReaderCurlState(state.unit)
     val latestImages by rememberUpdatedState(images)
     ReportUnit(curl, onUnitShown)
-    FollowJumps(curl, state.unit)
+    FollowJumps(curl, state.unit, narrating)
     PageCurl(
         count = state.unitCount,
         state = curl,
@@ -213,12 +218,17 @@ internal fun SinglePageReader(state: ReaderState.Ready, images: Map<Int, ImageBi
  * forward (animated), and a tap on the left page turns back.
  */
 @Composable
-internal fun SpreadReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap>, onUnitShown: (Int) -> Unit) {
+internal fun SpreadReader(
+    state: ReaderState.Ready,
+    images: Map<Int, ImageBitmap>,
+    narrating: Boolean = false,
+    onUnitShown: (Int) -> Unit
+) {
     val curl = rememberReaderCurlState(state.unit)
     val scope = rememberCoroutineScope()
     val latestImages by rememberUpdatedState(images)
     ReportUnit(curl, onUnitShown)
-    FollowJumps(curl, state.unit)
+    FollowJumps(curl, state.unit, narrating)
     Row(Modifier.fillMaxSize().testTag(ReaderTestTags.PAGE)) {
         Box(
             Modifier
@@ -281,10 +291,27 @@ private fun rememberReaderCurlState(unit: Int): PageCurlState {
     return rememberPageCurlState(initialCurrent = openedAt)
 }
 
-/** Contents, Go to page and the scrubber move the ViewModel's unit; the curl snaps to it without animating. */
+/**
+ * Contents, Go to page and the scrubber move the ViewModel's unit; the curl snaps to it without animating.
+ * When Narrator Mode advances to the next unit, the page curls forward and plays the page turn sound.
+ */
 @Composable
-private fun FollowJumps(curl: PageCurlState, unit: Int) {
-    LaunchedEffect(unit) { if (curl.current != unit) curl.snapTo(unit) }
+private fun FollowJumps(curl: PageCurlState, unit: Int, narrating: Boolean) {
+    val isNarrating by rememberUpdatedState(narrating)
+    LaunchedEffect(unit) {
+        if (curl.current != unit) {
+            if (isNarrating && unit == curl.current + 1) {
+                curl.next()
+                if (curl.current != unit) {
+                    curl.onTurn?.invoke(true)
+                    curl.snapTo(unit)
+                }
+            } else {
+                if (isNarrating && unit > curl.current) curl.onTurn?.invoke(true)
+                curl.snapTo(unit)
+            }
+        }
+    }
 }
 
 /** Reports each unit the curl settles on, and plays the page flip as each turn begins (ADR-0025). */

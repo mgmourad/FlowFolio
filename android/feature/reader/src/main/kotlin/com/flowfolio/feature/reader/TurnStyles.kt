@@ -55,13 +55,19 @@ import kotlinx.coroutines.launch
  * keeps the place.
  */
 @Composable
-internal fun SlideReader(state: ReaderState.Ready, images: Map<Int, ImageBitmap>, onUnitShown: (Int) -> Unit) {
+internal fun SlideReader(
+    state: ReaderState.Ready,
+    images: Map<Int, ImageBitmap>,
+    narrating: Boolean = false,
+    onUnitShown: (Int) -> Unit
+) {
     val stack = remember { PageStack(state.unit) }
     val scope = rememberCoroutineScope()
     val report by rememberUpdatedState(onUnitShown)
+    val isNarrating by rememberUpdatedState(narrating)
     val last = state.unitCount - 1
-    LaunchedEffect(state.unit) { stack.jumpTo(state.unit) }
     val sounds = LocalReaderSounds.current
+    LaunchedEffect(state.unit) { stack.follow(state.unit, last, isNarrating, sounds) }
     val turn = { direction: Int ->
         // The flip sounds as the page starts to slide, when there is a page to slide to (ADR-0025).
         val turning = (direction > 0 && stack.unit < last) || (direction < 0 && stack.unit > 0)
@@ -131,6 +137,17 @@ private class PageStack(start: Int) {
         if (target == unit) return
         progress.snapTo(0f)
         unit = target
+    }
+
+    suspend fun follow(target: Int, last: Int, narrating: Boolean, sounds: ReaderSounds?) {
+        if (target == unit) return
+        if (narrating && target == unit + 1) {
+            sounds?.turn(forward = true)
+            settle(1, last)
+        } else {
+            if (narrating && target > unit) sounds?.turn(forward = true)
+            jumpTo(target)
+        }
     }
 
     /** Finishes a turn in [direction] (1 forward, -1 back, 0 put back); returns the unit now on top if it changed. */
@@ -209,14 +226,26 @@ internal fun ScrollReader(
     state: ReaderState.Ready,
     images: Map<Int, ImageBitmap>,
     placeholderAspect: Float,
+    narrating: Boolean = false,
     onUnitShown: (Int) -> Unit
 ) {
     val opened = remember { state.unit }
     val list = rememberLazyListState(initialFirstVisibleItemIndex = opened)
     val scope = rememberCoroutineScope()
     val report by rememberUpdatedState(onUnitShown)
+    val isNarrating by rememberUpdatedState(narrating)
+    val sounds = LocalReaderSounds.current
     LaunchedEffect(list) { snapshotFlow { list.firstVisibleItemIndex }.collect { report(it) } }
-    LaunchedEffect(state.unit) { if (list.firstVisibleItemIndex != state.unit) list.scrollToItem(state.unit) }
+    LaunchedEffect(state.unit) {
+        if (list.firstVisibleItemIndex != state.unit) {
+            if (isNarrating && state.unit > list.firstVisibleItemIndex) {
+                sounds?.turn(forward = true)
+                list.animateScrollToItem(state.unit)
+            } else {
+                list.scrollToItem(state.unit)
+            }
+        }
+    }
     val bands = state.scrollBands
     val edge = with(LocalDensity.current) { (bands?.top ?: 0).toDp() }
     LazyColumn(
@@ -354,18 +383,21 @@ internal fun BookPages(
     state: ReaderState.Ready,
     images: Map<Int, ImageBitmap>,
     placeholderAspect: Float,
+    narrating: Boolean = false,
     onUnitShown: (Int) -> Unit
 ) {
     Box(Modifier.fillMaxSize()) {
         when {
             state.turn == com.flowfolio.core.model.PageTurn.SCROLL ->
-                ScrollReader(state, images, placeholderAspect, onUnitShown)
+                ScrollReader(state, images, placeholderAspect, narrating, onUnitShown)
 
-            state.turn == com.flowfolio.core.model.PageTurn.SLIDE -> SlideReader(state, images, onUnitShown)
+            state.turn == com.flowfolio.core.model.PageTurn.SLIDE ->
+                SlideReader(state, images, narrating, onUnitShown)
 
-            state.layout == ReaderLayout.SPREAD -> SpreadReader(state, images, onUnitShown)
+            state.layout == ReaderLayout.SPREAD ->
+                SpreadReader(state, images, narrating, onUnitShown)
 
-            else -> SinglePageReader(state, images, onUnitShown)
+            else -> SinglePageReader(state, images, narrating, onUnitShown)
         }
     }
 }
