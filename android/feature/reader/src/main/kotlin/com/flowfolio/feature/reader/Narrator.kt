@@ -51,6 +51,8 @@ internal class Narrator(context: Context, private val onReady: (List<Voice>) -> 
                 done?.invoke()
             }
         })
+        // Pick the most natural voice the device offers before the first word (owner, 2026-11-07).
+        tts.voice = voices.firstOrNull()
         onReady(voices)
     }
 
@@ -72,16 +74,29 @@ internal class Narrator(context: Context, private val onReady: (List<Voice>) -> 
 
     companion object {
         private const val UTTERANCE = "flowfolio-narrator"
-        private const val GOOGLE = "com.google.android.tts"
 
-        /** Prefer the Google engine, then the highest quality, then English; stable order for the picker. */
+        /**
+         * The device's voices, best first: offline only (the owner wants Narrator Mode offline forever), then the
+         * highest quality (neural = `QUALITY_VERY_HIGH`), US English, and Google's offline neural voices (whose names
+         * end in `-local`). The list stays in a stable order for the picker.
+         */
         private fun bestFirst(all: List<Voice>): List<Voice> {
-            val byLocale = all.filter { it.locale.language == Locale.ENGLISH.language }.ifEmpty { all }
-            return byLocale.sortedWith(
-                compareByDescending<Voice> { it.name.startsWith(GOOGLE) }
-                    .thenByDescending { it.quality }
+            val offline = all.filter { !it.isNetworkConnectionRequired }.ifEmpty { all }
+            val english = offline.filter { it.locale.language == Locale.ENGLISH.language }.ifEmpty { offline }
+            return english.sortedWith(
+                compareByDescending<Voice> { it.quality }
+                    .thenByDescending { it.locale.country == "US" }
+                    .thenByDescending { it.name.contains("-local") }
                     .thenBy { it.name }
             )
+        }
+
+        /** A friendly label for the picker: "English (United States)" with a neural marker when it applies. */
+        fun label(voice: Voice): String {
+            val language = voice.locale.getDisplayLanguage(Locale.ENGLISH).replaceFirstChar { it.uppercase() }
+            val country = voice.locale.getDisplayCountry(Locale.ENGLISH)
+            val name = if (country.isNotBlank()) "$language ($country)" else language
+            return if (voice.quality == Voice.QUALITY_VERY_HIGH) "$name · Neural" else name
         }
     }
 }

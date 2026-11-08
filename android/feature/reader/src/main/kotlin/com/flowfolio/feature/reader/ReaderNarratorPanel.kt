@@ -94,16 +94,27 @@ internal fun ReaderNarratorPanel(
 @Composable
 private fun VoicePicker(voices: List<Voice>, current: String?, onVoice: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
-    FlowFolioGhostButton(text = current ?: stringResource(R.string.reader_narrator_voice_default), onClick = {
-        open =
-            true
-    })
+    val label = voices.firstOrNull { it.name == current }?.let(Narrator::label)
+        ?: stringResource(R.string.reader_narrator_voice_default)
+    FlowFolioGhostButton(text = label, onClick = { open = true })
     FlowFolioMenu(expanded = open, onDismissRequest = { open = false }) {
         voices.forEach { v ->
-            DropdownMenuItem(text = { Text(v.name) }, onClick = {
-                open = false
-                onVoice(v.name)
-            })
+            DropdownMenuItem(
+                text = {
+                    Column {
+                        Text(Narrator.label(v))
+                        Text(
+                            v.name,
+                            fontSize = 11.sp,
+                            color = FlowFolio.palette.text.copy(alpha = 0.55f)
+                        )
+                    }
+                },
+                onClick = {
+                    open = false
+                    onVoice(v.name)
+                }
+            )
         }
     }
 }
