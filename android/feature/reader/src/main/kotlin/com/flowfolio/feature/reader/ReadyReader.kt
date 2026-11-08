@@ -361,6 +361,7 @@ internal fun BoxScope.Controls(
                 onNarratorVoice = parts.book::setNarratorVoice
             )
             AtmosphereGlimpse(parts.book)
+            VoiceDownloadOverlay(voicePackState)
             FootnotePopover(overlay.note, parts.book::footnote, onDismiss = { overlay.note = null })
             overlay.figure?.let { FigureZoom(it, parts.book, onDismiss = { overlay.figure = null }) }
             // A first-use guide on the button just tapped: a centred window, not a spotlight, so it can't be clipped

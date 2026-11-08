@@ -11,12 +11,10 @@ import com.flowfolio.core.voice.VoiceEngine
 import com.flowfolio.core.voice.VoiceSpeakers
 
 /**
- * Narrator Mode's neural voice (Phase 6 M3): Kokoro via sherpa-onnx. [speak] synthesizes the text on a
- * worker thread and plays it through an [AudioTrack], then calls [done] on the main thread when the audio
- * has finished playing. The engine is loaded once per reader visit; [release] frees it.
- *
- * A generation counter keeps a [stop] from reporting done for an utterance the reader has left, and a
- * [release] joins the worker before freeing the native engine so it is never freed mid-synthesis.
+ * Narrator Mode's neural voice (Phase 6 M3): Kokoro via sherpa-onnx. [speak] streams the synthesis so the
+ * first word plays as soon as it is ready and the next page starts the moment the previous one ends; [stop]
+ * interrupts a generation in flight, so pause takes effect at once. The engine is loaded once per reader
+ * visit; [release] frees it.
  */
 internal class Narrator(private val engine: VoiceEngine) {
     private var speakerId: Int = VoiceSpeakers.defaults.first().id
@@ -44,8 +42,7 @@ internal class Narrator(private val engine: VoiceEngine) {
         val gen = ++generation
         val thread = Thread {
             try {
-                val audio = engine.generate(text, speakerId, rate)
-                if (gen == generation) play(audio.sampleRate, PcmAudio.toPcm16(audio.samples))
+                if (gen == generation) stream(text, gen)
             } catch (t: Throwable) {
                 Log.e(TAG, "narrator synthesis failed", t)
             } finally {
@@ -69,41 +66,51 @@ internal class Narrator(private val engine: VoiceEngine) {
         engine.release()
     }
 
-    private fun play(sampleRate: Int, pcm: ShortArray) {
+    private fun stream(text: String, gen: Int) {
         val minBuffer = AudioTrack.getMinBufferSize(
-            sampleRate,
+            engine.sampleRate,
             AudioFormat.CHANNEL_OUT_MONO,
             AudioFormat.ENCODING_PCM_16BIT
         ).coerceAtLeast(MIN_BUFFER_FALLBACK)
-        val t = AudioTrack.Builder()
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_MEDIA)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .build()
-            )
-            .setAudioFormat(
-                AudioFormat.Builder()
-                    .setSampleRate(sampleRate)
-                    .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                    .build()
-            )
-            .setBufferSizeInBytes(minBuffer)
-            .setTransferMode(AudioTrack.MODE_STREAM)
-            .build()
+        val t = buildTrack(engine.sampleRate, minBuffer)
         track = t
         try {
             t.play()
-            t.write(pcm, 0, pcm.size, AudioTrack.WRITE_BLOCKING)
-            // WRITE_BLOCKING returns once the data is enqueued; let the buffered tail play out first.
-            Thread.sleep(minBuffer * MILLIS_PER_SECOND / (BYTES_PER_SAMPLE * sampleRate))
+            engine.stream(text, speakerId, rate) { samples ->
+                if (gen != generation) {
+                    false // stop generating; the reader has paused or left
+                } else {
+                    val pcm = PcmAudio.toPcm16(samples)
+                    t.write(pcm, 0, pcm.size, AudioTrack.WRITE_BLOCKING)
+                    gen == generation
+                }
+            }
+            // WRITE_BLOCKING returns once a chunk is enqueued; let the buffered tail play out first.
+            Thread.sleep(minBuffer * MILLIS_PER_SECOND / (BYTES_PER_SAMPLE * engine.sampleRate))
         } finally {
             runCatching { t.stop() }
             t.release()
             if (track === t) track = null
         }
     }
+
+    private fun buildTrack(sampleRate: Int, minBuffer: Int): AudioTrack = AudioTrack.Builder()
+        .setAudioAttributes(
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_MEDIA)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                .build()
+        )
+        .setAudioFormat(
+            AudioFormat.Builder()
+                .setSampleRate(sampleRate)
+                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                .build()
+        )
+        .setBufferSizeInBytes(minBuffer)
+        .setTransferMode(AudioTrack.MODE_STREAM)
+        .build()
 
     private companion object {
         const val TAG = "Narrator"

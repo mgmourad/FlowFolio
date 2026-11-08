@@ -20,6 +20,17 @@ class VoiceEngine private constructor(private val tts: com.k2fsa.sherpa.onnx.Off
         return VoiceAudio(audio.samples, audio.sampleRate)
     }
 
+    /**
+     * Streams [text]'s synthesis in chunks to [onChunk] instead of returning it whole, so playback can start
+     * before the whole page is generated (and a page can stop mid-generation). [onChunk] answers true to keep
+     * going and false to stop.
+     */
+    fun stream(text: String, speakerId: Int, speed: Float, onChunk: (FloatArray) -> Boolean) {
+        tts.generateWithCallback(text, sid = speakerId, speed = speed) { samples ->
+            if (onChunk(samples)) 1 else 0
+        }
+    }
+
     fun release() = tts.release()
 
     companion object {

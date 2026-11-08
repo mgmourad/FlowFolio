@@ -1,10 +1,13 @@
 package com.flowfolio.feature.reader
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Slider
@@ -25,6 +28,7 @@ import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
 import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
+import com.flowfolio.core.designsystem.glass
 import com.flowfolio.core.voice.Voice
 import com.flowfolio.core.voice.VoicePackState
 
@@ -123,6 +127,37 @@ private fun PackStatus(packState: VoicePackState, error: String?) {
             error,
             style = FlowFolioType.rowLabel.merge(FlowFolio.item),
             modifier = Modifier.padding(top = 12.dp)
+        )
+    }
+}
+
+/**
+ * A floating, non-modal pill at the foot of the page while the narrator's voice is downloading (owner,
+ * 2026-11-08): the reader can keep reading, but the download is never silent.
+ */
+@Composable
+internal fun BoxScope.VoiceDownloadOverlay(state: VoicePackState) {
+    val progress = (state as? VoicePackState.Downloading)?.progress ?: return
+    Column(
+        Modifier
+            .align(Alignment.BottomCenter)
+            .navigationBarsPadding()
+            .padding(start = 40.dp, end = 40.dp, bottom = 108.dp)
+            .glass(RoundedCornerShape(24.dp), tint = FlowFolio.palette.tabBar)
+            .padding(horizontal = 20.dp, vertical = 14.dp)
+    ) {
+        Text(
+            stringResource(R.string.reader_narrator_downloading_title),
+            style = FlowFolioType.rowLabel.merge(FlowFolio.title)
+        )
+        LinearProgressIndicator(
+            progress = { progress },
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
+        )
+        Text(
+            stringResource(R.string.reader_narrator_downloading, (progress * 100).toInt()),
+            style = FlowFolioType.rowDetail.merge(FlowFolio.hint),
+            modifier = Modifier.padding(top = 6.dp)
         )
     }
 }
