@@ -55,3 +55,6 @@ android/tools/results/
 
 # Spike raw results (summaries go to docs/spikes/)
 android/spikes/*/results/
+
+# Superpowers plan workspaces (scratch ledgers/briefs/reviews)
+.superpowers/

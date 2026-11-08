@@ -9,6 +9,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /** Where a voice pack is in its download lifecycle, for the reader's first-use prompt. */
@@ -22,41 +24,47 @@ sealed interface VoicePackState {
 /**
  * Downloads, checksum-verifies and extracts a [VoicePack] into [destDir] (app storage), reporting
  * progress through [state]. Call [ensureDownloaded] from a coroutine; it is idempotent (a ready pack
- * returns immediately).
+ * returns immediately) and serialized, so a double-tap cannot start two concurrent downloads.
  */
 class VoicePackDownloader(private val pack: VoicePack, private val destDir: File) {
     private val _state = MutableStateFlow<VoicePackState>(VoicePackState.Idle)
     val state: StateFlow<VoicePackState> = _state.asStateFlow()
 
-    suspend fun ensureDownloaded() = withContext(Dispatchers.IO) {
-        if (pack.isReady(destDir)) {
-            _state.value = VoicePackState.Ready
-            return@withContext
-        }
-        val archive = File(destDir, "voice-pack.zip")
-        try {
-            _state.value = VoicePackState.Downloading(0f)
-            download(pack.archiveUrl, archive) { p -> _state.value = VoicePackState.Downloading(p) }
-            if (!pack.hasValidChecksum(archive)) {
+    private val mutex = Mutex()
+
+    suspend fun ensureDownloaded() = mutex.withLock {
+        withContext(Dispatchers.IO) {
+            if (pack.isReady(destDir)) {
+                _state.value = VoicePackState.Ready
+                return@withContext
+            }
+            val archive = File(destDir, "voice-pack.zip")
+            try {
+                _state.value = VoicePackState.Downloading(0f)
+                download(pack.archiveUrl, archive) { p -> _state.value = VoicePackState.Downloading(p) }
+                if (!pack.hasValidChecksum(archive)) {
+                    archive.delete()
+                    throw IOException("Voice pack checksum mismatch")
+                }
+                ZipExtract.extract(archive, destDir)
                 archive.delete()
-                throw IOException("Voice pack checksum mismatch")
+                _state.value = if (pack.isReady(destDir)) {
+                    VoicePackState.Ready
+                } else {
+                    VoicePackState.Failed("Voice pack is incomplete")
+                }
+            } catch (e: IOException) {
+                archive.delete()
+                _state.value = VoicePackState.Failed(e.message ?: "Voice pack download failed")
             }
-            ZipExtract.extract(archive, destDir)
-            archive.delete()
-            _state.value = if (pack.isReady(destDir)) {
-                VoicePackState.Ready
-            } else {
-                VoicePackState.Failed("Voice pack is incomplete")
-            }
-        } catch (e: IOException) {
-            archive.delete()
-            _state.value = VoicePackState.Failed(e.message ?: "Voice pack download failed")
         }
     }
 
     private fun download(url: String, dest: File, onProgress: (Float) -> Unit) {
         dest.parentFile?.mkdirs()
         val connection = URL(url).openConnection() as HttpURLConnection
+        connection.connectTimeout = CONNECT_TIMEOUT_MS
+        connection.readTimeout = READ_TIMEOUT_MS
         try {
             copyWithProgress(connection.inputStream, dest, connection.contentLengthLong, onProgress)
         } finally {
@@ -86,5 +94,7 @@ class VoicePackDownloader(private val pack: VoicePack, private val destDir: File
 
     private companion object {
         const val BUFFER_BYTES = 64 * 1024
+        const val CONNECT_TIMEOUT_MS = 15_000
+        const val READ_TIMEOUT_MS = 60_000
     }
 }

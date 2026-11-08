@@ -802,6 +802,9 @@ class ReaderViewModel @Inject constructor(
     /** Narrator Mode (Phase 6 M3): reads the page aloud with Kokoro (sherpa-onnx), downloaded on first use. */
     private var narrator: Narrator? = null
 
+    // Set while the first-use download + engine load is in flight, so a second tap can't start another.
+    private var narratorLoading = false
+
     // External app-specific storage: private to the app, adb-pushable for testing, and the natural home
     // for a ~150 MB downloaded model (user-manageable, never backed up).
     private val voiceDir = File(context.getExternalFilesDir(null) ?: context.filesDir, "voice")
@@ -848,14 +851,27 @@ class ReaderViewModel @Inject constructor(
             readPage(anchorPage)
             return
         }
+        if (narratorLoading) return
+        narratorLoading = true
         viewModelScope.launch {
             downloader.ensureDownloaded()
-            if (downloader.state.value != VoicePackState.Ready) return@launch
-            val engine = VoiceEngine.load(voiceDir.absolutePath)
+            if (downloader.state.value != VoicePackState.Ready) {
+                narratorLoading = false
+                return@launch
+            }
+            // Loading the ~150 MB model is slow and native: do it off the main thread, and never crash on it.
+            val engine = withContext(Dispatchers.IO) {
+                runCatching { VoiceEngine.load(voiceDir.absolutePath) }.getOrNull()
+            }
+            if (engine == null) {
+                narratorLoading = false
+                return@launch
+            }
             val n = Narrator(engine)
             n.setRate(_narratorRate.value)
             n.setVoice(_narratorVoice.value ?: VoiceSpeakers.defaults.first().name)
             narrator = n
+            narratorLoading = false
             _narrating.value = true
             readPage(anchorPage)
         }

@@ -190,7 +190,15 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, modi
                     size = button * GLYPH_SHARE
                 )
             }
-            if (wide) TitlePill(title, wide = true, Modifier.weight(1f).reveal(1)) else Spacer(Modifier.weight(1f))
+            if (wide) {
+                TitlePill(
+                    title,
+                    wide = true,
+                    Modifier.weight(1f, fill = false).reveal(1)
+                )
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
             TopTools(mark, actions, button)
         }
     }
@@ -468,7 +476,7 @@ private val TOP_FADE_TAIL = 36.dp
 private val BAR_ROW_GAP = 10.dp
 private val PAGE_MARGIN = 32.dp
 private val FOOTER_MARGIN = 14.dp
-private val TITLE_MAX_WIDTH = 520.dp
+private val TITLE_MAX_WIDTH = 200.dp
 internal val TITLE_BESIDE_BACK = 600.dp
 
 /** The folded running head sits left of the page text border, ending just before the camera (owner, 2026-11-07). */
