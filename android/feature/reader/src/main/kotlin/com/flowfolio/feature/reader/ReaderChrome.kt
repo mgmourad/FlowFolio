@@ -11,7 +11,9 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -135,6 +137,18 @@ internal fun BoxScope.ReaderChrome(
             )
         }
     }
+    // Unfolded, the reading tools move to a vertical rail on the right (owner, 2026-11-08): the title gets the whole
+    // top bar beside Back, and the buttons are never snug.
+    if (LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK) {
+        AnimatedVisibility(
+            controlsVisible,
+            Modifier.align(Alignment.CenterEnd),
+            enter = slideInHorizontally(slide) { it * 2 } + fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)),
+            exit = slideOutHorizontally(slide) { it * 2 } + fadeOut(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut))
+        ) {
+            ScreenEntrance(holdForLandings = false) { RightRail(mark, actions) }
+        }
+    }
     AnimatedVisibility(
         bottomBarVisible,
         Modifier.align(Alignment.BottomCenter),
@@ -198,9 +212,28 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, modi
                 )
             } else {
                 Spacer(Modifier.weight(1f))
+                TopTools(mark, actions, button)
             }
-            TopTools(mark, actions, button)
         }
+    }
+}
+
+/**
+ * Unfolded, the reading tools in a vertical rail on the right, so the top bar holds just Back and the title
+ * (owner, 2026-11-08). The buttons keep the same order as the folded top bar, read top to bottom.
+ */
+@Composable
+private fun BoxScope.RightRail(mark: ChromeMark, actions: ChromeActions) {
+    Column(
+        Modifier
+            .align(Alignment.CenterEnd)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(end = BAR_INSET),
+        verticalArrangement = Arrangement.spacedBy(TOOL_GAP, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        TopTools(mark, actions, BIG_BUTTON)
     }
 }
 
@@ -476,7 +509,7 @@ private val TOP_FADE_TAIL = 36.dp
 private val BAR_ROW_GAP = 10.dp
 private val PAGE_MARGIN = 32.dp
 private val FOOTER_MARGIN = 14.dp
-private val TITLE_MAX_WIDTH = 200.dp
+private val TITLE_MAX_WIDTH = 420.dp
 internal val TITLE_BESIDE_BACK = 600.dp
 
 /** The folded running head sits left of the page text border, ending just before the camera (owner, 2026-11-07). */
