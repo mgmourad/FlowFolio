@@ -12,6 +12,7 @@ import com.flowfolio.core.model.FlowNotice
 import com.flowfolio.core.model.MaterialSeed
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
+import com.flowfolio.feature.library.TOUR_SEEN
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel
@@ -86,13 +87,19 @@ class AppViewModel @Inject constructor(
             val current = updates.installedCode()
             val seen = settings.settings.first().lastSeenVersionCode
             if (seen == 0L) {
-                // First install: remember this build and show nothing.
-                settings.setLastSeenVersionCode(current)
+                // First install: the "what's new" is owed too, but it waits for the tour (the dialog gates on
+                // [tutorialSeen]); dismissing it remembers this build. Nothing is marked here.
+                _whatsNew.value = updates.latestRelease()
                 return@launch
             }
             if (current > seen) updates.latestRelease()?.let { _whatsNew.value = it }
         }
     }
+
+    /** Whether the first-run tour is behind us, so the "what's new" popup can appear on a fresh install. */
+    val tutorialSeen: StateFlow<Boolean> = settings.settings
+        .map { TOUR_SEEN in it.seenGuides }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     /** The reader pressed "Ok": remember this build and put the popup away. */
     fun dismissWhatsNew() {

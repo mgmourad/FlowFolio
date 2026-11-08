@@ -94,7 +94,11 @@ class MainActivity : ComponentActivity() {
                             )
                         }
                         val whatsNew by appViewModel.whatsNew.collectAsStateWithLifecycle()
-                        whatsNew?.let { release -> WhatsNewDialog(release, onOk = appViewModel::dismissWhatsNew) }
+                        val tutorialSeen by appViewModel.tutorialSeen.collectAsStateWithLifecycle()
+                        // A first install shows the tour first, then this; an update shows it straight away.
+                        if (tutorialSeen) {
+                            whatsNew?.let { release -> WhatsNewDialog(release, onOk = appViewModel::dismissWhatsNew) }
+                        }
                         AskNotificationsOnce()
                         if (splash) FlowFolioSplash(stringResource(R.string.splash_tagline)) { splash = false }
                     }

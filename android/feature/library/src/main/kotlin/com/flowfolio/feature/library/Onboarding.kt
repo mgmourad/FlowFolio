@@ -76,7 +76,7 @@ internal enum class Tour(@DrawableRes val shot: Int, @StringRes val title: Int, 
 }
 
 /** What the app remembers about having given the tour; cleared by "Introduce features again". */
-internal const val TOUR_SEEN = "tour"
+const val TOUR_SEEN = "tour"
 
 /**
  * The tour FlowFolio gives itself the first time it opens (owner, M5 round 4).
