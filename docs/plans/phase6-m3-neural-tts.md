@@ -5,23 +5,18 @@
 
 ## Decision
 
-- **Engine:** Kokoro (English, 11 speakers) running on **sherpa-onnx**
-  (Apache-2.0 on-device runtime). Kokoro is the most natural small open-source TTS; it is the
-  "Gemini-like" bar the owner wants.
-- **Two default voices** are two *speakers from the one model*: a warm female + `am_michael`
-  (neutral male). One download → two voices.
-- **Delivery:** download-on-first-use (the model is ~140 MB unpacked; too big to bundle). A prompt
+- **Engine:** Kokoro running on **sherpa-onnx** (Apache-2.0 on-device runtime). Kokoro is the most
+  natural small open-source TTS; it is the "Gemini-like" bar the owner wants.
+- **Model:** `kokoro-multi-lang-v1_0` (int8, 53 speakers) — chosen so `af_heart` is available
+  (it is not in the English-only model). Owner-approved 2026-11-08.
+- **Two default voices** are two *speakers from the one model*: `af_heart` (warm female, sid 3) and
+  `am_michael` (neutral male, sid 16). One download → two voices (and the model ships 53 total, so
+  more are free once downloaded).
+- **Delivery:** download-on-first-use (the model is ~160 MB unpacked; too big to bundle). A prompt
   with progress before first narration, cached to app storage, checksum-verified.
-- **Extensible:** the model already contains all 11 Kokoro speakers, so more speakers are free once
+- **Extensible:** the model already contains 53 Kokoro speakers, so more speakers are free once
   downloaded. Additional voice packs (Piper voices, other languages) can be added later as opt-in
   downloads behind the same picker — this is explicitly deferred, not blocked.
-
-> **⚠️ Model-choice nuance (found in the spike):** `af_heart` is **not** in the English
-> `kokoro-en-v0_19` model. Its 11 speakers are `af, af_bella, af_nicole, af_sarah, af_sky, am_adam,
-> am_michael, bf_emma, bf_isabella, bm_george, bm_lewis`. `af_heart` only exists in the multi-lang
-> models (`kokoro-multi-lang-v1_0`, int8 132 MB, 53 speakers). Decide: (a) use the smaller EN model
-> with `af_bella`/`af_nicole` as the female default, or (b) use the multi-lang model to get
-> `af_heart` + `am_michael` at +~30 MB.
 
 ## Why not Piper (and why it's still on the table)
 
@@ -32,20 +27,20 @@
 
 ## Sizes (measured in the spike, 2026-11-08)
 
-| | Kokoro EN, int8 | Piper medium (one voice) |
+| | Kokoro multi-lang, int8 | Piper medium (one voice) |
 |---|---|---|
-| Model | **128 MB** (`model.int8.onnx`) | ~60–65 MB |
-| Phonemizer | **6.3 MB** (`lexicon-en-us.txt`) | ~6 MB lexicon |
-| Other (voices.bin/tokens) | ~5.5 MB | negligible |
-| **Unpacked total** | **~140 MB** | ~70 MB |
+| Model | ~128 MB (`model.int8.onnx`) | ~60–65 MB |
+| Voices | ~26 MB (`voices.bin`, 53 speakers) | — |
+| Lexicons | ~8 MB (`lexicon-us-en.txt` + `lexicon-zh.txt`) | ~6 MB |
+| **Unpacked total** | **~165 MB** | ~70 MB |
 
-The `espeak-ng-data` (18 MB) shipped in the tarball is **not used** by sherpa-onnx v2.0.1 — drop it.
+The `espeak-ng-data` shipped in the tarballs is **not used** by sherpa-onnx v2.0.1 — drop it.
 Kokoro fp32 is ~330 MB and fp16 ~165 MB — we use **int8**.
 
 ## Licensing (for the record)
 
 - sherpa-onnx: Apache-2.0. Kokoro weights: Apache-2.0. Piper: MIT (code; voices vary).
-- ✅ **No espeak-ng.** sherpa-onnx v2.0.1 phonemizes via a plain `lexicon-en-us.txt` (CMUDict-based),
+- ✅ **No espeak-ng.** sherpa-onnx v2.0.1 phonemizes via a plain `lexicon-*.txt` (CMUDict-based),
   so the GPL-3.0 espeak-ng concern is gone for our path.
 
 ## Approach
