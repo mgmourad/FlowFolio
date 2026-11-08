@@ -4,7 +4,6 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
-import java.util.zip.GZIPInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
@@ -33,9 +32,8 @@ class WordNetStore @Inject constructor(
     private fun ensureDb(): SQLiteDatabase? = db ?: synchronized(this) {
         db ?: runCatching {
             if (!dbFile.exists()) {
-                context.assets.open(ASSET).use { input ->
-                    GZIPInputStream(input).use { gz -> dbFile.outputStream().use { gz.copyTo(it) } }
-                }
+                // AAPT2 decompresses the bundled `.gz` asset and strips the suffix, so it opens as the raw database.
+                context.assets.open(ASSET).use { input -> dbFile.outputStream().use { input.copyTo(it) } }
             }
             SQLiteDatabase.openDatabase(dbFile.path, null, SQLiteDatabase.OPEN_READONLY)
         }.getOrNull()?.also { db = it }
@@ -57,6 +55,6 @@ class WordNetStore @Inject constructor(
     }
 
     private companion object {
-        const val ASSET = "wordnet.db.gz"
+        const val ASSET = "wordnet.db"
     }
 }
