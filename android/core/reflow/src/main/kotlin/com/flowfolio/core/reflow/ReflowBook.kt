@@ -270,6 +270,33 @@ class ReflowBook(val archive: EpubArchive, val pkg: EpubPackage) {
     }
 
     /**
+     * [chapter]'s text for searching: its blocks in reading order with each character's chapter offset (images and
+     * islands stand as a single newline at their place, so offsets stay aligned). Used by in-book search (Phase 6 M1).
+     */
+    fun chapterText(chapter: Int): Pair<String, IntArray> {
+        val c = chapters.getOrNull(chapter) ?: return "" to IntArray(0)
+        val text = StringBuilder(c.length)
+        val offsets = ArrayList<Int>(c.length)
+        for (block in c.blocks) {
+            when (block) {
+                is Block.Text -> {
+                    val s = block.text
+                    for (i in 0 until s.length) {
+                        text.append(s[i])
+                        offsets.add(block.start + i)
+                    }
+                }
+
+                is Block.Image, is Block.Island -> {
+                    text.append(SEARCH_BREAK)
+                    offsets.add(block.start)
+                }
+            }
+        }
+        return text.toString() to offsets.toIntArray()
+    }
+
+    /**
      * Packs every island's markup (M3 EPUB memory): run in the background once the book is open, so opening is not
      * slowed; markup is read as it is until then.
      */
@@ -315,3 +342,6 @@ private const val AVERAGE_CHAR_EMS = 0.5f
 
 /** Marks an image whose size couldn't be read (a concurrent map holds no nulls). */
 private val NO_SIZE = -1 to -1
+
+/** Stands for an image or island in [chapterText]'s searchable text. */
+private const val SEARCH_BREAK = '\n'

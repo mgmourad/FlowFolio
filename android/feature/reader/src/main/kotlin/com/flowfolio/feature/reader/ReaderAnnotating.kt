@@ -108,8 +108,13 @@ internal class Annotating(
     /** Copies of EPUB highlights on the further pages they run onto, for drawing and tapping only. */
     var extra by mutableStateOf<List<Annotation>>(emptyList())
 
-    /** Highlights by page, recomputed only when [all] or [extra] change. */
-    val byPage: Map<Int, List<Annotation>> by derivedStateOf { (all + extra).groupBy { it.page } }
+    /** The transient highlight marking the search hit the reader last jumped to (Phase 6 M1); null when idle. */
+    var search by mutableStateOf<Annotation?>(null)
+
+    /** Highlights by page, recomputed only when [all], [extra] or [search] change. */
+    val byPage: Map<Int, List<Annotation>> by derivedStateOf {
+        (all + extra + listOfNotNull(search)).groupBy { it.page }
+    }
 
     /** Where the magnifier looks (the finger while selecting or moving a handle); unspecified hides it. */
     var lens by mutableStateOf(Offset.Unspecified)
@@ -254,7 +259,9 @@ internal fun rememberAnnotating(
     }
     val all by vm.all.collectAsStateWithLifecycle()
     val book by vm.book.collectAsStateWithLifecycle()
+    val search by viewModel.searchHighlight.collectAsStateWithLifecycle()
     annotating.frames = frames
+    annotating.search = search
     if (s.reflowable) PlaceHighlights(annotating, all, s, viewModel, vm) else annotating.all = all
     annotating.title = book?.title ?: s.title
     annotating.author = book?.author

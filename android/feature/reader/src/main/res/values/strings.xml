@@ -56,6 +56,9 @@
     <string name="reader_link_open">Open</string>
     <string name="reader_contents">Contents</string>
     <string name="reader_contents_empty">This book has no table of contents.</string>
+    <string name="reader_search">Search in this book</string>
+    <string name="reader_search_hint">Search in this book</string>
+    <string name="reader_search_empty">No matches</string>
     <string name="reader_go_to">Go to page</string>
     <string name="reader_go_to_title">Go to page</string>
     <string name="reader_go_to_label">Page</string>

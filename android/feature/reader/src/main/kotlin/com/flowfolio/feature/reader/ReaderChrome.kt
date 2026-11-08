@@ -197,26 +197,30 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, modi
 }
 
 /**
- * Contents, Dictionary, Annotations, Bookmarks (the ribbon), and Page setup ("Aa"), ordered from right to left as
- * (page setup, bookmarks, annotations, dictionary, contents).
+ * Search, Contents, Dictionary, Annotations, Bookmarks (the ribbon), and Page setup ("Aa"), ordered from right to left
+ * as (page setup, bookmarks, annotations, dictionary, contents, search).
  */
 @Composable
 private fun TopTools(mark: ChromeMark, actions: ChromeActions, button: Dp) {
     val glyph = button * GLYPH_SHARE
-    val contents = Modifier.testTag(ReaderTestTags.CONTENTS).reveal(2)
+    val search = Modifier.testTag(ReaderTestTags.SEARCH).reveal(2)
+    FlowFolioIconButton({ actions.onPanel(Panel.SEARCH) }, search, glass = true, size = button) {
+        FlowFolioGlyph(Glyph.Search, stringResource(R.string.reader_search), size = glyph)
+    }
+    val contents = Modifier.testTag(ReaderTestTags.CONTENTS).reveal(3)
     FlowFolioIconButton({ actions.onPanel(Panel.CONTENTS) }, contents, glass = true, size = button) {
         FlowFolioGlyph(Glyph.Contents, stringResource(R.string.reader_contents), size = glyph)
     }
-    val dictionary = Modifier.testTag(ReaderTestTags.DICTIONARY).reveal(3)
+    val dictionary = Modifier.testTag(ReaderTestTags.DICTIONARY).reveal(4)
     FlowFolioIconButton({ actions.onPanel(Panel.DICTIONARY) }, dictionary, glass = true, size = button) {
         FlowFolioGlyph(Glyph.Translate, stringResource(R.string.reader_dictionary), size = glyph)
     }
-    val notes = Modifier.testTag(ReaderTestTags.ANNOTATIONS).reveal(4)
+    val notes = Modifier.testTag(ReaderTestTags.ANNOTATIONS).reveal(5)
     FlowFolioIconButton({ actions.onPanel(Panel.ANNOTATIONS) }, notes, glass = true, size = button) {
         FlowFolioGlyph(Glyph.Highlight, stringResource(R.string.reader_annotations), size = glyph)
     }
-    Box(Modifier.reveal(5)) { BookmarkButton(mark, actions, button) }
-    val settings = Modifier.testTag(ReaderTestTags.SETTINGS).reveal(6)
+    Box(Modifier.reveal(6)) { BookmarkButton(mark, actions, button) }
+    val settings = Modifier.testTag(ReaderTestTags.SETTINGS).reveal(7)
     FlowFolioIconButton({ actions.onPanel(Panel.SETTINGS) }, settings, glass = true, size = button) {
         Text(
             stringResource(R.string.reader_settings_button),
@@ -474,8 +478,8 @@ private val BIG_BUTTON = 56.dp
 private val FOLDED_BUTTON = 50.dp
 private val TOOL_GAP = 8.dp
 
-/** Back, Contents, Go to page, annotations, Aa and the ribbon, for PDFs and EPUBs alike (M4). */
-private const val TOOL_BUTTONS = 6
+/** Back, Search, Contents, Go to page, annotations, Aa and the ribbon, for PDFs and EPUBs alike (M4, M1). */
+private const val TOOL_BUTTONS = 7
 private const val SETTINGS_TEXT_SP = 16f
 
 /** A glyph's share of its round button (24 dp in 42 dp). */

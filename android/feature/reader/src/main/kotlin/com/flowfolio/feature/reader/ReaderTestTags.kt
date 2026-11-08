@@ -72,4 +72,7 @@ object ReaderTestTags {
     const val TRANSLATE_HISTORY = "reader_translate_history"
     const val DEFINE = "reader_define"
     const val DEFINITION = "reader_definition"
+    const val SEARCH = "reader_search"
+    const val SEARCH_PANEL = "reader_search_panel"
+    const val SEARCH_FIELD = "reader_search_field"
 }

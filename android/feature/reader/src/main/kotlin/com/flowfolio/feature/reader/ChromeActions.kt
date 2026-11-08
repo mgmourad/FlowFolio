@@ -5,7 +5,7 @@ import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.BookmarkColor
 
 /** What is open on top of the reader. */
-internal enum class Panel { NONE, CONTENTS, GO_TO, SETTINGS, MARK, ANNOTATIONS, DICTIONARY }
+internal enum class Panel { NONE, CONTENTS, GO_TO, SETTINGS, MARK, ANNOTATIONS, DICTIONARY, SEARCH }
 
 /** What the reader's controls can ask for. */
 internal class ChromeActions(

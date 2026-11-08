@@ -91,6 +91,11 @@ internal class EpubSession private constructor(
 
     val pageCount: Int get() = book.pages.size
 
+    /** In-book search (Phase 6 M1): a chapter's searchable text and each character's chapter offset. */
+    fun chapterText(chapter: Int): Pair<String, IntArray> = book.chapterText(chapter)
+
+    val chapterCount: Int get() = book.chapters.size
+
     /** Page images decoded at their drawn size, under a small byte budget. */
     private val images = object : LruCache<String, Bitmap>(IMAGE_BYTES) {
         override fun sizeOf(key: String, value: Bitmap) = value.allocationByteCount

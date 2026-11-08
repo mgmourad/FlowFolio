@@ -21,13 +21,16 @@ import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.BookHealth
 import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.FlowStatus
+import com.flowfolio.core.model.HighlightColor
 import com.flowfolio.core.model.PageLabels
+import com.flowfolio.core.model.PageRect
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PixelSize
 import com.flowfolio.core.model.ReaderText
 import com.flowfolio.core.model.ReadingFont
 import com.flowfolio.core.model.UserSettings
 import com.flowfolio.core.model.atmosphereInForce
+import com.flowfolio.core.pdf.PageText
 import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfException
 import com.flowfolio.core.reflow.CodeFace
@@ -114,7 +117,7 @@ data class Viewport(
 )
 
 // One handler per reader event, with a PDF path and an EPUB path for opening, layout and planning.
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LargeClass")
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     private val repository: ReaderRepository,
@@ -608,6 +611,127 @@ class ReaderViewModel @Inject constructor(
         saveProgress()
     }
 
+    /** In-book search (Phase 6 M1): the hits for the query typed so far. */
+    private val _searchResults = MutableStateFlow<List<SearchHit>>(emptyList())
+    internal val searchResults: StateFlow<List<SearchHit>> = _searchResults.asStateFlow()
+
+    /** The transient highlight marking the search hit the reader last jumped to; null when search is idle. */
+    private val _searchHighlight = MutableStateFlow<Annotation?>(null)
+    internal val searchHighlight: StateFlow<Annotation?> = _searchHighlight.asStateFlow()
+
+    private var searchJob: Job? = null
+
+    /** Searches the open book for [query] in the current view (reflowed text or the PDF's page text). */
+    internal fun search(query: String) {
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch(Dispatchers.Default) {
+            val q = query.trim()
+            _searchResults.value = if (q.isEmpty()) emptyList() else doSearch(q).take(SEARCH_CAP)
+        }
+    }
+
+    private suspend fun doSearch(query: String): List<SearchHit> {
+        val session = epub
+        return if (session != null) searchEpub(session, query) else searchPdf(query)
+    }
+
+    private suspend fun searchEpub(session: EpubSession, query: String): List<SearchHit> {
+        val hits = ArrayList<SearchHit>()
+        for (chapter in 0 until session.chapterCount) {
+            val (text, offsets) = session.chapterText(chapter)
+            if (text.isEmpty()) continue
+            for (range in findMatches(text, query)) {
+                val start = offsets[range.first]
+                val end = offsets[range.last]
+                val locator = Locator(chapter, start)
+                val page = session.pageOf(locator)
+                hits += SearchHit(
+                    page,
+                    locator.encode(),
+                    start,
+                    end,
+                    text.substring(range),
+                    snippet(text, range),
+                    labelFor(page)
+                )
+                if (hits.size >= SEARCH_HARD_CAP) return hits
+            }
+        }
+        return hits
+    }
+
+    @Suppress("NestedBlockDepth")
+    private suspend fun searchPdf(query: String): List<SearchHit> {
+        val doc = document
+        val hits = ArrayList<SearchHit>()
+        if (doc != null) {
+            outer@ for (page in 0 until doc.pageCount) {
+                val pageText = runCatching { doc.pageText(page) }.getOrNull() ?: continue
+                for (range in findMatches(pageText.text, query)) {
+                    hits += SearchHit(
+                        page,
+                        null,
+                        range.first,
+                        range.last + 1,
+                        pageText.text.substring(range),
+                        snippet(pageText.text, range),
+                        labelFor(page)
+                    )
+                    if (hits.size >= SEARCH_HARD_CAP) break@outer
+                }
+            }
+        }
+        return hits
+    }
+
+    /** The section (else chapter) a page is in, for a result's label. */
+    private fun labelFor(page: Int): String? {
+        val outline = _navigation.value.outline
+        return PageLookup.subtitleAt(outline, page) ?: PageLookup.chapterTitleAt(outline, page)
+    }
+
+    /** Jumps to [hit] and highlights its text (cleared when the search closes or the query changes). */
+    internal fun jumpTo(hit: SearchHit) {
+        goToPage(hit.page)
+        viewModelScope.launch(Dispatchers.Default) { _searchHighlight.value = buildHighlight(hit) }
+    }
+
+    internal fun clearSearchHighlight() {
+        _searchHighlight.value = null
+    }
+
+    private suspend fun buildHighlight(hit: SearchHit): Annotation? {
+        val base = searchAnnotation(hit)
+        val session = epub
+        if (session != null) return session.place(listOf(base), setOf(hit.page)).primary.firstOrNull()
+        val pageText = runCatching { document?.pageText(hit.page) }.getOrNull()
+        return pageText?.let { base.copy(page = hit.page, rects = rectsOf(it, hit.start, hit.end)) }
+    }
+
+    private fun searchAnnotation(hit: SearchHit): Annotation = Annotation(
+        id = SEARCH_ANNOTATION_ID,
+        bookId = bookId,
+        page = hit.page,
+        label = null,
+        start = hit.start,
+        end = hit.end,
+        text = hit.text,
+        rects = emptyList(),
+        color = HighlightColor.YELLOW,
+        note = null,
+        createdAtMillis = 0L,
+        updatedAtMillis = 0L,
+        locator = hit.locator
+    )
+
+    private fun rectsOf(text: PageText, start: Int, end: Int): List<PageRect> {
+        val out = ArrayList<PageRect>()
+        for (i in start until end.coerceAtMost(text.length)) {
+            if (text.hasBox(i)) out += PageRect(text.left(i), text.top(i), text.right(i), text.bottom(i))
+        }
+        return out
+    }
+
     /** The reader's root layout reports the window size whenever it changes (fold, unfold, rotation, resize). */
     fun onViewport(viewport: Viewport) {
         if (viewport == this.viewport) return
@@ -923,6 +1047,13 @@ class ReaderViewModel @Inject constructor(
         const val ARG_LAYOUT = "layout"
         private const val KEY_ANCHOR = "anchorPage"
         private const val KEY_LOCATOR = "locator"
+
+        /** In-book search (Phase 6 M1): results shown, and a hard stop before a huge book is searched in full. */
+        private const val SEARCH_CAP = 50
+        private const val SEARCH_HARD_CAP = 500
+
+        /** The id of the transient highlight marking a search hit; persisted highlights start at 1. */
+        private const val SEARCH_ANNOTATION_ID = -1L
 
         /** The island disk cache (ADR-0021), under the app's cache directory. */
         private const val ISLAND_DIR = "islands"

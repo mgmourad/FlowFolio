@@ -308,6 +308,7 @@ internal fun BoxScope.Controls(
             PanelDismiss(overlay.panel, overlay::dismiss)
             val flowNow by parts.book.flow.collectAsStateWithLifecycle()
             val settings by parts.book.userSettings.collectAsStateWithLifecycle()
+            val hits by parts.book.searchResults.collectAsStateWithLifecycle()
             ReaderChrome(
                 s,
                 navigation,
@@ -327,7 +328,11 @@ internal fun BoxScope.Controls(
                 onDismiss = overlay::dismiss,
                 flow = flowNow,
                 onFlow = parts.book::setFlow,
-                onPanel = overlay::open
+                onPanel = overlay::open,
+                hits = hits,
+                onSearchQuery = parts.book::search,
+                onSearchJump = parts.book::jumpTo,
+                onSearchClear = parts.book::clearSearchHighlight
             )
             AtmosphereGlimpse(parts.book)
             FootnotePopover(overlay.note, parts.book::footnote, onDismiss = { overlay.note = null })
