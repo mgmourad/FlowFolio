@@ -308,6 +308,19 @@ class ReaderViewModel @Inject constructor(
     /** The reader's settings as the chrome needs them: auto-hide, paper sounds, scrub haptics (spec 5.7). */
     internal val userSettings: StateFlow<UserSettings> = _userSettings.asStateFlow()
 
+    /** Remembers that a first-use guide was shown (owner, 2026-11-07). */
+    fun markGuideSeen(id: String) {
+        viewModelScope.launch { settingsRepository.markGuideSeen(id) }
+    }
+
+    /** "Never show tips again": turns first-use tips off and remembers the guide as seen (owner, 2026-11-07). */
+    fun disableTips(id: String) {
+        viewModelScope.launch {
+            settingsRepository.setTipsEnabled(false)
+            settingsRepository.markGuideSeen(id)
+        }
+    }
+
     init {
         open(password = null)
         viewModelScope.launch {

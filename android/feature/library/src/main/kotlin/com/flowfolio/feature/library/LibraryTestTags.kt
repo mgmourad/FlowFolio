@@ -116,6 +116,8 @@ object LibraryTestTags {
 
     fun bookmark(id: Long) = "bookmark_$id"
 
+    fun bookmarkBook(id: String) = "bookmarked_$id"
+
     fun annotatedBook(id: String) = "annotated_$id"
 
     fun annotation(id: Long) = "annotation_$id"

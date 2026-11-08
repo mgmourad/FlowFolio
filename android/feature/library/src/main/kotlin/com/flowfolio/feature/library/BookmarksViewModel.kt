@@ -22,6 +22,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -29,8 +30,13 @@ import kotlinx.coroutines.launch
 /** A ribbon in the Bookmarks tab: the bookmark, its book, and where it is ([chapter], printed page [label]). */
 data class BookmarkItem(val bookmark: Bookmark, val book: Book, val chapter: String?, val label: String)
 
+/** A book on the Bookmarks tab: its ribbons, colours and newest ribbon, for one card per book (owner, 2026-11-07). */
+data class BookmarkBook(val book: Book, val colours: List<BookmarkColor>, val latest: BookmarkItem, val count: Int)
+
 data class BookmarksUiState(
     val loading: Boolean = true,
+    /** The tab: one entry per book with ribbons, newest ribbon first. */
+    val books: List<BookmarkBook> = emptyList(),
     /** The ribbons shown (newest first), after the colour filter. */
     val items: List<BookmarkItem> = emptyList(),
     /** How many ribbons there are in all, and in how many books. */
@@ -49,6 +55,8 @@ data class BookmarkActions(
     val onRecolour: (BookmarkItem, BookmarkColor) -> Unit = { _, _ -> },
     val onRemove: (BookmarkItem) -> Unit = {},
     val onFilter: (BookmarkColor?) -> Unit = {},
+    /** Open a book's own Bookmarks page (the tab's card); unused on a book's page. */
+    val onOpenBook: (Book) -> Unit = {},
     /** Back, on a book's own Bookmarks page (none on the tab). */
     val onBack: (() -> Unit)? = null,
     /** Select mode (owner, 2026-10-22); null where ribbons cannot be selected. */
@@ -97,6 +105,14 @@ class BookmarksViewModel @Inject constructor(
         val shown = chosen?.takeIf { it in colours }
         BookmarksUiState(
             loading = false,
+            books = all.groupBy { it.book.id }.map { (id, items) ->
+                BookmarkBook(
+                    book = byId.getValue(id),
+                    colours = BookmarkColor.entries.filter { c -> items.any { it.bookmark.color == c } },
+                    latest = items.maxBy { it.bookmark.createdAtMillis },
+                    count = items.size
+                )
+            }.sortedByDescending { it.latest.bookmark.createdAtMillis },
             items = if (shown == null) all else all.filter { it.bookmark.color == shown },
             total = all.size,
             bookCount = all.map { it.book.id }.distinct().size,
@@ -117,6 +133,11 @@ class BookmarksViewModel @Inject constructor(
 
     /** Select mode's Delete, after its confirmation. */
     fun removeAll(ids: Collection<Long>) = viewModelScope.launch { ids.forEach { bookmarks.remove(it) } }
+
+    /** Select mode's Delete on the tab: every ribbon of [bookIds], after its confirmation (owner, 2026-11-07). */
+    fun removeBooks(bookIds: Collection<String>) = viewModelScope.launch {
+        bookmarks.observeAll().first().filter { it.bookId in bookIds }.forEach { bookmarks.remove(it.id) }
+    }
 
     /** Makes the ribbon's page the reading position, then calls [then] (to open the reader there). */
     fun open(item: BookmarkItem, then: () -> Unit) = viewModelScope.launch {

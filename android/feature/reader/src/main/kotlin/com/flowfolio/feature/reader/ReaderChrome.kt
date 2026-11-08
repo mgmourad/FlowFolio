@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.flowfolio.feature.reader
 
 import androidx.compose.animation.AnimatedVisibility
@@ -25,7 +27,6 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
@@ -52,6 +53,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -144,7 +146,11 @@ internal fun BoxScope.ReaderChrome(
     // In Scroll the number would float over the text; the bars show the page there. Whenever the riffle bar is not
     // showing -- hidden with the rest of the chrome, or dismissed on its own -- the page number stands in for it, and
     // carries the way back from a detour with it (owner, M5 round 3).
-    if (!bottomBarVisible && state.turn != PageTurn.SCROLL) PageNumber(state, navigation, flow, actions)
+    if (!bottomBarVisible &&
+        state.turn != PageTurn.SCROLL
+    ) {
+        PageNumber(state, navigation, flow, actions, controlsVisible)
+    }
 }
 
 /**
@@ -250,7 +256,8 @@ private fun BoxScope.PageNumber(
     state: ReaderState.Ready,
     navigation: BookNavigation,
     flow: FlowState,
-    actions: ChromeActions
+    actions: ChromeActions,
+    controlsVisible: Boolean
 ) {
     val spread = state.layout == ReaderLayout.SPREAD
     val pages = if (spread) Spreads.pagesOf(state.unit, state.pageCount, state.coverAlone) else listOf(state.anchorPage)
@@ -278,10 +285,11 @@ private fun BoxScope.PageNumber(
         }
         // The chapter and its section, reflowed books only (a PDF already carries its own running heads). In a spread
         // the chapter heads the left page and the section the right page's foot, each kept to its own page's column
-        // (the title ends at the left page's inner margin, the section starts at the right page's). Folded, the section
-        // (else the chapter) sits at the top left, cut at half the screen so the front camera never clips it (owner,
-        // 2026-11-07).
-        if (state.reflowable) {
+        // (the title ends at the left page's inner margin, the section ends at the right page's outer margin). Folded,
+        // the section (else the chapter) sits at the top, shifted left of the text border and cut at the front camera
+        // so the punch-hole never clips it (owner, 2026-11-07). Hidden while the chrome shows, so a running head never
+        // sits under the top bar's buttons (owner, 2026-11-07).
+        if (state.reflowable && !controlsVisible) {
             val leftPage = pages.firstOrNull() ?: state.anchorPage
             val rightPage = pages.lastOrNull() ?: state.anchorPage
             val chapter = PageLookup.chapterTitleAt(navigation.outline, leftPage)
@@ -299,8 +307,10 @@ private fun BoxScope.PageNumber(
                 section?.let {
                     ChapterLabel(
                         it,
-                        Modifier.align(Alignment.BottomStart).navigationBarsPadding()
-                            .offset(x = half + PAGE_MARGIN)
+                        // Right-aligned to the right page's outer margin: it can grow left only to that page's inner
+                        // margin, then truncates at the end of the line on the right (owner, 2026-11-07).
+                        Modifier.align(Alignment.BottomEnd).navigationBarsPadding()
+                            .padding(end = PAGE_MARGIN)
                             .padding(vertical = FOOTER_MARGIN)
                             .widthIn(max = half - PAGE_MARGIN * 2),
                         actions
@@ -308,17 +318,33 @@ private fun BoxScope.PageNumber(
                 }
             } else {
                 (section ?: chapter)?.let {
+                    val camera = cameraEdgeDp(half)
                     ChapterLabel(
                         it,
                         Modifier.align(Alignment.TopStart).statusBarsPadding()
-                            .padding(start = PAGE_MARGIN, top = FOOTER_MARGIN)
-                            .widthIn(max = half),
+                            .padding(start = FOLDED_HEAD_INSET, top = FOOTER_MARGIN)
+                            .widthIn(max = (camera - FOLDED_HEAD_INSET - HEAD_GAP).coerceAtLeast(0.dp)),
                         actions
                     )
                 }
             }
         }
     }
+}
+
+/**
+ * The left edge of the front-camera cutout in dp, so the folded running head can end just before it; [fallback] when
+ * the window reports no cutout. The cutout is read from the window rather than hardcoded, so it tracks the real camera
+ * on any phone (owner, 2026-11-07).
+ */
+@Composable
+private fun cameraEdgeDp(fallback: Dp): Dp {
+    val view = LocalView.current
+    val density = LocalDensity.current
+    val cutout = view.rootWindowInsets?.displayCutout
+    val band = with(density) { CUTOUT_BAND.toPx() }
+    val left = cutout?.boundingRects?.filter { it.top < band && it.width() > 0 }?.minOfOrNull { it.left }
+    return left?.let { with(density) { it.toDp() } } ?: fallback
 }
 
 /** A chapter or section heading in folio ink; tapping it opens the contents, which jumps to the current entry. */
@@ -436,6 +462,11 @@ private val PAGE_MARGIN = 32.dp
 private val FOOTER_MARGIN = 14.dp
 private val TITLE_MAX_WIDTH = 520.dp
 internal val TITLE_BESIDE_BACK = 600.dp
+
+/** The folded running head sits left of the page text border, ending just before the camera (owner, 2026-11-07). */
+private val FOLDED_HEAD_INSET = 8.dp
+private val HEAD_GAP = 8.dp
+private val CUTOUT_BAND = 200.dp
 
 /** The reader's round buttons: 56 dp unfolded, 50 dp folded (the app's usual is 42 dp; owner, 2026-10-22). */
 private val BASE_BUTTON = 42.dp

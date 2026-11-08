@@ -184,6 +184,10 @@
         <item quantity="one">%d ribbon</item>
         <item quantity="other">%d ribbons</item>
     </plurals>
+    <plurals name="bookmark_count">
+        <item quantity="one">%d Bookmark</item>
+        <item quantity="other">%d Bookmarks</item>
+    </plurals>
     <string name="bookmarks_empty_title">No ribbons yet</string>
     <string name="bookmarks_empty_body">While reading, tap the ribbon at the top right to mark a page in one of your colours. Your ribbons gather here.</string>
     <string name="bookmarks_filter_all">All</string>
@@ -366,6 +370,10 @@
     <plurals name="delete_ribbons_title">
         <item quantity="one">Remove %d ribbon?</item>
         <item quantity="other">Remove %d ribbons?</item>
+    </plurals>
+    <plurals name="delete_ribbon_books_title">
+        <item quantity="one">Remove the ribbons of %d book?</item>
+        <item quantity="other">Remove the ribbons of %d books?</item>
     </plurals>
     <plurals name="delete_annotated_books_title">
         <item quantity="one">Remove the annotations of %d book?</item>

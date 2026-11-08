@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.AtmosphereOverlay
+import com.flowfolio.core.designsystem.FeatureSplash
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioPalette
@@ -72,6 +73,9 @@ internal class Overlay(val chrome: ChromeClock, val textPinch: TextPinch) {
     var riffleDismissed by mutableStateOf(false)
     var webLink by mutableStateOf<String?>(null)
 
+    /** The panel whose button was last tapped, while its first-use guide may still be owed (owner, 2026-11-07). */
+    var guide by mutableStateOf<Panel?>(null)
+
     /** The EPUB footnote shown in a popover, if any. */
     var note by mutableStateOf<ShownNote?>(null)
 
@@ -101,7 +105,15 @@ internal class Overlay(val chrome: ChromeClock, val textPinch: TextPinch) {
     fun open(which: Panel) {
         chrome.interacted()
         riffleDismissed = true
-        panel = if (panel == which) Panel.NONE else which
+        val next = if (panel == which) Panel.NONE else which
+        panel = next
+        guide = if (next == Panel.NONE) null else which
+    }
+
+    /** Closes the panel (a tap outside it, or its own close); a pending guide goes with it. */
+    fun dismiss() {
+        panel = Panel.NONE
+        guide = null
     }
 
     /** Acts on a routed tap; true when it was not a page turn (so the page should not see it). */
@@ -127,6 +139,7 @@ internal class Overlay(val chrome: ChromeClock, val textPinch: TextPinch) {
 
     fun closeAll() {
         panel = Panel.NONE
+        guide = null
         riffleDismissed = false
         chrome.hide()
     }
@@ -292,8 +305,9 @@ internal fun BoxScope.Controls(
 ) {
     FlowFolioPalette(dark = s.tone.dark) {
         CompositionLocalProvider(LocalGlassStyle provides glassOver(s.tone)) {
-            PanelDismiss(overlay.panel) { overlay.panel = Panel.NONE }
+            PanelDismiss(overlay.panel, overlay::dismiss)
             val flowNow by parts.book.flow.collectAsStateWithLifecycle()
+            val settings by parts.book.userSettings.collectAsStateWithLifecycle()
             ReaderChrome(
                 s,
                 navigation,
@@ -310,7 +324,7 @@ internal fun BoxScope.Controls(
                 navigation,
                 mark,
                 parts.jump,
-                onDismiss = { overlay.panel = Panel.NONE },
+                onDismiss = overlay::dismiss,
                 flow = flowNow,
                 onFlow = parts.book::setFlow,
                 onPanel = overlay::open
@@ -318,6 +332,27 @@ internal fun BoxScope.Controls(
             AtmosphereGlimpse(parts.book)
             FootnotePopover(overlay.note, parts.book::footnote, onDismiss = { overlay.note = null })
             overlay.figure?.let { FigureZoom(it, parts.book, onDismiss = { overlay.figure = null }) }
+            // A first-use guide on the button just tapped: a centred window, not a spotlight, so it can't be clipped
+            // or misaligned on any screen (owner, 2026-11-07).
+            overlay.guide?.let { panel ->
+                ReaderGuide.of(panel)?.takeIf { it.unseen(settings) }?.let { guide ->
+                    FeatureSplash(
+                        glyph = guide.glyph,
+                        title = stringResource(guide.title),
+                        body = stringResource(guide.body),
+                        dismiss = stringResource(R.string.reader_demo_got_it),
+                        onDismiss = {
+                            parts.book.markGuideSeen(guide.id)
+                            overlay.guide = null
+                        },
+                        neverShow = stringResource(R.string.reader_demo_never),
+                        onNeverShow = {
+                            parts.book.disableTips(guide.id)
+                            overlay.guide = null
+                        }
+                    )
+                }
+            }
         }
     }
 }

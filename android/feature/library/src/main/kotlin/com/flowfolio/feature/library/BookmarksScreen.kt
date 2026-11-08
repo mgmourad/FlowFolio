@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.flowfolio.feature.library
 
 import androidx.activity.compose.BackHandler
@@ -97,14 +99,15 @@ import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookmarkColor
 
 /**
- * The mock's Bookmarks tab (`#s-bookmarks`): every ribbon in the library as a card with its colour tag, the book's
- * cover, the page and the chapter it is in. Tap a card to open the book there (with the book opening); swipe right to
- * recolour it, left to remove it. Highlights and notes join it once text selection exists.
+ * The mock's Bookmarks tab (`#s-bookmarks`): one card per book with ribbons (its title, author and the ribbon colours
+ * in it), newest ribbon first. Tap a card to open that book's ribbons; there, each ribbon is a card (tap to open the
+ * book there, swipe right to recolour, left to remove). The colour filter lives on the book's page (owner, 2026-11-07).
  */
 @Composable
 fun BookmarksScreen(
     onRead: (Book) -> Unit,
     onBack: (() -> Unit)? = null,
+    onOpenBook: (Book) -> Unit = {},
     viewModel: BookmarksViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -123,6 +126,7 @@ fun BookmarksScreen(
             onRecolour = viewModel::recolour,
             onRemove = viewModel::remove,
             onFilter = viewModel::setFilter,
+            onOpenBook = onOpenBook,
             onBack = onBack,
             selection = selection,
             onDeleteChosen = { confirmBulk = true }
@@ -130,11 +134,20 @@ fun BookmarksScreen(
     )
     if (confirmBulk) {
         val n = selection.chosen.size
+        val perBook = state.book != null
         BulkDeleteDialog(
-            pluralStringResource(R.plurals.delete_ribbons_title, n, n),
+            pluralStringResource(
+                if (perBook) R.plurals.delete_ribbons_title else R.plurals.delete_ribbon_books_title,
+                n,
+                n
+            ),
             stringResource(R.string.delete_cannot_undo),
             onConfirm = {
-                viewModel.removeAll(selection.chosen.map(String::toLong))
+                if (perBook) {
+                    viewModel.removeAll(selection.chosen.map(String::toLong))
+                } else {
+                    viewModel.removeBooks(selection.chosen)
+                }
                 selection.done()
                 confirmBulk = false
             },
@@ -151,6 +164,18 @@ fun BookmarksContent(state: BookmarksUiState, actions: BookmarkActions) {
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     var searchOpen by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
+    val perBook = state.book != null
+    val filteredBooks = remember(state.books, query) {
+        val q = query.trim()
+        if (q.isEmpty()) {
+            state.books
+        } else {
+            state.books.mapNotNull { entry ->
+                val score = maxOf(Fuzzy.score(q, entry.book.title), Fuzzy.score(q, entry.book.author))
+                if (score > 0) entry to score else null
+            }.sortedByDescending { it.second }.map { it.first }
+        }
+    }
     val filteredItems = remember(state.items, query) {
         val q = query.trim()
         if (q.isEmpty()) {
@@ -200,7 +225,8 @@ fun BookmarksContent(state: BookmarksUiState, actions: BookmarkActions) {
                     modifier = Modifier.reveal(0)
                 )
             }
-            if (state.colours.size > 1) {
+            // The colour filter belongs on a book's page, not the tab (owner, 2026-11-07).
+            if (perBook && state.colours.size > 1) {
                 item(span = { GridItemSpan(maxLineSpan) }) {
                     ColourFilter(state.colours, state.filter, actions.onFilter, Modifier.reveal(1))
                 }
@@ -208,8 +234,14 @@ fun BookmarksContent(state: BookmarksUiState, actions: BookmarkActions) {
             if (!state.loading && state.total == 0) {
                 item(span = { GridItemSpan(maxLineSpan) }) { EmptyBookmarks(Modifier.reveal(1)) }
             }
-            itemsIndexed(filteredItems, key = { _, entry -> entry.bookmark.id }) { i, item ->
-                Box(Modifier.animateItem().reveal(2 + i)) { BookmarkRow(item, actions, twoColumns) }
+            if (perBook) {
+                itemsIndexed(filteredItems, key = { _, entry -> entry.bookmark.id }) { i, item ->
+                    Box(Modifier.animateItem().reveal(2 + i)) { BookmarkRow(item, actions, twoColumns) }
+                }
+            } else {
+                itemsIndexed(filteredBooks, key = { _, entry -> entry.book.id }) { i, item ->
+                    Box(Modifier.animateItem().reveal(2 + i)) { BookmarkBookRow(item, actions) }
+                }
             }
         }
     }
@@ -492,6 +524,104 @@ private fun BookmarkCard(
     }
 }
 
+/** A book's card in the Bookmarks tab: a tap opens its ribbons; press and hold offers Select and Open. */
+@Composable
+private fun BookmarkBookRow(item: BookmarkBook, actions: BookmarkActions) {
+    val selection = actions.selection
+    val key = item.book.id
+    var menu by remember { mutableStateOf(false) }
+    Box {
+        BookmarkBookCard(item, onHold = { if (selection == null || !selection.active) menu = true }) {
+            if (selection != null && selection.active) selection.toggle(key) else actions.onOpenBook(item.book)
+        }
+        if (selection != null) SelectionMark(selection, key)
+        FlowFolioMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            if (selection != null) {
+                HoldEntry(R.string.action_select) {
+                    menu = false
+                    selection.startWith(key)
+                }
+                FlowFolioMenuDivider()
+            }
+            HoldEntry(R.string.action_open) {
+                menu = false
+                actions.onOpenBook(item.book)
+            }
+        }
+    }
+}
+
+/**
+ * A book with ribbons: its cover, title and author, and a dot per ribbon colour actually placed in it (owner,
+ * 2026-11-07).
+ */
+@Composable
+private fun BookmarkBookCard(item: BookmarkBook, onHold: (() -> Unit)? = null, onClick: () -> Unit) {
+    val cover by rememberCover(item.book)
+    FlowFolioCard(
+        Modifier.fillMaxWidth().combinedClickable(onClick = onClick, onLongClick = onHold)
+            .testTag(LibraryTestTags.bookmarkBook(item.book.id)),
+        radius = 22.dp,
+        padding = PaddingValues(14.dp)
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            MiniCover(item.book, cover, Modifier)
+            Column(Modifier.weight(1f)) {
+                Text(
+                    item.book.title,
+                    style = FlowFolioType.rowLabel.merge(FlowFolio.item),
+                    maxLines = 2,
+                    minLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                item.book.author?.let {
+                    Text(
+                        it,
+                        style = FlowFolioType.sub.merge(FlowFolio.hint),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+                // The count on the left, the book's ribbons gathered on the right (owner, 2026-11-07).
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        pluralStringResource(R.plurals.bookmark_count, item.count, item.count),
+                        style = FlowFolioType.sub.merge(FlowFolio.hint)
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for (c in item.colours) RibbonMark(c.color)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** A small ribbon in the book's colour, matching the ribbons actually placed in it (owner, 2026-11-07). */
+@Composable
+private fun RibbonMark(colour: Color) {
+    Canvas(Modifier.size(RIBBON_W, RIBBON_H)) {
+        val w = size.width
+        val h = size.height
+        drawPath(
+            Path().apply {
+                moveTo(0f, 0f)
+                lineTo(w, 0f)
+                lineTo(w, h)
+                lineTo(w / 2f, h * TAG_NOTCH)
+                lineTo(0f, h)
+                close()
+            },
+            colour
+        )
+    }
+}
+
 /** `.mini`: a small flat cover with a book's corners and a soft shadow. */
 @Composable
 internal fun MiniCover(book: Book, cover: CoverArt?, modifier: Modifier) {
@@ -549,6 +679,10 @@ private const val TAG_NOTCH = 0.78f
 private val TAG_RISE = 14.dp
 private const val RING_ALPHA = 0.6f
 private const val MINI_SHADOW = 0.55f
+
+/** A small ribbon on a book's card in the Bookmarks tab (owner, 2026-11-07). */
+private val RIBBON_W = 8.dp
+private val RIBBON_H = 16.dp
 
 /** The search box slides down from a third of its own height. */
 private const val SEARCH_SLIDE = 3

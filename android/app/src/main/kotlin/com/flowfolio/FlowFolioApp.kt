@@ -106,7 +106,12 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                         ScreenEntrance { ShelvesScreen(onOpenShelf = { id -> nav.navigate(Routes.shelf(id)) }) }
                     }
                     destination(TopLevel.Bookmarks.route) {
-                        ScreenEntrance { BookmarksScreen(onRead = { nav.navigate(Routes.reader(it.id)) }) }
+                        ScreenEntrance {
+                            BookmarksScreen(
+                                onRead = { nav.navigate(Routes.reader(it.id)) },
+                                onOpenBook = { book -> nav.navigate(Routes.bookBookmarks(book.id)) }
+                            )
+                        }
                     }
                     destination(TopLevel.Annotations.route) {
                         ScreenEntrance {

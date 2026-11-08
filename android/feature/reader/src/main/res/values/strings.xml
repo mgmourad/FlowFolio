@@ -148,6 +148,19 @@
     <string name="reader_demo_riffle">Riffle bar</string>
     <string name="reader_demo_got_it">Got it</string>
     <string name="reader_demo_never">Never show tips again</string>
+    <!-- First-use guides on the reader's buttons (owner, 2026-11-07). -->
+    <string name="reader_guide_contents_title">Contents</string>
+    <string name="reader_guide_contents_body">Jump to any chapter or section in this book.</string>
+    <string name="reader_guide_go_to_title">Go to page</string>
+    <string name="reader_guide_go_to_body">Type a printed page number, or one counted from the cover.</string>
+    <string name="reader_guide_settings_title">Reading settings</string>
+    <string name="reader_guide_settings_body">Text size, font, paper, page turns and more.</string>
+    <string name="reader_guide_mark_title">Bookmark</string>
+    <string name="reader_guide_mark_body">Put a ribbon on this page. Its colour follows your theme.</string>
+    <string name="reader_guide_annotations_title">Annotations</string>
+    <string name="reader_guide_annotations_body">This book\'s highlights and notes, newest first.</string>
+    <string name="reader_guide_dictionary_title">Dictionary</string>
+    <string name="reader_guide_dictionary_body">Select a word and look it up right here.</string>
     <string name="flow_status_queued">Waiting for another book to finish</string>
     <string name="flow_status_hot">Paused while your phone cools down</string>
     <string name="flow_status_battery">Paused: the battery is low</string>

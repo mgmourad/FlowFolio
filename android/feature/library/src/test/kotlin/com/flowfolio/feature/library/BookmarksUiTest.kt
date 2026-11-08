@@ -9,6 +9,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.flowfolio.core.designsystem.FlowFolioTheme
+import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.BookmarkColor
 import com.flowfolio.core.model.UserSettings
@@ -41,9 +42,28 @@ class BookmarksUiTest {
     }
 
     @Test
-    fun cardShowsPageTitleAndChapterAndOpens() {
+    fun bookCardShowsTitleAndOpensItsRibbons() {
+        var opened: Book? = null
+        val group = BookmarkBook(book("a", "University Physics"), listOf(BookmarkColor.GREEN), item, count = 1)
+        val state = BookmarksUiState(loading = false, books = listOf(group), total = 1, bookCount = 1)
+        compose.setContent {
+            FlowFolioTheme { BookmarksContent(state, BookmarkActions(onOpenBook = { opened = it })) }
+        }
+        compose.onNodeWithText("University Physics").assertIsDisplayed()
+        compose.onNodeWithText("University Physics").performClick()
+        assertEquals(group.book, opened)
+    }
+
+    @Test
+    fun ribbonCardShowsPageAndChapterAndOpens() {
         var opened: BookmarkItem? = null
-        val state = BookmarksUiState(loading = false, items = listOf(item), total = 1, bookCount = 1)
+        val state = BookmarksUiState(
+            loading = false,
+            items = listOf(item),
+            total = 1,
+            bookCount = 1,
+            book = book("a", "University Physics")
+        )
         compose.setContent {
             FlowFolioTheme { BookmarksContent(state, BookmarkActions(onOpen = { i, _ -> opened = i })) }
         }
@@ -61,7 +81,8 @@ class BookmarksUiTest {
             items = listOf(item),
             total = 2,
             bookCount = 1,
-            colours = listOf(BookmarkColor.SUB_ITEM, BookmarkColor.GREEN)
+            colours = listOf(BookmarkColor.SUB_ITEM, BookmarkColor.GREEN),
+            book = book("a", "University Physics")
         )
         compose.setContent {
             FlowFolioTheme { BookmarksContent(state, BookmarkActions(onFilter = { chosen = it })) }

@@ -1,3 +1,5 @@
+@file:Suppress("TooManyFunctions")
+
 package com.flowfolio.feature.library
 
 import androidx.activity.compose.BackHandler
@@ -34,6 +36,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -68,11 +71,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.Book3D
 import com.flowfolio.core.designsystem.CoverSpot
 import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioGhostButton
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioMenu
@@ -290,13 +295,21 @@ private fun Backdrop(backdrop: androidx.compose.ui.graphics.ImageBitmap?, modifi
 @Suppress("LongMethod")
 @Composable
 private fun DetailsHeading(state: DetailsUiState, book: Book, actions: DetailsActions, modifier: Modifier = Modifier) {
+    var showFullTitle by remember { mutableStateOf(false) }
+    var truncated by remember { mutableStateOf(false) }
     Column(modifier.fillMaxWidth().padding(horizontal = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         // Around the cover flying in, the page settles one line after another (ADR-0034).
         Text(
             book.title,
             style = FlowFolioType.bookTitle.merge(FlowFolio.title),
             textAlign = TextAlign.Center,
-            modifier = Modifier.reveal(1)
+            // Three lines at most; a longer title truncates and the ellipsis opens it whole (owner, 2026-11-07).
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+            onTextLayout = { truncated = it.hasVisualOverflow },
+            modifier = Modifier
+                .reveal(1)
+                .clickable(enabled = truncated) { showFullTitle = true }
         )
         book.details.subtitle?.let {
             Text(
@@ -356,6 +369,29 @@ private fun DetailsHeading(state: DetailsUiState, book: Book, actions: DetailsAc
                     )
                 }
             }
+        }
+    }
+    if (showFullTitle) FullTitleDialog(book.title) { showFullTitle = false }
+}
+
+/** The full book title in a small window, opened by tapping a title that truncated (owner, 2026-11-07). */
+@Composable
+private fun FullTitleDialog(title: String, onDismiss: () -> Unit) {
+    val shape = RoundedCornerShape(28.dp)
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            Modifier
+                .widthIn(max = FULL_TITLE_WIDTH)
+                .fillMaxWidth()
+                .clip(shape)
+                .background(FlowFolio.palette.background, shape)
+                .border(1.dp, FlowFolio.palette.edge, shape)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text(title, style = FlowFolioType.bookTitle.merge(FlowFolio.title), textAlign = TextAlign.Center)
+            FlowFolioGhostButton(text = stringResource(R.string.action_close), onClick = onDismiss)
         }
     }
 }
@@ -499,6 +535,7 @@ internal fun PlayGlyph() {
 }
 
 private val TWO_PANE_WIDTH = 600.dp
+private val FULL_TITLE_WIDTH = 440.dp
 private const val TAB_SLIDE = 8
 private const val TAB_COUNT = 4
 private val SWIPE_TAB = 56.dp
