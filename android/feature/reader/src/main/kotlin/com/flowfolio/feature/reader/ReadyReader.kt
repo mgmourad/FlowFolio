@@ -331,8 +331,10 @@ internal fun BoxScope.Controls(
                 onPanel = overlay::open,
                 hits = hits,
                 onSearchQuery = parts.book::search,
-                onSearchJump = parts.book::jumpTo,
-                onSearchClear = parts.book::clearSearchHighlight
+                onSearchJump = { hit ->
+                    parts.book.jumpTo(hit)
+                    overlay.dismiss()
+                }
             )
             AtmosphereGlimpse(parts.book)
             FootnotePopover(overlay.note, parts.book::footnote, onDismiss = { overlay.note = null })

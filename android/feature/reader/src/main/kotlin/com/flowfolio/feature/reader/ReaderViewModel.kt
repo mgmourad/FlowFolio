@@ -624,6 +624,7 @@ class ReaderViewModel @Inject constructor(
     /** Searches the open book for [query] in the current view (reflowed text or the PDF's page text). */
     internal fun search(query: String) {
         searchJob?.cancel()
+        _searchHighlight.value = null // a new search clears the highlight of the last jump
         searchJob = viewModelScope.launch(Dispatchers.Default) {
             val q = query.trim()
             _searchResults.value = if (q.isEmpty()) emptyList() else doSearch(q).take(SEARCH_CAP)
@@ -690,14 +691,10 @@ class ReaderViewModel @Inject constructor(
         return PageLookup.subtitleAt(outline, page) ?: PageLookup.chapterTitleAt(outline, page)
     }
 
-    /** Jumps to [hit] and highlights its text (cleared when the search closes or the query changes). */
+    /** Jumps to [hit] and highlights its text (cleared when the next search starts). */
     internal fun jumpTo(hit: SearchHit) {
         goToPage(hit.page)
         viewModelScope.launch(Dispatchers.Default) { _searchHighlight.value = buildHighlight(hit) }
-    }
-
-    internal fun clearSearchHighlight() {
-        _searchHighlight.value = null
     }
 
     private suspend fun buildHighlight(hit: SearchHit): Annotation? {

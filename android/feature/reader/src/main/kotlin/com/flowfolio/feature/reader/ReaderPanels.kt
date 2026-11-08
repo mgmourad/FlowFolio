@@ -70,8 +70,7 @@ internal fun BoxScope.ReaderPanels(
     onPanel: (Panel) -> Unit = {},
     hits: List<SearchHit> = emptyList(),
     onSearchQuery: (String) -> Unit = {},
-    onSearchJump: (SearchHit) -> Unit = {},
-    onSearchClear: () -> Unit = {}
+    onSearchJump: (SearchHit) -> Unit = {}
 ) {
     val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
     if (wide) {
@@ -101,7 +100,7 @@ internal fun BoxScope.ReaderPanels(
     }
     SheetPanel(panel == Panel.SETTINGS) { ReaderSettingsContent(s.reflowable, s.bookFont, flow, onFlow) }
     DropPanel(panel == Panel.SEARCH, SEARCH_WIDTH, fillDown = true) {
-        ReaderSearchPanel(hits, onSearchQuery, onSearchJump, onSearchClear)
+        ReaderSearchPanel(hits, onSearchQuery, onSearchJump)
     }
 }
 
