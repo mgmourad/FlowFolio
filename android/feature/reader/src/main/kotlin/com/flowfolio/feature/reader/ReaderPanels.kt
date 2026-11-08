@@ -69,6 +69,7 @@ internal fun BoxScope.ReaderPanels(
     onFlow: ((Boolean, Boolean) -> Unit)? = null,
     onPanel: (Panel) -> Unit = {},
     hits: List<SearchHit> = emptyList(),
+    searchQuery: String = "",
     onSearchQuery: (String) -> Unit = {},
     onSearchJump: (SearchHit) -> Unit = {}
 ) {
@@ -100,7 +101,7 @@ internal fun BoxScope.ReaderPanels(
     }
     SheetPanel(panel == Panel.SETTINGS) { ReaderSettingsContent(s.reflowable, s.bookFont, flow, onFlow) }
     DropPanel(panel == Panel.SEARCH, SEARCH_WIDTH, fillDown = true) {
-        ReaderSearchPanel(hits, onSearchQuery, onSearchJump)
+        ReaderSearchPanel(searchQuery, hits, onSearchQuery, onSearchJump)
     }
 }
 

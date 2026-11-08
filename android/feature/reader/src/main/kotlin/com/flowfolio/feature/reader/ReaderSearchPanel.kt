@@ -13,11 +13,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -37,15 +33,18 @@ import com.flowfolio.core.designsystem.FlowFolioType
 
 /** In-book search (Phase 6 M1): a field and the matches, each jumping to its page and highlighting it. */
 @Composable
-internal fun ReaderSearchPanel(hits: List<SearchHit>, onQuery: (String) -> Unit, onJump: (SearchHit) -> Unit) {
-    var query by rememberSaveable { mutableStateOf("") }
+internal fun ReaderSearchPanel(
+    query: String,
+    hits: List<SearchHit>,
+    onQuery: (String) -> Unit,
+    onJump: (SearchHit) -> Unit
+) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
-    LaunchedEffect(query) { onQuery(query) }
     Column(Modifier.padding(start = 20.dp, end = 12.dp, top = 16.dp, bottom = 8.dp)) {
         OutlinedTextField(
             value = query,
-            onValueChange = { query = it },
+            onValueChange = onQuery,
             singleLine = true,
             label = { Text(stringResource(R.string.reader_search_hint)) },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),

@@ -615,6 +615,10 @@ class ReaderViewModel @Inject constructor(
     private val _searchResults = MutableStateFlow<List<SearchHit>>(emptyList())
     internal val searchResults: StateFlow<List<SearchHit>> = _searchResults.asStateFlow()
 
+    /** The query as typed, kept so re-opening the search panel restores the last search (owner, 2026-11-07). */
+    private val _searchQuery = MutableStateFlow("")
+    internal val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
     /** The transient highlight marking the search hit the reader last jumped to; null when search is idle. */
     private val _searchHighlight = MutableStateFlow<Annotation?>(null)
     internal val searchHighlight: StateFlow<Annotation?> = _searchHighlight.asStateFlow()
@@ -624,9 +628,12 @@ class ReaderViewModel @Inject constructor(
     /** Searches the open book for [query] in the current view (reflowed text or the PDF's page text). */
     internal fun search(query: String) {
         searchJob?.cancel()
-        _searchHighlight.value = null // a new search clears the highlight of the last jump
+        if (query != _searchQuery.value) {
+            _searchQuery.value = query
+            _searchHighlight.value = null // a different query invalidates the last jump's highlight
+        }
+        val q = query.trim()
         searchJob = viewModelScope.launch(Dispatchers.Default) {
-            val q = query.trim()
             _searchResults.value = if (q.isEmpty()) emptyList() else doSearch(q).take(SEARCH_CAP)
         }
     }

@@ -132,13 +132,15 @@ class TranslateViewModel @Inject constructor(
         }
         val ready = runCatching {
             repository.translator.isDownloaded(from) && repository.translator.isDownloaded(s.to)
-        }.getOrDefault(false)
+        }.onFailure { android.util.Log.w("FlowFolioTranslate", "isDownloaded failed", it) }
+            .getOrDefault(false)
         _state.update {
             it.copy(result = null, status = if (ready) TranslateStatus.TRANSLATING else TranslateStatus.DOWNLOADING)
         }
         val done = runCatching {
             repository.translate(s.source, from, s.to, bookId, at)
-        }.getOrNull()
+        }.onFailure { android.util.Log.w("FlowFolioTranslate", "translate failed", it) }
+            .getOrNull()
         _state.update {
             if (done != null) {
                 it.copy(result = done.translated, status = TranslateStatus.DONE)

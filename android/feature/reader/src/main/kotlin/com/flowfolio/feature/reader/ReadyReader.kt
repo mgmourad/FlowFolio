@@ -295,6 +295,7 @@ internal class ChromeParts(
  * The bars and their panels. They take the light or dark palette of the page colour, so they read well on it, and a
  * glass that shows on it (owner, 2026-10-18).
  */
+@Suppress("LongMethod")
 @Composable
 internal fun BoxScope.Controls(
     s: ReaderState.Ready,
@@ -309,6 +310,7 @@ internal fun BoxScope.Controls(
             val flowNow by parts.book.flow.collectAsStateWithLifecycle()
             val settings by parts.book.userSettings.collectAsStateWithLifecycle()
             val hits by parts.book.searchResults.collectAsStateWithLifecycle()
+            val searchQuery by parts.book.searchQuery.collectAsStateWithLifecycle()
             ReaderChrome(
                 s,
                 navigation,
@@ -330,6 +332,7 @@ internal fun BoxScope.Controls(
                 onFlow = parts.book::setFlow,
                 onPanel = overlay::open,
                 hits = hits,
+                searchQuery = searchQuery,
                 onSearchQuery = parts.book::search,
                 onSearchJump = { hit ->
                     parts.book.jumpTo(hit)

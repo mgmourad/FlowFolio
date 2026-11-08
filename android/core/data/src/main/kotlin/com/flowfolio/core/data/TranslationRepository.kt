@@ -63,6 +63,7 @@ class MlKitTranslator @Inject constructor() : Translator {
     override suspend fun isDownloaded(language: String): Boolean = language == TranslateLanguage.ENGLISH ||
         RemoteModelManager.getInstance().isModelDownloaded(TranslateRemoteModel.Builder(language).build()).await()
 
+    @Suppress("TooGenericExceptionCaught")
     override suspend fun translate(text: String, from: String, to: String): String {
         if (from == to) return text
         val client = MlTranslation.getClient(
@@ -71,6 +72,9 @@ class MlKitTranslator @Inject constructor() : Translator {
         return try {
             client.downloadModelIfNeeded(DownloadConditions.Builder().build()).await()
             client.translate(text).await()
+        } catch (e: Exception) {
+            android.util.Log.w("FlowFolioTranslate", "translate $from->$to failed", e)
+            throw e
         } finally {
             client.close()
         }
