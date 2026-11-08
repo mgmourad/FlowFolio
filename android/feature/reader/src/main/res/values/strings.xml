@@ -171,7 +171,7 @@
     <string name="flow_status_on">On: the text flows to fit your screen</string>
     <string name="flow_status_ready">Ready whenever you want it</string>
     <string name="reader_define">Define</string>
-    <string name="reader_define_note">English Wiktionary · CC BY-SA 4.0 · On your phone</string>
+    <string name="reader_define_note">Wiktionary · WordNet · Wikipedia</string>
     <string name="reader_define_working">Looking up definition…</string>
     <string name="reader_define_not_found">No definition found in the offline dictionary.</string>
     <string name="reader_chip_brightness">Brightness</string>

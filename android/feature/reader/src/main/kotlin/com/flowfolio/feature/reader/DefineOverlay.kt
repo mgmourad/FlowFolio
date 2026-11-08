@@ -37,6 +37,7 @@ import com.flowfolio.core.designsystem.FlowFolioPill
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.glass
+import com.flowfolio.core.model.DefineEntry
 
 /**
  * FlowFolio's Define panel (owner, M3T3; ADR-0046): glass, in the reader's palette. Shows the selected word, its part
@@ -92,20 +93,11 @@ private fun DefineBody(state: DefineUiState) {
         )
         when (state.status) {
             DefineStatus.DONE -> {
-                val entry = state.entry
-                entry?.partOfSpeech?.takeIf { it.isNotBlank() }?.let { pos ->
-                    FlowFolioPill(pos, FlowFolio.subItem, Modifier.padding(top = 8.dp))
-                }
-                val definition = entry?.definition.orEmpty()
-                Text(
-                    definition,
-                    style = FlowFolioType.rowLabel.copy(fontSize = 18.sp, lineHeight = 26.sp)
-                        .merge(FlowFolio.text),
-                    modifier = Modifier.padding(top = 12.dp).testTag(ReaderTestTags.DEFINITION)
-                )
-                Row(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    DefineAction(R.string.reader_copy) { copy(context, "${state.word}: $definition") }
-                    DefineAction(R.string.reader_share) { share(context, "${state.word} — $definition") }
+                state.entries.forEach { entry -> DefineSourceRow(entry) }
+                val combined = state.entries.joinToString("\n\n") { "${it.source}: ${it.definition}" }
+                Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    DefineAction(R.string.reader_copy) { copy(context, "${state.word}: $combined") }
+                    DefineAction(R.string.reader_share) { share(context, "${state.word} — $combined") }
                 }
             }
 
@@ -127,6 +119,26 @@ private fun DefineBody(state: DefineUiState) {
                 )
             }
         }
+    }
+}
+
+/** One definition from one source: its name, part of speech and gloss. */
+@Composable
+private fun DefineSourceRow(entry: DefineEntry) {
+    Column(Modifier.padding(top = 14.dp)) {
+        Text(
+            entry.source,
+            style = FlowFolioType.eyebrow.merge(FlowFolio.hint)
+        )
+        entry.partOfSpeech?.takeIf { it.isNotBlank() }?.let { pos ->
+            FlowFolioPill(pos, FlowFolio.subItem, Modifier.padding(top = 4.dp))
+        }
+        Text(
+            entry.definition,
+            style = FlowFolioType.rowLabel.copy(fontSize = 18.sp, lineHeight = 26.sp)
+                .merge(FlowFolio.text),
+            modifier = Modifier.padding(top = 8.dp).testTag(ReaderTestTags.DEFINITION)
+        )
     }
 }
 

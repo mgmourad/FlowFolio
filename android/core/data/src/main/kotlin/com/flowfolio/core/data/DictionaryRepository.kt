@@ -6,6 +6,7 @@ import com.flowfolio.core.database.DefinitionDao
 import com.flowfolio.core.database.DefinitionEntity
 import com.flowfolio.core.database.TranslationDao
 import com.flowfolio.core.database.TranslationEntity
+import com.flowfolio.core.model.DefineEntry
 import com.flowfolio.core.model.DictionaryWord
 import com.flowfolio.core.model.WordDefinition
 import javax.inject.Inject
@@ -35,7 +36,7 @@ interface DictionaryRepository {
         bookId: String? = null,
         page: Int? = null,
         locator: String? = null
-    ): WordDefinition? = null
+    ): List<DefineEntry> = emptyList()
 
     /** Forgets one definition (owner, M5 round), leaving any others of the same word. */
     suspend fun removeDefinition(id: Long) {}
@@ -49,10 +50,13 @@ interface DictionaryRepository {
 }
 
 @Singleton
+@Suppress("LongParameterList")
 class DefaultDictionaryRepository @Inject constructor(
     private val definitions: DefinitionDao,
     private val translations: TranslationDao,
     private val wiktionary: WiktionaryStore,
+    private val wordNet: WordNetStore,
+    private val wikipedia: WikipediaStore,
     private val clock: Clock,
     @IoDispatcher private val io: CoroutineDispatcher
 ) : DictionaryRepository {
@@ -76,33 +80,32 @@ class DefaultDictionaryRepository @Inject constructor(
         counts
     }
 
-    override suspend fun define(word: String, bookId: String?, page: Int?, locator: String?): WordDefinition? =
+    override suspend fun define(word: String, bookId: String?, page: Int?, locator: String?): List<DefineEntry> =
         withContext(io) {
+            val results = ArrayList<DefineEntry>()
+            // Wiktionary (offline core + online), the source that is saved to the history.
             wiktionary.ensureDownloaded()
-            val entry = wiktionary.lookup(word) ?: return@withContext null
-            val now = clock.now()
-            val cleaned = word.trim().trim { !it.isLetterOrDigit() }.ifEmpty { entry.word }
-            val id = definitions.insert(
-                DefinitionEntity(
-                    word = cleaned,
-                    partOfSpeech = entry.partOfSpeech,
-                    definition = entry.definition,
-                    bookId = bookId,
-                    page = page,
-                    locator = locator,
-                    createdAt = now
+            wiktionary.lookup(word)?.let { entry ->
+                results += DefineEntry(WIKTIONARY, entry.partOfSpeech, entry.definition)
+                val now = clock.now()
+                val cleaned = word.trim().trim { !it.isLetterOrDigit() }.ifEmpty { entry.word }
+                definitions.insert(
+                    DefinitionEntity(
+                        word = cleaned,
+                        partOfSpeech = entry.partOfSpeech,
+                        definition = entry.definition,
+                        bookId = bookId,
+                        page = page,
+                        locator = locator,
+                        createdAt = now
+                    )
                 )
-            )
-            WordDefinition(
-                id = id,
-                word = cleaned,
-                partOfSpeech = entry.partOfSpeech,
-                definition = entry.definition,
-                bookId = bookId,
-                page = page,
-                locator = locator,
-                createdAtMillis = now
-            )
+            }
+            // WordNet (offline, full database).
+            wordNet.lookup(word).forEach { results += DefineEntry(WORDNET, it.pos, it.definition) }
+            // Wikipedia (online summary; skipped silently when offline).
+            wikipedia.summary(word)?.let { results += DefineEntry(WIKIPEDIA, null, it) }
+            results
         }
 
     override suspend fun removeDefinition(id: Long) {
@@ -127,6 +130,11 @@ class DefaultDictionaryRepository @Inject constructor(
 
     companion object {
         private const val MAX_WORDS = 2_000
+
+        /** Source labels shown on the Define popup (proper nouns, kept as plain strings). */
+        private const val WIKTIONARY = "Wiktionary"
+        private const val WORDNET = "WordNet"
+        private const val WIKIPEDIA = "Wikipedia"
 
         /**
          * Combines saved translations (`translations` table) and English definitions (`definitions` table) so each word

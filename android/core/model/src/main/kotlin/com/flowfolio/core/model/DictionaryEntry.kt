@@ -14,6 +14,9 @@ data class WordDefinition(
     val createdAtMillis: Long = 0L
 )
 
+/** One definition from one dictionary source, for the Define popup (Wiktionary, WordNet, Wikipedia). */
+data class DefineEntry(val source: String, val partOfSpeech: String?, val definition: String)
+
 /**
  * One word on the Dictionary page (owner, M3T3): combines any saved translation (Room `translations`) and English
  * definition (Room `definitions`) for the same word and book.

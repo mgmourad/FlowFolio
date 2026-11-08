@@ -4,7 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.DictionaryRepository
-import com.flowfolio.core.model.WordDefinition
+import com.flowfolio.core.model.DefineEntry
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.Job
@@ -19,13 +19,13 @@ data class DefineRequest(val word: String, val page: Int, val locator: String? =
 
 data class DefineUiState(
     val word: String = "",
-    val entry: WordDefinition? = null,
+    val entries: List<DefineEntry> = emptyList(),
     val status: DefineStatus = DefineStatus.WORKING
 )
 
 /**
- * Looks up a selected single word in the offline English Wiktionary dictionary (owner, M3T3; ADR-0046) and saves the
- * definition in Room (`definitions`) so it appears on the Dictionary tab and in global search.
+ * Looks up a selected single word across the offline Wiktionary and WordNet dictionaries and Wikipedia's summary, and
+ * saves the Wiktionary definition in Room (`definitions`) so it appears on the Dictionary tab and in global search.
  */
 @HiltViewModel
 class DefineViewModel @Inject constructor(saved: SavedStateHandle, private val dictionary: DictionaryRepository) :
@@ -40,18 +40,18 @@ class DefineViewModel @Inject constructor(saved: SavedStateHandle, private val d
         job?.cancel()
         job = viewModelScope.launch {
             _state.value = DefineUiState(word = request.word.trim(), status = DefineStatus.WORKING)
-            val result = runCatching {
+            val results = runCatching {
                 dictionary.define(
                     word = request.word,
                     bookId = bookId,
                     page = request.page,
                     locator = request.locator
                 )
-            }.getOrNull()
-            _state.value = if (result != null) {
-                DefineUiState(word = result.word, entry = result, status = DefineStatus.DONE)
+            }.getOrDefault(emptyList())
+            _state.value = if (results.isNotEmpty()) {
+                DefineUiState(word = request.word.trim(), entries = results, status = DefineStatus.DONE)
             } else {
-                DefineUiState(word = request.word.trim(), entry = null, status = DefineStatus.NOT_FOUND)
+                DefineUiState(word = request.word.trim(), status = DefineStatus.NOT_FOUND)
             }
         }
     }
