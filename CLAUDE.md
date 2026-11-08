@@ -142,6 +142,15 @@ first-book demo with "Never show tips again", the reader's chapter-and-section r
 annotation counts and VoiceMark tabs, and the Favourites page header). ADR-0050 (release-channel renumbering: 3–4
 alpha, 5–6 canary, 7 beta) is accepted with this sign-off. Next: Phase 6.
 
+**Phase 6 M0 (the reading-surface tweak batch) built 2026-11-07** (`docs/plans/phase6-m0.md`, CHANGELOG Unreleased):
+the owner's batch arriving ahead of Phase 6's milestones. Delivered: first-use guides on the reader's buttons (centred
+windows on first use — Contents, Go-to-page, Aa, ribbon, Annotations, Dictionary); the Bookmarks tab grouped one card
+per book (title, author, ribbon colours, "N Bookmarks"); top-level page titles on the button row (smaller when folded);
+the folded running head shifted left of the text border and cut at the front camera (read from the display cutout); the
+unfolded section label right-aligned; the running head hidden while the chrome shows so it never overlaps the tools;
+and the book-details title capped at three lines with a tap-to-view. Verified on the owner's Fold, folded; the unfolded
+items (shelf title, section label) and the ribbon shape still want the owner's eyes.
+
 ## Product direction (owner decisions, 2026-10-16)
 
 - **Foldables first** (reference device: Galaxy Z Fold 8 Ultra): single page on the cover screen,

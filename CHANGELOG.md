@@ -3,6 +3,31 @@
 All notable changes to this project are documented here.
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [SemVer](https://semver.org/).
 
+## [Unreleased]
+
+> **Phase 6 M0** (the owner's reading-surface tweak batch, 2026-11-07). `docs/plans/phase6-m0.md` records it. Not yet
+> released; CI runs at the Phase 6 boundary.
+
+### Added
+- **First-use guides on the reader's buttons.** The first time a reader taps Contents, Go-to-page, Aa, the ribbon,
+  Annotations or Dictionary, a centred window explains it — "Got it" and "Never show tips again" — rather than a
+  spotlight that could clip or misalign. The existing `seenGuides`/`tipsEnabled` machinery remembers each one.
+- **The Bookmarks tab groups by book.** One card per book — its title, author, the ribbon colours actually placed in it,
+  and "N Bookmarks" — newest ribbon first; tapping a book opens its ribbon cards, where the colour filter now lives.
+
+### Changed
+- **Top-level page titles sit on the button row.** `ScreenHeader` puts the title beside the page's buttons (the slogan
+  drops below); on a narrow (folded) screen the title steps down a size so a name like "Bookmarks" stays whole.
+
+### Fixed
+- **The folded running head no longer sits under the front camera.** It starts left of the text border and truncates at
+  the camera's left edge, read from the display cutout rather than a hardcoded offset.
+- **The unfolded section label right-aligns** to the right page's outer margin, growing left only to that page's inner
+  margin, ellipsis at the right.
+- **The reader's running head no longer overlaps the tools.** It is hidden while the chrome shows (with or without a
+  panel open), so a chapter title never sits under the top bar's buttons.
+- **The book-details title caps at three lines**, and tapping the ellipsis opens the full title in a small window.
+
 ## [0.5.0-canary.1] - 2026-11-07
 
 > **Phase 5 (the product flow around conversion) is closed.** `docs/plans/phase5-signoff.md` records it. This is the
