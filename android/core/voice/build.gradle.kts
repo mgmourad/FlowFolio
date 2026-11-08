@@ -13,6 +13,7 @@ android {
 
 dependencies {
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.commons.compress)
 
     testImplementation(libs.junit4)
     testImplementation(libs.kotlinx.coroutines.test)

@@ -14,7 +14,9 @@ class VoicePackTest {
     private val pack = VoicePack(
         archiveUrl = "https://example.invalid/kokoro.zip",
         archiveSha256 = "abc",
-        requiredFiles = listOf("model.int8.onnx", "voices.bin", "tokens.txt")
+        requiredFiles = listOf("model.int8.onnx", "voices.bin", "tokens.txt"),
+        archiveFileName = "kokoro.zip",
+        format = VoicePackFormat.ZIP
     )
 
     @Test
@@ -46,9 +48,10 @@ class VoicePackTest {
         val archive = tmp.newFile("p.zip")
         archive.writeText("content")
         val digest = Sha256.of(archive)
-        val pack = VoicePack("https://example.invalid/kokoro.zip", digest, emptyList())
+        val pack = VoicePack("https://example.invalid/kokoro.zip", digest, emptyList(), "p.zip", VoicePackFormat.ZIP)
         assertTrue(pack.hasValidChecksum(archive))
-        val wrong = VoicePack("https://example.invalid/kokoro.zip", "0".repeat(64), emptyList())
+        val wrong =
+            VoicePack("https://example.invalid/kokoro.zip", "0".repeat(64), emptyList(), "p.zip", VoicePackFormat.ZIP)
         assertFalse(wrong.hasValidChecksum(archive))
     }
 }

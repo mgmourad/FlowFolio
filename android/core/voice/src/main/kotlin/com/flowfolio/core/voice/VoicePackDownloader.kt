@@ -38,7 +38,7 @@ class VoicePackDownloader(private val pack: VoicePack, private val destDir: File
                 _state.value = VoicePackState.Ready
                 return@withContext
             }
-            val archive = File(destDir, "voice-pack.zip")
+            val archive = File(destDir, pack.archiveFileName)
             try {
                 _state.value = VoicePackState.Downloading(0f)
                 download(pack.archiveUrl, archive) { p -> _state.value = VoicePackState.Downloading(p) }
@@ -46,7 +46,7 @@ class VoicePackDownloader(private val pack: VoicePack, private val destDir: File
                     archive.delete()
                     throw IOException("Voice pack checksum mismatch")
                 }
-                ZipExtract.extract(archive, destDir)
+                extract(archive, destDir)
                 archive.delete()
                 _state.value = if (pack.isReady(destDir)) {
                     VoicePackState.Ready
@@ -57,6 +57,13 @@ class VoicePackDownloader(private val pack: VoicePack, private val destDir: File
                 archive.delete()
                 _state.value = VoicePackState.Failed(e.message ?: "Voice pack download failed")
             }
+        }
+    }
+
+    private fun extract(archive: File, dir: File) {
+        when (pack.format) {
+            VoicePackFormat.ZIP -> ZipExtract.extract(archive, dir)
+            VoicePackFormat.TAR_BZ2 -> TarBz2Extract.extract(archive, dir, pack.requiredFiles.toSet())
         }
     }
 

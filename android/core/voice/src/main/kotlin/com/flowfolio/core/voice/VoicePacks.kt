@@ -6,20 +6,22 @@ package com.flowfolio.core.voice
  */
 object VoicePacks {
     /**
-     * `kokoro-multi-lang-v1_0` int8, trimmed to the five files narration needs (the tarball's
-     * espeak-ng-data, Chinese FSTs and jieba dict are unused and dropped). Re-hosted as a flat zip; the
-     * URL is the FlowFolio GitHub release it is uploaded to (owner, 2026-11-08), and the digest pins it.
+     * `kokoro-multi-lang-v1_0` int8, served directly from sherpa-onnx's public `tts-models` release
+     * (tar.bz2). Only the five files narration needs are extracted; the archive's `espeak-ng-data/` and
+     * Chinese dicts/FSTs are skipped. The digest pins the archive.
      */
     val kokoroMultiLang = VoicePack(
-        archiveUrl = "https://github.com/mgmourad/FlowFolio/releases/download/voice-pack-v1/" +
-            "kokoro-multi-lang-v1_0-int8.zip",
-        archiveSha256 = "217f6fa5e02140963bbe8102d68015385d4355a8ccbfd57993bf0d0bd1bb2086",
+        archiveUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/" +
+            "kokoro-int8-multi-lang-v1_0.tar.bz2",
+        archiveSha256 = "72c347230107ef8a31098ec4d468a605244beef5f1ed00db97efa13518800653",
         requiredFiles = listOf(
             "model.int8.onnx",
             "voices.bin",
             "tokens.txt",
             "lexicon-us-en.txt",
             "lexicon-zh.txt"
-        )
+        ),
+        archiveFileName = "voice-pack.tar.bz2",
+        format = VoicePackFormat.TAR_BZ2
     )
 }

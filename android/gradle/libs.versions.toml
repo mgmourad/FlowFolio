@@ -39,6 +39,8 @@ detekt = "1.23.8"
 serialization = "1.12.0"
 jna = "5.19.1"
 epubcheck = "5.4.0"
+# Voice-pack download (Phase 6 M3): tar.bz2 extraction of the Kokoro model (sherpa-onnx's release format).
+commonsCompress = "1.27.1"
 
 
 # SDK levels (ADR-0006)
@@ -93,6 +95,7 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 epubcheck = { module = "org.w3c:epubcheck", version.ref = "epubcheck" }
+commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commonsCompress" }
 
 
 # Gradle plugins as libraries, for build-logic convention plugins
