@@ -10,6 +10,7 @@ import com.flowfolio.core.data.Ambience
 import com.flowfolio.core.data.FolioScanner
 import com.flowfolio.core.data.NotYetReadableException
 import com.flowfolio.core.data.OpenedBook
+import com.flowfolio.core.data.OpenedEpub
 import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.data.SettingsRepository
 import com.flowfolio.core.data.flow.DynamicFlow
@@ -22,6 +23,7 @@ import com.flowfolio.core.model.BookHealth
 import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.FlowStatus
 import com.flowfolio.core.model.HighlightColor
+import com.flowfolio.core.model.OutlineEntry
 import com.flowfolio.core.model.PageLabels
 import com.flowfolio.core.model.PageRect
 import com.flowfolio.core.model.PageTurn
@@ -187,6 +189,12 @@ class ReaderViewModel @Inject constructor(
 
     /** The open EPUB, when the book is one (ADR-0019). */
     private var epub: EpubSession? = null
+
+    /** A fixed-layout EPUB's pages, when the book declares `rendition:layout: pre-paginated` (Phase 6 M2). */
+    private var fixed: FixedEpubPageSource? = null
+
+    /** The fixed-layout book itself, kept so the reader's title and progress are the book's. */
+    private var fixedBook: com.flowfolio.core.model.Book? = null
 
     /** Where an EPUB reader is: kept across layouts (fold, unfold, spreads) and saved with the book. */
     private var locator: Locator?
@@ -420,6 +428,9 @@ class ReaderViewModel @Inject constructor(
         opened = null
         epub?.close()
         epub = null
+        fixed?.close()
+        fixed = null
+        fixedBook = null
         sizes.clear()
         wanted = emptyList()
         currentKeys.value = emptyMap()
@@ -439,18 +450,27 @@ class ReaderViewModel @Inject constructor(
     }
 
     /** An EPUB (or a PDF's Dynamic Flow, [flow]): parse it, then lay it out once the reader knows its pane. */
+    @Suppress("CyclomaticComplexMethod", "ReturnCount")
     private suspend fun openEpub(flow: Boolean = false) {
+        val opened = try {
+            if (flow) repository.openFlow(bookId) else repository.openEpub(bookId)
+        } catch (_: FileNotFoundException) {
+            _state.value = ReaderState.Failed(missingFile = true, epub = true)
+            return
+        } catch (_: EpubException) {
+            _state.value = ReaderState.Failed(missingFile = false, epub = true)
+            return
+        }
+        if (opened.pkg.fixedLayout) {
+            openFixedLayout(opened)
+            return
+        }
         val session = try {
             // Headings in the app's display face (Fraunces), as on the library's covers.
             val heading = runCatching { context.resources.getFont(DesignR.font.fraunces) }.getOrNull()
             // Code in the app's own monospaced face (JetBrains Mono): the phone's may not be monospaced.
             runCatching { context.resources.getFont(DesignR.font.code_jetbrains_mono) }.getOrNull()?.let(CodeFace::use)
-            EpubSession.open(
-                if (flow) repository.openFlow(bookId) else repository.openEpub(bookId),
-                heading,
-                ::readingFont,
-                java.io.File(context.cacheDir, ISLAND_DIR)
-            )
+            EpubSession.open(opened, heading, ::readingFont, java.io.File(context.cacheDir, ISLAND_DIR))
         } catch (_: FileNotFoundException) {
             _state.value = ReaderState.Failed(missingFile = true, epub = true)
             return
@@ -480,6 +500,40 @@ class ReaderViewModel @Inject constructor(
             bookJobs += viewModelScope.launch { c.images.collect { cacheImages.value = it } }
         }
         ensureEpubLayout()
+    }
+
+    /** A fixed-layout EPUB: one WebView page per spine item, read like a PDF (page turns, no reflow). */
+    private suspend fun openFixedLayout(opened: OpenedEpub) {
+        val source = FixedEpubPageSource(context, opened.archive, opened.pkg)
+        fixed = source
+        fixedBook = opened.book
+        thumbnails = ReaderThumbnails(viewModelScope) { page, size, tone -> source.render(PageKey(page, size, tone)) }
+        loadCover(opened.book.coverPath)
+        cache = PageCache(source, viewModelScope, budgetBytes = 0, onEvicted = ::releaseLater).also { c ->
+            bookJobs += viewModelScope.launch { c.images.collect { cacheImages.value = it } }
+        }
+        sizes.clear()
+        repeat(source.pageCount) { page -> sizes[page] = com.flowfolio.core.model.PageSize(FIXED_W, FIXED_H) }
+        anchorPage =
+            (saved[KEY_ANCHOR] ?: opened.book.lastPage ?: 0).coerceIn(0, (source.pageCount - 1).coerceAtLeast(0))
+        loadFixedNavigation(opened)
+        publishReady()
+        replan()
+    }
+
+    /** A fixed-layout EPUB's contents, from its navigation document (each entry points at a spine item, a page). */
+    private fun loadFixedNavigation(opened: OpenedEpub) {
+        val pathToPage = opened.pkg.spine.filter { it.linear && it.mediaType.contains("html") }
+            .map { it.path }.withIndex().associate { (i, path) -> path to i }
+        val outline = ArrayList<OutlineEntry>()
+        fun walk(points: List<com.flowfolio.core.epub.NavPoint>, depth: Int) {
+            for (p in points) {
+                pathToPage[p.href.substringBefore('#')]?.let { outline += OutlineEntry(depth, it, p.label) }
+                walk(p.children, depth + 1)
+            }
+        }
+        walk(opened.pkg.toc, 0)
+        _navigation.value = BookNavigation(outline = outline)
     }
 
     /**
@@ -803,10 +857,11 @@ class ReaderViewModel @Inject constructor(
         else -> chooseLayout(v.widthDp, v.heightDp)
     }
 
+    @Suppress("CyclomaticComplexMethod")
     private fun publishReady(unitOverride: Int? = null) {
         val session = epub
-        val book = opened?.book ?: session?.opened?.book
-        val pageCount = opened?.document?.pageCount ?: session?.pageCount
+        val book = opened?.book ?: session?.opened?.book ?: fixedBook
+        val pageCount = opened?.document?.pageCount ?: session?.pageCount ?: fixed?.pageCount
         val layingOut = session != null && ensureEpubLayout()
         if (book == null || pageCount == null || layingOut) return
         val layout = layoutFor(viewport)
@@ -842,10 +897,34 @@ class ReaderViewModel @Inject constructor(
         val v = viewport
         val session = epub
         val book = opened
+        val fixedSource = fixed
         when {
             ready == null || v == null -> Unit
             session != null -> if (!ensureEpubLayout()) planEpub(ready, session)
+            fixedSource != null -> planFixed(ready, v)
             book != null -> planPdf(ready, v, book)
+        }
+    }
+
+    /** Fixed-layout pages are drawn at the pane size; the cache holds the visible unit and the ones a turn reveals. */
+    private fun planFixed(ready: ReaderState.Ready, v: Viewport) {
+        planJob?.cancel()
+        planJob = viewModelScope.launch {
+            val spread = ready.layout == ReaderLayout.SPREAD
+            val paneWidth = if (spread) v.widthPx / 2 else v.widthPx
+            val paneHeight = if (ready.turn == PageTurn.SCROLL) UNBOUNDED_HEIGHT else v.heightPx
+            val units = listOf(ready.unit, ready.unit + 1, ready.unit - 1, ready.unit + 2)
+                .filter { it in 0 until ready.unitCount }
+            val pages = units.flatMap { u ->
+                if (spread) Spreads.pagesOf(u, ready.pageCount, ready.coverAlone) else listOf(u)
+            }
+            val keys = pages.map { page ->
+                val size = sizes.getOrPut(page) { com.flowfolio.core.model.PageSize(FIXED_W, FIXED_H) }
+                PageKey(page, size.fitInside(paneWidth, paneHeight), ready.tone)
+            }
+            wanted = keys
+            currentKeys.value = keys.associateBy { it.page }
+            cache?.request(keys, newBudgetBytes = minOf(keys.sumOf { it.size.argbBytes }, MAX_CACHE_BYTES))
         }
     }
 
@@ -1061,6 +1140,10 @@ class ReaderViewModel @Inject constructor(
 
         /** The island disk cache (ADR-0021), under the app's cache directory. */
         private const val ISLAND_DIR = "islands"
+
+        /** The page size (points) a fixed-layout EPUB's pages are reported at (Phase 6 M2). */
+        private const val FIXED_W = 600f
+        private const val FIXED_H = 800f
 
         /** Long enough for any frame that still referenced an evicted page to finish. */
         private const val RELEASE_DELAY_MS = 1_000L
