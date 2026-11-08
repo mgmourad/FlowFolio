@@ -75,4 +75,5 @@ object ReaderTestTags {
     const val SEARCH = "reader_search"
     const val SEARCH_PANEL = "reader_search_panel"
     const val SEARCH_FIELD = "reader_search_field"
+    const val NARRATOR = "reader_narrator"
 }

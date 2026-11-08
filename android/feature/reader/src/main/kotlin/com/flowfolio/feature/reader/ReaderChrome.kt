@@ -231,6 +231,10 @@ private fun TopTools(mark: ChromeMark, actions: ChromeActions, button: Dp) {
                 .merge(FlowFolio.title)
         )
     }
+    val narrator = Modifier.testTag(ReaderTestTags.NARRATOR).reveal(8)
+    FlowFolioIconButton({ actions.onPanel(Panel.NARRATOR) }, narrator, glass = true, size = button) {
+        FlowFolioGlyph(Glyph.Sound, stringResource(R.string.reader_narrator), size = glyph)
+    }
 }
 
 /** The book's title on glass, beside Back (unfolded) or centred (folded). */
@@ -478,8 +482,8 @@ private val BIG_BUTTON = 56.dp
 private val FOLDED_BUTTON = 50.dp
 private val TOOL_GAP = 8.dp
 
-/** Back, Search, Contents, Go to page, annotations, Aa and the ribbon, for PDFs and EPUBs alike (M4, M1). */
-private const val TOOL_BUTTONS = 7
+/** Back, Search, Contents, Go to page, annotations, Aa, the ribbon and Narrator, for PDFs and EPUBs alike. */
+private const val TOOL_BUTTONS = 8
 private const val SETTINGS_TEXT_SP = 16f
 
 /** A glyph's share of its round button (24 dp in 42 dp). */

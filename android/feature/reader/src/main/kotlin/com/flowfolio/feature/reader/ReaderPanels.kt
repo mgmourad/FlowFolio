@@ -1,5 +1,6 @@
 package com.flowfolio.feature.reader
 
+import android.speech.tts.Voice
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -71,7 +72,12 @@ internal fun BoxScope.ReaderPanels(
     hits: List<SearchHit> = emptyList(),
     searchQuery: String = "",
     onSearchQuery: (String) -> Unit = {},
-    onSearchJump: (SearchHit) -> Unit = {}
+    onSearchJump: (SearchHit) -> Unit = {},
+    narrator: NarratorUi = NarratorUi(),
+    onNarratorToggle: () -> Unit = {},
+    onNarratorRate: (Float) -> Unit = {},
+    onNarratorContinuous: (Boolean) -> Unit = {},
+    onNarratorVoice: (String) -> Unit = {}
 ) {
     val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
     if (wide) {
@@ -103,7 +109,29 @@ internal fun BoxScope.ReaderPanels(
     DropPanel(panel == Panel.SEARCH, SEARCH_WIDTH, fillDown = true) {
         ReaderSearchPanel(searchQuery, hits, onSearchQuery, onSearchJump)
     }
+    DropPanel(panel == Panel.NARRATOR, SEARCH_WIDTH) {
+        ReaderNarratorPanel(
+            narrator.narrating,
+            narrator.rate,
+            narrator.continuous,
+            narrator.voices,
+            narrator.voice,
+            onNarratorToggle,
+            onNarratorRate,
+            onNarratorContinuous,
+            onNarratorVoice
+        )
+    }
 }
+
+/** Narrator Mode's state, collected in [ReadyReader] and passed to [ReaderNarratorPanel] (Phase 6 M3). */
+internal data class NarratorUi(
+    val narrating: Boolean = false,
+    val rate: Float = 1f,
+    val continuous: Boolean = true,
+    val voices: List<Voice> = emptyList(),
+    val voice: String? = null
+)
 
 /**
  * A glass panel centered in the middle of the screen (for unfolded Contents and the Dictionary popup), keeping clear

@@ -412,6 +412,7 @@ class ReaderViewModel @Inject constructor(
 
     /** Lets go of everything the open book holds, so it can open again (in the other view). */
     private fun closeBook() {
+        stopNarration()
         layoutJob?.cancel()
         planJob?.cancel()
         bookJobs.forEach { it.cancel() }
@@ -790,6 +791,79 @@ class ReaderViewModel @Inject constructor(
         return out
     }
 
+    /** Narrator Mode (Phase 6 M3): reads the page aloud with Android's own offline text-to-speech. */
+    private var narrator: Narrator? = null
+
+    private val _narrating = MutableStateFlow(false)
+    internal val narrating: StateFlow<Boolean> = _narrating.asStateFlow()
+
+    private val _narratorRate = MutableStateFlow(1f)
+    internal val narratorRate: StateFlow<Float> = _narratorRate.asStateFlow()
+
+    private val _narratorContinuous = MutableStateFlow(true)
+    internal val narratorContinuous: StateFlow<Boolean> = _narratorContinuous.asStateFlow()
+
+    private val _narratorVoices = MutableStateFlow<List<android.speech.tts.Voice>>(emptyList())
+    internal val narratorVoices: StateFlow<List<android.speech.tts.Voice>> = _narratorVoices.asStateFlow()
+
+    private val _narratorVoice = MutableStateFlow<String?>(null)
+    internal val narratorVoice: StateFlow<String?> = _narratorVoice.asStateFlow()
+
+    fun toggleNarration() {
+        if (_narrating.value) stopNarration() else startNarration()
+    }
+
+    fun setNarratorRate(rate: Float) {
+        _narratorRate.value = rate
+        narrator?.rate = rate
+    }
+
+    fun setNarratorContinuous(on: Boolean) {
+        _narratorContinuous.value = on
+    }
+
+    fun setNarratorVoice(name: String) {
+        _narratorVoice.value = name
+        narrator?.voice = narrator?.voices?.firstOrNull { it.name == name }
+    }
+
+    private fun startNarration() {
+        val n = narrator ?: Narrator(context) { voices ->
+            _narratorVoices.value = voices
+            _narratorVoice.value = voices.firstOrNull()?.name
+        }.also { narrator = it }
+        n.rate = _narratorRate.value
+        _narrating.value = true
+        readPage(anchorPage)
+    }
+
+    private fun stopNarration() {
+        narrator?.stop()
+        _narrating.value = false
+    }
+
+    private fun readPage(page: Int) {
+        viewModelScope.launch {
+            val text = pageText(page)?.text.orEmpty()
+            if (text.isBlank()) {
+                advanceOrStop(page)
+                return@launch
+            }
+            narrator?.speak(text) { advanceOrStop(page) }
+        }
+    }
+
+    private fun advanceOrStop(page: Int) {
+        if (!_narrating.value) return
+        val count = (_state.value as? ReaderState.Ready)?.pageCount ?: 0
+        if (_narratorContinuous.value && page + 1 < count) {
+            goToPage(page + 1)
+            readPage(page + 1)
+        } else {
+            _narrating.value = false
+        }
+    }
+
     /** The reader's root layout reports the window size whenever it changes (fold, unfold, rotation, resize). */
     fun onViewport(viewport: Viewport) {
         if (viewport == this.viewport) return
@@ -1118,6 +1192,8 @@ class ReaderViewModel @Inject constructor(
         source?.release()
         opened?.document?.close()
         epub?.close()
+        fixed?.close()
+        narrator?.release()
     }
 
     companion object {

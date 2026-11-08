@@ -51,6 +51,7 @@ internal enum class ReaderGuide(val id: String, val glyph: Glyph, @StringRes val
             Panel.DICTIONARY -> Dictionary
             Panel.NONE -> null
             Panel.SEARCH -> null
+            Panel.NARRATOR -> null
         }
     }
 }

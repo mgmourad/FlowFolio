@@ -311,6 +311,18 @@ internal fun BoxScope.Controls(
             val settings by parts.book.userSettings.collectAsStateWithLifecycle()
             val hits by parts.book.searchResults.collectAsStateWithLifecycle()
             val searchQuery by parts.book.searchQuery.collectAsStateWithLifecycle()
+            val narrating by parts.book.narrating.collectAsStateWithLifecycle()
+            val narratorRate by parts.book.narratorRate.collectAsStateWithLifecycle()
+            val narratorContinuous by parts.book.narratorContinuous.collectAsStateWithLifecycle()
+            val narratorVoices by parts.book.narratorVoices.collectAsStateWithLifecycle()
+            val narratorVoice by parts.book.narratorVoice.collectAsStateWithLifecycle()
+            val narrator = NarratorUi(
+                narrating = narrating,
+                rate = narratorRate,
+                continuous = narratorContinuous,
+                voices = narratorVoices,
+                voice = narratorVoice
+            )
             ReaderChrome(
                 s,
                 navigation,
@@ -337,7 +349,12 @@ internal fun BoxScope.Controls(
                 onSearchJump = { hit ->
                     parts.book.jumpTo(hit)
                     overlay.dismiss()
-                }
+                },
+                narrator = narrator,
+                onNarratorToggle = parts.book::toggleNarration,
+                onNarratorRate = parts.book::setNarratorRate,
+                onNarratorContinuous = parts.book::setNarratorContinuous,
+                onNarratorVoice = parts.book::setNarratorVoice
             )
             AtmosphereGlimpse(parts.book)
             FootnotePopover(overlay.note, parts.book::footnote, onDismiss = { overlay.note = null })
