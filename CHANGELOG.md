@@ -5,23 +5,66 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
-> **Phase 6 M0** (the owner's reading-surface tweak batch, 2026-11-07). `docs/plans/phase6-m0.md` records it. Not yet
-> released; CI runs at the Phase 6 boundary.
+## [0.6.0-canary.1] - 2026-11-08
+
+> **Phase 6 (reading features) is closed.** `docs/plans/phase6-signoff.md` records it; ADR-0051 (offline neural TTS via
+> `sherpa-onnx` with Kokoro and Piper voice packs) is accepted with this sign-off. The release is gated on green CI,
+> including the converter corpus gate.
 
 ### Added
-- **First-use guides on the reader's buttons.** The first time a reader taps Contents, Go-to-page, Aa, the ribbon,
-  Annotations or Dictionary, a centred window explains it — "Got it" and "Never show tips again" — rather than a
-  spotlight that could clip or misalign. The existing `seenGuides`/`tipsEnabled` machinery remembers each one.
-- **The Bookmarks tab groups by book.** One card per book — its title, author, the ribbon colours actually placed in it,
-  and "N Bookmarks" — newest ribbon first; tapping a book opens its ribbon cards, where the colour filter now lives.
+- **Narrator Mode with offline neural voices** (Phase 6 M3, ADR-0051). The reader can read a book aloud offline using
+  two neural text-to-speech families powered by `sherpa-onnx` (`:core:voice`): **Kokoro** (`kokoro-int8-multi-lang-v1_0`,
+  11 US and UK English voices — Heart, Bella, Nicole, Sarah, Sky, Adam, Michael, Emma, Isabella, George and Lewis — from
+  one shared download) and **Piper VITS** (`Amy` US female and `Alan` UK male as standalone lighter-weight downloads).
+  Voice packs download on first use with SHA-256 verification and a non-blocking progress overlay in the reader chrome.
+- **Natural reading cadence, hyphen joining, and seamless page transitions in Narrator Mode** (owner, 2026-11-08).
+  `SpeechText` inserts distinct structural pauses after titles (`480 ms`), subtitles (`340 ms`), paragraphs (`320 ms`),
+  sentences (`150 ms`) and long clauses (`65 ms`), while inserting **zero pause (`0 ms`)** when a page ends
+  mid-sentence. `Narrator` pre-synthesizes the next page's opening sentence into the active `AudioTrack` queue before
+  auto-advancing and plays the page-turn sound on flip. Words split across lines or page boundaries by `-`, soft hyphens
+  (`\u00AD`) or PDFium line-break hyphens (`\u0002`) are rejoined, running headers and folios are stripped across
+  mid-sentence page turns, and regular plural (`-s`/`-es`/`-ies`) and past-tense (`-d`/`-ed`/`-ied`) lexicon inflections
+  are generated on-device.
+- **Vocoder de-hiss conditioning** (`PcmAudio.cleanVocoderBand`, owner, 2026-11-08). A zero-allocation 2-pole Butterworth
+  low-pass filter at `8.2 kHz`, a soft quadratic downward expander below `-41 dBFS`, and `6 ms` raised-cosine edge fades
+  strip 8-bit neural vocoder quantization hiss while keeping speech crisp.
+- **Search inside a book** (Phase 6 M1). A Search tool in the reader searches every chapter of a Dynamic Flow book or
+  every page of a PDF, showing each match with its chapter/section, surrounding snippet and page number; tapping jumps to
+  the place and highlights the match until the search is dismissed.
+- **Fixed-layout EPUBs** (Phase 6 M2). EPUBs with `rendition:layout: pre-paginated` open through `FixedEpubPageSource`,
+  rendering one spine item per page at its viewport dimensions in an isolated, network-blocked WebView rather than
+  reflowing page-designed books.
+- **Three-source Define across Wiktionary, WordNet 3.1 and Wikipedia** (owner, 2026-11-07). Looking up a word queries the
+  offline English Wiktionary, the full bundled Princeton WordNet 3.1 database (`wordnet.db.gz`, 132k entries with
+  synonyms and hypernyms), and English Wikipedia's opening summary for specialized and technical terms.
+- **Vertical tool rail on the unfolded reader** (owner, 2026-11-08). When unfolded, the reader's secondary tools (Aa,
+  Narrator, Bookmark, Annotate, Translate, Search, Contents) sit in a vertical glass rail on the right edge with an
+  active-panel glow.
+- **First-use guides on the reader's buttons** (Phase 6 M0). The first time a reader taps Contents, Go-to-page, Aa, the
+  ribbon, Annotations or Dictionary, a centred window explains it — "Got it" and "Never show tips again" — remembered via
+  `seenGuides`/`tipsEnabled`.
+- **The Bookmarks tab groups by book** (Phase 6 M0). One card per book — its title, author, the ribbon colours actually
+  placed in it, and "N Bookmarks" — newest ribbon first; tapping a book opens its ribbon cards and colour filter.
 
 ### Changed
-- **Top-level page titles sit on the button row.** `ScreenHeader` puts the title beside the page's buttons (the slogan
-  drops below); on a narrow (folded) screen the title steps down a size so a name like "Bookmarks" stays whole.
+- **Top-level page titles sit on the button row** (Phase 6 M0). `ScreenHeader` puts the title beside the page's buttons
+  (the slogan drops below); on a narrow (folded) screen the title steps down a size so a name like "Bookmarks" stays
+  whole.
+- **Formatted release notes in the "What's new" window** (owner, 2026-11-08). `WhatsNewDialog` renders headings, bullets
+  and bold spans from the release notes and waits until the first-launch tour is dismissed on fresh installs.
 
 ### Fixed
-- **The folded running head no longer sits under the front camera.** It starts left of the text border and truncates at
-  the camera's left edge, read from the display cutout rather than a hardcoded offset.
+- **R8 keep rules for ML Kit and `sherpa-onnx` JNI callbacks** (owner, 2026-11-07 & 2026-11-08). Kept `com.google.mlkit.**`,
+  `com.k2fsa.sherpa.onnx.**`, and `ChunkCallback`'s specialized `Function1.invoke([F)Ljava/lang/Integer;` method so
+  on-device translation and streaming neural TTS work in minified release builds.
+- **Piper VITS single-file lexicon loading and atomic voice-pack switching** (owner, 2026-11-08). `VoiceEngine.loadPiper`
+  writes a single merged lexicon file (`lexicon-en-us-complete.txt`) as required by `OfflineTtsVitsModelConfig`, and
+  `VoicePackDownloader` uses `.part` staging files with 3x retry and clean coroutine cancellation so switching voices
+  mid-narration never triggers false download errors.
+- **Page-turn sounds play even under Do Not Disturb** when the reader has them enabled, and the Define panel opens
+  directly under its button with smaller justified text.
+- **The folded running head no longer sits under the front camera** (Phase 6 M0). It starts left of the text border and
+  truncates at the camera's left edge, read from the display cutout rather than a hardcoded offset.
 - **The unfolded section label right-aligns** to the right page's outer margin, growing left only to that page's inner
   margin, ellipsis at the right.
 - **The reader's running head no longer overlaps the tools.** It is hidden while the chrome shows (with or without a

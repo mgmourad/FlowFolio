@@ -142,14 +142,24 @@ first-book demo with "Never show tips again", the reader's chapter-and-section r
 annotation counts and VoiceMark tabs, and the Favourites page header). ADR-0050 (release-channel renumbering: 3–4
 alpha, 5–6 canary, 7 beta) is accepted with this sign-off. Next: Phase 6.
 
-**Phase 6 M0 (the reading-surface tweak batch) built 2026-11-07** (`docs/plans/phase6-m0.md`, CHANGELOG Unreleased):
+**Phase 6 M0 (the reading-surface tweak batch) built 2026-11-07** (`docs/plans/phase6-m0.md`):
 the owner's batch arriving ahead of Phase 6's milestones. Delivered: first-use guides on the reader's buttons (centred
 windows on first use — Contents, Go-to-page, Aa, ribbon, Annotations, Dictionary); the Bookmarks tab grouped one card
 per book (title, author, ribbon colours, "N Bookmarks"); top-level page titles on the button row (smaller when folded);
 the folded running head shifted left of the text border and cut at the front camera (read from the display cutout); the
 unfolded section label right-aligned; the running head hidden while the chrome shows so it never overlaps the tools;
-and the book-details title capped at three lines with a tap-to-view. Verified on the owner's Fold, folded; the unfolded
-items (shelf title, section label) and the ribbon shape still want the owner's eyes.
+and the book-details title capped at three lines with a tap-to-view.
+
+**Phase 6 signed off by the owner 2026-11-08** (`docs/plans/phase6-signoff.md`) and **released as FlowFolio
+0.6.0-canary.1 (build 600001)**, tag `v0.6.0-canary.1`. Delivered: M1 in-book phrase search across both Dynamic Flow
+and PDF views (`BookSearch`, `ReaderSearchPanel`) plus three-source Define across English Wiktionary, bundled Princeton
+WordNet 3.1 (`wordnet.db.gz`), and Wikipedia summaries; M2 fixed-layout EPUB rendering page by page via
+`FixedEpubPageSource`; M3 Narrator Mode powered by offline neural TTS via `sherpa-onnx` v2.0.1 (`:core:voice`,
+ADR-0051) with 11 Kokoro voices and 2 Piper voices downloaded on first use, streaming synthesis, structural pauses for
+titles/subtitles/paragraphs, zero-pause mid-sentence page transitions with pre-queued next-page audio and page-turn
+sounds, line-break and cross-page hyphen rejoining, on-device plural and past-tense lexicon inflection generation, and
+an `8.2 kHz` 2-pole Butterworth vocoder de-hiss filter; plus the unfolded right-edge vertical tool rail and R8 keep
+rules for ML Kit and `sherpa-onnx` JNI callbacks. ADR-0051 is accepted with this sign-off. Next: Phase 7.
 
 ## Product direction (owner decisions, 2026-10-16)
 
@@ -178,7 +188,9 @@ leave the repository able to explain itself: what is in flight, what was verifie
 ## Architecture summary
 
 - Android modules (ADR-0012): `:app`, `:core:model` (JVM), `:core:pdf` (PDFium JNI, NDK), `:core:database` (Room),
-  `:core:datastore`, `:core:epub` (EPUB parsing, ADR-0020), `:core:reflow` (EPUB pagination and page drawing, ADR-0019), `:feature:reader:riffle` (the riffle scrubber, ADR-0022), `:core:data` (repositories, import, reader access), `:core:designsystem`, `:core:pagecurl`
+  `:core:datastore`, `:core:epub` (EPUB parsing, ADR-0020), `:core:reflow` (EPUB pagination and page drawing, ADR-0019),
+  `:core:voice` (offline neural TTS on `sherpa-onnx` for Kokoro and Piper voices, ADR-0051), `:feature:reader:riffle`
+  (the riffle scrubber, ADR-0022), `:core:data` (repositories, import, reader access), `:core:designsystem`, `:core:pagecurl`
   (vendored), `:feature:library` (library + settings), `:feature:reader` (curl, spreads, page cache),
   `:core:conversion` (the PDF to EPUB converter, plain JVM, ADR-0044), `:core:extract` (yt-dlp on an embedded
   CPython 3.12 through Chaquopy, for audio out of a video page, ADR-0047), `:tools:convert` (the converter on the
@@ -556,4 +568,7 @@ PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory bud
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
 Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), island image cache (0021), riffle scrubber (0022) and its haptics and sound (0023), screenshot tests with Roborazzi (0024), the owner's recorded paper sounds (0025, supersedes the sound part of 0023), page turn sounds and per-sound volumes (0026), reading fonts (0027), app themes (0028), Rustic without texture (0029), the book's own fonts (0030), EPUB memory and island stand-ins (0031), page sounds on the media stream (0032), the motion system (0033), element entrances and edge fades (0034), edge fades blurring behind the bars only (0035), the fixed signing key for sideloaded dev builds (0036), Google Books as a second details source (0037, its Google part superseded by 0039), multi-file and folder imports with folders as book paths (0038), book details from Open Library only (0039), EPUB highlights and ribbons stored by locator (0040), chapters on their own spread and the reader's chapter laid out first (0041), release channels and versioning (0042), retiring the Python converter (0043), the conversion engine as a plain JVM module with JNA in desktop tooling only (0044, proposed for the M1+M2 sign-off; would supersede the KMP part of 0009), Dynamic Flow (0045, the owner's design), the offline Wiktionary dictionary (0046),
 audio extraction with yt-dlp embedded (0047, accepted 2026-11-03: Unlicense source on MIT Chaquopy and PSF CPython,
-no ffmpeg because only an address is extracted), updating from the releases page (0048, proposed), re-keying the release identity after the signing key was lost (0049, proposed; supersedes the key-custody part of 0042).
+no ffmpeg because only an address is extracted), updating from the releases page (0048, accepted), re-keying the
+release identity after the signing key was lost (0049, accepted; supersedes the key-custody part of 0042), release-channel
+renumbering (0050, accepted 2026-11-07: 3–4 alpha, 5–6 canary, 7 beta), and offline neural TTS via `sherpa-onnx` with
+Kokoro and Piper voice packs (0051, accepted 2026-11-08).

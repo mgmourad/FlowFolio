@@ -14,16 +14,16 @@
   more are free once downloaded).
 - **Delivery:** download-on-first-use (the model is ~160 MB unpacked; too big to bundle). A prompt
   with progress before first narration, cached to app storage, checksum-verified.
-- **Extensible:** the model already contains 53 Kokoro speakers, so more speakers are free once
-  downloaded. Additional voice packs (Piper voices, other languages) can be added later as opt-in
-  downloads behind the same picker — this is explicitly deferred, not blocked.
+- **Extensible — both Kokoro and Piper ship:** the Kokoro model provides 11 English speakers (`Heart`,
+  `Bella`, `Nicole`, `Sarah`, `Sky`, `Adam`, `Michael`, `Emma`, `Isabella`, `George`, `Lewis`) from a
+  single download, and two **Piper VITS** voices (`Amy` US female, `Alan` UK male) ship alongside it
+  as lighter-weight (~64 MB) opt-in voice packs behind the same voice picker (ADR-0051).
 
-## Why not Piper (and why it's still on the table)
+## Piper voices alongside Kokoro
 
-- Piper is lighter per-voice (~60 MB) and faster, but sounds a clear step below Kokoro, and each
-  voice is a separate ~60 MB download (two voices ≈ two downloads).
-- Kept as a *future* opt-in "voice pack" if the owner wants a lower-footprint option, but not built
-  now.
+- Piper is lighter per-voice (~64 MB) and faster to download on constrained connections; both sources
+  are offered in the narrator voice picker (`Kokoro` and `Piper`) so the reader can switch between them
+  at any time, including mid-narration.
 
 ## Sizes (measured in the spike, 2026-11-08)
 

@@ -1,6 +1,6 @@
 # FlowFolio Architecture
 
-Status: Phase 3 (2026-10-27). Sections marked *planned* describe intent, not code. Module detail: `CLAUDE.md`.
+Status: Phase 6 (2026-11-08). Sections marked *planned* describe intent, not code. Module detail: `CLAUDE.md`.
 
 ## System context
 
@@ -9,21 +9,25 @@ flowchart LR
   user([Reader]) --> app[FlowFolio Android app]
   app --> conv[On-device converter, :core:conversion]
   conv -- "EPUB 3 + flowfolio.json" --> app
+  app --> voice[Offline neural TTS, :core:voice]
   app --> storage[(On-device storage: books, Room DB, caches)]
   app -. "book details, opt-in" .-> ol[Open Library]
   app -. "translation models" .-> mlkit[ML Kit downloads]
+  app -. "voice packs, on demand" .-> voices[GitHub Releases]
 ```
 
-Privacy: books never leave the device. Conversion runs on the phone (ADR-0009); the only network use is the opt-in
-book details lookup and ML Kit translation (model downloads and anonymous usage data; ADR-0017, ADR-0018).
+Privacy: books never leave the device. Conversion and neural text-to-speech run on the phone (ADR-0009, ADR-0051);
+network access is used only on demand for opt-in book details lookup, Wikipedia term summaries in Define, ML Kit
+translation model downloads (ADR-0017, ADR-0018), neural TTS voice pack downloads (ADR-0051), and in-app update checks
+(ADR-0048).
 
 ## The app (`android/`)
 
 - Kotlin, Jetpack Compose, Material 3, single activity, Hilt (ADR-0007), minSdk 29 (ADR-0006), MVVM with
   unidirectional data flow.
 - Reading: PDFium through our own JNI bridge (`:core:pdf`, ADR-0010), the vendored page curl (`:core:pagecurl`,
-  ADR-0011), our EPUB parser and pagination engine (`:core:epub`, `:core:reflow`, ADR-0019/0020), the reader
-  (`:feature:reader`), library and shelves (`:feature:library`).
+  ADR-0011), our EPUB parser and pagination engine (`:core:epub`, `:core:reflow`, ADR-0019/0020), offline neural TTS via
+  `sherpa-onnx` (`:core:voice`, ADR-0051), the reader (`:feature:reader`), library and shelves (`:feature:library`).
 
 ## The converter (`:core:conversion`, ADR-0009, ADR-0044)
 
