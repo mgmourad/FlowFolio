@@ -45,4 +45,5 @@ include(":tools:convert")
 // Throwaway spikes: built only with -Pspikes, never in CI or the shipped app.
 if (providers.gradleProperty("spikes").isPresent) {
     include(":spikes:epub-pagination")
+    include(":spikes:sherpa-onnx")
 }

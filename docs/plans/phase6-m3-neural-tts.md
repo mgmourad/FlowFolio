@@ -1,0 +1,87 @@
+# Phase 6 M3 — Narrator Mode: Neural voices (Kokoro via sherpa-onnx)
+
+- **Status:** decided with the owner (2026-11-08). Replaces the on-device Android `TextToSpeech`
+  voices, which the owner found robotic, with real neural voices run 100% offline.
+
+## Decision
+
+- **Engine:** Kokoro (English, 11 speakers) running on **sherpa-onnx**
+  (Apache-2.0 on-device runtime). Kokoro is the most natural small open-source TTS; it is the
+  "Gemini-like" bar the owner wants.
+- **Two default voices** are two *speakers from the one model*: a warm female + `am_michael`
+  (neutral male). One download → two voices.
+- **Delivery:** download-on-first-use (the model is ~140 MB unpacked; too big to bundle). A prompt
+  with progress before first narration, cached to app storage, checksum-verified.
+- **Extensible:** the model already contains all 11 Kokoro speakers, so more speakers are free once
+  downloaded. Additional voice packs (Piper voices, other languages) can be added later as opt-in
+  downloads behind the same picker — this is explicitly deferred, not blocked.
+
+> **⚠️ Model-choice nuance (found in the spike):** `af_heart` is **not** in the English
+> `kokoro-en-v0_19` model. Its 11 speakers are `af, af_bella, af_nicole, af_sarah, af_sky, am_adam,
+> am_michael, bf_emma, bf_isabella, bm_george, bm_lewis`. `af_heart` only exists in the multi-lang
+> models (`kokoro-multi-lang-v1_0`, int8 132 MB, 53 speakers). Decide: (a) use the smaller EN model
+> with `af_bella`/`af_nicole` as the female default, or (b) use the multi-lang model to get
+> `af_heart` + `am_michael` at +~30 MB.
+
+## Why not Piper (and why it's still on the table)
+
+- Piper is lighter per-voice (~60 MB) and faster, but sounds a clear step below Kokoro, and each
+  voice is a separate ~60 MB download (two voices ≈ two downloads).
+- Kept as a *future* opt-in "voice pack" if the owner wants a lower-footprint option, but not built
+  now.
+
+## Sizes (measured in the spike, 2026-11-08)
+
+| | Kokoro EN, int8 | Piper medium (one voice) |
+|---|---|---|
+| Model | **128 MB** (`model.int8.onnx`) | ~60–65 MB |
+| Phonemizer | **6.3 MB** (`lexicon-en-us.txt`) | ~6 MB lexicon |
+| Other (voices.bin/tokens) | ~5.5 MB | negligible |
+| **Unpacked total** | **~140 MB** | ~70 MB |
+
+The `espeak-ng-data` (18 MB) shipped in the tarball is **not used** by sherpa-onnx v2.0.1 — drop it.
+Kokoro fp32 is ~330 MB and fp16 ~165 MB — we use **int8**.
+
+## Licensing (for the record)
+
+- sherpa-onnx: Apache-2.0. Kokoro weights: Apache-2.0. Piper: MIT (code; voices vary).
+- ✅ **No espeak-ng.** sherpa-onnx v2.0.1 phonemizes via a plain `lexicon-en-us.txt` (CMUDict-based),
+  so the GPL-3.0 espeak-ng concern is gone for our path.
+
+## Approach
+
+- Add the sherpa-onnx **Android AAR** (`sherpa-onnx-2.0.1.aar`, 49 MB, arm64-v8a + classes) via
+  `implementation(files("sherpa-onnx-2.0.1.aar"))` — **confirmed working in the spike** (native libs
+  load, `OfflineTts` synthesizes). Loads the model from absolute file paths via
+  `OfflineTts(assetManager = null, config)`.
+- Replace `Narrator.kt`'s `TextToSpeech` with `OfflineTts` + `AudioTrack` playback. The rest of M3
+  (panel, play/pause/rate/continuous, `ReaderViewModel` state) is already built and stays.
+- Add a **voice pack** download manager (URL → app `filesDir`, checksum, progress state) and a
+  first-use prompt.
+- Voice picker: two default speakers + a per-voice **preview** button (plays a sample sentence) so
+  the owner can audition and choose. (I cannot audition audio myself — the preview button is how
+  the owner hears each voice.)
+
+## Out of scope (this pass)
+
+- Piper voice packs and other Kokoro languages (future opt-in downloads).
+- Reading PDF native text (same reflowed-text path as M3 today).
+- Spoken alt for tables/equations (converter follow-up, `phase6-m1.md`).
+
+## Files
+
+- `android/feature/reader/src/main/kotlin/com/flowfolio/feature/reader/Narrator.kt` — rewrite: `OfflineTts` + `AudioTrack` instead of `TextToSpeech`.
+- `android/feature/reader/src/main/kotlin/com/flowfolio/feature/reader/VoicePack.kt` — new: download, checksum, cache, progress (StateFlow).
+- `android/feature/reader/src/main/kotlin/com/flowfolio/feature/reader/ReaderNarratorPanel.kt` — voice picker: two speakers + preview + "download voice" state.
+- `android/feature/reader/src/main/kotlin/com/flowfolio/feature/reader/ReaderViewModel.kt` — speaker id + pack state instead of `android.speech.tts.Voice`.
+- `android/feature/reader/src/main/kotlin/com/flowfolio/feature/reader/ReaderPanels.kt` — `NarratorUi` (voices → speakers, download state).
+- `android/feature/reader/src/main/kotlin/com/flowfolio/feature/reader/ReadyReader.kt` — collect new state.
+- `android/app/build.gradle.kts` / a new `:core:voice` module — sherpa-onnx AAR + native libs.
+- `android/feature/reader/src/main/res/values/strings.xml` — copy.
+
+## Verification
+
+- `spotlessCheck detekt testDebugUnitTest -x :tools:convert:test`, `:app:assembleDebug`.
+- On-device: first-use download prompt → download → pick the female default → preview → narrate;
+  switch to `am_michael`; confirm no robot-voice (owner listens), pause/rate/continuous still work,
+  and it all stays offline in airplane mode.
