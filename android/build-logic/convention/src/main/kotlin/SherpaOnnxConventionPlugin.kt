@@ -78,7 +78,8 @@ class SherpaOnnxConventionPlugin : Plugin<Project> {
                 sha256.set(SherpaOnnx.SHA256)
                 outputDir.set(out)
             }
-            dependencies.add("implementation", files(out.map { it.file("classes.jar") }))
+            // Derive the jar from the task's output so the dependency carries the fetch task with it.
+            dependencies.add("implementation", files(fetch.flatMap { it.outputDir.file("classes.jar") }))
             extensions.configure<LibraryExtension> {
                 sourceSets.getByName("main").jniLibs.directories.add(out.get().dir("jni").asFile.path)
             }

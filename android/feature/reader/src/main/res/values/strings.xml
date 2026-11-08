@@ -66,6 +66,8 @@
     <string name="reader_narrator_continuous">Turn pages as it reads</string>
     <string name="reader_narrator_voice">Voice</string>
     <string name="reader_narrator_voice_default">Default voice</string>
+    <string name="reader_narrator_downloading">Downloading voice… %1$d%%</string>
+    <string name="reader_narrator_download_failed">Voice download failed: %1$s</string>
     <string name="reader_go_to">Go to page</string>
     <string name="reader_go_to_title">Go to page</string>
     <string name="reader_go_to_label">Page</string>

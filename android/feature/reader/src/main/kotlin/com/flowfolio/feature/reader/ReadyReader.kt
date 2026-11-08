@@ -314,14 +314,15 @@ internal fun BoxScope.Controls(
             val narrating by parts.book.narrating.collectAsStateWithLifecycle()
             val narratorRate by parts.book.narratorRate.collectAsStateWithLifecycle()
             val narratorContinuous by parts.book.narratorContinuous.collectAsStateWithLifecycle()
-            val narratorVoices by parts.book.narratorVoices.collectAsStateWithLifecycle()
             val narratorVoice by parts.book.narratorVoice.collectAsStateWithLifecycle()
+            val voicePackState by parts.book.voicePackState.collectAsStateWithLifecycle()
             val narrator = NarratorUi(
                 narrating = narrating,
                 rate = narratorRate,
                 continuous = narratorContinuous,
-                voices = narratorVoices,
-                voice = narratorVoice
+                voices = parts.book.narratorVoices,
+                voice = narratorVoice,
+                packState = voicePackState
             )
             ReaderChrome(
                 s,

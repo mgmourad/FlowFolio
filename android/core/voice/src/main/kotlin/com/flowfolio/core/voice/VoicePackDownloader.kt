@@ -2,6 +2,7 @@ package com.flowfolio.core.voice
 
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import kotlinx.coroutines.Dispatchers
@@ -47,7 +48,7 @@ class VoicePackDownloader(private val pack: VoicePack, private val destDir: File
             } else {
                 VoicePackState.Failed("Voice pack is incomplete")
             }
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             archive.delete()
             _state.value = VoicePackState.Failed(e.message ?: "Voice pack download failed")
         }
@@ -57,22 +58,33 @@ class VoicePackDownloader(private val pack: VoicePack, private val destDir: File
         dest.parentFile?.mkdirs()
         val connection = URL(url).openConnection() as HttpURLConnection
         try {
-            val total = connection.contentLengthLong
-            connection.inputStream.use { input ->
-                dest.outputStream().use { output ->
-                    val buffer = ByteArray(64 * 1024)
-                    var read = 0L
-                    while (true) {
-                        val n = input.read(buffer)
-                        if (n < 0) break
-                        output.write(buffer, 0, n)
-                        read += n
-                        if (total > 0) onProgress((read.toFloat() / total).coerceIn(0f, 1f))
-                    }
-                }
-            }
+            copyWithProgress(connection.inputStream, dest, connection.contentLengthLong, onProgress)
         } finally {
             connection.disconnect()
         }
+    }
+
+    private fun copyWithProgress(input: InputStream, dest: File, total: Long, onProgress: (Float) -> Unit) {
+        val buffer = ByteArray(BUFFER_BYTES)
+        var read = 0L
+        dest.outputStream().use { output ->
+            input.use { source ->
+                var n = source.read(buffer)
+                while (n >= 0) {
+                    output.write(buffer, 0, n)
+                    read += n
+                    reportProgress(read, total, onProgress)
+                    n = source.read(buffer)
+                }
+            }
+        }
+    }
+
+    private fun reportProgress(read: Long, total: Long, onProgress: (Float) -> Unit) {
+        if (total > 0) onProgress((read.toFloat() / total).coerceIn(0f, 1f))
+    }
+
+    private companion object {
+        const val BUFFER_BYTES = 64 * 1024
     }
 }

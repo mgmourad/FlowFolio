@@ -13,6 +13,7 @@ dependencies {
     implementation(projects.core.reflow)
     implementation(projects.core.designsystem)
     implementation(projects.core.pagecurl)
+    implementation(projects.core.voice)
     implementation(projects.feature.reader.riffle)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)

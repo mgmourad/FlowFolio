@@ -1,6 +1,5 @@
 package com.flowfolio.feature.reader
 
-import android.speech.tts.Voice
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -40,6 +39,8 @@ import androidx.compose.ui.unit.dp
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.glass
+import com.flowfolio.core.voice.Voice
+import com.flowfolio.core.voice.VoicePackState
 
 /**
  * Catches taps outside an open panel and closes it (and Back closes it), so a tap meant to dismiss never turns a
@@ -116,6 +117,7 @@ internal fun BoxScope.ReaderPanels(
             narrator.continuous,
             narrator.voices,
             narrator.voice,
+            narrator.packState,
             onNarratorToggle,
             onNarratorRate,
             onNarratorContinuous,
@@ -130,7 +132,8 @@ internal data class NarratorUi(
     val rate: Float = 1f,
     val continuous: Boolean = true,
     val voices: List<Voice> = emptyList(),
-    val voice: String? = null
+    val voice: String? = null,
+    val packState: VoicePackState = VoicePackState.Idle
 )
 
 /**

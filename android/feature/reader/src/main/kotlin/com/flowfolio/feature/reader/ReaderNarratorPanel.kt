@@ -1,12 +1,12 @@
 package com.flowfolio.feature.reader
 
-import android.speech.tts.Voice
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -25,9 +25,10 @@ import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
 import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
-import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.voice.Voice
+import com.flowfolio.core.voice.VoicePackState
 
-/** Narrator Mode's controls (Phase 6 M3): play/pause, speed, whether it turns pages, and the voice. */
+/** Narrator Mode's controls (Phase 6 M3): play/pause, speed, page turns, and the Kokoro voice. */
 @Composable
 internal fun ReaderNarratorPanel(
     narrating: Boolean,
@@ -35,6 +36,7 @@ internal fun ReaderNarratorPanel(
     continuous: Boolean,
     voices: List<Voice>,
     currentVoice: String?,
+    packState: VoicePackState,
     onToggle: () -> Unit,
     onRate: (Float) -> Unit,
     onContinuous: (Boolean) -> Unit,
@@ -58,6 +60,7 @@ internal fun ReaderNarratorPanel(
                 modifier = Modifier.padding(top = 12.dp)
             )
         }
+        PackStatus(packState)
         Text(
             stringResource(R.string.reader_narrator_rate),
             style = FlowFolioType.rowLabel.merge(FlowFolio.item),
@@ -92,9 +95,34 @@ internal fun ReaderNarratorPanel(
 }
 
 @Composable
+private fun PackStatus(packState: VoicePackState) {
+    when (packState) {
+        is VoicePackState.Downloading -> {
+            Text(
+                stringResource(R.string.reader_narrator_downloading, (packState.progress * 100).toInt()),
+                style = FlowFolioType.rowLabel.merge(FlowFolio.item),
+                modifier = Modifier.padding(top = 12.dp)
+            )
+            LinearProgressIndicator(
+                progress = { packState.progress },
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+            )
+        }
+
+        is VoicePackState.Failed -> Text(
+            stringResource(R.string.reader_narrator_download_failed, packState.message),
+            style = FlowFolioType.rowLabel.merge(FlowFolio.item),
+            modifier = Modifier.padding(top = 12.dp)
+        )
+
+        else -> Unit
+    }
+}
+
+@Composable
 private fun VoicePicker(voices: List<Voice>, current: String?, onVoice: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
-    val label = voices.firstOrNull { it.name == current }?.let(Narrator::label)
+    val label = voices.firstOrNull { it.name == current }?.let { voiceLabel(it.name) }
         ?: stringResource(R.string.reader_narrator_voice_default)
     FlowFolioGhostButton(text = label, onClick = { open = true })
     FlowFolioMenu(expanded = open, onDismissRequest = { open = false }) {
@@ -102,7 +130,7 @@ private fun VoicePicker(voices: List<Voice>, current: String?, onVoice: (String)
             DropdownMenuItem(
                 text = {
                     Column {
-                        Text(Narrator.label(v))
+                        Text(voiceLabel(v.name))
                         Text(
                             v.name,
                             fontSize = 11.sp,
@@ -117,6 +145,13 @@ private fun VoicePicker(voices: List<Voice>, current: String?, onVoice: (String)
             )
         }
     }
+}
+
+/** A friendly name for a Kokoro speaker: `af_heart` -> "Heart · female". */
+private fun voiceLabel(name: String): String = when (name) {
+    "af_heart" -> "Heart · female"
+    "am_michael" -> "Michael · male"
+    else -> name
 }
 
 private const val RATE_MIN = 0.5f

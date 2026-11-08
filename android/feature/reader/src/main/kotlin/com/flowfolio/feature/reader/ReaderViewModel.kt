@@ -37,6 +37,12 @@ import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfException
 import com.flowfolio.core.reflow.CodeFace
 import com.flowfolio.core.reflow.Locator
+import com.flowfolio.core.voice.Voice
+import com.flowfolio.core.voice.VoiceEngine
+import com.flowfolio.core.voice.VoicePackDownloader
+import com.flowfolio.core.voice.VoicePackState
+import com.flowfolio.core.voice.VoicePacks
+import com.flowfolio.core.voice.VoiceSpeakers
 import com.flowfolio.feature.reader.cache.PageCache
 import com.flowfolio.feature.reader.cache.PageKey
 import com.flowfolio.feature.reader.cache.PdfPageSource
@@ -47,6 +53,7 @@ import com.flowfolio.feature.reader.layout.Spreads
 import com.flowfolio.feature.reader.layout.chooseLayout
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import java.io.File
 import java.io.FileNotFoundException
 import javax.inject.Inject
 import kotlinx.coroutines.Dispatchers
@@ -791,8 +798,13 @@ class ReaderViewModel @Inject constructor(
         return out
     }
 
-    /** Narrator Mode (Phase 6 M3): reads the page aloud with Android's own offline text-to-speech. */
+    /** Narrator Mode (Phase 6 M3): reads the page aloud with Kokoro (sherpa-onnx), downloaded on first use. */
     private var narrator: Narrator? = null
+
+    private val downloader = VoicePackDownloader(
+        VoicePacks.kokoroMultiLang,
+        File(context.filesDir, "voice")
+    )
 
     private val _narrating = MutableStateFlow(false)
     internal val narrating: StateFlow<Boolean> = _narrating.asStateFlow()
@@ -803,11 +815,12 @@ class ReaderViewModel @Inject constructor(
     private val _narratorContinuous = MutableStateFlow(true)
     internal val narratorContinuous: StateFlow<Boolean> = _narratorContinuous.asStateFlow()
 
-    private val _narratorVoices = MutableStateFlow<List<android.speech.tts.Voice>>(emptyList())
-    internal val narratorVoices: StateFlow<List<android.speech.tts.Voice>> = _narratorVoices.asStateFlow()
-
-    private val _narratorVoice = MutableStateFlow<String?>(null)
+    private val _narratorVoice = MutableStateFlow<String?>(VoiceSpeakers.defaults.first().name)
     internal val narratorVoice: StateFlow<String?> = _narratorVoice.asStateFlow()
+
+    internal val narratorVoices: List<Voice> get() = VoiceSpeakers.defaults
+
+    internal val voicePackState: StateFlow<VoicePackState> = downloader.state
 
     fun toggleNarration() {
         if (_narrating.value) stopNarration() else startNarration()
@@ -815,7 +828,7 @@ class ReaderViewModel @Inject constructor(
 
     fun setNarratorRate(rate: Float) {
         _narratorRate.value = rate
-        narrator?.rate = rate
+        narrator?.setRate(rate)
     }
 
     fun setNarratorContinuous(on: Boolean) {
@@ -824,17 +837,26 @@ class ReaderViewModel @Inject constructor(
 
     fun setNarratorVoice(name: String) {
         _narratorVoice.value = name
-        narrator?.voice = narrator?.voices?.firstOrNull { it.name == name }
+        narrator?.setVoice(name)
     }
 
     private fun startNarration() {
-        val n = narrator ?: Narrator(context) { voices ->
-            _narratorVoices.value = voices
-            _narratorVoice.value = voices.firstOrNull()?.name
-        }.also { narrator = it }
-        n.rate = _narratorRate.value
-        _narrating.value = true
-        readPage(anchorPage)
+        if (narrator != null) {
+            _narrating.value = true
+            readPage(anchorPage)
+            return
+        }
+        viewModelScope.launch {
+            downloader.ensureDownloaded()
+            if (downloader.state.value != VoicePackState.Ready) return@launch
+            val engine = VoiceEngine.load(File(context.filesDir, "voice").absolutePath)
+            val n = Narrator(engine)
+            n.setRate(_narratorRate.value)
+            n.setVoice(_narratorVoice.value ?: VoiceSpeakers.defaults.first().name)
+            narrator = n
+            _narrating.value = true
+            readPage(anchorPage)
+        }
     }
 
     private fun stopNarration() {
