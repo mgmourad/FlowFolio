@@ -37,6 +37,7 @@ import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfException
 import com.flowfolio.core.reflow.CodeFace
 import com.flowfolio.core.reflow.Locator
+import com.flowfolio.core.voice.SpeechText
 import com.flowfolio.core.voice.Voice
 import com.flowfolio.core.voice.VoiceEngine
 import com.flowfolio.core.voice.VoicePackDownloader
@@ -801,10 +802,11 @@ class ReaderViewModel @Inject constructor(
     /** Narrator Mode (Phase 6 M3): reads the page aloud with Kokoro (sherpa-onnx), downloaded on first use. */
     private var narrator: Narrator? = null
 
-    private val downloader = VoicePackDownloader(
-        VoicePacks.kokoroMultiLang,
-        File(context.filesDir, "voice")
-    )
+    // External app-specific storage: private to the app, adb-pushable for testing, and the natural home
+    // for a ~150 MB downloaded model (user-manageable, never backed up).
+    private val voiceDir = File(context.getExternalFilesDir(null) ?: context.filesDir, "voice")
+
+    private val downloader = VoicePackDownloader(VoicePacks.kokoroMultiLang, voiceDir)
 
     private val _narrating = MutableStateFlow(false)
     internal val narrating: StateFlow<Boolean> = _narrating.asStateFlow()
@@ -849,7 +851,7 @@ class ReaderViewModel @Inject constructor(
         viewModelScope.launch {
             downloader.ensureDownloaded()
             if (downloader.state.value != VoicePackState.Ready) return@launch
-            val engine = VoiceEngine.load(File(context.filesDir, "voice").absolutePath)
+            val engine = VoiceEngine.load(voiceDir.absolutePath)
             val n = Narrator(engine)
             n.setRate(_narratorRate.value)
             n.setVoice(_narratorVoice.value ?: VoiceSpeakers.defaults.first().name)
@@ -866,7 +868,7 @@ class ReaderViewModel @Inject constructor(
 
     private fun readPage(page: Int) {
         viewModelScope.launch {
-            val text = pageText(page)?.text.orEmpty()
+            val text = SpeechText.normalize(pageText(page)?.text.orEmpty())
             if (text.isBlank()) {
                 advanceOrStop(page)
                 return@launch
