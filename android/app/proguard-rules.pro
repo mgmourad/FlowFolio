@@ -10,3 +10,9 @@
 # name (JNI); R8's renaming would break that binding, so keep its classes whole in the minified build.
 -keep class com.k2fsa.sherpa.onnx.** { *; }
 -dontwarn com.k2fsa.sherpa.onnx.**
+
+# generateWithCallback invokes the Kotlin Function1 callback from native code by method name; R8's
+# renaming of the lambda's invoke method breaks that JNI callback (NoSuchMethodError), so keep it whole.
+-keepclassmembers class * extends kotlin.jvm.functions.Function1 {
+    <methods>;
+}
