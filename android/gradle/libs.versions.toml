@@ -126,5 +126,6 @@ flowfolio-android-compose = { id = "flowfolio.android.compose" }
 flowfolio-android-library = { id = "flowfolio.android.library" }
 flowfolio-jvm-library = { id = "flowfolio.jvm.library" }
 flowfolio-pdfium = { id = "flowfolio.pdfium" }
+flowfolio-sherpa-onnx = { id = "flowfolio.sherpa-onnx" }
 flowfolio-hilt = { id = "flowfolio.hilt" }
 flowfolio-quality = { id = "flowfolio.quality" }
