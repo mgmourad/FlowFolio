@@ -2,7 +2,6 @@ package com.flowfolio.feature.reader.riffle
 
 import android.content.Context
 import android.media.AudioAttributes
-import android.media.AudioManager
 import android.media.SoundPool
 import android.os.Handler
 import android.os.Looper
@@ -13,7 +12,8 @@ import android.util.Log
  * The scrubber's paper sounds (ADR-0025): the owner's recordings, prepared by
  * `tools/sounds/prepare_recorded_sounds.py`. While the ribbon drags, the riffle forward or backward recording loops,
  * louder and quicker the faster pages pass; it fades out when the pages stop or the ribbon is let go. Each landing
- * plays a page flip in its direction. Silent in silent and vibrate ringer modes. [release] when the reader closes.
+ * plays a page flip in its direction. The reader's own switches and sliders are the only control: the sounds play
+ * whatever the phone's ringer or Do Not Disturb mode (owner, 2026-11-07). [release] when the reader closes.
  *
  * The sounds play on the media stream (ADR-0032), which the volume keys control in the reader, rather than as system
  * sounds, which some phones route elsewhere or mute separately (a flip that went silent until the phone restarted,
@@ -21,7 +21,6 @@ import android.util.Log
  */
 class RiffleSounds(context: Context) {
     private val app = context.applicationContext
-    private val audio = context.getSystemService(AudioManager::class.java)
     private var pool = newPool()
     private val loaded = HashSet<Int>()
     private var riffleForward = 0
@@ -38,7 +37,7 @@ class RiffleSounds(context: Context) {
         .setMaxStreams(MAX_STREAMS)
         .setAudioAttributes(
             AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_GAME)
+                .setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build()
         )
@@ -107,10 +106,6 @@ class RiffleSounds(context: Context) {
     /** One step of a drag: keeps the riffle going in the step's direction, at a loudness and pitch for its speed. */
     fun play(feedback: RiffleFeedback) {
         if (feedback.units == 0) return
-        if (!audible()) {
-            stopNow()
-            return
-        }
         val now = SystemClock.uptimeMillis()
         val dt = (now - lastStep).coerceIn(MIN_STEP_MS, MAX_STEP_MS) / MS_PER_S
         lastStep = now
@@ -137,14 +132,12 @@ class RiffleSounds(context: Context) {
 
     /** A landing: a page flip toward the end of the book ([forward]) or back toward its start. */
     fun flip(forward: Boolean) {
-        if (!audible()) return
         val v = FLIP_VOLUME * flipVolume
         start(if (forward) flipForward else flipBackward, v, 2, 0, 1f)
     }
 
     /** A moment of the riffle at its natural pace, so a volume slider can be heard. */
     fun previewRiffle() {
-        if (!audible()) return
         stopNow()
         volume = PREVIEW_VOLUME * riffleVolume
         stream = start(riffleForward, volume, 1, -1, 1f)
@@ -157,16 +150,6 @@ class RiffleSounds(context: Context) {
         stream = 0
         volume = 0f
     }
-
-    private fun audible(): Boolean {
-        val mode = audio?.ringerMode
-        // Said once a reader visit, so a silent flip can be explained from the log.
-        if (mode != AudioManager.RINGER_MODE_NORMAL && !toldSilent) Log.i(TAG, "ringer mode $mode: page sounds are off")
-        toldSilent = mode != AudioManager.RINGER_MODE_NORMAL
-        return mode == AudioManager.RINGER_MODE_NORMAL
-    }
-
-    private var toldSilent = false
 
     fun release() {
         stopNow()

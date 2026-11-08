@@ -318,7 +318,7 @@ fun SettingsContent(
     }
     // System Back on a dedicated page returns to the menu, not out to the Library (owner, 2026-11-07).
     BackHandler(enabled = page != null) { page = null }
-    Box(Modifier.fillMaxSize().chromeStart().testTag(LibraryTestTags.SETTINGS)) {
+    Box(Modifier.fillMaxSize().testTag(LibraryTestTags.SETTINGS)) {
         AnimatedContent(
             targetState = page,
             transitionSpec = {

@@ -83,7 +83,7 @@ internal fun BoxScope.ReaderPanels(
             ContentsList(navigation.outline, navigation.labels, s.anchorPage, jump) { onPanel(Panel.GO_TO) }
         }
     }
-    CenteredPanel(panel == Panel.DICTIONARY, CONTENTS_WIDTH) {
+    DropPanel(panel == Panel.DICTIONARY, CONTENTS_WIDTH, fillDown = true) {
         ReaderDictionaryPanel(navigation, jump)
     }
     DropPanel(panel == Panel.ANNOTATIONS, CONTENTS_WIDTH, fillDown = true) {
