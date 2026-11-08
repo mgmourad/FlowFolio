@@ -823,9 +823,13 @@ class ReaderViewModel @Inject constructor(
     private val _narratorVoice = MutableStateFlow<String?>(VoiceSpeakers.defaults.first().name)
     internal val narratorVoice: StateFlow<String?> = _narratorVoice.asStateFlow()
 
-    internal val narratorVoices: List<Voice> get() = VoiceSpeakers.defaults
+    internal val narratorVoices: List<Voice> get() = VoiceSpeakers.all
 
     internal val voicePackState: StateFlow<VoicePackState> = downloader.state
+
+    /** A narrator failure the panel should tell the reader about (a download or model-load error). */
+    private val _narratorError = MutableStateFlow<String?>(null)
+    internal val narratorError: StateFlow<String?> = _narratorError.asStateFlow()
 
     fun toggleNarration() {
         if (_narrating.value) stopNarration() else startNarration()
@@ -853,10 +857,12 @@ class ReaderViewModel @Inject constructor(
         }
         if (narratorLoading) return
         narratorLoading = true
+        _narratorError.value = null
         viewModelScope.launch {
             downloader.ensureDownloaded()
             if (downloader.state.value != VoicePackState.Ready) {
                 narratorLoading = false
+                _narratorError.value = context.getString(R.string.reader_narrator_load_failed)
                 return@launch
             }
             // Loading the ~150 MB model is slow and native: do it off the main thread, and never crash on it.
@@ -865,6 +871,7 @@ class ReaderViewModel @Inject constructor(
             }
             if (engine == null) {
                 narratorLoading = false
+                _narratorError.value = context.getString(R.string.reader_narrator_load_failed)
                 return@launch
             }
             val n = Narrator(engine)

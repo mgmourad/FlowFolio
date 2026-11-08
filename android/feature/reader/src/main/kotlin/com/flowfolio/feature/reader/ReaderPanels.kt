@@ -81,19 +81,13 @@ internal fun BoxScope.ReaderPanels(
     onNarratorVoice: (String) -> Unit = {}
 ) {
     val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
-    if (wide) {
-        CenteredPanel(panel == Panel.CONTENTS, CONTENTS_WIDTH) {
-            ContentsList(navigation.outline, navigation.labels, s.anchorPage, jump) { onPanel(Panel.GO_TO) }
-        }
-    } else {
-        DropPanel(panel == Panel.CONTENTS, CONTENTS_WIDTH, fillDown = true) {
-            ContentsList(navigation.outline, navigation.labels, s.anchorPage, jump) { onPanel(Panel.GO_TO) }
-        }
+    CenteredPanel(panel == Panel.CONTENTS, CONTENTS_WIDTH) {
+        ContentsList(navigation.outline, navigation.labels, s.anchorPage, jump) { onPanel(Panel.GO_TO) }
     }
-    DropPanel(panel == Panel.DICTIONARY, CONTENTS_WIDTH, fillDown = true) {
+    CenteredPanel(panel == Panel.DICTIONARY, CONTENTS_WIDTH) {
         ReaderDictionaryPanel(navigation, jump)
     }
-    DropPanel(panel == Panel.ANNOTATIONS, CONTENTS_WIDTH, fillDown = true) {
+    CenteredPanel(panel == Panel.ANNOTATIONS, CONTENTS_WIDTH) {
         AnnotationList(mark.notes, navigation, jump)
     }
     DropPanel(panel == Panel.GO_TO, GO_TO_WIDTH) {
@@ -107,7 +101,7 @@ internal fun BoxScope.ReaderPanels(
         RibbonList(mark.all, navigation, jump)
     }
     SheetPanel(panel == Panel.SETTINGS) { ReaderSettingsContent(s.reflowable, s.bookFont, flow, onFlow) }
-    DropPanel(panel == Panel.SEARCH, SEARCH_WIDTH, fillDown = true) {
+    CenteredPanel(panel == Panel.SEARCH, SEARCH_WIDTH) {
         ReaderSearchPanel(searchQuery, hits, onSearchQuery, onSearchJump)
     }
     DropPanel(panel == Panel.NARRATOR, SEARCH_WIDTH) {
@@ -118,6 +112,7 @@ internal fun BoxScope.ReaderPanels(
             narrator.voices,
             narrator.voice,
             narrator.packState,
+            narrator.error,
             onNarratorToggle,
             onNarratorRate,
             onNarratorContinuous,
@@ -133,7 +128,8 @@ internal data class NarratorUi(
     val continuous: Boolean = true,
     val voices: List<Voice> = emptyList(),
     val voice: String? = null,
-    val packState: VoicePackState = VoicePackState.Idle
+    val packState: VoicePackState = VoicePackState.Idle,
+    val error: String? = null
 )
 
 /**
@@ -184,9 +180,14 @@ private fun BoxScope.DropPanel(
     AnimatedVisibility(
         visible,
         Modifier
-            .align(Alignment.TopEnd)
+            // Unfolded, the tools are a rail on the right, so these drop beside it; folded, under the top bar.
+            .align(if (wide) Alignment.CenterEnd else Alignment.TopEnd)
             .statusBarsPadding()
-            .padding(start = PANEL_INSET, end = PANEL_INSET, top = topClearance)
+            .padding(
+                start = PANEL_INSET,
+                end = if (wide) PANEL_INSET + RAIL_CLEARANCE else PANEL_INSET,
+                top = if (wide) 0.dp else topClearance
+            )
             .then(if (fillDown) Modifier.navigationBarsPadding().padding(bottom = BOTTOM_BAR_CLEARANCE) else Modifier)
             .imePadding(),
         enter = fadeIn(tween(Motion.FAST_MS)) +
@@ -264,6 +265,9 @@ private val WIDE_TOP_BAR_CLEARANCE = 78.dp
 private val FOLDED_TOP_BAR_CLEARANCE = 116.dp
 private val CENTERED_VERTICAL_CLEARANCE = 84.dp
 private const val CENTERED_MAX_HEIGHT = 0.72f
+
+/** Unfolded, the right rail (56 dp button + 14 dp inset) plus a gap, so drop panels clear it. */
+private val RAIL_CLEARANCE = 78.dp
 
 /** The bottom bar is 56 dp tall, 26 dp above the navigation bar; the contents stop 10 dp above it. */
 private val BOTTOM_BAR_CLEARANCE = 92.dp

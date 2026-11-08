@@ -316,13 +316,15 @@ internal fun BoxScope.Controls(
             val narratorContinuous by parts.book.narratorContinuous.collectAsStateWithLifecycle()
             val narratorVoice by parts.book.narratorVoice.collectAsStateWithLifecycle()
             val voicePackState by parts.book.voicePackState.collectAsStateWithLifecycle()
+            val narratorError by parts.book.narratorError.collectAsStateWithLifecycle()
             val narrator = NarratorUi(
                 narrating = narrating,
                 rate = narratorRate,
                 continuous = narratorContinuous,
                 voices = parts.book.narratorVoices,
                 voice = narratorVoice,
-                packState = voicePackState
+                packState = voicePackState,
+                error = narratorError
             )
             ReaderChrome(
                 s,
@@ -331,6 +333,7 @@ internal fun BoxScope.Controls(
                 controlsVisible = overlay.chrome.shown,
                 mark = mark,
                 actions = ChromeActions(parts.onBack, onPanel = overlay::open),
+                panel = overlay.panel,
                 bottomBarVisible = overlay.chrome.shown && overlay.panel == Panel.NONE && !overlay.riffleDismissed,
                 bottomBar = parts.bar
             )

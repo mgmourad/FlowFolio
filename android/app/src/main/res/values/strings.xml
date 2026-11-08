@@ -15,7 +15,7 @@
     <string name="update_banner_dismiss">Dismiss</string>
     <!-- The "what's new" window shown once after an update. -->
     <string name="whats_new_title">What\'s new</string>
-    <string name="whats_new_body">FlowFolio %1$s is installed. Here is what changed:</string>
+    <string name="whats_new_version">Version %1$s</string>
     <string name="whats_new_ok">Ok</string>
     <!-- Dynamic Flow notices in the app (ADR-0045). -->
     <string name="flow_notice_started">Preparing Dynamic Flow</string>

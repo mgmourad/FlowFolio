@@ -164,19 +164,30 @@ fun FlowFolioIconButton(
     modifier: Modifier = Modifier,
     glass: Boolean = false,
     size: Dp = 42.dp,
+    glowing: Boolean = false,
     content: @Composable BoxScope.() -> Unit
 ) {
     val source = remember { MutableInteractionSource() }
+    val p = FlowFolio.palette
     // Off glass, a faint ring in the accent sets the button off from the page (owner, 2026-10-22).
     val surface = if (glass) {
         Modifier.glass(CircleShape)
     } else {
-        Modifier.card(CircleShape).ringOutline(CircleShape, FlowFolio.palette.title.copy(alpha = RING_ALPHA))
+        Modifier.card(CircleShape).ringOutline(CircleShape, p.title.copy(alpha = RING_ALPHA))
+    }
+    // The tool whose panel is open glows, so the two are clearly tied (owner, 2026-11-08).
+    val glow = if (glowing) {
+        Modifier
+            .softShadow(CircleShape, p.title.copy(alpha = GLOW_ALPHA), blur = GLOW_BLUR, spread = GLOW_SPREAD)
+            .ringOutline(CircleShape, p.title)
+    } else {
+        Modifier
     }
     Box(
         modifier
             .pressScale(source, ICON_PRESSED)
             .size(size)
+            .then(glow)
             .then(surface)
             .clip(CircleShape)
             .clickable(source, indication = null, role = Role.Button, onClick = onClick),
@@ -259,3 +270,6 @@ private const val BUTTON_PRESSED = 0.94f
 
 /** The faint accent ring around buttons and chips off glass. */
 private const val RING_ALPHA = 0.28f
+private const val GLOW_ALPHA = 0.7f
+private val GLOW_BLUR = 24.dp
+private val GLOW_SPREAD = 2.dp

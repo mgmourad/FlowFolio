@@ -46,11 +46,12 @@ import com.flowfolio.core.model.BookmarkColor
  * one, to remove it.
  */
 @Composable
-internal fun BookmarkButton(mark: ChromeMark, actions: ChromeActions, size: Dp) {
+internal fun BookmarkButton(mark: ChromeMark, actions: ChromeActions, size: Dp, glowing: Boolean = false) {
     FlowFolioIconButton(
         onClick = { actions.onPanel(Panel.MARK) },
         glass = true,
         size = size,
+        glowing = glowing,
         modifier = Modifier.testTag(ReaderTestTags.BOOKMARK)
     ) {
         FlowFolioGlyph(

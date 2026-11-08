@@ -72,6 +72,8 @@ class VoicePackDownloader(private val pack: VoicePack, private val destDir: File
         val connection = URL(url).openConnection() as HttpURLConnection
         connection.connectTimeout = CONNECT_TIMEOUT_MS
         connection.readTimeout = READ_TIMEOUT_MS
+        connection.instanceFollowRedirects = true
+        connection.setRequestProperty("User-Agent", AGENT)
         try {
             copyWithProgress(connection.inputStream, dest, connection.contentLengthLong, onProgress)
         } finally {
@@ -103,5 +105,6 @@ class VoicePackDownloader(private val pack: VoicePack, private val destDir: File
         const val BUFFER_BYTES = 64 * 1024
         const val CONNECT_TIMEOUT_MS = 15_000
         const val READ_TIMEOUT_MS = 60_000
+        const val AGENT = "FlowFolio (Android; https://github.com/mgmourad/FlowFolio)"
     }
 }

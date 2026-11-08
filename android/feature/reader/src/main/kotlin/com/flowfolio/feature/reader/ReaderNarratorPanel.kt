@@ -37,6 +37,7 @@ internal fun ReaderNarratorPanel(
     voices: List<Voice>,
     currentVoice: String?,
     packState: VoicePackState,
+    error: String?,
     onToggle: () -> Unit,
     onRate: (Float) -> Unit,
     onContinuous: (Boolean) -> Unit,
@@ -60,7 +61,7 @@ internal fun ReaderNarratorPanel(
                 modifier = Modifier.padding(top = 12.dp)
             )
         }
-        PackStatus(packState)
+        PackStatus(packState, error)
         Text(
             stringResource(R.string.reader_narrator_rate),
             style = FlowFolioType.rowLabel.merge(FlowFolio.item),
@@ -95,7 +96,7 @@ internal fun ReaderNarratorPanel(
 }
 
 @Composable
-private fun PackStatus(packState: VoicePackState) {
+private fun PackStatus(packState: VoicePackState, error: String?) {
     when (packState) {
         is VoicePackState.Downloading -> {
             Text(
@@ -117,12 +118,19 @@ private fun PackStatus(packState: VoicePackState) {
 
         else -> Unit
     }
+    if (error != null) {
+        Text(
+            error,
+            style = FlowFolioType.rowLabel.merge(FlowFolio.item),
+            modifier = Modifier.padding(top = 12.dp)
+        )
+    }
 }
 
 @Composable
 private fun VoicePicker(voices: List<Voice>, current: String?, onVoice: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
-    val label = voices.firstOrNull { it.name == current }?.let { voiceLabel(it.name) }
+    val label = voices.firstOrNull { it.name == current }?.label
         ?: stringResource(R.string.reader_narrator_voice_default)
     FlowFolioGhostButton(text = label, onClick = { open = true })
     FlowFolioMenu(expanded = open, onDismissRequest = { open = false }) {
@@ -130,7 +138,7 @@ private fun VoicePicker(voices: List<Voice>, current: String?, onVoice: (String)
             DropdownMenuItem(
                 text = {
                     Column {
-                        Text(voiceLabel(v.name))
+                        Text(v.label)
                         Text(
                             v.name,
                             fontSize = 11.sp,
@@ -145,13 +153,6 @@ private fun VoicePicker(voices: List<Voice>, current: String?, onVoice: (String)
             )
         }
     }
-}
-
-/** A friendly name for a Kokoro speaker: `af_heart` -> "Heart · female". */
-private fun voiceLabel(name: String): String = when (name) {
-    "af_heart" -> "Heart · female"
-    "am_michael" -> "Michael · male"
-    else -> name
 }
 
 private const val RATE_MIN = 0.5f

@@ -100,6 +100,7 @@ internal fun BoxScope.ReaderChrome(
     controlsVisible: Boolean,
     mark: ChromeMark,
     actions: ChromeActions,
+    panel: Panel = Panel.NONE,
     bottomBarVisible: Boolean = controlsVisible,
     bottomBar: @Composable () -> Unit
 ) {
@@ -133,6 +134,7 @@ internal fun BoxScope.ReaderChrome(
                 state.title,
                 mark,
                 actions,
+                panel,
                 modifier = Modifier.onSizeChanged { barHeight = with(density) { it.height.toDp() } }
             )
         }
@@ -146,7 +148,7 @@ internal fun BoxScope.ReaderChrome(
             enter = slideInHorizontally(slide) { it * 2 } + fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)),
             exit = slideOutHorizontally(slide) { it * 2 } + fadeOut(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut))
         ) {
-            ScreenEntrance(holdForLandings = false) { RightRail(mark, actions) }
+            ScreenEntrance(holdForLandings = false) { RightRail(mark, actions, panel) }
         }
     }
     AnimatedVisibility(
@@ -173,7 +175,13 @@ internal fun BoxScope.ReaderChrome(
  * 2026-10-23), which leaves the second row room for the tools EPUBs will gain.
  */
 @Composable
-private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, modifier: Modifier = Modifier) {
+private fun TopBar(
+    title: String,
+    mark: ChromeMark,
+    actions: ChromeActions,
+    panel: Panel,
+    modifier: Modifier = Modifier
+) {
     val width = LocalWindowInfo.current.containerDpSize.width
     val wide = width >= TITLE_BESIDE_BACK
     // A third larger than the app's usual 42 dp for easy reach (owner, 2026-10-22); folded, a little less, and never
@@ -212,7 +220,7 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, modi
                 )
             } else {
                 Spacer(Modifier.weight(1f))
-                TopTools(mark, actions, button)
+                TopTools(mark, actions, button, panel)
             }
         }
     }
@@ -220,49 +228,32 @@ private fun TopBar(title: String, mark: ChromeMark, actions: ChromeActions, modi
 
 /**
  * Unfolded, the reading tools in a vertical rail on the right, so the top bar holds just Back and the title
- * (owner, 2026-11-08). The buttons keep the same order as the folded top bar, read top to bottom.
+ * (owner, 2026-11-08). The buttons keep the same order as the folded top bar, read top to bottom. The rail is
+ * centred above the riffle bar, so its last button never touches it.
  */
 @Composable
-private fun BoxScope.RightRail(mark: ChromeMark, actions: ChromeActions) {
+private fun BoxScope.RightRail(mark: ChromeMark, actions: ChromeActions, panel: Panel) {
     Column(
         Modifier
             .align(Alignment.CenterEnd)
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(end = BAR_INSET),
+            .padding(end = BAR_INSET, bottom = RAIL_BOTTOM_CLEARANCE),
         verticalArrangement = Arrangement.spacedBy(TOOL_GAP, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        TopTools(mark, actions, BIG_BUTTON)
+        TopTools(mark, actions, BIG_BUTTON, panel)
     }
 }
 
 /**
- * Search, Contents, Dictionary, Annotations, Bookmarks (the ribbon), and Page setup ("Aa"), ordered from right to left
- * as (page setup, bookmarks, annotations, dictionary, contents, search).
+ * The reading tools, top to bottom in the vertical rail: Page setup, Narrator, Bookmarks, Annotations,
+ * Dictionary, Search, Contents (owner, 2026-11-08). Folded, the same order reads left to right.
  */
 @Composable
-private fun TopTools(mark: ChromeMark, actions: ChromeActions, button: Dp) {
+private fun TopTools(mark: ChromeMark, actions: ChromeActions, button: Dp, panel: Panel) {
     val glyph = button * GLYPH_SHARE
-    val search = Modifier.testTag(ReaderTestTags.SEARCH).reveal(2)
-    FlowFolioIconButton({ actions.onPanel(Panel.SEARCH) }, search, glass = true, size = button) {
-        FlowFolioGlyph(Glyph.Search, stringResource(R.string.reader_search), size = glyph)
-    }
-    val contents = Modifier.testTag(ReaderTestTags.CONTENTS).reveal(3)
-    FlowFolioIconButton({ actions.onPanel(Panel.CONTENTS) }, contents, glass = true, size = button) {
-        FlowFolioGlyph(Glyph.Contents, stringResource(R.string.reader_contents), size = glyph)
-    }
-    val dictionary = Modifier.testTag(ReaderTestTags.DICTIONARY).reveal(4)
-    FlowFolioIconButton({ actions.onPanel(Panel.DICTIONARY) }, dictionary, glass = true, size = button) {
-        FlowFolioGlyph(Glyph.Translate, stringResource(R.string.reader_dictionary), size = glyph)
-    }
-    val notes = Modifier.testTag(ReaderTestTags.ANNOTATIONS).reveal(5)
-    FlowFolioIconButton({ actions.onPanel(Panel.ANNOTATIONS) }, notes, glass = true, size = button) {
-        FlowFolioGlyph(Glyph.Highlight, stringResource(R.string.reader_annotations), size = glyph)
-    }
-    Box(Modifier.reveal(6)) { BookmarkButton(mark, actions, button) }
-    val settings = Modifier.testTag(ReaderTestTags.SETTINGS).reveal(7)
-    FlowFolioIconButton({ actions.onPanel(Panel.SETTINGS) }, settings, glass = true, size = button) {
+    ToolButton(Panel.SETTINGS, panel, ReaderTestTags.SETTINGS, 2, button, actions.onPanel) {
         Text(
             stringResource(R.string.reader_settings_button),
             style = FlowFolioType.button.copy(
@@ -272,10 +263,43 @@ private fun TopTools(mark: ChromeMark, actions: ChromeActions, button: Dp) {
                 .merge(FlowFolio.title)
         )
     }
-    val narrator = Modifier.testTag(ReaderTestTags.NARRATOR).reveal(8)
-    FlowFolioIconButton({ actions.onPanel(Panel.NARRATOR) }, narrator, glass = true, size = button) {
+    ToolButton(Panel.NARRATOR, panel, ReaderTestTags.NARRATOR, 3, button, actions.onPanel) {
         FlowFolioGlyph(Glyph.Sound, stringResource(R.string.reader_narrator), size = glyph)
     }
+    Box(Modifier.reveal(4)) { BookmarkButton(mark, actions, button, glowing = panel == Panel.MARK) }
+    ToolButton(Panel.ANNOTATIONS, panel, ReaderTestTags.ANNOTATIONS, 5, button, actions.onPanel) {
+        FlowFolioGlyph(Glyph.Highlight, stringResource(R.string.reader_annotations), size = glyph)
+    }
+    ToolButton(Panel.DICTIONARY, panel, ReaderTestTags.DICTIONARY, 6, button, actions.onPanel) {
+        FlowFolioGlyph(Glyph.Translate, stringResource(R.string.reader_dictionary), size = glyph)
+    }
+    ToolButton(Panel.SEARCH, panel, ReaderTestTags.SEARCH, 7, button, actions.onPanel) {
+        FlowFolioGlyph(Glyph.Search, stringResource(R.string.reader_search), size = glyph)
+    }
+    ToolButton(Panel.CONTENTS, panel, ReaderTestTags.CONTENTS, 8, button, actions.onPanel) {
+        FlowFolioGlyph(Glyph.Contents, stringResource(R.string.reader_contents), size = glyph)
+    }
+}
+
+/** A round tool button that glows while [active] is its panel. */
+@Composable
+private fun ToolButton(
+    open: Panel,
+    active: Panel,
+    testTag: String,
+    order: Int,
+    button: Dp,
+    onPanel: (Panel) -> Unit,
+    content: @Composable BoxScope.() -> Unit
+) {
+    FlowFolioIconButton(
+        { onPanel(open) },
+        Modifier.testTag(testTag).reveal(order),
+        glass = true,
+        size = button,
+        glowing = active == open,
+        content = content
+    )
 }
 
 /** The book's title on glass, beside Back (unfolded) or centred (folded). */
@@ -510,6 +534,7 @@ private val BAR_ROW_GAP = 10.dp
 private val PAGE_MARGIN = 32.dp
 private val FOOTER_MARGIN = 14.dp
 private val TITLE_MAX_WIDTH = 420.dp
+private val RAIL_BOTTOM_CLEARANCE = 104.dp
 internal val TITLE_BESIDE_BACK = 600.dp
 
 /** The folded running head sits left of the page text border, ending just before the camera (owner, 2026-11-07). */
