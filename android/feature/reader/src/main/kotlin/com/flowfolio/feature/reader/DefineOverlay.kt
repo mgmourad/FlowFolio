@@ -26,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -135,8 +136,8 @@ private fun DefineSourceRow(entry: DefineEntry) {
         }
         Text(
             entry.definition,
-            style = FlowFolioType.rowLabel.copy(fontSize = 18.sp, lineHeight = 26.sp)
-                .merge(FlowFolio.text),
+            style = FlowFolioType.sub.copy(fontSize = 15.sp, lineHeight = 22.sp).merge(FlowFolio.text),
+            textAlign = TextAlign.Justify,
             modifier = Modifier.padding(top = 8.dp).testTag(ReaderTestTags.DEFINITION)
         )
     }
