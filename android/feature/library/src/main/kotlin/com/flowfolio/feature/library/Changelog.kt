@@ -51,7 +51,7 @@ object Changelog {
     fun parse(markdown: String): List<VersionNotes> {
         val builder = Builder()
         markdown.lineSequence().forEach { builder.line(it.trimEnd()) }
-        return builder.finish()
+        return builder.finish().filter { it.sections.isNotEmpty() }
     }
 
     /** Collects versions, sections and bullets line by line. */
@@ -114,9 +114,13 @@ object Changelog {
         }
     }
 
-    /** The notes for [versionName], else the newest section (a development build's "Unreleased"). */
+    /**
+     * The notes for [versionName] (a debug build's "-dev" ignored), else the newest version that has any; an empty
+     * "Unreleased" right after a release is skipped.
+     */
     fun current(all: List<VersionNotes>, versionName: String): VersionNotes? =
-        all.firstOrNull { it.version == versionName } ?: all.firstOrNull()
+        all.firstOrNull { it.version == versionName.removeSuffix("-dev") }
+            ?: all.firstOrNull { it.sections.isNotEmpty() }
 
     private fun friendly(heading: String): String = when {
         heading.startsWith("Added", ignoreCase = true) -> "New"

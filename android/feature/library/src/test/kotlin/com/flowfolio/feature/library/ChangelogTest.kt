@@ -46,4 +46,12 @@ class ChangelogTest {
         assertEquals("0.6.0-canary.1", Changelog.current(all, "0.6.0-canary.1")?.version)
         assertEquals("Unreleased", Changelog.current(all, "9.9.9")?.version)
     }
+
+    @Test
+    fun skipsAnEmptyUnreleasedAndADebugSuffix() {
+        val all = Changelog.parse("## [Unreleased]\n\n## [1.0.0] - 2026-11-10\n\n### Fixed\n- A bug.\n")
+        assertEquals(listOf("1.0.0"), all.map { it.version })
+        assertEquals("1.0.0", Changelog.current(all, "1.0.0-dev")?.version)
+        assertEquals("1.0.0", Changelog.current(all, "0.9.0")?.version)
+    }
 }

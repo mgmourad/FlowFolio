@@ -47,6 +47,10 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     `LocalHeaderGap`), so the title shows in full. Every button keeps its 48 dp touch target.
   - **Library, Shelf view:** each shelf slides sideways again, showing all its books over a plank that stays put
     (`shelfRow`). Before, it showed only one row's worth.
+  - **The tour's Library, Atmosphere and Appearance pictures** were retaken to show the new rail mark (known issue
+    43).
+  - **What's new** ignores a debug build's "-dev" suffix, and skips an empty "Unreleased", so it always shows real
+    notes. `ChangelogTest` covers both.
   - Checked on `fold8_api37`, folded and unfolded.
 
 - **The reader's panels, held to the mock** (owner, 2026-11-10, second round). Checked on `fold8_api37` unfolded

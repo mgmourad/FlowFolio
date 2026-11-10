@@ -69,7 +69,7 @@ internal fun WhatsNewDialog(release: Release, onOk: () -> Unit) {
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val bundled = androidx.compose.runtime.remember {
                     com.flowfolio.feature.library.Changelog.read(context)
-                        .firstOrNull { it.version == BuildConfig.VERSION_NAME }
+                        .firstOrNull { it.version == BuildConfig.VERSION_NAME.removeSuffix("-dev") }
                 }
                 if (bundled != null) {
                     com.flowfolio.feature.library.VersionNotesView(bundled)
