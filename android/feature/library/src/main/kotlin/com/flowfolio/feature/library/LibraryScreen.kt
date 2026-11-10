@@ -11,14 +11,18 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -45,6 +49,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.CoverSpot
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
+import com.flowfolio.core.designsystem.FlowFolioSnackbarHost
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.LocalBookOpener
 import com.flowfolio.core.designsystem.LocalChromePadding
@@ -52,10 +57,13 @@ import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.ScrollToTopOnTab
 import com.flowfolio.core.designsystem.Selection
 import com.flowfolio.core.designsystem.chromeStart
+import com.flowfolio.core.designsystem.color
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.LibrarySort
+import com.flowfolio.core.model.LibraryView
+import com.flowfolio.core.model.StatsBand
 
 /** What the file picker offers: PDFs and EPUBs (Phase 2). */
 private val PDF_TYPES = arrayOf("application/pdf", "application/epub+zip")
@@ -97,7 +105,14 @@ data class LibraryActions(
     val onOpenShelf: (Long) -> Unit = {},
     val onReadingGoal: () -> Unit = {},
     val onSort: (LibrarySort) -> Unit = {},
-    val onShelfSort: (ShelfSort) -> Unit = {},
+    /** Shelf, grid or list (ADR-0052). */
+    val onView: (LibraryView) -> Unit = {},
+    /** Picks a folder to import and make into shelves straight away. */
+    val onImportFolderAsShelves: () -> Unit = {},
+    /** Opens or closes the stats band (ADR-0052). */
+    val onStatsBand: (StatsBand) -> Unit = {},
+    /** A stats tile: a chip, a Notebook section or the reading goal. */
+    val onStat: (StatTarget) -> Unit = {},
     val onFilter: (LibraryFilter) -> Unit = {},
     val onQuery: (String) -> Unit = {},
     /** Where the "Continue reading" cover is, so Resume opens the book from it. */
@@ -123,6 +138,7 @@ fun LibraryScreen(
     onBookmarks: (Book) -> Unit = {},
     onAnnotations: (Book) -> Unit = {},
     onDictionary: (Book) -> Unit = {},
+    onOpenNotebook: (NotebookSection) -> Unit = {},
     scrollToShelf: Long? = null,
     onScrolledToShelf: () -> Unit = {},
     viewModel: LibraryViewModel = hiltViewModel(),
@@ -145,11 +161,15 @@ fun LibraryScreen(
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         uri?.let { viewModel.onFolderPicked(it.toString()) }
     }
+    val shelvesPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        uri?.let { viewModel.onFolderPickedForShelves(it.toString()) }
+    }
     val locate = rememberLocate(viewModel)
     val opener = LocalBookOpener.current
     val heroSpot = remember { CoverSpot() }
     val stats = rememberLibraryStats(statsViewModel, state.continueReading?.book?.id)
     val setBookGoal = rememberLibraryBookGoalDialog(statsViewModel)
+    val openGoal = rememberLibraryGoalDialog(statsViewModel, stats, state, onOpenDetails)
     LibraryContent(
         state,
         rememberMessages(viewModel),
@@ -157,6 +177,7 @@ fun LibraryScreen(
         LibraryActions(
             onImport = { importPicker.launch(PDF_TYPES) },
             onImportFolder = { folderPicker.launch(null) },
+            onImportFolderAsShelves = { shelvesPicker.launch(null) },
             onFolderToShelves = viewModel::onFolderToShelves,
             onOpen = { item, origin ->
                 if (item.availability == Availability.MISSING) locate(item.book) else onOpenDetails(item.book, origin)
@@ -176,7 +197,14 @@ fun LibraryScreen(
             onFavorite = viewModel::toggleFavorite,
             onFinished = viewModel::toggleFinished,
             onOpenShelf = onOpenShelf,
-            onReadingGoal = rememberLibraryGoalDialog(statsViewModel, stats, state, onOpenDetails),
+            onReadingGoal = openGoal,
+            onStat = { target ->
+                when (target) {
+                    is StatTarget.Filter -> viewModel.onFilter(target.filter)
+                    is StatTarget.Notebook -> onOpenNotebook(target.section)
+                    StatTarget.Goal -> openGoal()
+                }
+            },
             onOpenFolder = onOpenFolder,
             onRemoveFolder = rememberRemoveFolder(viewModel),
             onReorder = { id: Long, ids: List<String> -> shelves.setOrder(id, ids).let {} }
@@ -186,7 +214,8 @@ fun LibraryScreen(
             onDictionary = onDictionary,
             onSetBookGoal = setBookGoal,
             onSort = viewModel::onSortChange,
-            onShelfSort = viewModel::onShelfSortChange,
+            onView = viewModel::onViewChange,
+            onStatsBand = viewModel::onStatsBand,
             onFilter = viewModel::onFilter,
             onQuery = viewModel::onQuery,
             heroSpot = heroSpot,
@@ -238,7 +267,10 @@ private fun rememberLocate(viewModel: LibraryViewModel): (Book) -> Unit {
     }
 }
 
-/** The library as in the mock: header, chips, "Continue reading" and a shelf row per shelf, on the app background. */
+/**
+ * The library (ADR-0052): the header with its search bar, the stats band, Continue reading, the reading goal (folded),
+ * the chips, then the books on their shelves, as a grid or as a list. The global search opens over it all.
+ */
 @Suppress("LongMethod")
 @Composable
 fun LibraryContent(
@@ -254,14 +286,16 @@ fun LibraryContent(
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     var searching by rememberSaveable { mutableStateOf(state.query.isNotEmpty()) }
     val list = rememberLazyListState()
+    val wide = libraryWide()
+    val perRow = booksPerRow()
+    val gutter = libraryGutter()
     // A tap on the Library tab shows the page from the top (owner, M4c).
     ScrollToTopOnTab("library", list)
-    val expanded = remember { mutableStateOf(emptySet<SearchGroup>()) }
     // Shelves screen -> "show this shelf": scroll its row into view once the rows are there.
     LaunchedEffect(scrollToShelf, state.loading, state.shelves) {
         val target = scrollToShelf ?: return@LaunchedEffect
         if (state.loading) return@LaunchedEffect
-        val index = rowIndex(state, target)
+        val index = rowIndex(state, target, wide)
         if (index != null) list.animateScrollToItem(index)
         onScrolledToShelf()
     }
@@ -275,64 +309,51 @@ fun LibraryContent(
             )
         ) {
             item(key = "header") {
-                LibraryHeader(
-                    state = state,
-                    stats = stats,
-                    searching = searching,
-                    onSearch = {
-                        searching = !searching
-                        if (!searching) actions.onQuery("")
-                    },
-                    actions = actions,
-                    modifier = Modifier.reveal(0)
-                )
-            }
-            // Always emitted so that it can animate: it grows, slides and fades in rather than appearing whole,
-            // and takes the cursor with it (owner, M4).
-            item(key = "search") {
-                AnimatedVisibility(
-                    visible = searching,
-                    enter = expandVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) +
-                        slideInVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { -it / SLIDE_FROM } +
-                        fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)),
-                    exit = shrinkVertically(tween(Motion.FAST_MS, easing = Motion.EaseInOut)) +
-                        fadeOut(tween(Motion.FAST_MS, easing = Motion.EaseInOut))
-                ) {
-                    SearchField(state.query, actions.onQuery, autoFocus = true)
+                Column(Modifier.padding(horizontal = gutter).reveal(0)) {
+                    LibraryHeader(state, wide, actions)
+                    if (!state.libraryEmpty) {
+                        LibrarySearchBar(onOpen = { searching = true }, Modifier.padding(top = 16.dp))
+                    }
                 }
             }
             if (state.importing) item(key = "importing") { ImportProgress(state.importProgress) }
-            // While a query is typed, everything it finds takes the shelves' place (owner, M3T2).
-            if (searching && state.query.isNotBlank()) {
-                searchResults(search, actions, expanded)
-            } else {
-                libraryBody(state, actions, stats)
-            }
+            libraryBody(state, actions, stats, wide, perRow, gutter)
         }
-        SnackbarHost(
+        FlowFolioSnackbarHost(
             snackbar,
             Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = insets.calculateBottomPadding() + chrome.calculateBottomPadding())
         )
+        AnimatedVisibility(
+            visible = searching,
+            enter = fadeIn(tween(Motion.FAST_MS)) +
+                slideInVertically(tween(Motion.RISE_MS, easing = Motion.Rise)) { it / SEARCH_RISE },
+            exit = fadeOut(tween(Motion.FAST_MS))
+        ) {
+            GlobalSearch(
+                query = state.query,
+                onQuery = actions.onQuery,
+                onClose = {
+                    searching = false
+                    actions.onQuery("")
+                },
+                results = search,
+                recent = state.recent,
+                actions = actions
+            )
+        }
     }
 }
 
-/** The list index of [shelfId]'s row, matching the items [LibraryContent] emits; null when it has no row. */
-private fun rowIndex(state: LibraryUiState, shelfId: Long): Int? {
-    val rows = shelfRows(state.items, state.shelves, state.sortRank)
-    val row = rows.indexOfFirst { it.shelf?.id == shelfId }.takeIf { it >= 0 } ?: return null
-    val hero = state.continueReading != null && state.filter == LibraryFilter.ALL && state.query.isBlank()
-    // Header, search field, import progress, chips and the hero card come before the rows. Since M4 the search
-    // row is always emitted (it animates open), so it always counts.
-    val before = listOf(true, true, state.importing, true, hero).count { it }
-    return before + row
-}
-
-private fun androidx.compose.foundation.lazy.LazyListScope.libraryBody(
+@Suppress("LongParameterList")
+private fun LazyListScope.libraryBody(
     state: LibraryUiState,
     actions: LibraryActions,
-    stats: LibraryStats
+    stats: LibraryStats,
+    wide: Boolean,
+    perRow: Int,
+    gutter: androidx.compose.ui.unit.Dp
 ) {
     when {
         state.loading -> Unit
@@ -340,45 +361,33 @@ private fun androidx.compose.foundation.lazy.LazyListScope.libraryBody(
         state.libraryEmpty -> item(key = "empty") { EmptyLibrary(actions) }
 
         else -> {
-            item(key = "chips") { FilterChips(state.filters, state.filter, actions.onFilter, Modifier.reveal(1)) }
-            if (state.filter == LibraryFilter.FOLDERS) {
-                folderRoots(state, actions)
-                return
-            }
-            if (state.filter == LibraryFilter.FINISHED) {
-                item(key = "finished") { FinishedTiles(state.items, actions, Modifier.reveal(2)) }
-                return
-            }
-            val hero = state.continueReading
-            if (hero != null && state.filter == LibraryFilter.ALL && state.query.isBlank()) {
-                // The shelf its shortcut opens: the first it is on, or the books on no shelf.
-                val shelf = state.shelves.firstOrNull { hero.book.id in it.bookIds }?.id ?: ShelfPageViewModel.LOOSE
-                val goalProgress = stats.heroGoal?.progress(stats.heroReadMillis)
-                    ?: stats.libraryGoal?.progress(stats.periodReadMillis)
-                item(key = "hero") {
-                    ContinueReadingCard(
-                        hero,
+            libraryTop(state, actions, stats, wide, gutter)
+            when {
+                state.filter == LibraryFilter.FOLDERS -> folderRoots(state, actions)
+
+                state.items.isEmpty() -> item(key = "nomatch") { NoMatch() }
+
+                state.view == LibraryView.SHELF && state.filter == LibraryFilter.ALL ->
+                    shelfSections(state, actions, perRow, gutter)
+
+                state.view == LibraryView.LIST -> {
+                    item(key = "list-gap") { Spacer(Modifier.height(BODY_GAP)) }
+                    bookList("list", state.items, gutter, actions)
+                }
+
+                else -> {
+                    item(key = "grid-gap") { Spacer(Modifier.height(BODY_GAP)) }
+                    bookRows(
+                        "grid",
+                        state.items,
+                        perRow,
+                        gutter,
+                        GRID_ORIGIN,
                         actions,
-                        shelf,
-                        stats.heroReadMillis,
-                        Modifier.reveal(2),
-                        bookmarkCount = stats.heroBookmarks,
-                        annotationCount = stats.heroAnnotations,
-                        dictionaryCount = stats.heroDictionary,
-                        readGoalProgress = goalProgress
+                        planks = state.view == LibraryView.SHELF,
+                        revealFrom = ROWS_REVEAL_ORDER
                     )
                 }
-            }
-            val rows = shelfRows(state.items, state.shelves, state.sortRank)
-            if (rows.isEmpty()) item(key = "nomatch") { NoMatch() }
-            itemsIndexed(rows, key = { _, r -> "row-" + (r.shelf?.id ?: "loose") }) { i, row ->
-                ShelfRowView(
-                    row,
-                    noShelves = state.shelves.isEmpty(),
-                    actions = actions,
-                    modifier = Modifier.animateItem(),
-                    order = ROWS_REVEAL_ORDER + i
-                )
             }
         }
     }
@@ -419,13 +428,19 @@ internal fun NoMatch() {
     )
 }
 
-/** The search box slides down from a third of its own height. */
-private const val SLIDE_FROM = 3
+/** The global search rises in from a twelfth of its height. */
+private const val SEARCH_RISE = 12
+
+private const val GRID_ORIGIN = "grid"
+internal const val LOOSE_ORIGIN = "loose"
 
 private val LIST_END = 24.dp
 
-/** Shelf rows reveal after the header, chips and hero card (orders 0 to 2). */
-private const val ROWS_REVEAL_ORDER = 3
+/** Shelf rows reveal after the header, stats, hero, goal and chips (orders 0 to 4). */
+internal const val ROWS_REVEAL_ORDER = 5
+
+/** Space between the chips and a grid or list (`margin-top: 18px`). */
+private val BODY_GAP = 18.dp
 
 @Suppress("CyclomaticComplexMethod") // one branch per message
 internal fun LibraryMessage.text(context: android.content.Context): String = when (this) {

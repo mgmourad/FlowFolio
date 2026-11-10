@@ -76,7 +76,7 @@ class LibraryUiTest {
         compose.onNodeWithContentDescription("Calculus").performClick()
         assertEquals(item, opened)
         compose.onNodeWithContentDescription("Calculus").performTouchInput { longClick() }
-        compose.onNodeWithText(res.getString(R.string.action_delete)).performClick()
+        compose.onNodeWithText(res.getString(R.string.action_remove_from_library)).performClick()
         assertEquals(item.book, deleted)
     }
 

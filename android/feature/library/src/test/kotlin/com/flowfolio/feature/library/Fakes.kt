@@ -117,6 +117,12 @@ class FakeSettings(initial: UserSettings = UserSettings()) : SettingsRepository 
 
     override suspend fun setStorageNoticeSeen() = state.update { it.copy(storageNoticeSeen = true) }
 
+    override suspend fun setLibraryView(view: com.flowfolio.core.model.LibraryView) =
+        state.update { it.copy(libraryView = view) }
+
+    override suspend fun setStatsBand(band: com.flowfolio.core.model.StatsBand) =
+        state.update { it.copy(statsBand = band) }
+
     override suspend fun setLibrarySort(sort: LibrarySort) = state.update { it.copy(librarySort = sort) }
 
     override suspend fun setReaderSpreads(on: Boolean) = state.update { it.copy(readerSpreads = on) }

@@ -112,6 +112,8 @@ fun FlowFolioRing(
     modifier: Modifier = Modifier,
     celebrationId: Any? = null,
     diameter: Dp = 84.dp,
+    /** The arc's colour; the accent by default (the goal ring turns to the success colour once reached). */
+    color: Color? = null,
     center: @Composable BoxScope.() -> Unit = {}
 ) {
     val p = FlowFolio.palette
@@ -149,7 +151,7 @@ fun FlowFolioRing(
                 }
             }
             drawArc(
-                p.accent,
+                color ?: p.accent,
                 START_ANGLE,
                 FULL_TURN * sweep,
                 false,

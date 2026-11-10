@@ -77,7 +77,18 @@ enum class BookFormat { PDF, EPUB }
 /** Whether a book's file can currently be opened. Only linked books can go missing. */
 enum class Availability { AVAILABLE, MISSING }
 
-enum class LibrarySort { RECENT, TITLE }
+/**
+ * How the library orders its books (ADR-0052), in every view and inside each shelf row. [RECENT] is most recently
+ * opened first; [TITLE] and [AUTHOR] are alphabetical; [DATE_ADDED], [PROGRESS] and [READ_TIME] put the newest, the
+ * furthest read and the longest read first.
+ */
+enum class LibrarySort { RECENT, TITLE, AUTHOR, DATE_ADDED, PROGRESS, READ_TIME }
+
+/** How the library lays its books out (ADR-0052): on shelves (rows over planks), as a grid, or as a list. */
+enum class LibraryView { SHELF, GRID, LIST }
+
+/** The library's stats band (ADR-0052): one summary line that opens, open at once, or not shown. */
+enum class StatsBand { COLLAPSED, EXPANDED, HIDDEN }
 
 enum class ThemePreference { SYSTEM, LIGHT, DARK }
 
@@ -87,6 +98,10 @@ data class UserSettings(
     val theme: ThemePreference = ThemePreference.SYSTEM,
     val storageNoticeSeen: Boolean = false,
     val librarySort: LibrarySort = LibrarySort.RECENT,
+    /** How the library shows its books, remembered (ADR-0052). */
+    val libraryView: LibraryView = LibraryView.SHELF,
+    /** The library's stats band: its state, remembered, and Settings' choice of Hidden (ADR-0052). */
+    val statsBand: StatsBand = StatsBand.COLLAPSED,
     /** Two pages side by side on wide windows (the unfolded Fold); off means always one page. */
     val readerSpreads: Boolean = true,
     /** In a spread, show the cover on its own (print style) rather than pairing from the first page. */

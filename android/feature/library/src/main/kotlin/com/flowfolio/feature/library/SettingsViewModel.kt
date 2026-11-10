@@ -16,6 +16,7 @@ import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.MaterialSeed
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.ReaderText
+import com.flowfolio.core.model.StatsBand
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
@@ -38,6 +39,8 @@ data class SettingsActions(
     val onAppStyle: (AppStyle) -> Unit = {},
     val onMaterialSeed: (MaterialSeed) -> Unit = {},
     val onGlow: (Boolean) -> Unit = {},
+    /** The library's stats band: collapsed, expanded or hidden (ADR-0052). */
+    val onStatsBand: (StatsBand) -> Unit = {},
     val onPageTurn: (PageTurn) -> Unit = {},
     val onSpreads: (Boolean) -> Unit = {},
     val onCoverAlone: (Boolean) -> Unit = {},
@@ -317,6 +320,8 @@ class SettingsViewModel @Inject constructor(
     fun setMaterialSeed(seed: MaterialSeed) = viewModelScope.launch { repo.setMaterialSeed(seed) }
 
     fun setGlow(on: Boolean) = viewModelScope.launch { repo.setNeonGlow(on) }
+
+    fun setStatsBand(band: StatsBand) = viewModelScope.launch { repo.setStatsBand(band) }
 
     fun setLookup(on: Boolean) = viewModelScope.launch { repo.setOnlineLookup(on) }
 

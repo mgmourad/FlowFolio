@@ -106,6 +106,12 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                                 onBookmarks = { book -> nav.navigate(Routes.bookBookmarks(book.id)) },
                                 onAnnotations = { book -> nav.navigate(Routes.bookAnnotations(book.id)) },
                                 onDictionary = { book -> nav.navigate(Routes.bookDictionary(book.id)) },
+                                onOpenNotebook = { section ->
+                                    nav.navigate(Destinations.notebook(section)) {
+                                        popUpTo(nav.graph.findStartDestination().id)
+                                        launchSingleTop = true
+                                    }
+                                },
                                 scrollToShelf = shelfToShow,
                                 onScrolledToShelf = { shelfToShow = null },
                                 viewModel = library

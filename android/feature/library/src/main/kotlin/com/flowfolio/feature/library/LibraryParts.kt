@@ -90,75 +90,54 @@ import com.flowfolio.core.model.pageLabel
 import com.flowfolio.core.model.printedPages
 
 /**
- * `.hdr`: "Library" with search, sort and import level with it at the top right (owner, M3T1), and the library's
- * totals under them. The title keeps its one line, shrinking a little on the narrowest screens rather than wrapping.
+ * The library's head (`.hrow`, ADR-0052): "Library" and its buttons: the reading goal (folded only; unfolded it is the
+ * ring in Continue reading), Sort and view, and Import.
  */
 @Composable
 internal fun LibraryHeader(
     state: LibraryUiState,
-    stats: LibraryStats,
-    searching: Boolean,
-    onSearch: () -> Unit,
+    wide: Boolean,
     actions: LibraryActions,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier.fillMaxWidth().padding(start = 22.dp, end = 18.dp, top = 10.dp, bottom = 6.dp)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                stringResource(R.string.library_title),
-                style = FlowFolioType.screenTitle.merge(FlowFolio.title),
-                maxLines = 1,
-                softWrap = false,
-                autoSize = TextAutoSize.StepBased(
-                    minFontSize = TITLE_MIN_SP,
-                    maxFontSize = FlowFolioType.screenTitle.fontSize
-                ),
-                modifier = Modifier.weight(1f).padding(end = 8.dp)
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                HeaderButtons(state, searching, onSearch, actions)
+    Row(modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            stringResource(R.string.library_title),
+            style = (if (wide) FlowFolioType.screenTitleWide else FlowFolioType.screenTitle)
+                .copy(color = FlowFolio.palette.ink),
+            maxLines = 1,
+            softWrap = false,
+            autoSize = TextAutoSize.StepBased(
+                minFontSize = TITLE_MIN_SP,
+                maxFontSize = (if (wide) FlowFolioType.screenTitleWide else FlowFolioType.screenTitle).fontSize
+            ),
+            modifier = Modifier.weight(1f).padding(end = 8.dp)
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (!state.libraryEmpty) {
+                if (!wide) {
+                    FlowFolioIconButton(
+                        onClick = actions.onReadingGoal,
+                        tooltip = stringResource(R.string.action_reading_goal),
+                        modifier = Modifier.testTag(LibraryTestTags.READING_GOAL)
+                    ) {
+                        FlowFolioGlyph(Glyph.ReadingGoal, null, size = 20.dp)
+                    }
+                }
+                SortViewMenu(state.sort, state.view, actions)
+            }
+            CoachMark(
+                visible = actions.welcomeVisible,
+                title = stringResource(R.string.guide_welcome_title),
+                body = stringResource(R.string.guide_welcome_body),
+                dismissLabel = stringResource(R.string.guide_got_it),
+                neverLabel = stringResource(R.string.guide_never_show),
+                onDismiss = actions.onWelcomeSeen,
+                onNeverShow = actions.onNeverShowTips
+            ) {
+                ImportMenu(actions)
             }
         }
-        if (!state.libraryEmpty) {
-            LibraryTotals(state, stats, Modifier.padding(top = 8.dp), onOpenGoal = actions.onReadingGoal)
-        }
-    }
-}
-
-/** Search, sort, reading goal and import. No select mode here: bulk deletion from the whole library was too easy to do
- * by accident (owner, 2026-10-23); shelf pages keep it. */
-@Composable
-private fun HeaderButtons(state: LibraryUiState, searching: Boolean, onSearch: () -> Unit, actions: LibraryActions) {
-    if (!state.libraryEmpty) {
-        FlowFolioIconButton(
-            onClick = actions.onReadingGoal,
-            modifier = Modifier.testTag(LibraryTestTags.READING_GOAL)
-        ) {
-            FlowFolioGlyph(
-                Glyph.ReadingGoal,
-                contentDescription = stringResource(R.string.action_reading_goal),
-                color = FlowFolio.palette.glyph
-            )
-        }
-        FlowFolioIconButton(onClick = onSearch, modifier = Modifier.testTag(LibraryTestTags.SEARCH)) {
-            FlowFolioGlyph(
-                Glyph.Search,
-                contentDescription = stringResource(R.string.action_search),
-                color = if (searching) FlowFolio.palette.title else FlowFolio.palette.glyph
-            )
-        }
-        SortMenu(state.shelfSort, actions.onShelfSort)
-    }
-    CoachMark(
-        visible = actions.welcomeVisible,
-        title = stringResource(R.string.guide_welcome_title),
-        body = stringResource(R.string.guide_welcome_body),
-        dismissLabel = stringResource(R.string.guide_got_it),
-        neverLabel = stringResource(R.string.guide_never_show),
-        onDismiss = actions.onWelcomeSeen,
-        onNeverShow = actions.onNeverShowTips
-    ) {
-        ImportMenu(actions)
     }
 }
 
@@ -236,11 +215,12 @@ internal fun FilterChips(
     filters: List<LibraryFilter>,
     selected: LibraryFilter,
     onFilter: (LibraryFilter) -> Unit,
+    gutter: androidx.compose.ui.unit.Dp,
     modifier: Modifier = Modifier
 ) {
     LazyRow(
         modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 14.dp, bottom = 4.dp),
+        contentPadding = PaddingValues(start = gutter, end = gutter, top = 18.dp, bottom = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(filters) { f ->
@@ -275,103 +255,6 @@ private val LibraryFilter.label: Int
         LibraryFilter.NOVELS -> R.string.filter_novels
         LibraryFilter.FOLDERS -> R.string.filter_folders
     }
-
-/** `.shelf`: the shelf's name and count, its books standing in a row, and the plank under them. */
-@Composable
-internal fun ShelfRowView(
-    row: ShelfRow,
-    noShelves: Boolean,
-    actions: LibraryActions,
-    modifier: Modifier = Modifier,
-    order: Int = 0
-) {
-    val origin = row.shelf?.id?.toString() ?: row.special?.let { "special$it" } ?: LOOSE_ORIGIN
-    val name = row.shelf?.name ?: stringResource(
-        when {
-            row.special == ShelfPageViewModel.FINISHED -> R.string.shelf_finished
-            noShelves -> R.string.shelf_all_books
-            else -> R.string.shelf_loose
-        }
-    )
-    val page = row.shelf?.id ?: row.special ?: ShelfPageViewModel.LOOSE
-    // A shelf in its own colour; books not on a shelf (and shelves without one) keep the theme's (owner, 2026-10-22).
-    val accent = row.shelf?.color?.color
-    Column(modifier.fillMaxWidth().padding(top = 22.dp)) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 22.dp).reveal(order),
-            verticalAlignment = Alignment.Bottom
-        ) {
-            Text(
-                name,
-                style = FlowFolioType.sectionTitle.merge(FlowFolio.title).let {
-                    if (accent !=
-                        null
-                    ) {
-                        it.copy(color = accent)
-                    } else {
-                        it
-                    }
-                },
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            // Tapping the count opens the whole shelf (tiles or a list).
-            // A bold pill on a soft shade (owner, 2026-10-22).
-            Text(
-                pluralStringResource(R.plurals.book_count, row.items.size, row.items.size) + "  ›",
-                style = FlowFolioType.sub.copy(fontSize = 13.sp, fontWeight = FontWeight.Bold).merge(FlowFolio.subItem),
-                modifier = Modifier
-                    .padding(start = 12.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(FlowFolio.palette.subItem.copy(alpha = COUNT_SHADE))
-                    .clickable { actions.onOpenShelf(page) }
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
-                    .testTag(LibraryTestTags.shelfCount(page))
-            )
-        }
-        ShelfBooks(row, origin, actions, order)
-        ShelfPlank(Modifier.padding(horizontal = 14.dp).reveal(order), accent)
-    }
-}
-
-/** A shelf's books standing in a row that swipes sideways; a real shelf's can be dragged into a new order. */
-@Composable
-private fun ShelfBooks(row: ShelfRow, origin: String, actions: LibraryActions, order: Int) {
-    // `.shelf-row` with `scroll-snap-type: x mandatory`: swipe sideways through the shelf; it settles on a book.
-    // As tall as the tallest book can be, whichever books are in view, so the plank never moves while the row
-    // scrolls (a lazy row is otherwise as tall as the books it shows; owner, 2026-10-26).
-    val rowState = rememberLazyListState()
-    // A shelf's books can be dragged into a new order (owner, 2026-10-26); the books on no shelf cannot.
-    val shelfId = row.shelf?.id
-    val reorder = if (shelfId != null && actions.onReorder != null) {
-        rememberRowReorder(row.items.map { it.book.id }, rowState) { actions.onReorder.invoke(shelfId, it) }
-    } else {
-        null
-    }
-    val byId = row.items.associateBy { it.book.id }
-    val shown = reorder?.order?.mapNotNull(byId::get) ?: row.items
-    LazyRow(
-        state = rowState,
-        modifier = Modifier.height(SHELF_ROW_TOP + SHELF_BOOK_HEIGHT + SHELF_BOOK_EXTRA.dp + SHELF_ROW_BOTTOM),
-        flingBehavior = rememberSnapFlingBehavior(rowState, SnapPosition.Start),
-        contentPadding = PaddingValues(start = 30.dp, end = 30.dp, top = SHELF_ROW_TOP, bottom = SHELF_ROW_BOTTOM),
-        horizontalArrangement = Arrangement.spacedBy(SHELF_BOOK_GAP),
-        verticalAlignment = Alignment.Bottom
-    ) {
-        itemsIndexed(shown, key = { _, entry -> entry.book.id }) { i, item ->
-            val h = SHELF_BOOK_HEIGHT + minOf(SHELF_BOOK_EXTRA, item.book.pageCount / PAGES_PER_DP).dp
-            val dragged = reorder?.dragging == item.book.id
-            Box(
-                Modifier.zIndex(if (dragged) 1f else 0f)
-                    .then(if (dragged) Modifier else Modifier.animateItem())
-                    .reveal(order + 1 + i)
-            ) {
-                ShelfBook(item, origin, actions, width = SHELF_BOOK_WIDTH, height = h, reorder = reorder)
-            }
-        }
-    }
-}
 
 /**
  * A book on a shelf: the 3D book (lifts while pressed) and a badge when its file is missing or locked; its title is
@@ -436,7 +319,7 @@ internal fun ShelfBook(
             )
             BookBadge(item)
             selection?.let { SelectionMark(it, book.id) }
-            BookMenu(item, menu, actions) { menu = false }
+            BookMenu(item, origin, menu, actions) { menu = false }
         }
     }
 }
@@ -499,65 +382,12 @@ private fun androidx.compose.foundation.layout.BoxScope.BookBadge(item: LibraryI
     }
 }
 
-@Suppress("LongMethod", "CyclomaticComplexMethod")
-@Composable
-private fun BookMenu(item: LibraryItem, open: Boolean, actions: LibraryActions, onClose: () -> Unit) {
-    FlowFolioMenu(expanded = open, onDismissRequest = onClose) {
-        val entries = ArrayList<Triple<Int, Boolean, () -> Unit>>()
-        fun add(label: Int, warn: Boolean = false, action: () -> Unit) = entries.add(
-            Triple(label, warn, {
-                onClose()
-                action()
-            })
-        )
-        actions.selection?.let { add(R.string.action_select) { it.startWith(item.book.id) } }
-        add(R.string.action_add_to_shelf) { actions.onAddToShelf(item.book) }
-        actions.onFavorite?.let {
-            add(if (item.book.favorite) R.string.action_favorite_remove else R.string.action_favorite_add) {
-                it(item.book)
-            }
-        }
-        actions.onFinished?.let {
-            add(if (item.book.finished) R.string.action_mark_unfinished else R.string.action_mark_finished) {
-                it(item.book)
-            }
-        }
-        actions.onFlow?.takeIf { item.book.format == BookFormat.PDF }?.let {
-            add(if (item.book.flowMode == true) R.string.action_flow_off else R.string.action_flow_on) { it(item.book) }
-        }
-        actions.onBookmarks?.let { add(R.string.action_bookmarks) { it(item.book) } }
-        actions.onAnnotations?.let { add(R.string.hero_annotations) { it(item.book) } }
-        actions.onDictionary?.let { add(R.string.dictionary_title) { it(item.book) } }
-        actions.onSetBookGoal?.let { add(R.string.action_set_read_goal) { it(item.book) } }
-        actions.onRename?.let { add(R.string.action_rename) { it(item.book) } }
-        if (item.book.storage is BookStorage.Linked) add(R.string.action_locate) { actions.onLocate(item.book) }
-        add(R.string.action_delete, warn = true) { actions.onDelete(item.book) }
-        entries.forEachIndexed { i, (label, warn, action) ->
-            if (i > 0) FlowFolioMenuDivider()
-            MenuEntry(label, warn, action)
-        }
-    }
-}
-
-@Composable
-private fun MenuEntry(label: Int, warn: Boolean = false, onClick: () -> Unit) {
-    DropdownMenuItem(
-        text = { Text(stringResource(label), style = if (warn) FlowFolio.subItem else FlowFolio.title) },
-        onClick = onClick
-    )
-}
-
 internal const val HERO_ORIGIN = "hero"
-
-/** Narrower than this, the header's buttons go under the title. */
-private const val COUNT_SHADE = 0.14f
-private const val LOOSE_ORIGIN = "loose"
 
 /** The search box's resting outline: the theme's title colour, dimmed but still clearly a line. */
 private const val SEARCH_OUTLINE = 0.55f
 
 private const val SEARCH_FILL = 0.6f
-private const val PAGES_PER_DP = 70
 private val BADGE_GLYPH = 13.dp
 private val BADGE_EDGE = 4.dp
 private val BADGE_RADIUS = 7.dp
@@ -565,14 +395,6 @@ private val BADGE_RADIUS = 7.dp
 /** How far the badges' plate dims the cover under them. */
 private const val BADGE_PLATE = 0.55f
 
-private val SHELF_BOOK_WIDTH = 90.dp
-private val SHELF_BOOK_HEIGHT = 124.dp
-private const val SHELF_BOOK_EXTRA = 18
 internal val BOOK_SPINE_ROOM = 8.dp
-
-/** Half the mock's 22 dp between books (owner, 2026-10-26). */
-private val SHELF_BOOK_GAP = 11.dp
-private val SHELF_ROW_TOP = 22.dp
-private val SHELF_ROW_BOTTOM = 6.dp
 
 private val TITLE_MIN_SP = 34.sp

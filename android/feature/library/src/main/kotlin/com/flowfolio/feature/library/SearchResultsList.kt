@@ -176,4 +176,4 @@ private val SearchGroup.label: Int
     }
 
 private const val FIRST_HITS = 4
-private const val SEARCH_ORIGIN = "search"
+internal const val SEARCH_ORIGIN = "search"

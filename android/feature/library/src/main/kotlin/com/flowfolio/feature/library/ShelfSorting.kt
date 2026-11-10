@@ -1,6 +1,7 @@
 package com.flowfolio.feature.library
 
 import com.flowfolio.core.model.Book
+import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.ReadingGoal
 
 /**
@@ -45,6 +46,29 @@ fun sortBooks(books: List<Book>, sort: ShelfSort, inputs: ShelfSortInputs): List
     ShelfSort.READ_GOAL -> books.sortedWith(
         compareByDescending<Book> { inputs.goals[it.id]?.targetMinutes ?: 0 }.thenBy { it.title.lowercase() }
     )
+}
+
+/**
+ * The library's books in [sort] order (ADR-0052), with [readMillis] for [LibrarySort.READ_TIME]. Ties fall back to the
+ * title, so equal books keep a steady order. "Recently opened" puts books never opened last, newest added first.
+ */
+fun orderLibrary(books: List<Book>, sort: LibrarySort, readMillis: Map<String, Long> = emptyMap()): List<Book> {
+    val byTitle = compareBy<Book> { it.title.lowercase() }
+    val order: Comparator<Book> = when (sort) {
+        LibrarySort.RECENT -> compareByDescending<Book> { it.lastOpenedAtMillis ?: Long.MIN_VALUE }
+            .thenByDescending { it.addedAtMillis }
+
+        LibrarySort.TITLE -> byTitle
+
+        LibrarySort.AUTHOR -> compareBy<Book> { it.author.isNullOrBlank() }.thenBy { it.author?.lowercase() }
+
+        LibrarySort.DATE_ADDED -> compareByDescending { it.addedAtMillis }
+
+        LibrarySort.PROGRESS -> compareByDescending { if (it.finished) 1f else it.progress }
+
+        LibrarySort.READ_TIME -> compareByDescending { readMillis[it.id] ?: 0L }
+    }
+    return books.sortedWith(order.then(byTitle))
 }
 
 /**

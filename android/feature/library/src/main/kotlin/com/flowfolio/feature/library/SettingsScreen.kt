@@ -77,6 +77,7 @@ import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.PageTurn
+import com.flowfolio.core.model.StatsBand
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
@@ -99,6 +100,7 @@ fun SettingsScreen(
             onAppStyle = viewModel::setAppStyle,
             onMaterialSeed = viewModel::setMaterialSeed,
             onGlow = viewModel::setGlow,
+            onStatsBand = viewModel::setStatsBand,
             onPageTurn = viewModel::setPageTurn,
             onSpreads = viewModel::setSpreads,
             onCoverAlone = viewModel::setCoverAlone,
@@ -383,6 +385,13 @@ private fun AppearanceGroup(settings: UserSettings, actions: SettingsActions) {
             Divider()
             SwitchRow(R.string.settings_glow, R.string.settings_glow_detail, settings.neonGlow, actions.onGlow)
         }
+        Divider()
+        ChoiceRow(
+            R.string.settings_stats_band,
+            R.string.settings_stats_band_detail,
+            listOf(R.string.stats_band_collapsed, R.string.stats_band_expanded, R.string.stats_band_hidden),
+            StatsBand.entries.indexOf(settings.statsBand)
+        ) { actions.onStatsBand(StatsBand.entries[it]) }
         Divider()
         ChoiceRow(
             R.string.settings_turn,

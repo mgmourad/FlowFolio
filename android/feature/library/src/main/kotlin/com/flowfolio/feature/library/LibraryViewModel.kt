@@ -18,8 +18,10 @@ import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.BookType
 import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.LibrarySort
+import com.flowfolio.core.model.LibraryView
 import com.flowfolio.core.model.ReadingIntent
 import com.flowfolio.core.model.Shelf
+import com.flowfolio.core.model.StatsBand
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.UserSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -65,10 +67,13 @@ data class LibraryUiState(
     /** The books that pass [filter] and [query], in the chosen sort order. */
     val items: List<LibraryItem> = emptyList(),
     val loading: Boolean = true,
+    /** The order of the books in every view and inside each shelf row (ADR-0052), remembered. */
     val sort: LibrarySort = LibrarySort.RECENT,
-    /** How the books inside each shelf row are ordered (owner, M4): the shelf page's own choices. */
-    val shelfSort: ShelfSort = ShelfSort.CUSTOM,
-    /** Where each book sits in [shelfSort]'s order; empty for [ShelfSort.CUSTOM], where shelves keep their order. */
+    /** Shelf, grid or list (ADR-0052), remembered; filtered views keep it. */
+    val view: LibraryView = LibraryView.SHELF,
+    /** The stats band: collapsed, expanded or hidden (ADR-0052), remembered. */
+    val statsBand: StatsBand = StatsBand.COLLAPSED,
+    /** Where each book sits in [sort]'s order, which reorders the books inside each shelf row. */
     val sortRank: Map<String, Int> = emptyMap(),
     val importing: Boolean = false,
     /** Books done and books in all, while a batch (several files, a folder) imports. */
@@ -83,6 +88,8 @@ data class LibraryUiState(
     /** Favourites and finished books, for the totals' second column (owner, M3T2). */
     val favoriteCount: Int = 0,
     val finishedCount: Int = 0,
+    /** The books opened most recently, for the global search before anything is typed (ADR-0052). */
+    val recent: List<LibraryItem> = emptyList(),
     /** The most recently opened book with a saved position, for the "Continue reading" card. */
     val continueReading: LibraryItem? = null,
     /** The chips to show: the type chips only when some book has that type. */
@@ -93,17 +100,20 @@ data class LibraryUiState(
 }
 
 /**
- * A row of the library: a shelf's books, the books on no shelf ([shelf] null), or a row of the library's own
- * ([special]: [ShelfPageViewModel.FINISHED], the finished books at the bottom; owner, M3T2).
+ * A row of the library: a shelf's books, or the books on no shelf ([shelf] null, "Not on a shelf", always last).
+ * [special] is kept for rows of the library's own; none is made since ADR-0052 (finished books have their chip).
  */
-data class ShelfRow(val shelf: Shelf?, val items: List<LibraryItem>, val special: Long? = null)
+data class ShelfRow(val shelf: Shelf?, val items: List<LibraryItem>, val special: Long? = null) {
+    /** A key no two rows share, for lazy lists (the old `row-loose` key crashed when two rows had no shelf). */
+    val key: String get() = "row-" + (shelf?.id?.toString() ?: special?.let { "special-$it" } ?: "loose")
+}
 
 /**
  * The library's rows: each shelf with the [items] on it, then the books on no shelf. Shelves with no visible
  * books are left out, except that with no shelves at all every book is in one row.
  *
  * Each row is in the shelf's own order unless a [rank] is given, which reorders within every row while leaving
- * the books where they are (owner, M4). The finished row keeps its own order, latest first.
+ * the books where they are (owner, M4).
  */
 fun shelfRows(
     items: List<LibraryItem>,
@@ -119,11 +129,7 @@ fun shelfRows(
     }
     val shelved = shelves.flatMapTo(HashSet()) { it.bookIds }
     val loose = items.filterNot { it.book.id in shelved }.ordered()
-    val finished = items.filter { it.book.finished }.sortedByDescending { it.book.finishedAtMillis }
-    return rows + listOfNotNull(
-        ShelfRow(null, loose).takeIf { loose.isNotEmpty() },
-        ShelfRow(null, finished, ShelfPageViewModel.FINISHED).takeIf { finished.isNotEmpty() }
-    )
+    return rows + listOfNotNull(ShelfRow(null, loose).takeIf { loose.isNotEmpty() })
 }
 
 internal fun Book.started(): Boolean = (lastPage ?: 0) > 0
@@ -164,6 +170,9 @@ internal fun Book.matches(query: String): Boolean =
 
 /** What the app remembers about having offered to turn folders into shelves (owner, M5 round 4). */
 private const val FOLDER_SHELVES = "folders_to_shelves"
+
+/** How many recent books the global search shows before anything is typed. */
+private const val RECENT_IN_SEARCH = 4
 
 private const val RECENT_WINDOW_MS = 30L * 24 * 60 * 60 * 1000
 
@@ -228,7 +237,6 @@ class LibraryViewModel @Inject constructor(
     private val shelfRepo: ShelfRepository,
     private val lookup: BookLookup,
     readingRepo: ReadingRepository,
-    goalRepo: ReadingGoalRepository,
     private val flow: DynamicFlow = DynamicFlow.None
 ) : ViewModel(),
     FlowSwitching {
@@ -300,16 +308,8 @@ class LibraryViewModel @Inject constructor(
 
     private val bookIdsWithBookmarks: Flow<Set<String>> = library.observeBookIdsWithBookmarks()
 
-    /** The order inside the shelf rows. Like the shelf page's, it lasts for the session rather than being stored. */
-    private val shelfSortFlow = MutableStateFlow(ShelfSort.CUSTOM)
-
-    private val shelfSorting = combine(
-        shelfSortFlow,
-        readingRepo.observeReadMillisByBook(),
-        goalRepo.observeAllGoals()
-    ) { sort, readMillis, goalList ->
-        sort to ShelfSortInputs(readMillis, goalList.associateBy { it.scope })
-    }
+    /** Time read per book, for the Read time order. */
+    private val readMillis = readingRepo.observeReadMillisByBook()
 
     private val listed =
         combine(books, availability, shelfRepo.observeShelves(), bookIdsWithBookmarks) {
@@ -337,21 +337,25 @@ class LibraryViewModel @Inject constructor(
         settingsRepo.settings,
         transient,
         view,
-        shelfSorting
+        readMillis
     ) {
-            (all, _, shelves),
+            (unordered, _, shelves),
             s,
             t,
             v,
-            (shelfSort, sortInputs)
+            millis
         ->
         val now = System.currentTimeMillis()
+        val rank = orderLibrary(unordered.map { it.book }, s.librarySort, millis)
+            .withIndex().associate { (i, b) -> b.id to i }
+        val all = unordered.sortedBy { rank[it.book.id] ?: Int.MAX_VALUE }
         LibraryUiState(
             items = all.filter { v.filter.accepts(it, now) && it.book.matches(v.query) },
             loading = false,
             sort = s.librarySort,
-            shelfSort = shelfSort,
-            sortRank = sortRank(all.map { it.book }, shelfSort, sortInputs),
+            view = s.libraryView,
+            statsBand = s.statsBand,
+            sortRank = rank,
             importing = t.importing,
             importProgress = t.progress,
             dialog = t.dialog,
@@ -362,6 +366,9 @@ class LibraryViewModel @Inject constructor(
             inProgressCount = all.count { it.book.started() && !it.book.finished },
             favoriteCount = all.count { it.book.favorite },
             finishedCount = all.count { it.book.finished },
+            recent = all.filter { it.book.lastOpenedAtMillis != null }
+                .sortedByDescending { it.book.lastOpenedAtMillis }
+                .take(RECENT_IN_SEARCH),
             continueReading = all.filter {
                 it.book.started() && !it.book.finished && it.book.lastOpenedAtMillis != null
             }
@@ -384,6 +391,15 @@ class LibraryViewModel @Inject constructor(
 
     /** A folder chosen with the system's folder picker: its books and those in every folder inside it. */
     fun onFolderPicked(treeUri: String) = request(ImportRequest.Folder(treeUri))
+
+    /** Whether the folder being imported was picked to become shelves ("Make shelves from a folder", ADR-0052). */
+    private var shelvesFromNextFolder = false
+
+    /** Imports a folder and makes its folders into shelves, with no question asked: the reader chose this. */
+    fun onFolderPickedForShelves(treeUri: String) {
+        shelvesFromNextFolder = true
+        onFolderPicked(treeUri)
+    }
 
     private fun request(request: ImportRequest) = viewModelScope.launch {
         val s = settings.value ?: settingsRepo.settings.first()
@@ -420,7 +436,17 @@ class LibraryViewModel @Inject constructor(
         outcome.linkRefused?.let { showDialog(LibraryDialog.LinkNotPossible(it)) }
         // Both of these want the screen. The shelves offer waits its turn rather than being painted over by the
         // lookup question, which is what happened when they were simply shown one after the other.
-        pendingShelves = shelvesOffer(outcome.imported)
+        if (shelvesFromNextFolder) {
+            shelvesFromNextFolder = false
+            val plan = FoldersToShelves.plan(outcome.imported)
+            if (plan.isNotEmpty()) {
+                val existing = shelfRepo.observeShelves().first().associate { it.name to it.id }
+                FoldersToShelves.apply(plan, shelfRepo, existing)
+                messageChannel.send(LibraryMessage.ShelvesMade(plan.size))
+            }
+        } else {
+            pendingShelves = shelvesOffer(outcome.imported)
+        }
         val asked = outcome.imported.isNotEmpty() && lookUp(outcome.imported)
         if (!asked) showPendingShelves()
     }
@@ -531,14 +557,11 @@ class LibraryViewModel @Inject constructor(
 
     fun onSortChange(sort: LibrarySort) = viewModelScope.launch { settingsRepo.setLibrarySort(sort) }
 
-    /**
-     * Orders the books inside every shelf row (owner, M4). The order the books are read from the database in is set
-     * with them, so picking Name also fetches them by title and the rows need no reordering at all.
-     */
-    fun onShelfSortChange(sort: ShelfSort) {
-        shelfSortFlow.value = sort
-        onSortChange(if (sort == ShelfSort.NAME) LibrarySort.TITLE else LibrarySort.RECENT)
-    }
+    /** Shelf, grid or list (ADR-0052). */
+    fun onViewChange(view: LibraryView) = viewModelScope.launch { settingsRepo.setLibraryView(view) }
+
+    /** Opens or closes the stats band, or (from Settings) hides it (ADR-0052). */
+    fun onStatsBand(band: StatsBand) = viewModelScope.launch { settingsRepo.setStatsBand(band) }
 
     fun onBookOpened(bookId: String) = viewModelScope.launch { library.markOpened(bookId) }
 

@@ -17,10 +17,12 @@ import com.flowfolio.core.model.Atmosphere
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.LibrarySort
+import com.flowfolio.core.model.LibraryView
 import com.flowfolio.core.model.MaterialSeed
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.ReaderText
+import com.flowfolio.core.model.StatsBand
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
@@ -46,6 +48,8 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             theme = p[THEME].toEnum(defaults.theme),
             storageNoticeSeen = p[NOTICE_SEEN] ?: defaults.storageNoticeSeen,
             librarySort = p[SORT].toEnum(defaults.librarySort),
+            libraryView = p[LIBRARY_VIEW].toEnum(defaults.libraryView),
+            statsBand = p[STATS_BAND].toEnum(defaults.statsBand),
             readerSpreads = p[READER_SPREADS] ?: defaults.readerSpreads,
             spreadCoverAlone = p[COVER_ALONE] ?: defaults.spreadCoverAlone,
             paperStyle = p[PAPER_STYLE].toEnum(defaults.paperStyle),
@@ -128,6 +132,14 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
 
     suspend fun setLibrarySort(sort: LibrarySort) {
         store.edit { it[SORT] = sort.name }
+    }
+
+    suspend fun setLibraryView(view: LibraryView) {
+        store.edit { it[LIBRARY_VIEW] = view.name }
+    }
+
+    suspend fun setStatsBand(band: StatsBand) {
+        store.edit { it[STATS_BAND] = band.name }
     }
 
     suspend fun setReaderSpreads(on: Boolean) {
@@ -252,6 +264,8 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val THEME = stringPreferencesKey("theme")
         val NOTICE_SEEN = booleanPreferencesKey("storage_notice_seen")
         val SORT = stringPreferencesKey("library_sort")
+        val LIBRARY_VIEW = stringPreferencesKey("library_view")
+        val STATS_BAND = stringPreferencesKey("library_stats_band")
         val READER_SPREADS = booleanPreferencesKey("reader_spreads")
         val COVER_ALONE = booleanPreferencesKey("spread_cover_alone")
         val PAPER_STYLE = stringPreferencesKey("reader_paper")

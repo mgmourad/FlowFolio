@@ -10,6 +10,50 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 > **CI has not run** for any of it yet.
 
 ### Changed
+- **Overhaul Phase 3: the Library** (2026-11-09).
+  - **Header:** the title with Reading goal (folded only; unfolded it is a ring in Continue reading), Sort and view,
+    and Import. Import offers files, a folder, and **"Make shelves from a folder…"**, which imports a folder and makes
+    its shelves with no question asked (`onFolderPickedForShelves`).
+  - **Global search:** a pill under the header opens a full-screen search (`GlobalSearch`).
+    - Before typing, it shows the four most recently opened books and a hint.
+    - From two letters on (`SEARCH_MINIMUM`, also enforced in `SearchViewModel.search`), it shows grouped results.
+    - Nothing matching says so, and points to the reader for searching inside a book.
+  - **Stats band** (`StatsBandCard`): one summary line ("17 books · 5 in progress · 2 finished", plus ribbons and time
+    read unfolded).
+    - It opens on a spring to eight tiles, each leading to its chip, its Notebook section or the reading goal.
+    - Its state is remembered (`UserSettings.statsBand`), and Settings → Appearance → Library stats chooses Collapsed,
+      Expanded or Hidden.
+  - **Continue reading:** the cover, "Continue reading", the title, the author, "Page X of Y" with a percentage, a
+    thin bar, and Resume (plus Details unfolded).
+    - The ⋯ menu sits in the card's top-right corner.
+    - Unfolded, the reading-goal ring takes a third column (`GoalRing`).
+  - **Folded reading-goal card** (`GoalCard`): a 46 dp ring (green once the goal is met), time read in the goal's
+    period, what is left, and the reminder.
+  - **Chips:** a ★ Favorites chip joins the rest. Recent and Folders keep their place at the end.
+  - **Books:** one 2:3 cover everywhere (`BookTile`), with its badges, its title, and a progress bar, "Finished" or
+    "Not started".
+    - In Shelf view, each shelf shows a heading with "N books ›" and its first three (folded) or six (unfolded)
+      books, the plank *under* the titles and progress lines. "Not on a shelf" comes last.
+    - Grid and List views, and every filtered view, keep the chosen view.
+  - **Sort and view** (`SortViewMenu`): Recently opened, Title, Author, Date added, Progress or Read time
+    (`LibrarySort`, now six orders, `orderLibrary`), applied in every view and inside shelf rows. View as Shelf, Grid
+    or List (`LibraryView`). Both are remembered in DataStore.
+  - **Book menu** (long press, or ⋯ on Continue reading; `BookMenu`): Open, Details, favourite, finished, Add to
+    shelf, the book's Notebook pages, Dynamic Flow for PDFs, its reading goal, Locate for linked books, and Remove
+    from library in red.
+- **Removed:**
+  - The library's separate "Finished" row (the Finished chip shows those books).
+  - The header's totals block and goal path (`LibraryTotals.kt`).
+  - Drag-to-reorder inside library rows. Shelf pages keep drag-to-reorder.
+- **Not added:** "Share file" from the mock's book menu waits for the owner, since it would widen the FileProvider
+  beyond update downloads.
+
+### Fixed
+- **Library scroll crash** `IllegalArgumentException: Key "row-loose" was already used`. The "Not on a shelf" row and
+  the "Finished" row both had no shelf and so took the same lazy key. Every row now has its own key (`ShelfRow.key`),
+  and `LibraryOverhaulTest` holds the regression.
+
+### Changed (earlier phases)
 - **Overhaul Phase 2: app shell and navigation** (2026-11-09).
   - **Four destinations instead of seven:** Library, Shelves, Notebook and Settings.
     - Folded, a glass tab bar with labels.

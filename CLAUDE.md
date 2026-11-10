@@ -172,6 +172,10 @@ local.
   they sit on a glass bar; unfolded, on a flat rail with the app mark and Settings at the bottom. Favorites is a
   Library chip. The Notebook hosts the old Bookmarks, Annotations and Dictionary pages as sections. The retired routes
   forward through `Destinations` in `app/`.
+- **Phase 3 (Library) built 2026-11-09.** Header, global search (`GlobalSearch`, two-letter minimum), stats band
+  (`UserSettings.statsBand`), Continue card with ⋯ and the unfolded goal ring, folded `GoalCard`, flat 2:3 `BookTile`s
+  in Shelf, Grid or List view (`UserSettings.libraryView`), six `LibrarySort` orders applied everywhere, and the new
+  `BookMenu`. The `row-loose` crash is fixed (`ShelfRow.key`). Share file is not in the book menu yet (owner to decide).
 - Handover APKs get a new name every build (`app/build/outputs/apk/debug/handover/`) and are installed on the owner's
   phone as well as the emulator.
 

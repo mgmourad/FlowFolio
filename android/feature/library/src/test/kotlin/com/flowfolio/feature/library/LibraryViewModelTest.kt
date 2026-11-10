@@ -37,8 +37,7 @@ class LibraryViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun vm(settings: FakeSettings) =
-        LibraryViewModel(library, settings, FakeShelves(), lookup, FakeReading(), FakeGoals())
+    private fun vm(settings: FakeSettings) = LibraryViewModel(library, settings, FakeShelves(), lookup, FakeReading())
 
     private fun seen(mode: StorageMode = StorageMode.COPY, ask: Boolean = false) = FakeSettings(
         UserSettings(
@@ -207,5 +206,19 @@ class LibraryViewModelTest {
         vm.onSortChange(LibrarySort.TITLE)
         assertEquals(LibrarySort.TITLE, settings.state.value.librarySort)
         assertEquals(listOf("Alpha", "Zeta"), vm.uiState.value.items.map { it.book.title })
+    }
+
+    @Test
+    fun statsBandSortAndViewAreRemembered() = runTest(dispatcher) {
+        val settings = seen()
+        val vm = vm(settings)
+        backgroundScope.launch { vm.uiState.collect {} }
+        assertEquals(com.flowfolio.core.model.StatsBand.COLLAPSED, vm.uiState.value.statsBand)
+        vm.onStatsBand(com.flowfolio.core.model.StatsBand.EXPANDED)
+        vm.onViewChange(com.flowfolio.core.model.LibraryView.LIST)
+        vm.onSortChange(com.flowfolio.core.model.LibrarySort.AUTHOR)
+        assertEquals(com.flowfolio.core.model.StatsBand.EXPANDED, settings.state.value.statsBand)
+        assertEquals(com.flowfolio.core.model.LibraryView.LIST, vm.uiState.value.view)
+        assertEquals(com.flowfolio.core.model.LibrarySort.AUTHOR, vm.uiState.value.sort)
     }
 }

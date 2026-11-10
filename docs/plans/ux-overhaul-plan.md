@@ -114,6 +114,12 @@ the additions below.
 
 ### Phase 3: library
 
+> **Done 2026-11-09** (CHANGELOG, Unreleased). The library's separate Finished row is gone; the Finished chip covers
+> it. Drag-to-reorder now happens on shelf pages only. Recent and Folders chips stay at the end of the row. The
+> Continue card shows the author without a chapter, because the library holds no chapter names. "Share file" waits for
+> the owner, since it would widen the FileProvider. Verified on `fold8_api37`: folded and unfolded, light and dark,
+> Shelf, Grid and List, sort and view persisted across a force-stop, search, stats band and book menu. CI has not run.
+
 - Header (title, Reading goal folded only, Sort and view, Import), the global search field (titles, authors,
   highlights, notes, saved words, shelves; grouped results; recent books before typing; two-character minimum).
 - Stats band: collapsed one line by default, More/Less, eight tiles each opening its filtered view; Settings choice

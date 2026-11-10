@@ -6,10 +6,12 @@ import com.flowfolio.core.model.Atmosphere
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.LibrarySort
+import com.flowfolio.core.model.LibraryView
 import com.flowfolio.core.model.MaterialSeed
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.ReaderText
+import com.flowfolio.core.model.StatsBand
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
@@ -29,6 +31,12 @@ interface SettingsRepository {
     suspend fun setStorageNoticeSeen()
 
     suspend fun setLibrarySort(sort: LibrarySort)
+
+    /** How the library lays its books out (ADR-0052). */
+    suspend fun setLibraryView(view: LibraryView) = Unit
+
+    /** The library's stats band: collapsed, expanded or hidden (ADR-0052). */
+    suspend fun setStatsBand(band: StatsBand) = Unit
 
     /** Reading Atmosphere (owner, M5). */
     suspend fun setAtmosphereOn(on: Boolean) = Unit
@@ -117,6 +125,14 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setLibrarySort(sort: LibrarySort) {
         source.setLibrarySort(sort)
+    }
+
+    override suspend fun setLibraryView(view: LibraryView) {
+        source.setLibraryView(view)
+    }
+
+    override suspend fun setStatsBand(band: StatsBand) {
+        source.setStatsBand(band)
     }
 
     override suspend fun setAtmosphereOn(on: Boolean) {

@@ -182,35 +182,6 @@ private fun DialogButton(label: Int, onClick: () -> Unit) {
     TextButton(onClick = onClick) { Text(stringResource(label)) }
 }
 
-/** Import: files (one or several) or a whole folder, from a small menu under the + button (owner, 2026-10-26). */
-@Composable
-internal fun ImportMenu(actions: LibraryActions) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        FlowFolioIconButton(onClick = { open = true }, modifier = Modifier.testTag(LibraryTestTags.IMPORT)) {
-            FlowFolioGlyph(Glyph.Add, contentDescription = stringResource(R.string.action_import))
-        }
-        FlowFolioMenu(expanded = open, onDismissRequest = { open = false }) {
-            ImportEntry(R.string.import_files) {
-                open = false
-                actions.onImport()
-            }
-            ImportEntry(R.string.import_folder) {
-                open = false
-                actions.onImportFolder()
-            }
-        }
-    }
-}
-
-@Composable
-private fun ImportEntry(label: Int, onClick: () -> Unit) {
-    androidx.compose.material3.DropdownMenuItem(
-        text = { Text(stringResource(label), style = FlowFolio.title) },
-        onClick = onClick
-    )
-}
-
 /** An import running: how far a batch has got, or an open-ended bar for a single book. */
 @Composable
 internal fun ImportProgress(progress: Pair<Int, Int>?) {
@@ -250,42 +221,4 @@ internal fun RemoveFolderDialog(folder: FolderEntry, onConfirm: () -> Unit, onCl
         },
         onDismiss = onClose
     )
-}
-
-/**
- * The library's order: the same six the shelf page offers (owner, M4). It orders the books inside each shelf row
- * rather than across the library, so the books stay on their shelves.
- */
-@Composable
-internal fun SortMenu(current: ShelfSort, onSort: (ShelfSort) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        FlowFolioIconButton(onClick = { open = true }) {
-            FlowFolioGlyph(Glyph.Sort, contentDescription = stringResource(R.string.action_sort))
-        }
-        FlowFolioMenu(expanded = open, onDismissRequest = { open = false }) {
-            ShelfSort.entries.forEach { sort ->
-                DropdownMenuItem(
-                    text = {
-                        val label = when (sort) {
-                            ShelfSort.CUSTOM -> R.string.sort_custom
-                            ShelfSort.NAME -> R.string.sort_name
-                            ShelfSort.DATE_ADDED -> R.string.sort_date_added
-                            ShelfSort.PROGRESS -> R.string.sort_progress
-                            ShelfSort.READ_TIME -> R.string.sort_read_time
-                            ShelfSort.READ_GOAL -> R.string.sort_read_goal
-                        }
-                        Text(
-                            stringResource(label),
-                            style = if (sort == current) FlowFolio.title else FlowFolio.item
-                        )
-                    },
-                    onClick = {
-                        open = false
-                        onSort(sort)
-                    }
-                )
-            }
-        }
-    }
 }

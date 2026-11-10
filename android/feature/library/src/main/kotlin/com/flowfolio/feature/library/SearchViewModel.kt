@@ -111,7 +111,8 @@ class SearchViewModel @Inject constructor(
         const val DICTIONARY_LIMIT = 2_000
 
         fun search(q: String, s: Sources): SearchResults {
-            if (q.isBlank()) return SearchResults(q)
+            // Nothing until two letters: one matched too much to be useful (ADR-0052).
+            if (q.trim().length < SEARCH_MINIMUM) return SearchResults(q)
             val byId = s.books.associateBy { it.id }
             val books = s.books.mapNotNull { b ->
                 val subjectScore = b.details.subjects.maxOfOrNull { Fuzzy.score(q, it) } ?: 0
