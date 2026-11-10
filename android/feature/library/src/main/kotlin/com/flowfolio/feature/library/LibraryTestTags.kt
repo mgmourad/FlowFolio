@@ -16,6 +16,7 @@ object LibraryTestTags {
     const val IMPORT = "library_import"
     const val SORT = "library_sort"
     const val SHELVES_SORT = "shelves_sort"
+    const val DETAILS_FAVORITE = "details_favorite"
     const val NOTEBOOK = "notebook_home"
     const val NOTEBOOK_BOOK = "notebook_book"
     fun notebookKind(name: String) = "notebook_kind_${name.lowercase()}"

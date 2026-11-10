@@ -171,6 +171,10 @@ the additions below.
 
 ### Phase 6: book details
 
+> **Done 2026-11-09.** Overview keeps its description and intent chips (the existing tags), and the Dynamic Flow
+> switches stay in the reader and the library menu. Share file waits for the owner, as in Phase 3. Verified on
+> `fold8_api37` unfolded. CI has not run.
+
 - Header back and ⋯; cover, title, subtitle, author, "format · pages · size"; primary action naming where you land
   ("Continue · p. 55", "Start reading", "Read again"), with Shelf, Goal and ★.
 - Fact tiles with correct plurals (plural resources everywhere, bug 3); pages labelled as printed page or PDF page.

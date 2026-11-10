@@ -111,16 +111,7 @@ internal fun OverviewPanel(state: DetailsUiState, book: Book) {
                 )
             }
         }
-        Row(
-            Modifier.fillMaxWidth().padding(top = 26.dp).height(IntrinsicSize.Min),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Stat(readTime(state.readMillis), R.string.stat_read, Modifier.weight(1f))
-            StatRule()
-            Stat(state.ribbons.toString(), R.string.stat_ribbons, Modifier.weight(1f))
-            StatRule()
-            Stat(state.bookShelves.size.toString(), R.string.stat_shelves, Modifier.weight(1f))
-        }
+        FactTiles(state, book)
         if (state.bookShelves.isNotEmpty()) {
             Text(
                 state.bookShelves.joinToString(SEPARATOR) { it.name },
@@ -147,11 +138,11 @@ internal fun readTime(millis: Long): String {
 }
 
 @Composable
-private fun Stat(value: String, label: Int, modifier: Modifier) {
+private fun Stat(value: String, label: String, modifier: Modifier) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, style = FlowFolioType.stat.merge(FlowFolio.item))
         Text(
-            stringResource(label).uppercase(),
+            label.uppercase(),
             style = FlowFolioType.eyebrow.merge(FlowFolio.hint),
             modifier = Modifier.padding(top = 2.dp)
         )
@@ -237,3 +228,57 @@ private const val MINUTES_PER_HOUR = 60L
 private const val WHOLE_HOURS_FROM = 10L
 private const val DOT_IDLE_ALPHA = 0.4f
 private const val SEPARATOR = " \u00B7 "
+
+/** The Notebook tab (ADR-0052): this book's marks by kind, and its whole notebook a tap away. */
+@Composable
+internal fun NotebookPanel(state: DetailsUiState, onOpen: () -> Unit) {
+    Column(Modifier.fillMaxWidth()) {
+        CountPills(state.counts)
+        Text(
+            if (state.counts.total == 0) {
+                stringResource(R.string.notebook_book_empty)
+            } else {
+                pluralStringResource(R.plurals.details_marks, state.counts.total, state.counts.total)
+            },
+            style = FlowFolioType.sub.copy(color = FlowFolio.palette.ink2),
+            modifier = Modifier.padding(top = 14.dp)
+        )
+        com.flowfolio.core.designsystem.FlowFolioButton(
+            stringResource(R.string.details_open_notebook),
+            onOpen,
+            Modifier.padding(top = 16.dp),
+            style = com.flowfolio.core.designsystem.ButtonStyle.SOFT,
+            icon = com.flowfolio.core.designsystem.Glyph.Notebook
+        )
+    }
+}
+
+/** The four fact tiles (ADR-0052): Complete, Read, Ribbons and Shelves, named singular or plural as needed. */
+@Composable
+private fun FactTiles(state: DetailsUiState, book: Book) {
+    // Four fact tiles (ADR-0052), their names singular or plural as the figure needs ("1 SHELF").
+    Row(
+        Modifier.fillMaxWidth().padding(top = 26.dp).height(IntrinsicSize.Min),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Stat(
+            stringResource(R.string.percent_value, (book.progress * PERCENT).roundToInt()),
+            stringResource(R.string.stat_complete),
+            Modifier.weight(1f)
+        )
+        StatRule()
+        Stat(readTime(state.readMillis), stringResource(R.string.stat_read), Modifier.weight(1f))
+        StatRule()
+        Stat(
+            state.counts.bookmarks.toString(),
+            pluralStringResource(R.plurals.stat_ribbons_n, state.counts.bookmarks),
+            Modifier.weight(1f)
+        )
+        StatRule()
+        Stat(
+            state.bookShelves.size.toString(),
+            pluralStringResource(R.plurals.stat_shelves_n, state.bookShelves.size),
+            Modifier.weight(1f)
+        )
+    }
+}

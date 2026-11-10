@@ -180,7 +180,8 @@ private fun NavGraphBuilder.detailsDestination(nav: NavHostController) = composa
                 onBack = { nav.popBackStack() },
                 onRead = { book -> nav.navigate(Routes.reader(book.id)) },
                 onEdit = { book -> nav.navigate(Routes.edit(book.id)) },
-                onOpenBook = { book -> nav.navigate(Routes.details(book.id, "")) }
+                onOpenBook = { book -> nav.navigate(Routes.details(book.id, "")) },
+                onNotebook = { book -> nav.navigate(Destinations.notebookBook(book.id)) }
             )
         }
     }

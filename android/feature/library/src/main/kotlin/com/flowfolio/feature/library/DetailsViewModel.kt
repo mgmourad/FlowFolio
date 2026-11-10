@@ -3,8 +3,10 @@ package com.flowfolio.feature.library
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.flowfolio.core.data.BookMarkCounts
 import com.flowfolio.core.data.BookmarkRepository
 import com.flowfolio.core.data.LibraryRepository
+import com.flowfolio.core.data.MarkCounts
 import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.data.ReadingGoalRepository
 import com.flowfolio.core.data.ReadingRepository
@@ -51,7 +53,9 @@ data class DetailsUiState(
     val ribbons: Int = 0,
     val sameAuthor: List<Book> = emptyList(),
     /** This book's reading goal (M3T3), if set. */
-    val bookGoal: ReadingGoal? = null
+    val bookGoal: ReadingGoal? = null,
+    /** This book's marks by kind, from the count every screen shares (ADR-0052). */
+    val counts: BookMarkCounts = BookMarkCounts()
 ) {
     val bookShelves: List<Shelf> get() = book?.let { b -> shelves.filter { b.id in it.bookIds } }.orEmpty()
 }
@@ -66,8 +70,9 @@ class DetailsViewModel @Inject constructor(
     shelves: ShelfRepository,
     reading: ReadingRepository,
     bookmarks: BookmarkRepository,
-    private val views: ReadingViews,
-    private val goals: ReadingGoalRepository
+    @Suppress("unused") views: ReadingViews,
+    private val goals: ReadingGoalRepository,
+    private val marks: MarkCounts
 ) : ViewModel() {
     val bookId: String = checkNotNull(saved[ARG_BOOK_ID]) { "details needs a book id" }
 
@@ -89,7 +94,8 @@ class DetailsViewModel @Inject constructor(
                 shelves = s,
                 contents = c,
                 readMillis = x.readMillis,
-                ribbons = x.ribbons,
+                ribbons = x.counts.bookmarks,
+                counts = x.counts,
                 sameAuthor = book?.author?.let { author -> x.books.filter { it.id != bookId && it.author == author } }
                     .orEmpty(),
                 bookGoal = x.goal
@@ -113,15 +119,30 @@ class DetailsViewModel @Inject constructor(
         if (library.relink(bookId, uri) == RelinkResult.Relinked) load()
     }
 
-    private class Extras(val readMillis: Long, val ribbons: Int, val books: List<Book>, val goal: ReadingGoal?)
+    private class Extras(
+        val readMillis: Long,
+        val counts: BookMarkCounts,
+        val books: List<Book>,
+        val goal: ReadingGoal?
+    )
 
+    @Suppress("UnusedParameter") // ribbons are counted through MarkCounts, like every other screen (ADR-0052)
     private fun extras(reading: ReadingRepository, bookmarks: BookmarkRepository, goals: ReadingGoalRepository) =
         combine(
             reading.observeReadMillis(bookId),
-            views.bookmarks(bookmarks.observe(bookId)),
+            marks.all,
             library.observeBooks(LibrarySort.RECENT),
             goals.observeBookGoal(bookId)
-        ) { ms, marks, books, goal -> Extras(ms, marks.size, books, goal) }
+        ) { ms, all, books, goal -> Extras(ms, all.byBook[bookId] ?: BookMarkCounts(), books, goal) }
+
+    /** Starts the book again from its first page (ADR-0052: Reset progress, after a confirmation). */
+    fun resetProgress() = viewModelScope.launch { reader.saveProgress(bookId, 0) }
+
+    /** This book's marks as Markdown, for Export notes. */
+    suspend fun notesMarkdown(): String {
+        val book = library.observeBook(bookId).first() ?: return ""
+        return notebookMarkdown(listOf(book), marks.all.first())
+    }
 
     fun saveGoal(goal: ReadingGoal) = viewModelScope.launch { goals.saveGoal(goal) }
 

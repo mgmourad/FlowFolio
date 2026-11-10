@@ -753,4 +753,27 @@
     <string name="entry_sort_page">Page order</string>
     <string name="entry_sort_newest">Newest first</string>
     <string name="entry_sort_type">Type</string>
+    <string name="details_read_again">Read again</string>
+    <string name="details_continue_at">Continue · p. %1$s</string>
+    <string name="details_start">Start reading</string>
+    <string name="details_reset">Reset progress</string>
+    <string name="details_reset_title">Reset progress?</string>
+    <string name="details_reset_body">The book starts again from its first page. Your highlights, notes and ribbons stay.</string>
+    <string name="details_export_notes">Export notes</string>
+    <string name="details_open_notebook">Open notebook</string>
+    <string name="tab_notebook">Notebook</string>
+    <string name="stat_complete">Complete</string>
+    <string name="percent_value">%1$d%%</string>
+    <plurals name="stat_ribbons_n">
+        <item quantity="one">Ribbon</item>
+        <item quantity="other">Ribbons</item>
+    </plurals>
+    <plurals name="stat_shelves_n">
+        <item quantity="one">Shelf</item>
+        <item quantity="other">Shelves</item>
+    </plurals>
+    <plurals name="details_marks">
+        <item quantity="one">%d mark in this book</item>
+        <item quantity="other">%d marks in this book</item>
+    </plurals>
 </resources>

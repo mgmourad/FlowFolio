@@ -10,6 +10,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 > **CI has not run** for any of it yet.
 
 ### Changed
+- **Overhaul Phase 6: book details** (2026-11-09).
+  - **The primary action says where it lands:** "Continue · p. 55" (the page's printed label), "Start reading" or
+    "Read again". Beside it: Shelf, Goal, and a ★ that makes the book a favourite.
+  - **Four fact tiles:** Complete %, Read, Ribbons and Shelves. Each name is singular or plural as the figure needs
+    ("1 SHELF" was wrong), and the ribbons come from `MarkCounts`.
+  - **Tabs in the mock's order:** Overview, Contents, Notebook (with its count, the book's count pills, and "Open
+    notebook"), Details and Author.
+  - **⋯ menu:** Edit details, Add to shelf, favourite, finished, Locate for linked books, **Export notes** (this
+    book's marks as Markdown, through the share sheet), **Reset progress** (asks first), and Remove from library in
+    red.
 - **Overhaul Phase 5: the Notebook** (2026-11-09).
   - **One count for every screen** (`MarkCounts`, `countByBook` in `:core:data`). Every mark is counted after the
     reader's current-view filter (`ReadingViews`), so the Library, the Notebook and Shelves give the same figures.

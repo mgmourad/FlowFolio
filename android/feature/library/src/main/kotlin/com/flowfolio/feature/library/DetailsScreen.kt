@@ -22,6 +22,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -66,6 +67,7 @@ import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -75,14 +77,19 @@ import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.Book3D
+import com.flowfolio.core.designsystem.ButtonStyle
 import com.flowfolio.core.designsystem.CoverSpot
+import com.flowfolio.core.designsystem.DialogAction
 import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioDialog
 import com.flowfolio.core.designsystem.FlowFolioGhostButton
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioMenuDivider
+import com.flowfolio.core.designsystem.FlowFolioMenuItem
 import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
+import com.flowfolio.core.designsystem.FlowFolioTabs
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.FlowFolioUnderlineTabs
 import com.flowfolio.core.designsystem.Glyph
@@ -98,6 +105,7 @@ import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.ReadingIntent
+import com.flowfolio.core.model.pageLabel
 import kotlinx.coroutines.launch
 
 /**
@@ -112,12 +120,16 @@ fun DetailsScreen(
     onRead: (Book) -> Unit,
     onEdit: (Book) -> Unit = {},
     onOpenBook: (Book) -> Unit = {},
+    onNotebook: (Book) -> Unit = {},
     viewModel: DetailsViewModel = hiltViewModel(),
     shelvesVm: ShelvesViewModel = hiltViewModel(),
     libraryVm: LibraryViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var picking by remember { mutableStateOf(false) }
+    var resetting by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val book = state.book
     val relink = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) viewModel.relink(uri.toString())
@@ -149,13 +161,18 @@ fun DetailsScreen(
         onBook = onOpenBook,
         onFavorite = { libraryVm.toggleFavorite(book) },
         onIntent = { libraryVm.setIntent(book, it) },
-        onFinished = { libraryVm.toggleFinished(book) }
+        onFinished = { libraryVm.toggleFinished(book) },
+        onNotebook = { onNotebook(book) },
+        onAddToShelf = { picking = true },
+        onExportNotes = { scope.launch { share(context, viewModel.notesMarkdown(), "text/markdown") } },
+        onResetProgress = { resetting = true }
     )
     // System Back flies the cover home too.
     BackHandler(onBack = actions.onBack)
     DetailsContent(state, book, hero, actions)
     LibraryDialogs(libraryVm.uiState.collectAsStateWithLifecycle().value.dialog, libraryVm)
     if (picking) ShelveBookFlow(book, state.shelves, shelvesVm) { picking = false }
+    if (resetting) ResetProgressDialog({ resetting = false }) { viewModel.resetProgress() }
 }
 
 internal data class DetailsActions(
@@ -172,7 +189,13 @@ internal data class DetailsActions(
     val onFavorite: () -> Unit = {},
     val onFinished: () -> Unit = {},
     /** The reader's own intention for the book (owner, M5). */
-    val onIntent: (ReadingIntent?) -> Unit = {}
+    val onIntent: (ReadingIntent?) -> Unit = {},
+    /** This book's notebook, optionally on one kind (ADR-0052). */
+    val onNotebook: () -> Unit = {},
+    val onAddToShelf: () -> Unit = {},
+    val onExportNotes: () -> Unit = {},
+    /** Asks, then starts the book again from its first page. */
+    val onResetProgress: () -> Unit = {}
 )
 
 /** Folded: hero, then title, actions and tabs under it. Unfolded (600 dp and wider): cover pane and tabs pane. */
@@ -292,7 +315,7 @@ private fun Backdrop(backdrop: androidx.compose.ui.graphics.ImageBitmap?, modifi
 }
 
 /** Title, author, pills and the actions row (`.det-body` up to `.actions`). */
-@Suppress("LongMethod")
+@Suppress("LongMethod", "CyclomaticComplexMethod") // one label per state of the book
 @Composable
 private fun DetailsHeading(state: DetailsUiState, book: Book, actions: DetailsActions, modifier: Modifier = Modifier) {
     var showFullTitle by remember { mutableStateOf(false) }
@@ -338,13 +361,19 @@ private fun DetailsHeading(state: DetailsUiState, book: Book, actions: DetailsAc
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                // The button says where it lands (ADR-0052): "Continue · p. 55", "Start reading" or "Read again".
                 val read = when {
-                    state.availability == Availability.MISSING -> R.string.action_locate
-                    book.lastPage != null -> R.string.action_continue
-                    else -> R.string.action_read
+                    state.availability == Availability.MISSING -> stringResource(R.string.action_locate)
+
+                    book.finished -> stringResource(R.string.details_read_again)
+
+                    (book.lastPage ?: 0) > 0 ->
+                        stringResource(R.string.details_continue_at, book.pageLabel(book.lastPage ?: 0))
+
+                    else -> stringResource(R.string.details_start)
                 }
                 FlowFolioPrimaryButton(
-                    text = stringResource(read),
+                    text = read,
                     onClick = actions.onRead,
                     modifier = Modifier.fillMaxWidth(READ_WIDTH).testTag(LibraryTestTags.READ),
                     icon = { PlayGlyph() }
@@ -367,6 +396,21 @@ private fun DetailsHeading(state: DetailsUiState, book: Book, actions: DetailsAc
                         compact,
                         onClick = actions.onGoal
                     )
+                    FlowFolioIconButton(
+                        onClick = actions.onFavorite,
+                        glowing = book.favorite,
+                        tooltip = stringResource(
+                            if (book.favorite) R.string.action_favorite_remove else R.string.action_favorite_add
+                        ),
+                        modifier = Modifier.testTag(LibraryTestTags.DETAILS_FAVORITE)
+                    ) {
+                        FlowFolioGlyph(
+                            if (book.favorite) Glyph.StarFilled else Glyph.Star,
+                            null,
+                            color = if (book.favorite) FlowFolio.palette.accent else FlowFolio.palette.ink2,
+                            size = 20.dp
+                        )
+                    }
                 }
             }
         }
@@ -460,43 +504,24 @@ private fun TopButtons(state: DetailsUiState, actions: DetailsActions) {
             FlowFolioIconButton(onClick = { menu = true }, glass = true) {
                 FlowFolioGlyph(Glyph.More, stringResource(R.string.action_more), color = p.text)
             }
-            FlowFolioMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                val book = state.book
-                val entry: @Composable (Int, androidx.compose.ui.text.TextStyle, () -> Unit, Modifier) -> Unit =
-                    { text, style, onClick, mod ->
-                        DropdownMenuItem(text = { Text(stringResource(text), style = style) }, onClick = {
-                            menu = false
-                            onClick()
-                        }, modifier = mod)
-                    }
-                if (book?.storage is BookStorage.Linked) {
-                    entry(R.string.action_locate, FlowFolio.title, actions.onLocate, Modifier)
-                    FlowFolioMenuDivider()
-                }
-                val editMod = Modifier.testTag(LibraryTestTags.EDIT_MENU)
-                entry(R.string.action_edit_details, FlowFolio.item, actions.onEdit, editMod)
-                FlowFolioMenuDivider()
-                val fav = if (book?.favorite == true) R.string.action_favorite_remove else R.string.action_favorite_add
-                entry(fav, FlowFolio.item, actions.onFavorite, Modifier)
-                FlowFolioMenuDivider()
-                val fin = if (book?.finished == true) R.string.action_mark_unfinished else R.string.action_mark_finished
-                entry(fin, FlowFolio.item, actions.onFinished, Modifier)
-                FlowFolioMenuDivider()
-                entry(R.string.action_delete, FlowFolio.subItem, actions.onDelete, Modifier)
-            }
+            DetailsMenu(state, menu, actions) { menu = false }
         }
     }
 }
 
 @Composable
 private fun DetailsTabs(state: DetailsUiState, book: Book, tab: Int, onTab: (Int) -> Unit, actions: DetailsActions) {
+    // The mock's order (ADR-0052): Overview, Contents, Notebook, Details, Author.
     val tabs = listOf(
         stringResource(R.string.tab_overview),
+        stringResource(R.string.tab_contents),
+        stringResource(R.string.tab_notebook),
         stringResource(R.string.tab_details),
-        stringResource(R.string.tab_author),
-        stringResource(R.string.tab_contents)
+        stringResource(R.string.tab_author)
     )
-    FlowFolioUnderlineTabs(tabs, tab, onTab, Modifier.padding(top = 26.dp).reveal(5))
+    Box(Modifier.padding(top = 26.dp).reveal(5).horizontalScroll(rememberScrollState())) {
+        FlowFolioTabs(tabs, tab, onTab, counts = listOf(null, null, state.counts.total, null, null))
+    }
     // The new tab's content slides in from the side its tab lies on, the old one fades (ADR-0033).
     AnimatedContent(
         tab,
@@ -514,9 +539,10 @@ private fun DetailsTabs(state: DetailsUiState, book: Book, tab: Int, onTab: (Int
     ) { shown ->
         when (shown) {
             0 -> OverviewPanel(state, book)
-            1 -> InfoPanel(state, book)
-            2 -> AuthorPanel(state, book, actions.onBook)
-            else -> ContentsPanel(state.contents, book, actions.onChapter)
+            1 -> ContentsPanel(state.contents, book, actions.onChapter)
+            2 -> NotebookPanel(state, actions.onNotebook)
+            3 -> InfoPanel(state, book)
+            else -> AuthorPanel(state, book, actions.onBook)
         }
     }
 }
@@ -537,7 +563,7 @@ internal fun PlayGlyph() {
 private val TWO_PANE_WIDTH = 600.dp
 private val FULL_TITLE_WIDTH = 440.dp
 private const val TAB_SLIDE = 8
-private const val TAB_COUNT = 4
+private const val TAB_COUNT = 5
 private val SWIPE_TAB = 56.dp
 
 /** Moves to the next tab on a swipe to the left and the previous on a swipe to the right; vertical scrolls pass. */
@@ -586,3 +612,97 @@ private val PANE_TOP = 72.dp
 
 /** The sway's middle angle: where the opening flight starts from. */
 private const val HERO_ANGLE = 15f
+
+/** Reset progress (ADR-0052): asks first, since it moves the reading position back to the first page. */
+@Composable
+private fun ResetProgressDialog(onDismiss: () -> Unit, onReset: () -> Unit) {
+    FlowFolioDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.details_reset_title),
+        body = stringResource(R.string.details_reset_body),
+        glyph = Glyph.Refresh,
+        destructive = true,
+        actions = listOf(
+            DialogAction(stringResource(R.string.action_cancel)) { onDismiss() },
+            DialogAction(stringResource(R.string.details_reset), ButtonStyle.DANGER) {
+                onReset()
+                onDismiss()
+            }
+        )
+    )
+}
+
+/** The details page's ⋯ (ADR-0052): edit, shelf, favourite, finished, locate, export notes, reset, remove. */
+@Suppress("LongMethod") // one entry per action
+@Composable
+private fun DetailsMenu(state: DetailsUiState, open: Boolean, actions: DetailsActions, onClose: () -> Unit) {
+    FlowFolioMenu(expanded = open, onDismissRequest = onClose) {
+        val book = state.book
+        fun run(action: () -> Unit): () -> Unit = {
+            onClose()
+            action()
+        }
+        FlowFolioMenuItem(
+            stringResource(R.string.action_edit_details),
+            run(actions.onEdit),
+            glyph = Glyph.Edit,
+            modifier = Modifier.testTag(LibraryTestTags.EDIT_MENU)
+        )
+        FlowFolioMenuItem(
+            stringResource(R.string.action_add_to_shelf),
+            run(actions.onAddToShelf),
+            glyph = Glyph.Shelves
+        )
+        FlowFolioMenuItem(
+            stringResource(
+                if (book?.favorite ==
+                    true
+                ) {
+                    R.string.action_favorite_remove
+                } else {
+                    R.string.action_favorite_add
+                }
+            ),
+            run(actions.onFavorite),
+            glyph = if (book?.favorite == true) Glyph.StarFilled else Glyph.Star
+        )
+        FlowFolioMenuItem(
+            stringResource(
+                if (book?.finished ==
+                    true
+                ) {
+                    R.string.action_mark_unfinished
+                } else {
+                    R.string.action_mark_finished
+                }
+            ),
+            run(actions.onFinished),
+            glyph = Glyph.Check
+        )
+        if (book?.storage is BookStorage.Linked) {
+            FlowFolioMenuItem(
+                stringResource(R.string.action_locate),
+                run(actions.onLocate),
+                glyph = Glyph.Folder
+            )
+        }
+        FlowFolioMenuDivider()
+        FlowFolioMenuItem(
+            stringResource(R.string.details_export_notes),
+            run(actions.onExportNotes),
+            glyph = Glyph.Share
+        )
+        FlowFolioMenuItem(
+            stringResource(R.string.details_reset),
+            run(actions.onResetProgress),
+            glyph = Glyph.Refresh
+        )
+        FlowFolioMenuDivider()
+        FlowFolioMenuItem(
+            stringResource(R.string.action_remove_from_library),
+            run(actions.onDelete),
+            glyph = Glyph.Trash,
+            destructive = true
+        )
+    }
+}

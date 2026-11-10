@@ -182,6 +182,8 @@ local.
 - **Phase 5 (Notebook) built 2026-11-09.** `MarkCounts` (`:core:data`) is the one count of marks every screen
   reads. `NotebookHome` (kind chips, a card per book, export and share as text) and `NotebookBookScreen` (tabs by kind,
   Open, Share, Delete with Undo).
+- **Phase 6 (Details) built 2026-11-09.** The main button names where it lands, a ★ beside it, four fact tiles with
+  plurals, the Notebook tab, and Export notes and Reset progress in ⋯.
 - Handover APKs get a new name every build (`app/build/outputs/apk/debug/handover/`) and are installed on the owner's
   phone as well as the emulator.
 
