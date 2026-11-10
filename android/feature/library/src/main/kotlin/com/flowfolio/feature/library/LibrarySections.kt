@@ -84,7 +84,7 @@ internal fun LazyListScope.shelfSections(state: LibraryUiState, actions: Library
             )
         }
         val origin = row.shelf?.id?.toString() ?: LOOSE_ORIGIN
-        bookRows(row.key, row.items.take(perRow), perRow, gutter, origin, actions, planks = true, ROWS_REVEAL_ORDER + i)
+        shelfRow(row.key, row.items, perRow, gutter, origin, actions, ROWS_REVEAL_ORDER + i)
     }
 }
 

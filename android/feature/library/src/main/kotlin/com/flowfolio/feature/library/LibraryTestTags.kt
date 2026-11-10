@@ -122,6 +122,9 @@ object LibraryTestTags {
 
     fun shelfCount(id: Long) = "shelf_count_$id"
 
+    /** A shelf's sliding row of books in the library's Shelf view. */
+    fun shelfRow(key: String) = "shelf_row_$key"
+
     fun shelfFlow(id: Long) = "shelf_flow_$id"
 
     fun row(bookId: String) = "row_$bookId"

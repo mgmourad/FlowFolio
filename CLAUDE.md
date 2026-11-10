@@ -161,6 +161,13 @@ sounds, line-break and cross-page hyphen rejoining, on-device plural and past-te
 an `8.2 kHz` 2-pole Butterworth vocoder de-hiss filter; plus the unfolded right-edge vertical tool rail and R8 keep
 rules for ML Kit and `sherpa-onnx` JNI callbacks. ADR-0051 is accepted with this sign-off. Next: Phase 7.
 
+**Phase 6.5, the UX overhaul "Quiet Library", closed by the owner 2026-11-10 and released as FlowFolio
+0.6.0-canary.2 (build 600002)**, tag `v0.6.0-canary.2`, gated on green CI.
+- Nine phases, then the owner's review rounds (reader panels held to the mock, Details, Words, the dock), and a new
+  app icon. The icon's source is `docs/brand/icon-concepts/`: Flowing Pages with a Fraunces F whose stem is the
+  ribbon, built as vector layers by `make_vector.py`.
+- Room is at v22 (`book_tags`). Next: Phase 7 (scanned books and OCR).
+
 **UX overhaul "Quiet Library" (ADR-0052, accepted by the owner 2026-11-09; `docs/plans/ux-overhaul-plan.md`).**
 This runs between Phase 6 and Phase 7 in nine phases, one at a time. Stop and report after each. Commits stay local
 until the end, which ships as 0.6.0-canary.2. `docs/ux-review/` (the mock, the review, captures) is gitignored and stays
@@ -201,7 +208,7 @@ local.
   - What's new reads the `CHANGELOG.md` that `copyChangelog` bundles into the APK (`Changelog` in
     `:feature:library`).
   - `docs/plans/ux-overhaul-parity.md` maps every feature to its new home.
-  - **Nothing is pushed yet**: 0.6.0-canary.2 waits for the owner.
+  - Released as 0.6.0-canary.2 (see below).
 - **Owner's post-overhaul fixes, 2026-11-10.**
   - Details follows the mock (cover column, actions on one line, fact tiles, Overview chips). **Room v22**
     `book_tags`, a book's own tags (`BookTagRepository`).
@@ -466,6 +473,9 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     `app/build.gradle.kts` (the plugin overwrites DSL settings on those build types); real release builds keep it false.
     Gradle's connected run uninstalls the test APK and hides crashes: when a run reports 0 tests, install both APKs and
     run `am instrument -w -r -e class ... -e androidx.benchmark.enabledRules BaselineProfile` by hand.
+49. **The launcher icon is generated.** `app/src/main/res/drawable/ic_launcher_*.xml` come from
+    `docs/brand/icon-concepts/make_vector.py`; `flowfolio_icon.png` (splash, rail) from `render512.html`. Change the
+    script and regenerate rather than editing the XML by hand.
 48. **Room is at schema v22** (v22: `book_tags`; v21: `book_text`). The migration tests replay the committed schema JSON
     into SQLite (`BookTextMigrationTest`, `BookTagMigrationTest`), since `room-testing` is not a dependency.
 32. Room is at schema v14 (v14: `annotations.locator` and `bookmarks.locator`, an EPUB highlight's or ribbon's

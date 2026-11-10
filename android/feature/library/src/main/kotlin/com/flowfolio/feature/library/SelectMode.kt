@@ -44,7 +44,10 @@ internal fun SelectControls(selection: Selection, allKeys: List<String>, normal:
         enter = fadeIn(tween(Motion.FAST_MS, delayMillis = SWAP_DELAY_MS)),
         exit = fadeOut(tween(SWAP_DELAY_MS))
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(LocalHeaderGap.current),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             normal()
             if (allKeys.isNotEmpty()) {
                 SelectButton(

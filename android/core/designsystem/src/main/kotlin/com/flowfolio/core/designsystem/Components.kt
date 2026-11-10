@@ -38,6 +38,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -168,7 +169,7 @@ fun FlowFolioIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     glass: Boolean = false,
-    size: Dp = 42.dp,
+    size: Dp = LocalIconButtonSize.current,
     glowing: Boolean = false,
     tooltip: String? = null,
     ghost: Boolean = false,
@@ -209,6 +210,12 @@ fun FlowFolioIconButton(
     }
     if (tooltip == null) button() else FlowFolioTooltip(tooltip) { button() }
 }
+
+/**
+ * How big icon buttons are drawn where no size is given (42 dp). A crowded header (the folded Shelves page) provides
+ * a smaller size so its title fits; the 48 dp touch target is kept either way.
+ */
+val LocalIconButtonSize = staticCompositionLocalOf { 42.dp }
 
 /** What a [FlowFolioButton] looks like (`.btn`, `.btn.ghost`, `.btn.soft`, `.btn.danger`). */
 enum class ButtonStyle { PRIMARY, GHOST, SOFT, DANGER }

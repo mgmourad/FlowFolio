@@ -251,7 +251,7 @@ the additions below.
 >   sheet, and the palette aliases removed.
 > - Not checked: the cold start (bug 4). The splash and window background already share the theme's colour, but no
 >   frame-by-frame capture was taken.
-> - The release (0.6.0-canary.2) waits for the owner's go-ahead.
+> - Released as 0.6.0-canary.2 (build 600002) on 2026-11-10, with the new app icon.
 >
 > CI has not run.
 

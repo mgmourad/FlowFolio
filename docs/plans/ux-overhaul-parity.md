@@ -98,3 +98,13 @@ These were checked on `fold8_api37`:
 - Unfolded, Resume and Details share a line.
 
 Not seen on a device: the folded Details layout.
+
+## Released, 2026-11-10
+
+These went out as 0.6.0-canary.2:
+- the folded Shelves header fix;
+- shelf rows sliding sideways in the library's Shelf view;
+- the new app icon: launcher (vector, with a monochrome layer), splash and rail mark.
+
+Checked on `fold8_api37`, folded and unfolded. The splash frame itself was not captured: a debug cold start is slow,
+and the splash lasts about a second. It draws the same image as the rail mark, which was seen.

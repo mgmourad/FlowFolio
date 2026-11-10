@@ -50,6 +50,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.CompositingStrategy
@@ -233,29 +234,20 @@ private fun Rail(selected: TopLevel, onSelect: (TopLevel) -> Unit) {
     }
 }
 
-/** The app's mark at the top of the rail (`.rail .logo`): an F in Fraunces on the accent, softly lifted. */
+/** The app's mark at the top of the rail (`.rail .logo`): the app icon itself, softly lifted (owner, 2026-11-10). */
 @Composable
 private fun AppMark(modifier: Modifier = Modifier) {
     val p = FlowFolio.palette
     val shape = RoundedCornerShape(13.dp)
-    Box(
-        modifier
+    androidx.compose.foundation.Image(
+        painter = androidx.compose.ui.res.painterResource(com.flowfolio.core.designsystem.R.drawable.flowfolio_icon),
+        contentDescription = null,
+        modifier = modifier
             .softShadow(shape, p.accent.copy(alpha = MARK_SHADOW), blur = 16.dp, offsetY = 6.dp)
-            .size(42.dp)
-            .background(p.accent, shape)
-            .clearAndSetSemantics {},
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            "F",
-            style = FlowFolioType.heroTitle.copy(
-                fontFamily = DisplayFamily,
-                fontWeight = FontWeight.Bold,
-                fontSize = 22.sp,
-                color = p.accentInk
-            )
-        )
-    }
+            .size(MARK_SIZE)
+            .clip(shape)
+            .clearAndSetSemantics {}
+    )
 }
 
 /**
@@ -345,5 +337,6 @@ private val PILL_HEIGHT = 32.dp
 private val TAB_MIN_SP = 9.sp
 private val TAB_GLYPH = 22.dp
 private const val RAIL_TINT = 0.6f
+private val MARK_SIZE = 44.dp
 private const val MARK_SHADOW = 0.35f
 private const val HIDE_MS = 420

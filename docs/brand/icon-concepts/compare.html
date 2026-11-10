@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>FlowFolio icon concepts</title>
+<style>
+  body { margin: 0; background: #F6EFE3; font-family: -apple-system, "Helvetica Neue", sans-serif; color: #2A2118; }
+  .sheet { width: 1500px; padding: 48px 56px; box-sizing: border-box; }
+  h1 { font: 600 30px Georgia, serif; margin: 0 0 6px; }
+  .sub { color: #6B5C4C; margin: 0 0 36px; font-size: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 36px; }
+  .card { background: #FFFBF4; border: 1px solid #E6D9C6; border-radius: 24px; padding: 28px; }
+  .tag { font-size: 13px; letter-spacing: .12em; color: #C2410C; font-weight: 700; }
+  .name { font: 600 22px Georgia, serif; margin: 4px 0 8px; }
+  .idea { font-size: 14.5px; line-height: 1.5; color: #4D4034; min-height: 66px; margin: 0 0 22px; }
+  .hero { display: flex; justify-content: center; margin-bottom: 26px; }
+  .hero img { width: 240px; height: 240px; border-radius: 30%; box-shadow: 0 18px 40px rgba(60, 30, 10, .22); }
+  .wall { border-radius: 16px; padding: 18px; display: flex; gap: 22px; align-items: center; justify-content: center; margin-top: 12px; }
+  .wall.light { background: linear-gradient(135deg, #DCE7F2, #F3E3D3); }
+  .wall.dark { background: linear-gradient(135deg, #1B1F2A, #2B2018); }
+  .wall img { box-shadow: 0 6px 14px rgba(0,0,0,.25); }
+  .circle { width: 64px; height: 64px; border-radius: 50%; }
+  .squircle { width: 64px; height: 64px; border-radius: 30%; }
+  .square { width: 64px; height: 64px; border-radius: 18%; }
+  .tiny { width: 40px; height: 40px; border-radius: 50%; }
+  .label { font-size: 12px; text-align: center; margin-top: 6px; }
+  .wall.light .label { color: #2A2118; } .wall.dark .label { color: #F2EADF; }
+  .cell { display: flex; flex-direction: column; align-items: center; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <h1>FlowFolio — three icon directions</h1>
+  <p class="sub">Each is an Android adaptive icon (108 dp canvas, artwork inside the 66 dp safe zone), shown large, then at launcher size in the three common masks on light and dark wallpapers.</p>
+  <div class="grid">
+    <div class="card">
+      <div class="tag">A</div>
+      <div class="name">Flowing Pages</div>
+      <p class="idea">An open book on the app's terracotta. The left page is set type; on the right the lines turn into waves — Dynamic Flow reflowing the page. The ink ribbon is the bookmark.</p>
+      <div class="hero"><img src="a-flowing-pages.svg"></div>
+      <div class="wall light">
+        <div class="cell"><img class="circle" src="a-flowing-pages.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="squircle" src="a-flowing-pages.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="square" src="a-flowing-pages.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="tiny" src="a-flowing-pages.svg"><div class="label">40 dp</div></div>
+      </div>
+      <div class="wall dark">
+        <div class="cell"><img class="circle" src="a-flowing-pages.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="squircle" src="a-flowing-pages.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="square" src="a-flowing-pages.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="tiny" src="a-flowing-pages.svg"><div class="label">40 dp</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tag">B</div>
+      <div class="name">The Curl</div>
+      <p class="idea">A bound book on warm paper, its top page turning in the app's signature 3D page curl, the underside in terracotta. The calmest of the three, like the Quiet Library itself.</p>
+      <div class="hero"><img src="b-page-curl.svg"></div>
+      <div class="wall light">
+        <div class="cell"><img class="circle" src="b-page-curl.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="squircle" src="b-page-curl.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="square" src="b-page-curl.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="tiny" src="b-page-curl.svg"><div class="label">40 dp</div></div>
+      </div>
+      <div class="wall dark">
+        <div class="cell"><img class="circle" src="b-page-curl.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="squircle" src="b-page-curl.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="square" src="b-page-curl.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="tiny" src="b-page-curl.svg"><div class="label">40 dp</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tag">C</div>
+      <div class="name">Night Spread</div>
+      <p class="idea">A two-page spread opening like the unfolded Fold, lit warm from behind on deep ink. A single terracotta-to-amber ribbon flows across both pages — reading that carries on across the fold.</p>
+      <div class="hero"><img src="c-night-spread.svg"></div>
+      <div class="wall light">
+        <div class="cell"><img class="circle" src="c-night-spread.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="squircle" src="c-night-spread.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="square" src="c-night-spread.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="tiny" src="c-night-spread.svg"><div class="label">40 dp</div></div>
+      </div>
+      <div class="wall dark">
+        <div class="cell"><img class="circle" src="c-night-spread.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="squircle" src="c-night-spread.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="square" src="c-night-spread.svg"><div class="label">FlowFolio</div></div>
+        <div class="cell"><img class="tiny" src="c-night-spread.svg"><div class="label">40 dp</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

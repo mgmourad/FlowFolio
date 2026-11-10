@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>FlowFolio icon, Flowing Pages with the F</title>
+<style>
+  body { margin: 0; background: #F6EFE3; font-family: -apple-system, "Helvetica Neue", sans-serif; color: #2A2118; }
+  .sheet { width: 1240px; padding: 44px 52px; box-sizing: border-box; }
+  h1 { font: 600 28px Georgia, serif; margin: 0 0 6px; }
+  .sub { color: #6B5C4C; margin: 0 0 30px; font-size: 15px; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+  .card { background: #FFFBF4; border: 1px solid #E6D9C6; border-radius: 24px; padding: 26px; }
+  .tag { font-size: 13px; letter-spacing: .12em; color: #C2410C; font-weight: 700; }
+  .name { font: 600 21px Georgia, serif; margin: 4px 0 18px; }
+  .hero { display: flex; justify-content: center; gap: 28px; align-items: center; margin-bottom: 22px; }
+  .crop { overflow: hidden; position: relative; box-shadow: 0 14px 32px rgba(60, 30, 10, .22); }
+  .crop img { position: absolute; width: 150%; height: 150%; left: -25%; top: -25%; }
+  .big { width: 230px; height: 230px; border-radius: 30%; }
+  .canvas { width: 150px; height: 150px; border-radius: 6px; box-shadow: none; outline: 1px dashed #C9B497; }
+  .canvas img { width: 100%; height: 100%; left: 0; top: 0; }
+  .safe { position: absolute; left: 19.4%; top: 19.4%; width: 61.1%; height: 61.1%; border-radius: 50%; border: 1.5px dashed rgba(255,255,255,.9); box-sizing: border-box; }
+  .note { font-size: 12px; color: #6B5C4C; text-align: center; margin-top: 8px; }
+  .wall { border-radius: 16px; padding: 16px; display: flex; gap: 22px; align-items: flex-end; justify-content: center; margin-top: 12px; }
+  .wall.light { background: linear-gradient(135deg, #DCE7F2, #F3E3D3); }
+  .wall.dark { background: linear-gradient(135deg, #1B1F2A, #2B2018); }
+  .cell { display: flex; flex-direction: column; align-items: center; }
+  .m64 { width: 64px; height: 64px; } .m44 { width: 44px; height: 44px; }
+  .circle { border-radius: 50%; } .squircle { border-radius: 30%; } .square { border-radius: 18%; }
+  .label { font-size: 12px; margin-top: 6px; }
+  .wall.light .label { color: #2A2118; } .wall.dark .label { color: #F2EADF; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <h1>Flowing Pages, with the F</h1>
+  <p class="sub">Shown the way Android draws it: the launcher keeps the centre 72 dp of the 108 dp canvas, so icons appear larger than the full canvas suggests. The dashed circle on the right is the 66 dp safe zone every mask keeps.</p>
+  <div class="row">
+    <div class="card">
+      <div class="tag">BEFORE</div>
+      <div class="name">A · Flowing Pages</div>
+      <div class="hero">
+        <div class="crop big"><img src="a-flowing-pages.svg"></div>
+        <div><div class="crop canvas"><img src="a-flowing-pages.svg"><div class="safe"></div></div><div class="note">Full canvas</div></div>
+      </div>
+      <div class="wall light">
+        <div class="cell"><div class="crop m64 circle"><img src="a-flowing-pages.svg"></div><div class="label">FlowFolio</div></div>
+        <div class="cell"><div class="crop m64 squircle"><img src="a-flowing-pages.svg"></div><div class="label">FlowFolio</div></div>
+        <div class="cell"><div class="crop m64 square"><img src="a-flowing-pages.svg"></div><div class="label">FlowFolio</div></div>
+        <div class="cell"><div class="crop m44 circle"><img src="a-flowing-pages.svg"></div><div class="label">44 dp</div></div>
+      </div>
+      <div class="wall dark">
+        <div class="cell"><div class="crop m64 circle"><img src="a-flowing-pages.svg"></div><div class="label">FlowFolio</div></div>
+        <div class="cell"><div class="crop m64 squircle"><img src="a-flowing-pages.svg"></div><div class="label">FlowFolio</div></div>
+        <div class="cell"><div class="crop m64 square"><img src="a-flowing-pages.svg"></div><div class="label">FlowFolio</div></div>
+        <div class="cell"><div class="crop m44 circle"><img src="a-flowing-pages.svg"></div><div class="label">44 dp</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tag">AFTER</div>
+      <div class="name">A · Flowing Pages, Fraunces F</div>
+      <div class="hero">
+        <div class="crop big"><img src="a2-flowing-pages-f.svg"></div>
+        <div><div class="crop canvas"><img src="a2-flowing-pages-f.svg"><div class="safe"></div></div><div class="note">Full canvas</div></div>
+      </div>
+      <div class="wall light">
+        <div class="cell"><div class="crop m64 circle"><img src="a2-flowing-pages-f.svg"></div><div class="label">FlowFolio</div></div>
+        <div class="cell"><div class="crop m64 squircle"><img src="a2-flowing-pages-f.svg"></div><div class="label">FlowFolio</div></div>
+        <div class="cell"><div class="crop m64 square"><img src="a2-flowing-pages-f.svg"></div><div class="label">FlowFolio</div></div>
+        <div class="cell"><div class="crop m44 circle"><img src="a2-flowing-pages-f.svg"></div><div class="label">44 dp</div></div>
+      </div>
+      <div class="wall dark">
+        <div class="cell"><div class="crop m64 circle"><img src="a2-flowing-pages-f.svg"></div><div class="label">FlowFolio</div></div>
+        <div class="cell"><div class="crop m64 squircle"><img src="a2-flowing-pages-f.svg"></div><div class="label">FlowFolio</div></div>
+        <div class="cell"><div class="crop m64 square"><img src="a2-flowing-pages-f.svg"></div><div class="label">FlowFolio</div></div>
+        <div class="cell"><div class="crop m44 circle"><img src="a2-flowing-pages-f.svg"></div><div class="label">44 dp</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

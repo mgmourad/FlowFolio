@@ -5,11 +5,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
-> **UX overhaul ("Quiet Library", ADR-0052, `docs/plans/ux-overhaul-plan.md`), in progress.** Nine phases between
-> Phase 6 and Phase 7, released together as 0.6.0-canary.2. Each phase is verified locally and on `fold8_api37`;
-> **CI has not run** for any of it yet.
+## [0.6.0-canary.2] - 2026-11-10
+
+> **The UX overhaul ("Quiet Library", ADR-0052, `docs/plans/ux-overhaul-plan.md`) is closed: Phase 6.5.**
+> - Nine phases between Phase 6 and Phase 7: design system, app shell, Library, Shelves, Notebook, Details,
+>   Settings, Reader, and the sweep.
+> - Then the owner's rounds of fixes after review, and a new app icon.
+> - Every phase was verified locally and on `fold8_api37`. This release is gated on green CI.
+> - **Room is at v22** (v21 `book_text`, v22 `book_tags`). Both migrations are additive.
+> - OCR stays Phase 7.
 
 ### Added
+- **A new app icon** (owner, 2026-11-10): "Flowing Pages".
+  - An open book on the app's terracotta. The left page is set type; on the right, three orange lines flow as
+    Dynamic Flow does.
+  - A black Fraunces F stands on the right page's top edge, its stem running on as the bookmark ribbon into a V
+    notch.
+  - The launcher icon is now Android vector layers (`drawable/ic_launcher_{background,foreground,monochrome}.xml`),
+    sharp at every density, with a monochrome layer for themed icons. The old bitmap foregrounds are gone.
+  - The splash and the unfolded rail's mark (formerly an "F" on the accent) use the same artwork
+    (`flowfolio_icon.png`).
+  - Source: `docs/brand/icon-concepts/`. `glyph.py` takes the F from the bundled Fraunces with fontTools, run once
+    through `uvx` (a development tool only, nothing added to the app); `make_vector.py` writes the layers.
 - **Tags of your own** (owner, 2026-11-10). **Room v22** adds `book_tags` (one row per book and tag, removed with
   the book; additive auto-migration 21 → 22, held by `BookTagMigrationTest`).
   - Details → Overview has "+ Tag": type a word or two, or tap one of the library's other tags. Tap a tag to take it
@@ -24,6 +41,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Settings → Text holds the defaults, and says so.
 
 ### Changed
+- **The owner's last fixes before the release** (2026-11-10).
+  - **Shelves, folded:** the title showed as "Shel…", because four header buttons took the row. Folded, header
+    buttons now draw at 40 dp, and their invisible touch margins overlap slightly (`LocalIconButtonSize`,
+    `LocalHeaderGap`), so the title shows in full. Every button keeps its 48 dp touch target.
+  - **Library, Shelf view:** each shelf slides sideways again, showing all its books over a plank that stays put
+    (`shelfRow`). Before, it showed only one row's worth.
+  - Checked on `fold8_api37`, folded and unfolded.
+
 - **The reader's panels, held to the mock** (owner, 2026-11-10, second round). Checked on `fold8_api37` unfolded
   except where noted; CI has not run.
   - **One placement for every panel** (`DockPanel`): a glass card as wide as the dock, 560 dp unfolded, a fixed

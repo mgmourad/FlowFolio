@@ -6,7 +6,9 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +16,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -213,6 +217,38 @@ internal fun LazyListScope.bookRows(
                 ShelfPlank(Modifier.padding(top = 16.dp, bottom = 6.dp))
             } else {
                 Spacer(Modifier.padding(bottom = 16.dp))
+            }
+        }
+    }
+}
+
+/**
+ * One shelf in the library's Shelf view: all its books in a row that slides sideways across the plank (owner,
+ * 2026-11-10: "like before"), each tile as wide as a grid tile so [perRow] show at once. The plank stays put.
+ */
+@Suppress("LongParameterList")
+internal fun LazyListScope.shelfRow(
+    key: String,
+    items: List<LibraryItem>,
+    perRow: Int,
+    gutter: Dp,
+    origin: String,
+    actions: LibraryActions,
+    revealFrom: Int
+) {
+    item(key = key) {
+        BoxWithConstraints(Modifier.fillMaxWidth().reveal(revealFrom)) {
+            val gap = if (perRow > NARROW_PER_ROW) 18.dp else 14.dp
+            val tile = (maxWidth - gutter * 2 - gap * (perRow - 1)) / perRow
+            Column {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = gutter),
+                    horizontalArrangement = Arrangement.spacedBy(gap),
+                    modifier = Modifier.testTag(LibraryTestTags.shelfRow(key))
+                ) {
+                    items(items, key = { it.book.id }) { item -> BookTile(item, origin, actions, Modifier.width(tile)) }
+                }
+                ShelfPlank(Modifier.padding(horizontal = gutter).padding(top = 16.dp, bottom = 6.dp))
             }
         }
     }

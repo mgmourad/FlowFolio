@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Artwork: docs/brand/flowfolio-icon-master.png; layers built by tools/icon/make_launcher_icons.ps1. -->
+<!-- Artwork: docs/brand/icon-concepts (Flowing Pages with the Fraunces F); layers built by make_vector.py. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@drawable/ic_launcher_background" />
-    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <foreground android:drawable="@drawable/ic_launcher_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_monochrome" />
 </adaptive-icon>
