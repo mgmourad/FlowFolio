@@ -27,11 +27,10 @@ internal fun FinishedTiles(items: List<LibraryItem>, actions: LibraryActions, mo
         verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         finished.forEach { item ->
-            ShelfBook(item, FINISHED_ORIGIN, actions, width = FINISHED_TILE_WIDTH, height = FINISHED_TILE_HEIGHT)
+            ShelfBook(item, FINISHED_ORIGIN, actions, width = FINISHED_TILE_WIDTH)
         }
     }
 }
 
 private const val FINISHED_ORIGIN = "finished"
 private val FINISHED_TILE_WIDTH = 96.dp
-private val FINISHED_TILE_HEIGHT = 140.dp

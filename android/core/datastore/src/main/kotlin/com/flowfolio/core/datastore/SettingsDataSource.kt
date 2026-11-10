@@ -22,6 +22,7 @@ import com.flowfolio.core.model.MaterialSeed
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.ReaderText
+import com.flowfolio.core.model.ShelvesOrder
 import com.flowfolio.core.model.StatsBand
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
@@ -50,6 +51,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             librarySort = p[SORT].toEnum(defaults.librarySort),
             libraryView = p[LIBRARY_VIEW].toEnum(defaults.libraryView),
             statsBand = p[STATS_BAND].toEnum(defaults.statsBand),
+            shelvesOrder = p[SHELVES_ORDER].toEnum(defaults.shelvesOrder),
             readerSpreads = p[READER_SPREADS] ?: defaults.readerSpreads,
             spreadCoverAlone = p[COVER_ALONE] ?: defaults.spreadCoverAlone,
             paperStyle = p[PAPER_STYLE].toEnum(defaults.paperStyle),
@@ -140,6 +142,10 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
 
     suspend fun setStatsBand(band: StatsBand) {
         store.edit { it[STATS_BAND] = band.name }
+    }
+
+    suspend fun setShelvesOrder(order: ShelvesOrder) {
+        store.edit { it[SHELVES_ORDER] = order.name }
     }
 
     suspend fun setReaderSpreads(on: Boolean) {
@@ -266,6 +272,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val SORT = stringPreferencesKey("library_sort")
         val LIBRARY_VIEW = stringPreferencesKey("library_view")
         val STATS_BAND = stringPreferencesKey("library_stats_band")
+        val SHELVES_ORDER = stringPreferencesKey("shelves_order")
         val READER_SPREADS = booleanPreferencesKey("reader_spreads")
         val COVER_ALONE = booleanPreferencesKey("spread_cover_alone")
         val PAPER_STYLE = stringPreferencesKey("reader_paper")

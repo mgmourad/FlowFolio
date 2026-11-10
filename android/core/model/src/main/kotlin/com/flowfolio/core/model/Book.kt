@@ -87,6 +87,9 @@ enum class LibrarySort { RECENT, TITLE, AUTHOR, DATE_ADDED, PROGRESS, READ_TIME 
 /** How the library lays its books out (ADR-0052): on shelves (rows over planks), as a grid, or as a list. */
 enum class LibraryView { SHELF, GRID, LIST }
 
+/** How the Shelves tab orders its shelves (ADR-0052): their own order, or by name, books, time read or marks. */
+enum class ShelvesOrder { CUSTOM, NAME, MOST_BOOKS, MOST_READ, MOST_MARKS }
+
 /** The library's stats band (ADR-0052): one summary line that opens, open at once, or not shown. */
 enum class StatsBand { COLLAPSED, EXPANDED, HIDDEN }
 
@@ -102,6 +105,8 @@ data class UserSettings(
     val libraryView: LibraryView = LibraryView.SHELF,
     /** The library's stats band: its state, remembered, and Settings' choice of Hidden (ADR-0052). */
     val statsBand: StatsBand = StatsBand.COLLAPSED,
+    /** How the Shelves tab orders its shelves, remembered (ADR-0052). */
+    val shelvesOrder: ShelvesOrder = ShelvesOrder.CUSTOM,
     /** Two pages side by side on wide windows (the unfolded Fold); off means always one page. */
     val readerSpreads: Boolean = true,
     /** In a spread, show the cover on its own (print style) rather than pairing from the first page. */

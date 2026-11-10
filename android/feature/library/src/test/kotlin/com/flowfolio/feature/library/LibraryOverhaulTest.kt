@@ -66,4 +66,27 @@ class LibraryOverhaulTest {
         assertTrue(SearchViewModel.search(" p ", sources).empty)
         assertTrue(!SearchViewModel.search("py", sources).empty)
     }
+
+    @Test
+    fun shelvesOrderByNameBooksReadAndMarks() {
+        val a = ShelfCard(Shelf(1, "Zoology", listOf()), listOf(book("x")), readTimeMillis = 10, annotationsCount = 1)
+        val b = ShelfCard(Shelf(2, "algebra", listOf()), listOf(book("y"), book("z")), readTimeMillis = 5)
+        val c = ShelfCard(Shelf(3, "Music", listOf()), emptyList(), readTimeMillis = 50, bookmarksCount = 4)
+        val cards = listOf(a, b, c)
+        assertEquals(
+            listOf(1L, 2L, 3L),
+            orderShelves(cards, com.flowfolio.core.model.ShelvesOrder.CUSTOM).map {
+                it.shelf.id
+            }
+        )
+        assertEquals(
+            listOf(2L, 3L, 1L),
+            orderShelves(cards, com.flowfolio.core.model.ShelvesOrder.NAME).map {
+                it.shelf.id
+            }
+        )
+        assertEquals(2L, orderShelves(cards, com.flowfolio.core.model.ShelvesOrder.MOST_BOOKS).first().shelf.id)
+        assertEquals(3L, orderShelves(cards, com.flowfolio.core.model.ShelvesOrder.MOST_READ).first().shelf.id)
+        assertEquals(3L, orderShelves(cards, com.flowfolio.core.model.ShelvesOrder.MOST_MARKS).first().shelf.id)
+    }
 }

@@ -64,6 +64,8 @@ class ShelfPageUiTest {
                 )
             }
         }
+        // View as List sits in the Sort and view menu since ADR-0052.
+        compose.onNodeWithTag(LibraryTestTags.SHELF_SORT).performClick()
         compose.onNodeWithText(res.getString(R.string.view_list)).performClick()
         compose.onNodeWithText("Optics").assertIsDisplayed()
         compose.onNodeWithText("Hecht").assertIsDisplayed()

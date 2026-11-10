@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +26,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -32,12 +34,15 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,35 +53,54 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.Book3D
+import com.flowfolio.core.designsystem.BookCover
+import com.flowfolio.core.designsystem.ButtonStyle
+import com.flowfolio.core.designsystem.COVER_ASPECT
+import com.flowfolio.core.designsystem.DialogAction
+import com.flowfolio.core.designsystem.DialogField
+import com.flowfolio.core.designsystem.DialogSwatches
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioAlertDialog
 import com.flowfolio.core.designsystem.FlowFolioCard
+import com.flowfolio.core.designsystem.FlowFolioDialog
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioMenuDivider
+import com.flowfolio.core.designsystem.FlowFolioMenuHeader
+import com.flowfolio.core.designsystem.FlowFolioMenuItem
+import com.flowfolio.core.designsystem.FlowFolioSnackbarHost
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalChromePadding
 import com.flowfolio.core.designsystem.ScrollToTopOnTab
 import com.flowfolio.core.designsystem.Selection
+import com.flowfolio.core.designsystem.card
 import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.color
 import com.flowfolio.core.designsystem.jiggle
 import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.designsystem.rememberZoomSource
 import com.flowfolio.core.designsystem.reveal
+import com.flowfolio.core.designsystem.showFlowFolio
+import com.flowfolio.core.designsystem.tint
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.Shelf
+import com.flowfolio.core.model.ShelfColor
+import com.flowfolio.core.model.ShelvesOrder
+import kotlinx.coroutines.launch
 
 /** What is being edited on the Shelves screen. */
 private sealed interface ShelfEdit {
@@ -91,42 +115,91 @@ private sealed interface ShelfEdit {
 
     /** "Batch Dynamic Flow" confirmation for an entire shelf. */
     data class BatchFlow(val shelf: Shelf) : ShelfEdit
+
+    data class Colour(val shelf: Shelf) : ShelfEdit
 }
 
-/** Shelves (the mock's `#s-shelves`): a card per shelf; tapping one shows it in the library. */
+/**
+ * Shelves (ADR-0052): folder cards, two columns folded and three unfolded, each with its colour as a border, its name,
+ * up to five covers fanned, and its totals; a dashed card makes a new shelf. The header searches, orders and adds.
+ */
+@Suppress("LongMethod")
 @Composable
 fun ShelvesScreen(onOpenShelf: (Long) -> Unit, viewModel: ShelvesViewModel = hiltViewModel()) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var edit by remember { mutableStateOf<ShelfEdit?>(null) }
     val selection = rememberSelection()
     var confirmBulk by remember { mutableStateOf(false) }
-    ShelvesContent(
-        state = state,
-        onOpen = onOpenShelf,
-        onNew = { edit = ShelfEdit.New },
-        onRename = { edit = ShelfEdit.Rename(it) },
-        onDelete = { edit = ShelfEdit.Delete(it) },
-        selection = selection,
-        onDeleteChosen = { confirmBulk = true },
-        onAddBooks = { edit = ShelfEdit.AddBooks(it) },
-        onBatchFlow = { edit = ShelfEdit.BatchFlow(it) },
-        onToggleFlow = { card ->
-            if (card.flowActive) {
-                viewModel.setShelfFlowOff(card.shelf.id)
-            } else if (viewModel.isShelfFlowReady(card.shelf.id)) {
-                viewModel.startBatchFlow(card.shelf.id)
-            } else {
-                edit = ShelfEdit.BatchFlow(card.shelf)
-            }
-        }
-    )
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    Box(Modifier.fillMaxSize()) {
+        ShelvesContent(
+            state = state,
+            onOpen = onOpenShelf,
+            onNew = { edit = ShelfEdit.New },
+            onRename = { edit = ShelfEdit.Rename(it) },
+            onDelete = { edit = ShelfEdit.Delete(it) },
+            selection = selection,
+            onDeleteChosen = { confirmBulk = true },
+            onAddBooks = { edit = ShelfEdit.AddBooks(it) },
+            onBatchFlow = { edit = ShelfEdit.BatchFlow(it) },
+            onToggleFlow = { card ->
+                if (card.flowActive) {
+                    viewModel.setShelfFlowOff(card.shelf.id)
+                } else if (viewModel.isShelfFlowReady(card.shelf.id)) {
+                    viewModel.startBatchFlow(card.shelf.id)
+                } else {
+                    edit = ShelfEdit.BatchFlow(card.shelf)
+                }
+            },
+            onColour = { edit = ShelfEdit.Colour(it) },
+            onOrder = viewModel::setOrder
+        )
+        FlowFolioSnackbarHost(
+            snackbar,
+            Modifier.align(Alignment.BottomCenter).padding(bottom = LocalChromePadding.current.calculateBottomPadding())
+        )
+    }
     if (confirmBulk) ConfirmShelvesDelete(selection, viewModel) { confirmBulk = false }
     BackHandler(selection.active) { selection.done() }
-    ShelfEditDialogs(edit, state, viewModel) { edit = null }
+    ShelfEditDialogs(
+        edit,
+        state,
+        viewModel,
+        onMade = { shelf ->
+            scope.launch {
+                val r = snackbar.showFlowFolio(
+                    context.getString(R.string.shelf_made, shelf.name),
+                    Glyph.Shelves,
+                    context.getString(R.string.action_add_books)
+                )
+                if (r == SnackbarResult.ActionPerformed) edit = ShelfEdit.AddBooks(shelf)
+            }
+        },
+        onDeleted = { name, undo ->
+            scope.launch {
+                val r = snackbar.showFlowFolio(
+                    context.getString(R.string.shelf_deleted, name),
+                    Glyph.Trash,
+                    context.getString(R.string.action_undo)
+                )
+                if (r == SnackbarResult.ActionPerformed) undo()
+            }
+        }
+    ) { edit = null }
 }
 
+@Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
-private fun ShelfEditDialogs(edit: ShelfEdit?, state: ShelvesUiState, viewModel: ShelvesViewModel, onDone: () -> Unit) {
+private fun ShelfEditDialogs(
+    edit: ShelfEdit?,
+    state: ShelvesUiState,
+    viewModel: ShelvesViewModel,
+    onMade: (Shelf) -> Unit,
+    onDeleted: (String, () -> Unit) -> Unit,
+    onDone: () -> Unit
+) {
     when (val e = edit) {
         null -> Unit
 
@@ -135,57 +208,118 @@ private fun ShelfEditDialogs(edit: ShelfEdit?, state: ShelvesUiState, viewModel:
             onDone()
         }, onDismiss = onDone)
 
-        ShelfEdit.New -> ShelfDialog(stringResource(R.string.shelf_new), "", null, onConfirm = { name, color ->
-            viewModel.create(name, color = color)
-            onDone()
-        }, onDismiss = onDone)
-
-        is ShelfEdit.Rename -> ShelfDialog(
-            stringResource(R.string.shelf_edit),
-            e.shelf.name,
-            e.shelf.color,
-            onConfirm = { name, color ->
-                viewModel.rename(e.shelf.id, name)
-                viewModel.setColor(e.shelf.id, color)
+        ShelfEdit.New -> ShelfNameColourDialog(
+            title = stringResource(R.string.shelf_new),
+            confirm = stringResource(R.string.action_create),
+            initialName = "",
+            initialColour = ShelfColor.entries.first(),
+            onConfirm = { name, colour ->
+                viewModel.createShelf(name, colour, onMade)
                 onDone()
             },
             onDismiss = onDone
         )
 
-        is ShelfEdit.Delete -> FlowFolioAlertDialog(
-            onDismissRequest = onDone,
-            title = { Text(stringResource(R.string.shelf_delete_title, e.shelf.name)) },
-            text = { Text(stringResource(R.string.shelf_delete_body)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.delete(e.shelf.id)
-                    onDone()
-                }) { Text(stringResource(R.string.action_remove), style = FlowFolio.subItem) }
+        is ShelfEdit.Rename -> ShelfNameColourDialog(
+            title = stringResource(R.string.shelf_rename),
+            confirm = stringResource(R.string.action_save),
+            initialName = e.shelf.name,
+            initialColour = null,
+            onConfirm = { name, _ ->
+                viewModel.rename(e.shelf.id, name)
+                onDone()
             },
-            dismissButton = {
-                TextButton(onClick = onDone) {
-                    Text(stringResource(R.string.action_cancel), style = FlowFolio.hint)
-                }
-            }
+            onDismiss = onDone
         )
 
-        is ShelfEdit.BatchFlow -> FlowFolioAlertDialog(
+        is ShelfEdit.Colour -> ShelfColourDialog(e.shelf, onPick = {
+            viewModel.setColor(e.shelf.id, it)
+            onDone()
+        }, onDismiss = onDone)
+
+        is ShelfEdit.Delete -> FlowFolioDialog(
             onDismissRequest = onDone,
-            title = { Text(stringResource(R.string.batch_flow_title)) },
-            text = { Text(stringResource(R.string.batch_flow_body, e.shelf.name)) },
-            confirmButton = {
-                TextButton(onClick = {
+            title = stringResource(R.string.shelf_delete_title, e.shelf.name),
+            body = stringResource(R.string.shelf_delete_body),
+            glyph = Glyph.Trash,
+            destructive = true,
+            actions = listOf(
+                DialogAction(stringResource(R.string.action_cancel)) { onDone() },
+                DialogAction(stringResource(R.string.action_delete), ButtonStyle.DANGER) {
+                    val card = state.cards.firstOrNull { it.shelf.id == e.shelf.id }
+                    if (card != null) {
+                        viewModel.deleteForUndo(card) { undo -> onDeleted(e.shelf.name, undo) }
+                    } else {
+                        viewModel.delete(e.shelf.id)
+                    }
+                    onDone()
+                }
+            )
+        )
+
+        is ShelfEdit.BatchFlow -> FlowFolioDialog(
+            onDismissRequest = onDone,
+            title = stringResource(R.string.batch_flow_title),
+            body = stringResource(R.string.batch_flow_body, e.shelf.name),
+            glyph = Glyph.DynamicFlow,
+            actions = listOf(
+                DialogAction(stringResource(R.string.action_cancel)) { onDone() },
+                DialogAction(stringResource(R.string.action_convert), ButtonStyle.PRIMARY) {
                     viewModel.startBatchFlow(e.shelf.id)
                     onDone()
-                }) { Text(stringResource(R.string.action_convert), style = FlowFolio.title) }
-            },
-            dismissButton = {
-                TextButton(onClick = onDone) {
-                    Text(stringResource(R.string.action_cancel), style = FlowFolio.hint)
                 }
-            }
+            )
         )
     }
+}
+
+/** New shelf and Rename (ADR-0052): a name, and for a new shelf a row of colours. */
+@Composable
+internal fun ShelfNameColourDialog(
+    title: String,
+    confirm: String,
+    initialName: String,
+    initialColour: ShelfColor?,
+    onConfirm: (String, ShelfColor?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var name by remember { mutableStateOf(initialName) }
+    var colour by remember { mutableStateOf(initialColour) }
+    val dark = FlowFolio.palette.dark
+    FlowFolioDialog(
+        onDismissRequest = onDismiss,
+        title = title,
+        glyph = Glyph.Shelves,
+        field = DialogField(name, { name = it }, stringResource(R.string.shelf_name_hint)),
+        swatches = initialColour?.let {
+            DialogSwatches(
+                ShelfColor.entries.map { it.tint(dark) },
+                ShelfColor.entries.map { it.name.lowercase() },
+                ShelfColor.entries.indexOf(colour)
+            ) { colour = ShelfColor.entries[it] }
+        },
+        actions = listOf(
+            DialogAction(stringResource(R.string.action_cancel)) { onDismiss() },
+            DialogAction(confirm, ButtonStyle.PRIMARY) { if (name.isNotBlank()) onConfirm(name.trim(), colour) }
+        )
+    )
+}
+
+/** Change colour (ADR-0052): the shelf's colours, the current one ringed. */
+@Composable
+internal fun ShelfColourDialog(shelf: Shelf, onPick: (ShelfColor) -> Unit, onDismiss: () -> Unit) {
+    val dark = FlowFolio.palette.dark
+    FlowFolioDialog(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.shelf_colour),
+        glyph = Glyph.Paper,
+        swatches = DialogSwatches(
+            ShelfColor.entries.map { it.tint(dark) },
+            ShelfColor.entries.map { it.name.lowercase() },
+            ShelfColor.entries.indexOf(shelf.color)
+        ) { onPick(ShelfColor.entries[it]) },
+        actions = listOf(DialogAction(stringResource(R.string.action_done)) { onDismiss() })
+    )
 }
 
 /** Asks before select mode removes the chosen shelves (their books stay). */
@@ -216,7 +350,9 @@ internal fun ShelvesContent(
     onDeleteChosen: () -> Unit = {},
     onAddBooks: (Shelf) -> Unit = {},
     onBatchFlow: (Shelf) -> Unit = {},
-    onToggleFlow: (ShelfCard) -> Unit = {}
+    onToggleFlow: (ShelfCard) -> Unit = {},
+    onColour: (Shelf) -> Unit = {},
+    onOrder: (ShelvesOrder) -> Unit = {}
 ) {
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     val chrome = LocalChromePadding.current
@@ -237,47 +373,58 @@ internal fun ShelvesContent(
         }
     }
     val grid = rememberLazyGridState()
+    val wide = libraryWide()
+    val gutter = libraryGutter()
     // Tapping the tab shows this page from the top (owner, M4c).
     ScrollToTopOnTab("shelves", grid)
     LazyVerticalGrid(
         state = grid,
-        columns = GridCells.Adaptive(CARD_MIN),
+        columns = GridCells.Fixed(if (wide) WIDE_COLUMNS else NARROW_COLUMNS),
         modifier = Modifier.fillMaxSize().chromeStart().testTag(LibraryTestTags.SHELVES),
         contentPadding = PaddingValues(
-            start = 18.dp,
-            end = 18.dp,
+            start = gutter,
+            end = gutter,
             top = insets.calculateTopPadding(),
             bottom = insets.calculateBottomPadding() + chrome.calculateBottomPadding() + 24.dp
         ),
-        horizontalArrangement = Arrangement.spacedBy(14.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        horizontalArrangement = Arrangement.spacedBy(if (wide) 18.dp else 14.dp),
+        verticalArrangement = Arrangement.spacedBy(if (wide) 18.dp else 14.dp)
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             val keys = filteredCards.map { it.shelf.id.toString() }
-            Column(Modifier.reveal(0)) {
-                ShelvesHeader {
-                    // New shelf and Search step aside with Select while choosing.
-                    SelectControls(selection, keys) {
-                        FlowFolioIconButton(
-                            onClick = {
-                                searchOpen = !searchOpen
-                                if (!searchOpen) query = ""
-                            },
-                            modifier = Modifier.testTag(LibraryTestTags.SEARCH)
-                        ) {
-                            FlowFolioGlyph(Glyph.Search, contentDescription = stringResource(R.string.action_search))
-                        }
-                        FlowFolioIconButton(onClick = onNew, modifier = Modifier.testTag(LibraryTestTags.ADD_SHELF)) {
-                            FlowFolioGlyph(Glyph.Add, contentDescription = stringResource(R.string.shelf_new))
+            Column(Modifier.reveal(0).padding(bottom = 6.dp)) {
+                ScreenHeader(
+                    title = stringResource(R.string.shelves_title),
+                    slogan = stringResource(R.string.shelves_sub),
+                    actions = {
+                        // Search, Sort and New shelf step aside for Select's controls while choosing.
+                        SelectControls(selection, keys) {
+                            FlowFolioIconButton(
+                                onClick = {
+                                    searchOpen = !searchOpen
+                                    if (!searchOpen) query = ""
+                                },
+                                glowing = searchOpen,
+                                tooltip = stringResource(R.string.action_search),
+                                modifier = Modifier.testTag(LibraryTestTags.SEARCH)
+                            ) {
+                                FlowFolioGlyph(Glyph.Search, null, size = 20.dp)
+                            }
+                            ShelvesOrderMenu(state.order, onOrder)
+                            FlowFolioIconButton(
+                                onClick = onNew,
+                                tooltip = stringResource(R.string.shelf_new),
+                                modifier = Modifier.testTag(LibraryTestTags.ADD_SHELF)
+                            ) {
+                                FlowFolioGlyph(Glyph.Add, null, size = 20.dp)
+                            }
                         }
                     }
-                }
+                )
                 if (searchOpen) {
-                    SearchField(
-                        query = query,
-                        onQuery = { query = it },
-                        hintRes = R.string.search_shelves_hint
-                    )
+                    SearchField(query = query, onQuery = {
+                        query = it
+                    }, hintRes = R.string.search_shelves_hint, autoFocus = true)
                 }
                 SelectionRow(selection, keys, onDeleteChosen)
             }
@@ -305,8 +452,11 @@ internal fun ShelvesContent(
                             onAddBooks = onAddBooks,
                             onBatchFlow = onBatchFlow,
                             onToggleFlow = { onToggleFlow(card) },
-                            onSelect = { selection.startWith(key) }
+                            onSelect = { selection.startWith(key) },
+                            onColour = onColour,
+                            onOpen = { onOpen(card.shelf.id) }
                         ),
+                        wide = wide,
                         modifier = zoom.modifier,
                         menuEnabled = !selection.active
                     )
@@ -318,28 +468,55 @@ internal fun ShelvesContent(
     }
 }
 
+/** Sort shelves (ADR-0052): their own order, by name, most books, most read or most marks. */
 @Composable
-private fun ShelvesHeader(select: @Composable () -> Unit) {
-    ScreenHeader(
-        title = stringResource(R.string.shelves_title),
-        slogan = stringResource(R.string.shelves_sub),
-        actions = select
-    )
+private fun ShelvesOrderMenu(order: ShelvesOrder, onOrder: (ShelvesOrder) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        FlowFolioIconButton(
+            onClick = { open = true },
+            tooltip = stringResource(R.string.shelves_sort),
+            modifier = Modifier.testTag(LibraryTestTags.SHELVES_SORT)
+        ) {
+            FlowFolioGlyph(Glyph.Sort, null, size = 20.dp)
+        }
+        FlowFolioMenu(expanded = open, onDismissRequest = { open = false }) {
+            FlowFolioMenuHeader(stringResource(R.string.library_sort_by))
+            ShelvesOrder.entries.forEach { o ->
+                FlowFolioMenuItem(stringResource(o.label), {
+                    open = false
+                    onOrder(o)
+                }, checked = o == order)
+            }
+        }
+    }
 }
 
-/** What a shelf card's press-and-hold menu does. */
+private val ShelvesOrder.label: Int
+    get() = when (this) {
+        ShelvesOrder.CUSTOM -> R.string.sort_custom
+        ShelvesOrder.NAME -> R.string.sort_name
+        ShelvesOrder.MOST_BOOKS -> R.string.shelves_most_books
+        ShelvesOrder.MOST_READ -> R.string.shelves_most_read
+        ShelvesOrder.MOST_MARKS -> R.string.shelves_most_marks
+    }
+
+/** What a shelf card's menu does. */
+@Suppress("LongParameterList") // one handler per menu entry
 private class ShelfMenu(
     val onRename: (Shelf) -> Unit,
     val onDelete: (Shelf) -> Unit,
     val onAddBooks: (Shelf) -> Unit,
     val onBatchFlow: (Shelf) -> Unit,
     val onToggleFlow: () -> Unit,
-    val onSelect: () -> Unit
+    val onSelect: () -> Unit,
+    val onColour: (Shelf) -> Unit,
+    val onOpen: () -> Unit
 )
 
 /**
- * `.col`: shelf title on top-left, Dynamic Flow toggle glyph on top-right, up to five books fanned out in the middle,
- * and minimalist stats (books, annotations, bookmarks, dictionary items, total read time) on the bottom.
+ * A shelf card (`.folder`, ADR-0052): a 2 dp border in the shelf's colour, its name on two lines with the Dynamic Flow
+ * switch and ⋯ beside it, up to five covers fanned, and its books, annotations, ribbons, words and time read.
  */
 @Suppress("LongMethod")
 @OptIn(ExperimentalFoundationApi::class)
@@ -348,142 +525,156 @@ private fun ShelfCardView(
     card: ShelfCard,
     onOpen: (Long) -> Unit,
     actions: ShelfMenu,
+    wide: Boolean,
     modifier: Modifier,
     menuEnabled: Boolean = true
 ) {
+    val p = FlowFolio.palette
     var menu by remember { mutableStateOf(false) }
-    val shape = RoundedCornerShape(24.dp)
-    val outline = card.shelf.color.color
-    Box(modifier.clip(shape).border(OUTLINE, outline, shape)) {
-        FlowFolioCard(
-            Modifier
-                .fillMaxWidth()
-                .combinedClickable(onClick = { onOpen(card.shelf.id) }, onLongClick = { if (menuEnabled) menu = true })
-                .testTag(LibraryTestTags.shelf(card.shelf.id)),
-            radius = 24.dp,
-            padding = PaddingValues(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 14.dp)
-        ) {
-            Column {
-                Row(
-                    Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        card.shelf.name,
-                        style = FlowFolioType.rowLabel.copy(fontSize = 16.sp).merge(FlowFolio.item),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f).padding(end = 6.dp)
-                    )
-                    ShelfFlowToggle(
-                        shelfId = card.shelf.id,
-                        active = card.flowActive,
-                        converting = card.flowConverting,
-                        onClick = actions.onToggleFlow
-                    )
+    val shape = RoundedCornerShape(22.dp)
+    val outline = card.shelf.color?.color ?: p.line
+    Box(
+        modifier
+            .card(shape)
+            .border(OUTLINE, outline, shape)
+            .clip(shape)
+            .combinedClickable(onClick = { onOpen(card.shelf.id) }, onLongClick = { if (menuEnabled) menu = true })
+            .padding(start = 14.dp, end = 8.dp, top = 8.dp, bottom = 12.dp)
+            .testTag(LibraryTestTags.shelf(card.shelf.id))
+    ) {
+        Column {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+                Text(
+                    card.shelf.name,
+                    style = FlowFolioType.rowLabel.copy(fontSize = 15.sp, lineHeight = 18.sp, color = p.ink),
+                    maxLines = 2,
+                    minLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).padding(top = 8.dp, end = 4.dp)
+                )
+                if (card.hasPdf) {
+                    Box(Modifier.padding(top = 4.dp)) {
+                        ShelfFlowToggle(card.shelf.id, card.flowActive, card.flowConverting, actions.onToggleFlow)
+                    }
                 }
-                Fan(card.books.take(FAN_SIZE))
-                ShelfStatsRow(card, Modifier.padding(top = 12.dp))
+                Box {
+                    FlowFolioIconButton(
+                        onClick = { if (menuEnabled) menu = true },
+                        size = 36.dp,
+                        ghost = true,
+                        tooltip = stringResource(R.string.shelf_options)
+                    ) {
+                        FlowFolioGlyph(Glyph.More, null, color = p.ink2, size = 18.dp)
+                    }
+                    ShelfCardMenu(card, menu, actions) { menu = false }
+                }
             }
+            Fan(card.books.take(FAN_SIZE), if (wide) FAN_HEIGHT_WIDE else FAN_HEIGHT)
+            ShelfStatsRow(card)
         }
-        FlowFolioMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            HoldEntry(R.string.action_select) {
-                menu = false
-                actions.onSelect()
-            }
-            FlowFolioMenuDivider()
-            HoldEntry(R.string.action_add_books) {
-                menu = false
-                actions.onAddBooks(card.shelf)
-            }
-            FlowFolioMenuDivider()
-            HoldEntry(R.string.action_batch_flow) {
-                menu = false
-                actions.onBatchFlow(card.shelf)
-            }
-            FlowFolioMenuDivider()
-            HoldEntry(R.string.action_edit) {
-                menu = false
+    }
+}
+
+@Composable
+private fun ShelfCardMenu(card: ShelfCard, open: Boolean, actions: ShelfMenu, onClose: () -> Unit) {
+    fun run(action: () -> Unit): () -> Unit = {
+        onClose()
+        action()
+    }
+    FlowFolioMenu(expanded = open, onDismissRequest = onClose) {
+        FlowFolioMenuItem(stringResource(R.string.action_open), run(actions.onOpen), glyph = Glyph.Shelves)
+        FlowFolioMenuItem(
+            stringResource(R.string.action_rename),
+            run {
                 actions.onRename(card.shelf)
-            }
-            FlowFolioMenuDivider()
-            HoldEntry(R.string.action_remove, warn = true) {
-                menu = false
-                actions.onDelete(card.shelf)
-            }
+            },
+            glyph = Glyph.Edit
+        )
+        FlowFolioMenuItem(
+            stringResource(R.string.shelf_colour),
+            run {
+                actions.onColour(card.shelf)
+            },
+            glyph = Glyph.Paper
+        )
+        FlowFolioMenuItem(
+            stringResource(R.string.action_add_books),
+            run {
+                actions.onAddBooks(card.shelf)
+            },
+            glyph = Glyph.Add
+        )
+        if (card.hasPdf) {
+            FlowFolioMenuItem(
+                stringResource(if (card.flowActive) R.string.action_batch_flow_off else R.string.action_batch_flow),
+                run { if (card.flowActive) actions.onToggleFlow() else actions.onBatchFlow(card.shelf) },
+                glyph = Glyph.DynamicFlow
+            )
         }
+        FlowFolioMenuItem(stringResource(R.string.action_select), run(actions.onSelect), glyph = Glyph.Select)
+        FlowFolioMenuDivider()
+        FlowFolioMenuItem(
+            stringResource(R.string.shelf_delete),
+            run { actions.onDelete(card.shelf) },
+            glyph = Glyph.Trash,
+            destructive = true
+        )
     }
 }
 
 @Composable
 private fun ShelfFlowToggle(shelfId: Long, active: Boolean, converting: Boolean, onClick: () -> Unit) {
     val p = FlowFolio.palette
-    val lit = active || converting
-    val tint = when {
-        active -> p.title
-        converting -> p.subItem
-        else -> p.hint.copy(alpha = 0.42f)
-    }
-    val bg = when {
-        active -> p.title.copy(alpha = 0.18f)
-        converting -> p.subItem.copy(alpha = 0.14f)
-        else -> Color.Transparent
-    }
+    val tint = if (active) p.accent else p.ink3
     Box(
         Modifier
             .size(28.dp)
             .clip(CircleShape)
-            .background(bg)
-            .then(
-                if (lit) {
-                    Modifier.border(1.dp, tint.copy(alpha = 0.55f), CircleShape)
-                } else {
-                    Modifier
-                }
-            )
+            .background(if (active) p.accentSoft else p.surface2)
             .clickable(onClick = onClick)
             .testTag(LibraryTestTags.shelfFlow(shelfId)),
         contentAlignment = Alignment.Center
     ) {
         FlowFolioGlyph(
             Glyph.DynamicFlow,
-            contentDescription = stringResource(R.string.action_batch_flow),
+            contentDescription = stringResource(
+                if (converting) R.string.shelf_flow_converting else R.string.action_batch_flow
+            ),
             color = tint,
-            size = 16.dp
+            size = 16.dp,
+            glow = false
         )
     }
 }
 
+/** `.fs`: the shelf's totals, each a glyph and a figure, read out with their names. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ShelfStatsRow(card: ShelfCard, modifier: Modifier = Modifier) {
     FlowRow(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().padding(end = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(5.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        ShelfStatItem(Glyph.Library, card.books.size.toString())
-        ShelfStatItem(Glyph.Highlight, card.annotationsCount.toString())
-        ShelfStatItem(Glyph.Bookmark, card.bookmarksCount.toString())
-        ShelfStatItem(Glyph.Translate, card.dictionaryCount.toString())
-        ShelfStatItem(Glyph.Clock, formatCompactReadTime(card.readTimeMillis))
+        ShelfStatItem(Glyph.Library, card.books.size.toString(), R.string.stats_books)
+        ShelfStatItem(Glyph.Highlight, card.annotationsCount.toString(), R.string.stats_annotations)
+        ShelfStatItem(Glyph.Bookmark, card.bookmarksCount.toString(), R.string.stats_bookmarks)
+        ShelfStatItem(Glyph.Translate, card.dictionaryCount.toString(), R.string.stats_words)
+        ShelfStatItem(Glyph.Clock, formatCompactReadTime(card.readTimeMillis), R.string.stats_reading_time)
     }
 }
 
 @Composable
-private fun ShelfStatItem(glyph: Glyph, value: String) {
+private fun ShelfStatItem(glyph: Glyph, value: String, label: Int) {
     val p = FlowFolio.palette
+    val name = stringResource(label)
     Row(
+        Modifier.semantics(mergeDescendants = true) { contentDescription = "$value $name" },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(3.dp)
     ) {
-        FlowFolioGlyph(glyph, contentDescription = null, color = p.hint, size = 12.dp)
-        Text(
-            value,
-            style = FlowFolioType.pill.copy(fontSize = 11.sp).merge(FlowFolio.hint),
-            maxLines = 1
-        )
+        FlowFolioGlyph(glyph, contentDescription = null, color = p.ink3, size = 13.dp, glow = false)
+        Text(value, style = FlowFolioType.body.copy(fontSize = 12.sp, color = p.ink2), maxLines = 1)
     }
 }
 
@@ -500,47 +691,67 @@ private fun formatCompactReadTime(millis: Long): String {
 }
 
 /**
- * `.fan`: the books overlap across the card's width, the outer ones tilted most, the middle one in front; up to five
- * (owner, 2026-10-22; the mock fanned three).
+ * `.fan` (ADR-0052): up to five flat covers, each half the card wide, spread across it and turned 5 degrees apart from
+ * the middle, the outer ones lifted a little; the middle one in front.
  */
 @Composable
-private fun Fan(books: List<Book>) {
-    BoxWithConstraints(Modifier.fillMaxWidth().height(FAN_HEIGHT)) {
+private fun Fan(books: List<Book>, height: androidx.compose.ui.unit.Dp) {
+    BoxWithConstraints(
+        Modifier.fillMaxWidth().padding(start = 4.dp, end = 10.dp, top = 10.dp, bottom = 12.dp).height(height)
+    ) {
         val n = books.size
-        val step = if (n > 1) (maxWidth - FAN_BOOK_WIDTH - FAN_EDGE * 2) / (n - 1) else 0.dp
+        if (n == 0) {
+            Text(
+                stringResource(R.string.shelf_empty),
+                style = FlowFolioType.body.copy(color = FlowFolio.palette.ink3),
+                modifier = Modifier.align(Alignment.Center)
+            )
+            return@BoxWithConstraints
+        }
+        val coverWidth = minOf(maxWidth * FAN_COVER_SHARE, height * COVER_ASPECT)
+        val spread = maxWidth - coverWidth
         val middle = (n - 1) / 2f
-        // Outer books first, so the middle one is drawn in front.
         books.indices.sortedByDescending { kotlin.math.abs(it - middle) }.forEach { i ->
             val book = books[i]
             val cover by rememberCover(book)
+            val tilt = if (n > 1) (i - middle) * FAN_STEP_DEG else 0f
             Box(
                 Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = FAN_EDGE + step * i, bottom = 4.dp)
+                    .padding(
+                        start = if (n >
+                            1
+                        ) {
+                            spread * (i / (n - 1f))
+                        } else {
+                            spread / 2
+                        },
+                        bottom = (kotlin.math.abs(tilt) * 0.6f).dp
+                    )
+                    .width(coverWidth)
                     .graphicsLayer {
-                        rotationZ = if (n > 1) (i - middle) / middle * FAN_MAX_TILT else 0f
-                        // Drawn once at rest and turned as a layer, so the shadow is not re-blurred.
-                        compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
+                        rotationZ = tilt
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 1f)
                     }
             ) {
-                Book3D(book.face(cover), FAN_BOOK_WIDTH, FAN_BOOK_HEIGHT)
+                BookCover(book.face(cover), Modifier.fillMaxWidth())
             }
         }
     }
 }
 
-/** `.col.new`: a dashed outline card that makes a shelf. */
+/** `.folder.new`: a dashed card that makes a shelf. */
 @Composable
 private fun NewShelfCard(onNew: () -> Unit, modifier: Modifier) {
     val p = FlowFolio.palette
     Box(
         modifier
             .heightIn(min = NEW_CARD_MIN)
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(22.dp))
             .drawBehind {
                 drawRoundRect(
-                    p.edge,
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(24.dp.toPx()),
+                    p.line,
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(22.dp.toPx()),
                     style = Stroke(2.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 8f)))
                 )
             }
@@ -549,18 +760,19 @@ private fun NewShelfCard(onNew: () -> Unit, modifier: Modifier) {
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("+", style = FlowFolioType.screenTitle.copy(fontSize = 34.sp).merge(FlowFolio.title))
-            Text(stringResource(R.string.shelf_new), style = FlowFolioType.rowLabel.merge(FlowFolio.hint))
+            FlowFolioGlyph(Glyph.Add, null, color = p.accent, size = 26.dp, glow = false)
+            Spacer(Modifier.height(8.dp))
+            Text(stringResource(R.string.shelf_new), style = FlowFolioType.body.copy(color = p.ink3))
         }
     }
 }
 
 private const val FAN_SIZE = 5
-private val CARD_MIN = 160.dp
-private val NEW_CARD_MIN = 190.dp
-private val FAN_HEIGHT = 120.dp
-private val FAN_BOOK_WIDTH = 64.dp
-private val FAN_BOOK_HEIGHT = 94.dp
-private val FAN_EDGE = 4.dp
-private const val FAN_MAX_TILT = 9f
+private const val WIDE_COLUMNS = 3
+private const val NARROW_COLUMNS = 2
+private const val FAN_COVER_SHARE = 0.44f
+private const val FAN_STEP_DEG = 5f
+private val NEW_CARD_MIN = 200.dp
+private val FAN_HEIGHT = 132.dp
+private val FAN_HEIGHT_WIDE = 190.dp
 private val OUTLINE = 2.dp

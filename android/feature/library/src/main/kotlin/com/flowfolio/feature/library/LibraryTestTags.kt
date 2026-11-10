@@ -17,6 +17,7 @@ object LibraryTestTags {
     const val GRID = "library_grid"
     const val IMPORT = "library_import"
     const val SORT = "library_sort"
+    const val SHELVES_SORT = "shelves_sort"
     const val STATS_BAND = "library_stats"
     const val GLOBAL_SEARCH = "library_global_search"
     const val GOAL_CARD = "library_goal_card"

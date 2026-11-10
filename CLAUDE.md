@@ -176,6 +176,9 @@ local.
   (`UserSettings.statsBand`), Continue card with ⋯ and the unfolded goal ring, folded `GoalCard`, flat 2:3 `BookTile`s
   in Shelf, Grid or List view (`UserSettings.libraryView`), six `LibrarySort` orders applied everywhere, and the new
   `BookMenu`. The `row-loose` crash is fixed (`ShelfRow.key`). Share file is not in the book menu yet (owner to decide).
+- **Phase 4 (Shelves) built 2026-11-09.** Folder cards with flat fanned covers, the ⋯ menu, `ShelvesOrder` sort
+  (remembered), New shelf with colours and an "Add books" snackbar, Delete with Undo; shelf pages restyled; `ShelfBook`
+  draws the flat cover.
 - Handover APKs get a new name every build (`app/build/outputs/apk/debug/handover/`) and are installed on the owner's
   phone as well as the emulator.
 

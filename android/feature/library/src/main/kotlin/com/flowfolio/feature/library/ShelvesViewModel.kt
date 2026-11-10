@@ -11,6 +11,7 @@ import com.flowfolio.core.data.BookmarkRepository
 import com.flowfolio.core.data.DictionaryRepository
 import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.data.ReadingRepository
+import com.flowfolio.core.data.SettingsRepository
 import com.flowfolio.core.data.ShelfRepository
 import com.flowfolio.core.data.flow.DynamicFlow
 import com.flowfolio.core.model.Annotation
@@ -24,6 +25,7 @@ import com.flowfolio.core.model.HighlightColor
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.Shelf
 import com.flowfolio.core.model.ShelfColor
+import com.flowfolio.core.model.ShelvesOrder
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -52,7 +55,10 @@ data class ShelfCard(
 
 data class ShelvesUiState(
     val loading: Boolean = true,
+    /** The shelves in [order]. */
     val cards: List<ShelfCard> = emptyList(),
+    /** How the shelves are ordered (ADR-0052), remembered. */
+    val order: ShelvesOrder = ShelvesOrder.CUSTOM,
     /** Every book in the library, for a shelf's "Add books". */
     val books: List<Book> = emptyList()
 )
@@ -87,7 +93,7 @@ private object EmptyShelfReadingRepository : ReadingRepository {
 }
 
 /** Shelves: listing them, and making, renaming and removing them, and choosing a book's shelves. */
-@Suppress("LongParameterList")
+@Suppress("LongParameterList", "TooManyFunctions")
 @HiltViewModel
 class ShelvesViewModel @Inject constructor(
     private val shelves: ShelfRepository,
@@ -97,8 +103,27 @@ class ShelvesViewModel @Inject constructor(
     dictionaryRepo: DictionaryRepository = object : DictionaryRepository {},
     readingRepo: ReadingRepository = EmptyShelfReadingRepository,
     private val flow: DynamicFlow = DynamicFlow.None,
-    @ApplicationContext private val appContext: Context? = null
+    @ApplicationContext private val appContext: Context? = null,
+    private val settings: SettingsRepository? = null
 ) : ViewModel() {
+    private val order = settings?.settings?.map { it.shelvesOrder } ?: flowOf(ShelvesOrder.CUSTOM)
+
+    /** Orders the shelves (ADR-0052), remembered. */
+    fun setOrder(order: ShelvesOrder) = viewModelScope.launch { settings?.setShelvesOrder(order) }
+
+    /** Makes a shelf and hands it back, for "Add books" in the snackbar that follows (ADR-0052). */
+    fun createShelf(name: String, color: ShelfColor?, onMade: (Shelf) -> Unit) = viewModelScope.launch {
+        val id = shelves.create(name.trim(), color)
+        onMade(Shelf(id, name.trim(), emptyList(), color))
+    }
+
+    /** Deletes a shelf, keeping what Undo needs to put it back with its books, colour and order. */
+    fun deleteForUndo(card: ShelfCard, onDeleted: (undo: () -> Unit) -> Unit) = viewModelScope.launch {
+        val shelf = card.shelf
+        shelves.delete(shelf.id)
+        onDeleted { createWith(shelf.name, shelf.color, shelf.bookIds) }
+    }
+
     private data class StatsBundle(
         val annotationsByBook: Map<String, Int>,
         val bookmarksByBook: Map<String, Int>,
@@ -129,8 +154,9 @@ class ShelvesViewModel @Inject constructor(
         combine(
             shelves.observeShelves(),
             library.observeBooks(LibrarySort.RECENT),
-            statsBundle
-        ) { list, books, stats ->
+            statsBundle,
+            order
+        ) { list, books, stats, chosen ->
             val byId = books.associateBy { it.id }
             val cards = list.map { s ->
                 val shelfBooks = s.bookIds.mapNotNull(byId::get)
@@ -157,7 +183,7 @@ class ShelvesViewModel @Inject constructor(
                     flowConverting = converting
                 )
             }
-            ShelvesUiState(false, cards, books)
+            ShelvesUiState(false, orderShelves(cards, chosen), chosen, books)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ShelvesUiState())
 
     /** Starts batch Dynamic Flow conversion on all PDF books in [shelfId]. */
@@ -269,4 +295,13 @@ class ShelvesViewModel @Inject constructor(
         const val BATCH_FLOW_NOTIFICATION_BASE = 5100
         const val NOTIFICATION_ID_MASK = 0xFFF
     }
+}
+
+/** The shelves in [order]; ties keep their own order (ADR-0052). */
+internal fun orderShelves(cards: List<ShelfCard>, order: ShelvesOrder): List<ShelfCard> = when (order) {
+    ShelvesOrder.CUSTOM -> cards
+    ShelvesOrder.NAME -> cards.sortedBy { it.shelf.name.lowercase() }
+    ShelvesOrder.MOST_BOOKS -> cards.sortedByDescending { it.books.size }
+    ShelvesOrder.MOST_READ -> cards.sortedByDescending { it.readTimeMillis }
+    ShelvesOrder.MOST_MARKS -> cards.sortedByDescending { it.annotationsCount + it.bookmarksCount + it.dictionaryCount }
 }

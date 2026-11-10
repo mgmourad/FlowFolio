@@ -42,6 +42,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
@@ -69,25 +70,32 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.designsystem.ButtonStyle
+import com.flowfolio.core.designsystem.DialogAction
 import com.flowfolio.core.designsystem.FlatCover
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioAlertDialog
 import com.flowfolio.core.designsystem.FlowFolioCard
+import com.flowfolio.core.designsystem.FlowFolioDialog
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioMenuDivider
+import com.flowfolio.core.designsystem.FlowFolioMenuHeader
+import com.flowfolio.core.designsystem.FlowFolioMenuItem
 import com.flowfolio.core.designsystem.FlowFolioProgressBar
 import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.Selection
+import com.flowfolio.core.designsystem.color
 import com.flowfolio.core.designsystem.rememberSelection
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
+import com.flowfolio.core.model.Shelf
 import com.flowfolio.core.model.pageLabel
 import com.flowfolio.core.model.printedPages
 
@@ -130,7 +138,9 @@ internal data class BookRowActions(
     /** The drag and drop under way in the current view (set by [ShelfPageContent]). */
     val reorder: ReorderState? = null,
     /** Changes the sort order on a shelf or the 'Not on a shelf' page. */
-    val onSort: (ShelfSort) -> Unit = {}
+    val onSort: (ShelfSort) -> Unit = {},
+    /** The shelf's own menu: rename, colour, add books, delete; null on pages that are not a shelf. */
+    val shelfMenu: ShelfPageMenu? = null
 )
 
 /**
@@ -154,6 +164,7 @@ fun ShelfPageScreen(
     var removing by remember { mutableStateOf<FolderEntry?>(null) }
     var adding by remember { mutableStateOf(false) }
     var shelving by remember { mutableStateOf<List<String>?>(null) }
+    var shelfEdit by remember { mutableStateOf<ShelfPageEdit?>(null) }
     val relink = rememberRelink(viewModel)
     val actions = BookRowActions(
         onOpen = { item ->
@@ -195,7 +206,15 @@ fun ShelfPageScreen(
             else -> null
         },
         onShelveChosen = { shelving = state.booksChosen(selection.chosen) },
-        onSort = viewModel::setSort
+        onSort = viewModel::setSort,
+        shelfMenu = state.shelf?.let {
+            ShelfPageMenu(
+                onRename = { shelfEdit = ShelfPageEdit.RENAME },
+                onColour = { shelfEdit = ShelfPageEdit.COLOUR },
+                onAddBooks = { adding = true },
+                onDelete = { shelfEdit = ShelfPageEdit.DELETE }
+            )
+        }
     )
     ShelfPageContent(state, onBack, actions)
     val shelf = state.shelf
@@ -219,6 +238,7 @@ fun ShelfPageScreen(
         }
     }
     removing?.let { folder -> RemoveFolderDialog(folder, { viewModel.removeFolder(folder.path) }) { removing = null } }
+    state.shelf?.let { s -> ShelfPageEdits(s, shelfEdit, shelvesVm, onBack) { shelfEdit = null } }
     BackHandler(selection.active) { selection.done() }
     BookPromptDialogs(prompt, state, viewModel, shelvesVm) { prompt = null }
 }
@@ -399,6 +419,7 @@ internal fun ShelfPageContent(state: ShelfPageUiState, onBack: (() -> Unit)?, ac
                 onView = { view = it },
                 onBack = onBack,
                 onSort = actions.onSort,
+                shelfMenu = actions.shelfMenu,
                 selectionRow = {
                     actions.selection?.let {
                         SelectionRow(it, keys, actions.onDeleteChosen, onAddToShelf = actions.onShelveChosen)
@@ -502,7 +523,7 @@ private fun AddBooksButton(onClick: () -> Unit) {
     }
 }
 
-@Suppress("LongParameterList", "LongMethod")
+@Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod")
 @Composable
 private fun ShelfPageHeader(
     state: ShelfPageUiState,
@@ -511,8 +532,10 @@ private fun ShelfPageHeader(
     onBack: (() -> Unit)?,
     onSort: (ShelfSort) -> Unit,
     selectionRow: @Composable () -> Unit,
+    shelfMenu: ShelfPageMenu?,
     select: @Composable () -> Unit
 ) {
+    val p = FlowFolio.palette
     val name = state.folder?.substringAfterLast('/') ?: state.shelf?.name ?: stringResource(
         when {
             state.special == ShelfPageViewModel.FINISHED -> R.string.shelf_finished
@@ -521,108 +544,130 @@ private fun ShelfPageHeader(
             else -> R.string.shelf_loose
         }
     )
-    // Back on the left and the + / Select controls on the right sit on one line; the name moves below them so it has
-    // the whole width for a long shelf name (owner, 2026-11-07). It is a little smaller than a top-level page's title.
+    val wide = libraryWide()
+    // ADR-0052: Back on the left, Sort and view, Add books and the shelf's ⋯ on the right; then the shelf's colour
+    // dot and name, and what it holds.
     Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
-        Row(
-            Modifier.fillMaxWidth().padding(start = 4.dp, top = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             onBack?.let { back ->
-                FlowFolioIconButton(onClick = back, modifier = Modifier.padding(end = 10.dp)) {
-                    FlowFolioGlyph(Glyph.Back, contentDescription = stringResource(R.string.action_back))
+                FlowFolioIconButton(onClick = back, tooltip = stringResource(R.string.action_back)) {
+                    FlowFolioGlyph(Glyph.Back, null, size = 20.dp)
                 }
             }
             Spacer(Modifier.weight(1f))
-            select()
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                ShelfSortViewMenu(state.canSort, state.sort, onSort, view, onView)
+                select()
+                shelfMenu?.let { ShelfPageMoreMenu(it) }
+            }
         }
-        // The page's name centred under the buttons; the Favourites tab keeps the top-level pages' own size (owner,
-        // 2026-11-07), a folder or custom shelf is a little smaller.
+        Row(Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            state.shelf?.let { shelf ->
+                Box(
+                    Modifier
+                        .padding(end = 10.dp)
+                        .size(14.dp)
+                        .background(shelf.color?.color ?: p.accent, CircleShape)
+                )
+            }
+            Text(
+                name,
+                style = FlowFolioType.screenTitle.copy(
+                    fontSize = if (wide) 40.sp else 30.sp,
+                    lineHeight = if (wide) 42.sp else 32.sp,
+                    color = p.ink
+                ),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
         Text(
-            name,
-            style = if (state.special == ShelfPageViewModel.FAVORITES) {
-                FlowFolioType.screenTitle.merge(FlowFolio.title)
-            } else {
-                FlowFolioType.bookTitle.merge(FlowFolio.title)
-            },
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+            listOfNotNull(
+                state.subfolders.size.takeIf { it > 0 }?.let {
+                    pluralStringResource(R.plurals.folder_count, it, it)
+                },
+                pluralStringResource(R.plurals.book_count, state.items.size, state.items.size)
+                    .takeIf { state.items.isNotEmpty() || state.subfolders.isEmpty() }
+            ).joinToString(" · "),
+            style = FlowFolioType.sub.copy(color = p.ink2),
+            modifier = Modifier.padding(top = 6.dp)
         )
         selectionRow()
-        Row(
-            Modifier.fillMaxWidth().padding(top = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                listOfNotNull(
-                    state.subfolders.size.takeIf { it > 0 }?.let {
-                        pluralStringResource(R.plurals.folder_count, it, it)
-                    },
-                    // A folder holding only folders says just that.
-                    pluralStringResource(R.plurals.book_count, state.items.size, state.items.size)
-                        .takeIf { state.items.isNotEmpty() || state.subfolders.isEmpty() }
-                ).joinToString(" · "),
-                style = FlowFolioType.sub.merge(FlowFolio.hint),
-                modifier = Modifier.weight(1f)
-            )
-            if (state.canSort) {
-                ShelfSortButton(current = state.sort, onSelect = onSort)
-            }
-            FlowFolioSegmented(
-                listOf(stringResource(R.string.view_tiles), stringResource(R.string.view_list)),
-                view,
-                onView,
-                modifier = Modifier.testTag(LibraryTestTags.SHELF_VIEW)
+    }
+}
+
+/** A shelf's own menu on its page (ADR-0052). */
+internal class ShelfPageMenu(
+    val onRename: () -> Unit,
+    val onColour: () -> Unit,
+    val onAddBooks: () -> Unit,
+    val onDelete: () -> Unit
+)
+
+@Composable
+private fun ShelfPageMoreMenu(menu: ShelfPageMenu) {
+    var open by remember { mutableStateOf(false) }
+    fun run(action: () -> Unit): () -> Unit = {
+        open = false
+        action()
+    }
+    Box {
+        FlowFolioIconButton(onClick = { open = true }, tooltip = stringResource(R.string.shelf_options)) {
+            FlowFolioGlyph(Glyph.More, null, size = 20.dp)
+        }
+        FlowFolioMenu(expanded = open, onDismissRequest = { open = false }) {
+            FlowFolioMenuItem(stringResource(R.string.action_rename), run(menu.onRename), glyph = Glyph.Edit)
+            FlowFolioMenuItem(stringResource(R.string.shelf_colour), run(menu.onColour), glyph = Glyph.Paper)
+            FlowFolioMenuItem(stringResource(R.string.action_add_books), run(menu.onAddBooks), glyph = Glyph.Add)
+            FlowFolioMenuDivider()
+            FlowFolioMenuItem(
+                stringResource(R.string.shelf_delete),
+                run(menu.onDelete),
+                glyph = Glyph.Trash,
+                destructive = true
             )
         }
     }
 }
 
+/** Sort and view on a shelf page (ADR-0052): the shelf's orders where it can be sorted, then Grid or List. */
 @Composable
-private fun ShelfSortButton(current: ShelfSort, onSelect: (ShelfSort) -> Unit) {
-    var expanded by remember { mutableStateOf(false) }
-    val p = FlowFolio.palette
+private fun ShelfSortViewMenu(
+    canSort: Boolean,
+    current: ShelfSort,
+    onSort: (ShelfSort) -> Unit,
+    view: Int,
+    onView: (Int) -> Unit
+) {
+    var open by remember { mutableStateOf(false) }
     Box {
-        Row(
-            Modifier
-                .clip(RoundedCornerShape(999.dp))
-                .background(p.surface)
-                .clickable { expanded = true }
-                .padding(horizontal = 12.dp, vertical = 7.dp)
-                .testTag(LibraryTestTags.SHELF_SORT),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        FlowFolioIconButton(
+            onClick = { open = true },
+            tooltip = stringResource(R.string.library_sort_view),
+            modifier = Modifier.testTag(LibraryTestTags.SHELF_SORT)
         ) {
-            FlowFolioGlyph(
-                Glyph.Sliders,
-                contentDescription = stringResource(R.string.action_sort),
-                color = p.glyph,
-                size = 15.dp
-            )
-            Text(
-                stringResource(current.labelRes()),
-                style = FlowFolioType.pill.merge(FlowFolio.item),
-                maxLines = 1
-            )
+            FlowFolioGlyph(Glyph.Sort, null, size = 20.dp)
         }
-        FlowFolioMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            ShelfSort.entries.forEachIndexed { i, sort ->
-                if (i > 0) FlowFolioMenuDivider()
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            stringResource(sort.labelRes()),
-                            style = if (sort == current) FlowFolio.title else FlowFolio.item
-                        )
-                    },
-                    onClick = {
-                        expanded = false
-                        onSelect(sort)
-                    }
-                )
+        FlowFolioMenu(expanded = open, onDismissRequest = { open = false }) {
+            if (canSort) {
+                FlowFolioMenuHeader(stringResource(R.string.library_sort_by))
+                ShelfSort.entries.forEach { sort ->
+                    FlowFolioMenuItem(stringResource(sort.labelRes()), {
+                        open = false
+                        onSort(sort)
+                    }, checked = sort == current)
+                }
+                FlowFolioMenuDivider()
+            }
+            FlowFolioMenuHeader(stringResource(R.string.library_view_as))
+            listOf(R.string.view_grid to Glyph.Library, R.string.view_list to Glyph.Contents).forEachIndexed {
+                    i,
+                    (label, glyph)
+                ->
+                FlowFolioMenuItem(stringResource(label), {
+                    open = false
+                    onView(i)
+                }, glyph = glyph, checked = view == i)
             }
         }
     }
@@ -651,3 +696,53 @@ internal val TILE_CELL = TILE_BOOK_WIDTH + BOOK_SPINE_ROOM
 
 internal val TILE_COLUMN_GAP = 12.dp
 internal val TILE_ROW_GAP = 28.dp
+
+/** What is being changed about the shelf itself from its page. */
+private enum class ShelfPageEdit { RENAME, COLOUR, DELETE }
+
+/** Rename, Change colour and Delete shelf from a shelf's page; deleting leaves the page (the books stay). */
+@Composable
+private fun ShelfPageEdits(
+    shelf: Shelf,
+    edit: ShelfPageEdit?,
+    shelvesVm: ShelvesViewModel,
+    onBack: (() -> Unit)?,
+    onDone: () -> Unit
+) {
+    when (edit) {
+        null -> Unit
+
+        ShelfPageEdit.RENAME -> ShelfNameColourDialog(
+            title = stringResource(R.string.shelf_rename),
+            confirm = stringResource(R.string.action_save),
+            initialName = shelf.name,
+            initialColour = null,
+            onConfirm = { name, _ ->
+                shelvesVm.rename(shelf.id, name)
+                onDone()
+            },
+            onDismiss = onDone
+        )
+
+        ShelfPageEdit.COLOUR -> ShelfColourDialog(shelf, onPick = {
+            shelvesVm.setColor(shelf.id, it)
+            onDone()
+        }, onDismiss = onDone)
+
+        ShelfPageEdit.DELETE -> FlowFolioDialog(
+            onDismissRequest = onDone,
+            title = stringResource(R.string.shelf_delete_title, shelf.name),
+            body = stringResource(R.string.shelf_delete_body),
+            glyph = Glyph.Trash,
+            destructive = true,
+            actions = listOf(
+                DialogAction(stringResource(R.string.action_cancel)) { onDone() },
+                DialogAction(stringResource(R.string.action_delete), ButtonStyle.DANGER) {
+                    shelvesVm.delete(shelf.id)
+                    onDone()
+                    onBack?.invoke()
+                }
+            )
+        )
+    }
+}

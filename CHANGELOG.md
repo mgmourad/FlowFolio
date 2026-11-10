@@ -10,6 +10,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 > **CI has not run** for any of it yet.
 
 ### Changed
+- **Overhaul Phase 4: Shelves** (2026-11-09).
+  - **Shelves tab:** two columns folded and three unfolded, each card with:
+    - a 2 dp border in the shelf's colour;
+    - its name on two lines, beside the Dynamic Flow switch (for shelves with PDFs) and ⋯;
+    - up to five flat covers fanned 5 degrees apart;
+    - its books, annotations, ribbons, words and time read, each read out with its name.
+
+    A dashed "New shelf" card closes the grid.
+  - **Header:** Search, Sort (Custom order, Name, Most books, Most read, Most marks; `ShelvesOrder`, remembered in
+    DataStore) and New shelf. Select mode is kept.
+  - **Shelf ⋯ menu:** Open, Rename, Change colour, Add books, Dynamic Flow for the shelf, Select, and Delete shelf in
+    red.
+  - **New shelf** (`ShelfNameColourDialog`): a name and a row of colours, followed by a snackbar offering "Add books".
+    **Delete shelf** asks first and offers Undo, which puts the shelf back with its books and colour.
+  - **Shelf page:** Back, Sort and view (the shelf's orders including Custom, then Grid or List), Add books and ⋯
+    (Rename, Change colour, Add books, Delete shelf), over the shelf's colour dot, its name and its counts.
+  - **Books on shelf pages and the Finished tiles** are the flat 2:3 cover now (`ShelfBook`). `Book3D` stays for the
+    flights.
 - **Overhaul Phase 3: the Library** (2026-11-09).
   - **Header:** the title with Reading goal (folded only; unfolded it is a ring in Continue reading), Sort and view,
     and Import. Import offers files, a folder, and **"Make shelves from a folder…"**, which imports a folder and makes

@@ -46,6 +46,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
@@ -58,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.flowfolio.core.designsystem.Book3D
+import com.flowfolio.core.designsystem.BookCover
 import com.flowfolio.core.designsystem.CoachMark
 import com.flowfolio.core.designsystem.CoverSpot
 import com.flowfolio.core.designsystem.FlowFolio
@@ -267,8 +269,6 @@ internal fun ShelfBook(
     origin: String,
     actions: LibraryActions,
     width: androidx.compose.ui.unit.Dp,
-    height: androidx.compose.ui.unit.Dp,
-    shadow: Boolean = true,
     /** Drag and drop on a shelf; null where books keep their order. */
     reorder: ReorderState? = null
 ) {
@@ -309,78 +309,29 @@ internal fun ShelfBook(
                 .testTag(LibraryTestTags.book(book.id))
                 .then(gestures)
         ) {
-            Book3D(
+            // The one 2:3 cover of ADR-0052 everywhere books are browsed; [Book3D] is kept for the flights.
+            val lifted = pressed || reorder?.dragging == book.id
+            BookCover(
                 book.face(cover),
-                width,
-                height,
-                modifier = Modifier.coverSpot(spot).coverLanding(shelfCoverKey(book.id, origin), SHELF_ANGLE),
-                lifted = pressed || reorder?.dragging == book.id,
-                shadow = shadow
+                Modifier
+                    .width(width)
+                    .graphicsLayer {
+                        val s = if (lifted) LIFT_SCALE else 1f
+                        scaleX = s
+                        scaleY = s
+                    }
+                    .coverSpot(spot)
+                    .coverLanding(shelfCoverKey(book.id, origin), 0f),
+                badges = item.badges()
             )
-            BookBadge(item)
+            item.statusLabel()?.let { FlowFolioPill(stringResource(it), FlowFolio.subItem, Modifier.padding(4.dp)) }
             selection?.let { SelectionMark(it, book.id) }
             BookMenu(item, origin, menu, actions) { menu = false }
         }
     }
 }
 
-/**
- * What is true of the book, on its cover: "Missing" or "Locked" as a pill at the top, and its marks together in the
- * bottom-right corner (owner, M4) -- Dynamic Flow, a ribbon in it, and a favourite's filled star. They sit on a
- * dimmed plate, since a cover can be any colour underneath.
- */
-@Composable
-private fun androidx.compose.foundation.layout.BoxScope.BookBadge(item: LibraryItem) {
-    val p = FlowFolio.palette
-    val label = when {
-        item.availability == Availability.MISSING -> R.string.badge_missing
-        item.book.passwordProtected -> R.string.badge_locked
-        else -> null
-    }
-    if (label != null) {
-        FlowFolioPill(stringResource(label), FlowFolio.subItem, Modifier.align(Alignment.TopStart).padding(4.dp))
-    }
-    val flowing = item.book.flowMode == true && item.book.format == BookFormat.PDF
-    if (!flowing && !item.hasBookmarks && !item.isFavorite) return
-    Row(
-        Modifier
-            .align(Alignment.BottomEnd)
-            .padding(BADGE_EDGE)
-            .clip(RoundedCornerShape(BADGE_RADIUS))
-            .background(p.backgroundDeep.copy(alpha = BADGE_PLATE))
-            .padding(horizontal = 4.dp, vertical = 3.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        if (flowing) {
-            FlowFolioGlyph(
-                Glyph.DynamicFlow,
-                stringResource(R.string.badge_flow),
-                size = BADGE_GLYPH,
-                color = p.item,
-                glow = false
-            )
-        }
-        if (item.hasBookmarks) {
-            FlowFolioGlyph(
-                Glyph.Bookmark,
-                stringResource(R.string.badge_bookmarked),
-                size = BADGE_GLYPH,
-                color = p.subItem,
-                glow = false
-            )
-        }
-        if (item.isFavorite) {
-            FlowFolioGlyph(
-                Glyph.StarFilled,
-                stringResource(R.string.badge_favourite),
-                size = BADGE_GLYPH,
-                color = p.title,
-                glow = false
-            )
-        }
-    }
-}
+private const val LIFT_SCALE = 1.04f
 
 internal const val HERO_ORIGIN = "hero"
 
@@ -388,12 +339,6 @@ internal const val HERO_ORIGIN = "hero"
 private const val SEARCH_OUTLINE = 0.55f
 
 private const val SEARCH_FILL = 0.6f
-private val BADGE_GLYPH = 13.dp
-private val BADGE_EDGE = 4.dp
-private val BADGE_RADIUS = 7.dp
-
-/** How far the badges' plate dims the cover under them. */
-private const val BADGE_PLATE = 0.55f
 
 internal val BOOK_SPINE_ROOM = 8.dp
 

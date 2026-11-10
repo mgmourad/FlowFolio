@@ -11,6 +11,7 @@ import com.flowfolio.core.model.MaterialSeed
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.ReaderText
+import com.flowfolio.core.model.ShelvesOrder
 import com.flowfolio.core.model.StatsBand
 import com.flowfolio.core.model.StorageMode
 import com.flowfolio.core.model.ThemePreference
@@ -37,6 +38,9 @@ interface SettingsRepository {
 
     /** The library's stats band: collapsed, expanded or hidden (ADR-0052). */
     suspend fun setStatsBand(band: StatsBand) = Unit
+
+    /** How the Shelves tab orders its shelves (ADR-0052). */
+    suspend fun setShelvesOrder(order: ShelvesOrder) = Unit
 
     /** Reading Atmosphere (owner, M5). */
     suspend fun setAtmosphereOn(on: Boolean) = Unit
@@ -133,6 +137,10 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setStatsBand(band: StatsBand) {
         source.setStatsBand(band)
+    }
+
+    override suspend fun setShelvesOrder(order: ShelvesOrder) {
+        source.setShelvesOrder(order)
     }
 
     override suspend fun setAtmosphereOn(on: Boolean) {

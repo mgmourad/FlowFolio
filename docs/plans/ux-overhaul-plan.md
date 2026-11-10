@@ -137,6 +137,10 @@ the additions below.
 
 ### Phase 4: shelves
 
+> **Done 2026-11-09.** The Dynamic Flow switch stays on cards of shelves with PDFs, beside ⋯, and its batch action
+> moves into ⋯ too. The Add books sheet is unchanged in this phase. Verified on `fold8_api37` unfolded light. CI has
+> not run.
+
 - Folder cards: two columns folded, three unfolded, coloured border, two-line title, ⋯, up to five fanned covers, a
   labelled stats row, a dashed "New shelf" card; header Search, Sort (Custom, Name, Most books, Most read, Most marks),
   New shelf.

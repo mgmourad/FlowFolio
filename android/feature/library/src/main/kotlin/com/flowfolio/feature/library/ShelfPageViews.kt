@@ -187,8 +187,6 @@ internal fun BookTile(item: LibraryItem, actions: BookRowActions, origin: String
                 selection = actions.selection
             ),
             width = TILE_BOOK_WIDTH,
-            height = TILE_BOOK_HEIGHT,
-            shadow = false,
             reorder = actions.reorder
         )
         Text(
