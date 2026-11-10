@@ -12,8 +12,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.CornerRadius
@@ -35,13 +37,13 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 
 /**
- * The mock's toggle (`.tgl`), exactly: a 58 x 34 track with a sunken inner shadow and a soft drop shadow; a 28 px knob
- * with a drop shadow, a top highlight and a bottom shade. Off: grey track, knob in the off colour on the left. On:
- * the on track colour, an orange knob on the right, glowing in dark mode. The knob travels on the mock's spring.
- * Pass [onCheckedChange] = null when a parent row handles the toggle (it then only draws).
+ * The toggle (`.sw`, ADR-0052): a 46 x 28 track that *is* the state, the accent when on and surface 3 when off, with
+ * a white 22 dp thumb that springs across. Nothing else changes colour, so on and off read by position and track alone.
+ * The touch target is at least 48 dp. Pass [onCheckedChange] = null when a parent row handles the toggle (it then only
+ * draws).
  *
- * [progress] (0 to 1, or [INDETERMINATE]) rings the knob while what the toggle turned on is being prepared (Dynamic
- * Flow converting a book). The ring has a canvas of its own, so its updates never redraw the toggle's blurred shadows.
+ * [progress] (0 to 1, or [INDETERMINATE]) rings the thumb while what the toggle turned on is being prepared (Dynamic
+ * Flow converting a book).
  */
 @Composable
 fun FlowFolioToggle(
@@ -51,17 +53,18 @@ fun FlowFolioToggle(
     enabled: Boolean = true,
     progress: Float? = null
 ) {
+    val target = if (onCheckedChange != null) modifier.minimumInteractiveComponentSize() else modifier
     if (progress == null) {
-        ToggleBody(checked, onCheckedChange, modifier, enabled)
+        ToggleBody(checked, onCheckedChange, target, enabled)
         return
     }
-    Box(modifier) {
+    Box(target, contentAlignment = Alignment.Center) {
         ToggleBody(checked, onCheckedChange, Modifier, enabled)
-        KnobRing(checked, progress, Modifier.matchParentSize())
+        KnobRing(checked, progress, Modifier.size(TRACK_W.dp, TRACK_H.dp))
     }
 }
 
-/** The ring round the knob: a faint full circle and the part done, or a turning arc when it can't say how far. */
+/** The ring round the thumb: a faint full circle and the part done, or a turning arc when it can't say how far. */
 @Composable
 private fun KnobRing(checked: Boolean, progress: Float, modifier: Modifier) {
     val p = FlowFolio.palette
@@ -73,81 +76,48 @@ private fun KnobRing(checked: Boolean, progress: Float, modifier: Modifier) {
         label = "turn"
     )
     val shown by animateFloatAsState(progress.coerceAtLeast(0f), tween(Motion.MEDIUM_MS), label = "progress")
-    val position by animateFloatAsState(
-        if (checked) 1f else 0f,
-        tween(Motion.SPRING_MS, easing = Motion.Spring),
-        label = "ringKnob"
-    )
+    val position by animateFloatAsState(if (checked) 1f else 0f, Motion.bouncySpec(), label = "ringKnob")
     Canvas(modifier) {
         val unit = size.height / TRACK_H
         val r = (KNOB / 2f + RING_GAP) * unit
         val centre = Offset((INSET + KNOB / 2f + position * TRAVEL) * unit, size.height / 2f)
         val stroke = Stroke(RING_WIDTH * unit, cap = StrokeCap.Round)
         val box = androidx.compose.ui.geometry.Rect(centre, r)
-        // In the text colour: it reads against the orange knob and the track in every theme.
-        drawCircle(p.item.copy(alpha = RING_TRACK_ALPHA), r, centre, style = stroke)
+        drawCircle(p.ink.copy(alpha = RING_TRACK_ALPHA), r, centre, style = stroke)
         if (progress < 0f) {
-            drawArc(p.item, turn - QUARTER, SPIN_SWEEP, false, box.topLeft, box.size, style = stroke)
+            drawArc(p.ink, turn - QUARTER, SPIN_SWEEP, false, box.topLeft, box.size, style = stroke)
         } else {
-            drawArc(p.item, -QUARTER, FULL_TURN * shown, false, box.topLeft, box.size, style = stroke)
+            drawArc(p.ink, -QUARTER, FULL_TURN * shown, false, box.topLeft, box.size, style = stroke)
         }
     }
 }
 
-/** The toggle itself (the mock's `.tgl`). */
+/** The toggle itself (`.sw`). */
 @Composable
 private fun ToggleBody(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?, modifier: Modifier, enabled: Boolean) {
     val p = FlowFolio.palette
-    val spring = tween<Float>(Motion.SPRING_MS, easing = Motion.Spring)
-    val position by animateFloatAsState(if (checked) 1f else 0f, spring, label = "knob")
-    val knob by animateColorAsState(
-        if (checked) p.toggleOnThumb else p.toggleOffThumb,
-        tween(400),
-        label = "knobColour"
+    val position by animateFloatAsState(if (checked) 1f else 0f, Motion.bouncySpec(), label = "knob")
+    val track by animateColorAsState(
+        if (checked) p.toggleOnTrack else p.toggleOffTrack,
+        Motion.colorSpec(),
+        label = "track"
     )
-    val track by animateColorAsState(if (checked) p.toggleOnTrack else p.toggleOffTrack, tween(400), label = "track")
-    val glowing = p.dark && checked && p.titleGlow.color.alpha > 0f
     val interactive = if (onCheckedChange != null) {
         Modifier.toggleable(checked, enabled = enabled, role = Role.Switch, onValueChange = onCheckedChange)
     } else {
         Modifier
     }
-    Canvas(modifier.then(interactive).size(58.dp, 34.dp).alpha(if (enabled) 1f else DISABLED_ALPHA)) {
-        val unit = size.height / TRACK_H
-        val trackRound = RoundRect(0f, 0f, size.width, size.height, CornerRadius(TRACK_RADIUS * unit))
-        // Track: `0 6px 12px -4px rgba(0,0,0,.4)` outside, `inset 0 3px 6px rgba(0,0,0,.35)` inside.
-        blurred(Color.Black.copy(alpha = 0.4f), 12f * unit) {
-            drawRoundRect(
-                4f * unit,
-                10f * unit,
-                size.width - 4f * unit,
-                size.height + 2f * unit,
-                TRACK_RADIUS * unit,
-                TRACK_RADIUS * unit,
-                it
-            )
+    Box(modifier.then(interactive), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(TRACK_W.dp, TRACK_H.dp).alpha(if (enabled) 1f else DISABLED_ALPHA)) {
+            val unit = size.height / TRACK_H
+            drawRoundRect(track, cornerRadius = CornerRadius(size.height / 2f))
+            val r = KNOB / 2f * unit
+            val centre = Offset((INSET + KNOB / 2f + position * TRAVEL) * unit, size.height / 2f)
+            // `box-shadow: 0 1px 3px rgba(0,0,0,.25)`, as two soft rings: cheap, no blur in a list.
+            drawCircle(Color.Black.copy(alpha = 0.08f), r + 1.5f * unit, centre + Offset(0f, 1f * unit))
+            drawCircle(Color.Black.copy(alpha = 0.12f), r + 0.5f * unit, centre + Offset(0f, 1f * unit))
+            drawCircle(p.toggleOnThumb, r, centre)
         }
-        drawPath(Path().apply { addRoundRect(trackRound) }, track)
-        insetShadow(trackRound, Color.Black.copy(alpha = 0.35f), 6f * unit, 3f * unit)
-        // Knob: 28 px, 3 px from the edges, travelling 24 px.
-        val r = KNOB / 2f * unit
-        val centre = Offset((INSET + KNOB / 2f + position * TRAVEL) * unit, size.height / 2f)
-        if (glowing) blurred(p.toggleOnThumb.copy(alpha = 0.75f), 14f * unit) { drawCircle(centre.x, centre.y, r, it) }
-        blurred(Color.Black.copy(alpha = 0.4f), 8f * unit) { drawCircle(centre.x, centre.y + 4f * unit, r, it) }
-        drawCircle(knob, r, centre)
-        // `inset 0 2px 3px rgba(255,255,255,.25), inset 0 -3px 4px rgba(0,0,0,.25)`: lit top, shaded bottom.
-        drawCircle(
-            Brush.verticalGradient(
-                0f to Color.White.copy(alpha = if (glowing) 0.3f else 0.25f),
-                0.35f to Color.Transparent,
-                0.7f to Color.Transparent,
-                1f to Color.Black.copy(alpha = 0.25f),
-                startY = centre.y - r,
-                endY = centre.y + r
-            ),
-            r,
-            centre
-        )
     }
 }
 
@@ -207,11 +177,11 @@ private const val SPIN_MS = 1_100
 private const val RING_GAP = 2.5f
 private const val RING_WIDTH = 2.2f
 private const val RING_TRACK_ALPHA = 0.18f
-private const val TRACK_H = 34f
-private const val TRACK_RADIUS = 20f
-private const val KNOB = 28f
+private const val TRACK_W = 46f
+private const val TRACK_H = 28f
+private const val KNOB = 22f
 private const val INSET = 3f
-private const val TRAVEL = 24f
+private const val TRAVEL = 18f
 private const val DISABLED_ALPHA = 0.4f
 private const val MIN_BLUR = 0.5f
 private const val GLYPH_GLOW_ALPHA = 0.75f

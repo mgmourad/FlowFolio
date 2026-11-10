@@ -5,6 +5,53 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+> **UX overhaul ("Quiet Library", ADR-0052, `docs/plans/ux-overhaul-plan.md`), in progress.** Nine phases between
+> Phase 6 and Phase 7, released together as 0.6.0-canary.2. Each phase is verified locally and on `fold8_api37`;
+> **CI has not run** for any of it yet.
+
+### Changed
+- **Overhaul Phase 1: design system** (2026-11-09).
+  - **Tokens.** Every theme is now one set of semantic colours (`Tokens`: bg, bg2, surface 1 to 3, line, three inks,
+    one accent with its ink and soft tint, ok, danger, paper), built into a `Palette` by `quietPalette`.
+    - FlowFolio light uses a terracotta accent and dark an amber one, both on warm neutrals.
+    - Rustic, AMOLED and the Material You fallback take the mock's overrides. Material You still maps the wallpaper's
+      dynamic scheme onto the same slots.
+  - **Aliases.** The older role fields (`title`, `item`, `hint`, `subItem`, `glyph`, toggle and button colours) are now
+    aliases of the semantic set, so every screen took the new look at once. They will be removed at the end of the
+    overhaul.
+    - Warnings and removals now name `danger` explicitly: swipe-to-delete, the selection bin, VoiceMark recording and
+      discard, the annotation and shelf warnings.
+  - **Kept as they were:** ribbon colours (frozen at their exact hues) and the highlighter colours.
+  - **"Night glow"** (was "Neon glow") is off by default. It now only blooms titles in dark mode. A stored choice is
+    kept.
+  - **Accessibility:** the light theme's third ink is `#938574`, a step darker than the mock's `#9A8B79`, so meta text
+    reaches 3:1 on the background (WCAG AA).
+  - **Components restyled:**
+    - Cards are the surface with a hairline and a soft shadow.
+    - Chips are 34 dp; selected ones fill with ink and can show a count.
+    - Icon buttons are 42 dp on the surface with 48 dp targets and a long-press tooltip.
+    - Pill buttons are flat (primary, ghost, soft, danger; `FlowFolioButton`).
+    - The toggle's track is its state (accent or neutral) and the thumb is always white.
+    - Sliders always show their value.
+    - The segmented control and the underlined tabs (with counts) slide on springs.
+    - The progress bar and ring are accent on a neutral track; the ring takes a size.
+    - The shelf plank and the page background are flat.
+    - Glass is the surface at 84% over an 18 dp blur.
+  - **New components:**
+    - `FlowFolioMenuItem`, `FlowFolioMenuHeader` and a restyled `FlowFolioMenu`: checkmarks, trailing notes,
+      destructive items.
+    - `FlowFolioSheet`: Material's sheet, with predictive back.
+    - `FlowFolioDialog`: icon tile, optional text field and colour swatches, destructive variant.
+    - `FlowFolioSnackbar` with `showFlowFolio`: an icon and an Undo action.
+    - `FlowFolioTooltip`, `FlowFolioStepper` and `SettingsTile`.
+    - `BookCover`: one 2:3 cover with spine, sheen, shadow and badges at the bottom right. Generated covers now set
+      their title at the top.
+  - **Motion:** interactive parts move on springs and can be interrupted mid-flight. Panels, menus and snackbars rise
+    16 dp on the mock's curve. The system's "Remove animations" is read into `LocalReducedMotion`.
+  - **Launch window:** the background takes the new colours.
+  - **Tests:** `TokenContrastTest` checks WCAG contrast in every theme. `ComponentScreenshotTest` holds Roborazzi
+    references for FlowFolio light and dark, Rustic light and dark, and AMOLED.
+
 ## [0.6.0-canary.1] - 2026-11-08
 
 > **Phase 6 (reading features) is closed.** `docs/plans/phase6-signoff.md` records it; ADR-0051 (offline neural TTS via

@@ -55,7 +55,7 @@ internal fun HoldEntry(label: Int, warn: Boolean = false, glyph: Glyph? = null, 
                 FlowFolioGlyph(
                     it,
                     contentDescription = null,
-                    color = if (warn) FlowFolio.palette.subItem else FlowFolio.palette.glyph,
+                    color = if (warn) FlowFolio.palette.danger else FlowFolio.palette.glyph,
                     size = 18.dp,
                     glow = false
                 )

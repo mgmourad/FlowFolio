@@ -10,22 +10,23 @@ import com.flowfolio.core.model.HighlightColor
 
 /**
  * The colour of a ribbon: the original FlowFolio design's colour roles (plus a green) in light or dark, whatever the
- * app's theme (owner, 2026-10-22), so a ribbon keeps its colour when the theme changes.
+ * app's theme (owner, 2026-10-22), so a ribbon keeps its colour when the theme changes. The hues are frozen here
+ * since ADR-0052 retoned the palettes they were first borrowed from.
  */
 val BookmarkColor.color: Color
     @Composable @ReadOnlyComposable
     get() {
-        val p = if (FlowFolio.palette.dark) DarkPalette else LightPalette
+        val dark = FlowFolio.palette.dark
         return when (this) {
-            BookmarkColor.SUB_ITEM -> p.subItem
+            BookmarkColor.SUB_ITEM -> if (dark) Color(0xFFFF2D5A) else Color(0xFFC8102E)
 
-            BookmarkColor.TITLE -> p.title
+            BookmarkColor.TITLE -> if (dark) Color(0xFFFF8A00) else Color(0xFF8B4D12)
 
-            BookmarkColor.ITEM -> p.item
+            BookmarkColor.ITEM -> if (dark) Color(0xFF00F0FF) else Color(0xFF0F5F59)
 
-            BookmarkColor.ACCENT -> p.glyph
+            BookmarkColor.ACCENT -> if (dark) Color(0xFFC02F9A) else Color(0xFF4A2BB0)
 
-            BookmarkColor.GREEN -> p.green
+            BookmarkColor.GREEN -> if (dark) Color(0xFF39F28F) else Color(0xFF2C7A2E)
 
             // The four added in M4b are fixed hues rather than palette roles: the five above are the design's own
             // colours, and there are no more roles to borrow without two ribbons coming out the same.

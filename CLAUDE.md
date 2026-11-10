@@ -161,6 +161,16 @@ sounds, line-break and cross-page hyphen rejoining, on-device plural and past-te
 an `8.2 kHz` 2-pole Butterworth vocoder de-hiss filter; plus the unfolded right-edge vertical tool rail and R8 keep
 rules for ML Kit and `sherpa-onnx` JNI callbacks. ADR-0051 is accepted with this sign-off. Next: Phase 7.
 
+**UX overhaul "Quiet Library" (ADR-0052, accepted by the owner 2026-11-09; `docs/plans/ux-overhaul-plan.md`).**
+This runs between Phase 6 and Phase 7 in nine phases, one at a time. Stop and report after each. Commits stay local
+until the end, which ships as 0.6.0-canary.2. `docs/ux-review/` (the mock, the review, captures) is gitignored and stays
+local.
+- **Phase 1 (design system) built 2026-11-09.** Semantic `Tokens` per theme, built by `quietPalette`. The old role
+  fields are aliases until Phase 9. Night glow is off by default. New components: menu, sheet, dialog, snackbar,
+  tooltip, stepper, settings tile and `BookCover`.
+- Handover APKs get a new name every build (`app/build/outputs/apk/debug/handover/`) and are installed on the owner's
+  phone as well as the emulator.
+
 ## Product direction (owner decisions, 2026-10-16)
 
 - **Foldables first** (reference device: Galaxy Z Fold 8 Ultra): single page on the cover screen,
@@ -215,7 +225,8 @@ leave the repository able to explain itself: what is in flight, what was verifie
 
 ## Design language (ADR-0014, ADR-0015)
 
-**`docs/design/FlowFolio_Mock.html` is the design reference for every milestone and phase.** Keep our 3D page curl;
+**Since ADR-0052 the design reference is the Quiet Library mock (`docs/ux-review/2026-11-09/flowfolio-app-mock.html`,
+local only); `docs/design/FlowFolio_Mock.html` is historical.** Keep our 3D page curl;
 on the unfolded Fold use a side rail and wider layouts. M5 plan: `docs/plans/phase1-m5-design.md`.
 
 `:core:designsystem` holds everything visual. Use it instead of raw Material colours. Since ADR-0028 a theme is a

@@ -58,11 +58,16 @@ val ProseFamily = FontFamily(
 /** Instrument Sans for UI labels, buttons, metadata, the tab bar. */
 val UiFamily = FontFamily(listOf(400, 600, 650, 700, 800).map { instrument(it) } + instrument(400, italic = true))
 
-/** Named text styles from the mock's CSS, in sp. Colours and glows come from [FlowFolio]'s role styles. */
+/**
+ * Named text styles from the Quiet Library mock's CSS (ADR-0052), in sp. Colours and glows come from [FlowFolio]'s role
+ * styles.
+ */
 object FlowFolioType {
-    /** `.hdr h1`: screen titles ("Library"). */
+    /** `.ttl`: screen titles ("Library"); 44 sp on the unfolded screen ([screenTitleWide]). */
     val screenTitle =
-        TextStyle(fontFamily = DisplayFamily, fontWeight = FontWeight(680), fontSize = 40.sp, lineHeight = 40.sp)
+        TextStyle(fontFamily = DisplayFamily, fontWeight = FontWeight(600), fontSize = 38.sp, lineHeight = 40.sp)
+
+    val screenTitleWide = screenTitle.copy(fontSize = 44.sp, lineHeight = 46.sp)
 
     /** `.det-body h1`: the book title on its details page. */
     val bookTitle =
@@ -70,10 +75,16 @@ object FlowFolioType {
 
     /** `.hero-card h2`. */
     val heroTitle =
-        TextStyle(fontFamily = DisplayFamily, fontWeight = FontWeight(650), fontSize = 22.sp, lineHeight = 24.sp)
+        TextStyle(fontFamily = DisplayFamily, fontWeight = FontWeight(600), fontSize = 22.sp, lineHeight = 25.sp)
+
+    /** `.sheet h3`, `.dlg h3`: sheet and dialog titles. */
+    val dialogTitle = TextStyle(fontFamily = DisplayFamily, fontWeight = FontWeight(600), fontSize = 21.sp)
 
     /** `.shelf-hd h3`. */
-    val sectionTitle = TextStyle(fontFamily = DisplayFamily, fontWeight = FontWeight(650), fontSize = 21.sp)
+    val sectionTitle = TextStyle(fontFamily = DisplayFamily, fontWeight = FontWeight(600), fontSize = 21.sp)
+
+    /** Plain interface text: menu entries, dialog bodies, list rows. */
+    val body = TextStyle(fontFamily = UiFamily, fontSize = 14.sp, lineHeight = 21.sp)
 
     /** `.det-body .subt`: italic subtitle. */
     val subtitle = TextStyle(fontFamily = DisplayFamily, fontStyle = FontStyle.Italic, fontSize = 17.sp)
@@ -85,29 +96,29 @@ object FlowFolioType {
     val sub = TextStyle(fontFamily = UiFamily, fontSize = 13.5.sp)
 
     /** Row labels (`.set-row .lbl b`). */
-    val rowLabel = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight(650), fontSize = 15.sp)
+    val rowLabel = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight(600), fontSize = 15.sp)
 
     /** Row details (`.set-row .lbl span`). */
     val rowDetail = TextStyle(fontFamily = UiFamily, fontSize = 12.sp)
 
     /** `.set-h`, `.eyebrow`: small caps-style section labels (write the text in upper case). */
     val eyebrow =
-        TextStyle(fontFamily = UiFamily, fontWeight = FontWeight(800), fontSize = 11.sp, letterSpacing = 0.18.em)
+        TextStyle(fontFamily = UiFamily, fontWeight = FontWeight(700), fontSize = 11.sp, letterSpacing = 0.14.em)
 
     /** `.btn`. */
-    val button = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight(700), fontSize = 14.sp)
+    val button = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight(600), fontSize = 14.5.sp)
 
     /** `.chip`. */
-    val chip = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight(600), fontSize = 13.sp)
+    val chip = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight(500), fontSize = 13.sp)
 
     /** `.pill`, `.seg button`. */
-    val pill = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight(700), fontSize = 11.5.sp)
+    val pill = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight(600), fontSize = 11.5.sp)
 
     /** `.tab`: tab bar labels. */
-    val tab = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight(650), fontSize = 10.5.sp)
+    val tab = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight(500), fontSize = 11.sp)
 
     /** `.stat b`: big numbers. */
-    val stat = TextStyle(fontFamily = DisplayFamily, fontWeight = FontWeight(700), fontSize = 22.sp)
+    val stat = TextStyle(fontFamily = DisplayFamily, fontWeight = FontWeight(600), fontSize = 21.sp)
 }
 
 /** Material's type scale on the mock's fonts: display, headline and large titles in Fraunces, the rest UI. */

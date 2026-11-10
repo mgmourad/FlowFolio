@@ -298,7 +298,10 @@ private fun drawSpine(
     canvas.restore()
 }
 
-/** The mock's generated cover (`.cv`): a gradient with the title set in Fraunces. */
+/**
+ * The generated cover (`.cov`, ADR-0052): a gradient with the title set in Fraunces at the top and a short rule under
+ * it, so the badges at the bottom right never sit on the title.
+ */
 private fun drawGeneratedCover(canvas: android.graphics.Canvas, w: Float, h: Float, face: BookFace, display: Typeface) {
     val bg = Paint().apply {
         shader =
@@ -325,10 +328,18 @@ private fun drawGeneratedCover(canvas: android.graphics.Canvas, w: Float, h: Flo
         .setMaxLines(COVER_MAX_LINES)
         .build()
     canvas.save()
-    canvas.translate(margin, h - w * 0.1f - layout.height)
+    canvas.translate(margin, margin)
     layout.draw(canvas)
     canvas.restore()
+    val rule = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        color = face.colors.ink.toArgb()
+        alpha = RULE_ALPHA
+    }
+    val ruleTop = margin + layout.height + w * 0.06f
+    canvas.drawRect(margin, ruleTop, margin + w * 0.3f, ruleTop + w * 0.012f, rule)
 }
+
+private const val RULE_ALPHA = 128
 
 /** Shortens [text] with an ellipsis to fit [maxWidth]. */
 @Suppress("FunctionName")

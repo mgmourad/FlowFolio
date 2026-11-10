@@ -404,7 +404,7 @@ private fun BookmarkRow(item: BookmarkItem, actions: BookmarkActions, uniform: B
             }
         },
         end = { close ->
-            SwipeAction(R.string.action_remove, Glyph.Trash, FlowFolio.palette.subItem) {
+            SwipeAction(R.string.action_remove, Glyph.Trash, FlowFolio.palette.danger) {
                 close()
                 actions.onRemove(item)
             }

@@ -20,6 +20,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.dp
+import com.flowfolio.core.model.BookmarkColor
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.sin
@@ -49,8 +50,14 @@ private data class Piece(
 @Composable
 fun FlowFolioConfetti(play: Boolean, modifier: Modifier = Modifier, onEnd: () -> Unit = {}) {
     if (!play) return
-    val p = FlowFolio.palette
-    val colors = remember(p) { listOf(p.title, p.item, p.subItem, p.green, p.glyph) }
+    // The ribbon hues: festive in every theme, where the palette itself is now quiet (ADR-0052).
+    val colors = listOf(
+        BookmarkColor.SUB_ITEM.color,
+        BookmarkColor.TITLE.color,
+        BookmarkColor.ITEM.color,
+        BookmarkColor.GREEN.color,
+        BookmarkColor.ACCENT.color
+    )
     // Fixed once per burst: re-rolling them every frame would make the pieces jitter rather than fly.
     val pieces = remember {
         val random = Random(SEED)

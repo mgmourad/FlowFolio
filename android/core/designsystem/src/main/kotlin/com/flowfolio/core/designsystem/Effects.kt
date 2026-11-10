@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.asAndroidPath
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.graphicsLayer
@@ -128,24 +129,26 @@ fun angledGradient(degrees: Float, start: Color, end: Color, size: Size): Brush 
     return Brush.linearGradient(listOf(start, end), c - Offset(dx, dy) * half, c + Offset(dx, dy) * half)
 }
 
-/** The mock's `--shadow-soft`: `0 22px 44px -16px` plus a 1 px top inner highlight. */
+/** The mock's `--shadow` (ADR-0052): a soft, wide drop under cards (`0 10px 30px`). */
 @Composable
 fun Modifier.softElevation(shape: Shape): Modifier {
     val p = FlowFolio.palette
-    return softShadow(shape, p.shadow, blur = 44.dp, offsetY = 22.dp, spread = (-16).dp)
+    return softShadow(shape, p.shadow, blur = 30.dp, offsetY = 10.dp, spread = (-4).dp)
 }
 
-/** The mock's `--card`: 160-degree gradient fill, soft shadow, top inner highlight, clipped to [shape]. */
+/** A card (`.card`, ADR-0052): the surface, a hairline in the line colour and the soft shadow, clipped to [shape]. */
 @Composable
 fun Modifier.card(shape: Shape = RoundedCornerShape(22.dp)): Modifier {
     val p = FlowFolio.palette
     return softElevation(shape)
         .drawWithCache {
-            val brush = angledGradient(CARD_ANGLE, p.cardStart, p.cardEnd, size)
             val outline = shape.createOutline(size, layoutDirection, this)
-            onDrawBehind { drawOutline(outline, brush) }
+            val stroke = Stroke(EDGE_WIDTH.toPx())
+            onDrawBehind {
+                drawOutline(outline, p.surface)
+                drawOutline(outline, p.edge, style = stroke)
+            }
         }
-        .innerShadow(shape, p.highlight, blur = 0.dp, offsetY = 1.dp)
 }
 
 /** The mock's `--shadow-press`: a sunken look for tracks, segmented controls and pressed buttons. */
@@ -175,29 +178,14 @@ fun Modifier.grain(): Modifier = drawWithCache {
     }
 }
 
-/**
- * The mock's page background: `radial-gradient(1200x700 at 50% 0, surface, bg-deep 70%)`, laid with the theme's
- * texture (ADR-0028, ADR-0029): the mock's grain, or nothing.
- */
-fun Modifier.appBackground(palette: Palette): Modifier = drawWithCache {
-    val radius = max(size.width, size.height) * BACKGROUND_REACH
-    val brush = Brush.radialGradient(
-        0f to palette.surface,
-        BACKGROUND_STOP to palette.backgroundDeep,
-        center = Offset(size.width / 2f, 0f),
-        radius = radius
-    )
-    onDrawBehind { drawRect(brush) }
-}.then(
+/** The page background (ADR-0052): the theme's background, flat; the texture where a theme still lays one. */
+fun Modifier.appBackground(palette: Palette): Modifier = drawBehind { drawRect(palette.background) }.then(
     when (palette.texture) {
         SurfaceTexture.GRAIN -> Modifier.grain()
         SurfaceTexture.NONE -> Modifier
     }
 )
 
-private const val CARD_ANGLE = 160f
 private const val GRAIN_TILE = 180
 private const val GRAIN_SEED = 1792
 private const val GRAIN_ALPHA = 0.07f * 0.55f
-private const val BACKGROUND_REACH = 1.1f
-private const val BACKGROUND_STOP = 0.7f

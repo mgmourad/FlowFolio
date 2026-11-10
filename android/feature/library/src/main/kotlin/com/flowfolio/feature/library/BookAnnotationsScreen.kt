@@ -262,7 +262,7 @@ private fun AnnotationRow(a: Annotation, chapter: String?, actions: AnnotationAc
             }
         },
         end = { close ->
-            SwipeAction(R.string.action_delete, Glyph.Trash, FlowFolio.palette.subItem) {
+            SwipeAction(R.string.action_delete, Glyph.Trash, FlowFolio.palette.danger) {
                 close()
                 actions.onDelete(a)
             }

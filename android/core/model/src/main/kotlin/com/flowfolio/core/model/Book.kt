@@ -95,8 +95,8 @@ data class UserSettings(
     val paperStyle: PaperStyle = PaperStyle.AUTO,
     /** How pages turn in the reader. */
     val pageTurn: PageTurn = PageTurn.CURL,
-    /** The mock's "Neon glow": the soft light on text and icons in dark mode (and soft shadows in light mode). */
-    val neonGlow: Boolean = true,
+    /** "Night glow" (ADR-0052): a soft bloom on display titles in dark mode. Opt-in, off by default. */
+    val neonGlow: Boolean = false,
     /** The app's theme (ADR-0028); light or dark still follows [theme]. */
     val appStyle: AppStyle = AppStyle.FLOWFOLIO,
     /** Material You's colours, when [appStyle] is Material. */

@@ -265,7 +265,7 @@ private fun BookListRow(item: LibraryItem, actions: BookRowActions) {
                 close()
                 actions.onRename(book)
             }
-            SwipeAction(R.string.action_delete, Glyph.Trash, FlowFolio.palette.subItem) {
+            SwipeAction(R.string.action_delete, Glyph.Trash, FlowFolio.palette.danger) {
                 close()
                 actions.onDelete(book)
             }

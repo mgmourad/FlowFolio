@@ -39,21 +39,21 @@ val LocalGlassStyle = staticCompositionLocalOf { GlassStyle() }
 fun Modifier.glassSource(): Modifier = LocalGlassState.current?.let { hazeSource(it) } ?: this
 
 /**
- * The mock's glass (`.glass`, `.tabbar`): what is behind is blurred ([blur], `saturate` approximated by the tint), then
- * tinted with [tint] (default: the background at 45%), with a hairline edge and a soft shadow. Real blur needs
+ * The mock's glass (`.glass`, ADR-0052): what is behind is blurred ([blur], `saturate` approximated by the tint), then
+ * tinted with [tint] (default: the surface at 84%), with a hairline edge and a soft shadow. Real blur needs
  * Android 12+; older phones get the tint alone (Haze's fallback).
  */
 @Composable
 fun Modifier.glass(
     shape: Shape,
-    tint: Color = LocalGlassStyle.current.tint ?: FlowFolio.palette.background.copy(alpha = GLASS_ALPHA),
-    blur: Dp = 16.dp
+    tint: Color = LocalGlassStyle.current.tint ?: FlowFolio.palette.surface.copy(alpha = GLASS_ALPHA),
+    blur: Dp = 18.dp
 ): Modifier {
     val p = FlowFolio.palette
-    val edge = LocalGlassStyle.current.edge ?: p.edge
+    val edge = LocalGlassStyle.current.edge ?: p.edge.copy(alpha = EDGE_ALPHA)
     val state = LocalGlassState.current
     val shadowed =
-        softShadow(shape, Color.Black.copy(alpha = SHADOW_ALPHA), blur = 40.dp, offsetY = 20.dp, spread = (-14).dp)
+        softShadow(shape, Color.Black.copy(alpha = SHADOW_ALPHA), blur = 28.dp, offsetY = 8.dp, spread = (-4).dp)
     val blurred = if (state != null) {
         shadowed.clip(shape).hazeBlur(
             HazeInput.Sources(state),
@@ -77,7 +77,8 @@ fun Modifier.glass(
     }
 }
 
-private const val GLASS_ALPHA = 0.45f
+private const val GLASS_ALPHA = 0.84f
+private const val EDGE_ALPHA = 0.75f
 private const val FALLBACK_ALPHA = 0.9f
-private const val SHADOW_ALPHA = 0.55f
+private const val SHADOW_ALPHA = 0.14f
 private const val NOISE = 0.05f

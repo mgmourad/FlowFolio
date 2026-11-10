@@ -204,7 +204,7 @@ private fun DictionaryRow(
             FlowFolioGlyph(
                 Glyph.Trash,
                 contentDescription = null,
-                color = FlowFolio.palette.subItem,
+                color = FlowFolio.palette.danger,
                 size = 18.dp,
                 glow = false
             )

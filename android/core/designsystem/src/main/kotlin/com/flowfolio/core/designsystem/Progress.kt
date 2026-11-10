@@ -71,23 +71,22 @@ fun FlowFolioProgressBar(progress: Float, modifier: Modifier = Modifier, celebra
         label = "progress"
     )
     val celebrate = rememberCelebration(progress, celebrationId)
-    val shape = RoundedCornerShape(6.dp)
+    // The mock's `.pb`: a 4 dp track in surface 3, filled flat in the accent (ADR-0052).
+    val shape = RoundedCornerShape(50)
     Box(modifier.fillMaxWidth()) {
         Box(
             Modifier
                 .fillMaxWidth()
-                .height(6.dp)
+                .height(4.dp)
                 .clip(shape)
-                .drawBehind { drawRect(p.hint.copy(alpha = 0.25f)) }
-                .pressedInset(shape)
+                .drawBehind { drawRect(p.surface3) }
         ) {
             Spacer(
                 Modifier
                     .fillMaxHeight()
                     .fillMaxWidth(grown)
-                    .softShadow(shape, p.title.copy(alpha = if (p.dark) 0.6f else 0f), blur = 10.dp)
                     .clip(shape)
-                    .drawBehind { drawRect(Brush.horizontalGradient(listOf(p.title, p.subItem))) }
+                    .drawBehind { drawRect(p.accent) }
             )
         }
         if (celebrate.value) {
@@ -103,7 +102,8 @@ fun FlowFolioProgressBar(progress: Float, modifier: Modifier = Modifier, celebra
 }
 
 /**
- * An 84 dp progress ring (`.ring`) in the item colour with its glow, sweeping in over 1.6 s. A full ring
+ * A progress ring ([diameter], 84 dp by default; the folded goal card's is 46 dp) in the accent on a surface-3 track,
+ * sweeping in over 1.6 s (ADR-0052). A full ring
  * throws confetti on the same terms as [FlowFolioProgressBar] (owner, M4).
  */
 @Composable
@@ -111,6 +111,7 @@ fun FlowFolioRing(
     progress: Float,
     modifier: Modifier = Modifier,
     celebrationId: Any? = null,
+    diameter: Dp = 84.dp,
     center: @Composable BoxScope.() -> Unit = {}
 ) {
     val p = FlowFolio.palette
@@ -122,13 +123,14 @@ fun FlowFolioRing(
         tween(RING_MS, RING_DELAY_MS, Motion.EaseOut),
         label = "ring"
     )
-    Box(modifier.size(84.dp), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.size(84.dp)) {
-            val stroke = 8.dp.toPx()
-            val inset = stroke / 2f + 4.dp.toPx()
+    Box(modifier.size(diameter), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(diameter)) {
+            val unit = size.minDimension / 84.dp.toPx()
+            val stroke = 8.dp.toPx() * unit
+            val inset = stroke / 2f + 4.dp.toPx() * unit
             val arcSize = Size(size.width - 2 * inset, size.height - 2 * inset)
             val topLeft = Offset(inset, inset)
-            drawArc(p.hint.copy(alpha = 0.25f), 0f, FULL_TURN, false, topLeft, arcSize, style = Stroke(stroke))
+            drawArc(p.surface3, 0f, FULL_TURN, false, topLeft, arcSize, style = Stroke(stroke))
             if (p.itemGlow.color.alpha > 0f) {
                 blurred(p.item.copy(alpha = 0.7f), 12.dp.toPx()) { paint ->
                     paint.style = android.graphics.Paint.Style.STROKE
@@ -147,7 +149,7 @@ fun FlowFolioRing(
                 }
             }
             drawArc(
-                p.item,
+                p.accent,
                 START_ANGLE,
                 FULL_TURN * sweep,
                 false,
@@ -160,7 +162,7 @@ fun FlowFolioRing(
         if (celebrate.value) {
             FlowFolioConfetti(
                 play = true,
-                modifier = Modifier.align(Alignment.BottomCenter).size(84.dp).requiredHeight(ConfettiHeight)
+                modifier = Modifier.align(Alignment.BottomCenter).size(diameter).requiredHeight(ConfettiHeight)
             ) { celebrate.value = false }
         }
     }

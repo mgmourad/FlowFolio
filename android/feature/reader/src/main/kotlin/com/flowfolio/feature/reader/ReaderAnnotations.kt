@@ -188,7 +188,7 @@ private fun BarAction(label: Int, glyph: Glyph, onClick: () -> Unit, warn: Boole
         FlowFolioGlyph(
             glyph,
             contentDescription = null,
-            color = if (warn) FlowFolio.palette.subItem else FlowFolio.palette.title,
+            color = if (warn) FlowFolio.palette.danger else FlowFolio.palette.title,
             size = BAR_GLYPH,
             glow = false
         )

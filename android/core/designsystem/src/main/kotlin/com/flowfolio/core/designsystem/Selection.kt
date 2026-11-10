@@ -179,7 +179,7 @@ fun SelectionBar(
             FlowFolioGlyph(
                 Glyph.Trash,
                 labels.delete,
-                color = if (selection.chosen.isEmpty()) p.hint else p.subItem
+                color = if (selection.chosen.isEmpty()) p.hint else p.danger
             )
         }
         Text(

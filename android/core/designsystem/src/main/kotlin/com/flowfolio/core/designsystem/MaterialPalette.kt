@@ -24,6 +24,9 @@ import kotlin.math.sin
  */
 internal fun materialFamily(context: Context, seed: MaterialSeed): PaletteFamily {
     val wallpaper = seed == MaterialSeed.WALLPAPER && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    if (seed == MaterialSeed.WALLPAPER && !wallpaper) {
+        return PaletteFamily(quietPalette(MaterialLightTokens, false), quietPalette(MaterialDarkTokens, true))
+    }
     val light = if (wallpaper) dynamicLightColorScheme(context) else seedScheme(seed.hueOrDefault, dark = false)
     val dark = if (wallpaper) dynamicDarkColorScheme(context) else seedScheme(seed.hueOrDefault, dark = true)
     return PaletteFamily(light.toPalette(dark = false), dark.toPalette(dark = true))
@@ -66,47 +69,49 @@ private fun seedScheme(hue: Float, dark: Boolean): ColorScheme {
     }
 }
 
-/** A Material scheme as FlowFolio's tokens: primary for titles, icons and buttons, the surfaces for the rest. */
-private fun ColorScheme.toPalette(dark: Boolean): Palette = Palette(
-    dark = dark,
-    background = surface,
-    backgroundDeep = if (dark) surfaceContainerLowest else surfaceContainer,
-    surface = surfaceContainer,
-    surface2 = surfaceContainerHigh,
-    edge = outlineVariant,
-    title = primary,
-    item = onSurface,
-    hint = onSurfaceVariant,
-    subItem = tertiary,
-    glyph = primary,
-    text = onSurface,
-    toggleOffTrack = surfaceContainerHighest,
-    toggleOffThumb = outline,
-    toggleOnTrack = primary,
-    toggleOnThumb = onPrimary,
-    cardStart = surfaceContainerLow,
-    cardEnd = surfaceContainerLow,
-    paper = surfaceContainerLowest,
-    paperInk = onSurface,
-    paperShade = Color.Black.copy(alpha = if (dark) DARK_SHADE else LIGHT_SHADE),
-    shelfTop = secondaryContainer,
-    shelfBottom = surfaceContainerHighest,
-    tabBar = surfaceContainer.copy(alpha = TAB_BAR_ALPHA),
-    buttonTop = primary,
-    buttonBottom = primary,
-    buttonInk = onPrimary,
-    titleGlow = Glow.None,
-    itemGlow = Glow.None,
-    subGlow = Glow.None,
-    hintGlow = Glow.None,
-    glyphGlow = Glow.None,
-    selected = secondaryContainer,
-    shadow = Color.Black.copy(alpha = if (dark) DARK_SHADOW else LIGHT_SHADOW),
-    pressShadow = Color.Black.copy(alpha = if (dark) DARK_PRESS else LIGHT_PRESS),
-    highlight = Color.Transparent,
-    green = Tonal.color(GREEN_HUE, PRIMARY_CHROMA, if (dark) DARK_ACCENT_TONE else LIGHT_ACCENT_TONE),
-    texture = SurfaceTexture.NONE,
-    buttonGlyph = onPrimary
+/**
+ * A Material scheme as FlowFolio's tokens (ADR-0052): the tonal surfaces for the neutrals, on-surface colours for the
+ * three inks, primary for the one accent.
+ */
+private fun ColorScheme.toPalette(dark: Boolean): Palette {
+    val tokens = if (dark) {
+        Tokens(
+            bg = surface, bg2 = surfaceContainerLowest, surface = surfaceContainer, surface2 = surfaceContainerHigh,
+            surface3 = surfaceContainerHighest, line = outlineVariant, ink = onSurface, ink2 = onSurfaceVariant,
+            ink3 = outline, accent = primary, accentInk = onPrimary, accentSoft = primaryContainer,
+            ok = Tonal.color(GREEN_HUE, PRIMARY_CHROMA, DARK_ACCENT_TONE),
+            okSoft = Tonal.color(GREEN_HUE, SECONDARY_CHROMA, DARK_SOFT_TONE),
+            danger = error, dangerSoft = errorContainer, paper = surfaceContainerLow, paperInk = onSurface,
+            scrim = DarkTokens.scrim
+        )
+    } else {
+        Tokens(
+            bg = surfaceContainerLow, bg2 = surfaceContainer, surface = surfaceContainerLowest,
+            surface2 = surfaceContainerHigh, surface3 = surfaceContainerHighest, line = outlineVariant,
+            ink = onSurface, ink2 = onSurfaceVariant, ink3 = outline, accent = primary, accentInk = onPrimary,
+            accentSoft = primaryContainer,
+            ok = Tonal.color(GREEN_HUE, PRIMARY_CHROMA, LIGHT_ACCENT_TONE),
+            okSoft = Tonal.color(GREEN_HUE, SECONDARY_CHROMA, LIGHT_SOFT_TONE),
+            danger = error, dangerSoft = errorContainer, paper = surfaceContainerLowest, paperInk = onSurface,
+            scrim = LightTokens.scrim
+        )
+    }
+    return quietPalette(tokens, dark).copy(selected = if (dark) surfaceContainerHighest else surfaceContainerLowest)
+}
+
+/** The mock's `th-material` (indigo), for phones that offer no wallpaper colours. */
+internal val MaterialLightTokens = LightTokens.copy(
+    bg = Color(0xFFF3F3FA), bg2 = Color(0xFFE9EAF5), surface = Color(0xFFFFFFFF), surface2 = Color(0xFFE9EAF5),
+    surface3 = Color(0xFFDCDDEE), line = Color(0xFFDADBEA), ink = Color(0xFF1B1C26), ink2 = Color(0xFF4A4C63),
+    ink3 = Color(0xFF7C7E96), accent = Color(0xFF4C5BA8), accentSoft = Color(0xFFDFE3FA),
+    paper = Color(0xFFFCFCFF), paperInk = Color(0xFF1D1E2A)
+)
+
+internal val MaterialDarkTokens = DarkTokens.copy(
+    bg = Color(0xFF121318), bg2 = Color(0xFF0D0E12), surface = Color(0xFF1D1F27), surface2 = Color(0xFF262833),
+    surface3 = Color(0xFF30333F), line = Color(0xFF363948), ink = Color(0xFFE4E5F2), ink2 = Color(0xFFB3B5CC),
+    ink3 = Color(0xFF7F8199), accent = Color(0xFFB7C3FF), accentInk = Color(0xFF141A3B),
+    accentSoft = Color(0xFF2D3354), paper = Color(0xFF1A1B22), paperInk = Color(0xFFE1E2EE)
 )
 
 /**
@@ -162,14 +167,9 @@ private const val NEUTRAL_VARIANT_CHROMA = 8f
 private const val DARK_ACCENT_TONE = 80f
 private const val LIGHT_ACCENT_TONE = 40f
 private const val GREEN_HUE = 140f
+private const val DARK_SOFT_TONE = 25f
+private const val LIGHT_SOFT_TONE = 92f
 private const val CHROMA_STEP = 1f
-private const val DARK_SHADE = 0.45f
-private const val LIGHT_SHADE = 0.22f
-private const val TAB_BAR_ALPHA = 0.94f
-private const val DARK_SHADOW = 0.55f
-private const val LIGHT_SHADOW = 0.18f
-private const val DARK_PRESS = 0.35f
-private const val LIGHT_PRESS = 0.12f
 private const val WHITE_X = 0.95047
 private const val WHITE_Z = 1.08883
 private const val EPSILON = 216.0 / 24389.0
@@ -181,7 +181,7 @@ private const val GAMUT_SLACK = 0.0005
 /** A shelf's colour (owner, 2026-10-22) at the tone of Material You's accents in light or dark. */
 fun ShelfColor.tint(dark: Boolean): Color = MaterialSeed.valueOf(name).swatch(dark)
 
-/** A shelf's colour in the current light or dark; null (no colour chosen) is the theme's title colour. */
+/** A shelf's colour in the current light or dark; null (no colour chosen) is the theme's accent. */
 val ShelfColor?.color: Color
     @androidx.compose.runtime.Composable @androidx.compose.runtime.ReadOnlyComposable
-    get() = this?.tint(FlowFolio.palette.dark) ?: FlowFolio.palette.title
+    get() = this?.tint(FlowFolio.palette.dark) ?: FlowFolio.palette.accent

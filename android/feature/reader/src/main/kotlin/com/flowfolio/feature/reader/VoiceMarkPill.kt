@@ -164,7 +164,7 @@ private fun VoiceMarkRow(
             FlowFolioGlyph(
                 Glyph.Trash,
                 stringResource(R.string.reader_voicemark_discard),
-                color = p.subItem,
+                color = p.danger,
                 size = 18.dp,
                 glow = false
             )
@@ -195,7 +195,7 @@ private fun RecordButton(recording: Boolean, hasMark: Boolean, playing: Boolean,
             .size(BUTTON)
             .scale(scale)
             .clip(CircleShape)
-            .background(if (recording) p.subItem else p.title, CircleShape)
+            .background(if (recording) p.danger else p.title, CircleShape)
             .clickable(onClick = onClick)
             .testTag(ReaderTestTags.VOICEMARK_RECORD),
         contentAlignment = Alignment.Center

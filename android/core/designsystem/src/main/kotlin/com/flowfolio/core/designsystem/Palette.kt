@@ -1,3 +1,6 @@
+// The design's colour tables are read as tables (ADR-0052), not named one by one.
+@file:Suppress("MagicNumber")
+
 package com.flowfolio.core.designsystem
 
 import androidx.compose.runtime.Immutable
@@ -6,7 +9,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** The fine texture over the app background (ADR-0028). */
+/** The fine texture over the app background (ADR-0028). Quiet Library (ADR-0052) lays none. */
 enum class SurfaceTexture { GRAIN, NONE }
 
 /**
@@ -21,9 +24,37 @@ data class Glow(val color: Color, val blur: Dp, val offsetY: Dp = 0.dp) {
 }
 
 /**
- * FlowFolio's design tokens, verbatim from the owner's mock (`docs/design/FlowFolio_Mock.html`, ADR-0015). Property
- * names follow the mock's CSS variables; [glyph] and [edge] keep their earlier names (ADR-0014) as aliases of the
- * mock's `accent` and `line`.
+ * A theme's semantic colours (ADR-0052, the "Quiet Library" mock's CSS variables): warm neutrals, three weights of ink
+ * and one accent whose only meanings are the primary action and the selected state.
+ */
+@Immutable
+data class Tokens(
+    val bg: Color,
+    val bg2: Color,
+    val surface: Color,
+    val surface2: Color,
+    val surface3: Color,
+    val line: Color,
+    val ink: Color,
+    val ink2: Color,
+    val ink3: Color,
+    val accent: Color,
+    val accentInk: Color,
+    val accentSoft: Color,
+    val ok: Color,
+    val okSoft: Color,
+    val danger: Color,
+    val dangerSoft: Color,
+    val paper: Color,
+    val paperInk: Color,
+    val scrim: Color
+)
+
+/**
+ * FlowFolio's design tokens. The semantic set ([ink], [accent], [surface3] ...) is ADR-0052's; the older role
+ * fields ([title], [item], [hint], [subItem], [glyph], the toggle and button colours) are kept as aliases derived from
+ * it by [quietPalette], so every screen takes the new look at once while it moves to the new names. The aliases go at
+ * the end of the overhaul.
  */
 @Immutable
 data class Palette(
@@ -38,15 +69,15 @@ data class Palette(
     val item: Color,
     val hint: Color,
     val subItem: Color,
-    /** Icons (`--accent`). */
+    /** Icons. */
     val glyph: Color,
-    /** Body text on app surfaces (`--text`). */
+    /** Body text on app surfaces. */
     val text: Color,
     val toggleOffTrack: Color,
     val toggleOffThumb: Color,
     val toggleOnTrack: Color,
     val toggleOnThumb: Color,
-    /** Card fill: a 160-degree gradient from [cardStart] to [cardEnd]. */
+    /** Card fill: a 160-degree gradient from [cardStart] to [cardEnd] (flat since ADR-0052). */
     val cardStart: Color,
     val cardEnd: Color,
     val paper: Color,
@@ -63,22 +94,40 @@ data class Palette(
     val subGlow: Glow,
     val hintGlow: Glow,
     val glyphGlow: Glow,
-    /** The selected segment / tab indicator fill (`--surface-2`, or warm white in light mode). */
+    /** The selected segment / tab indicator fill. */
     val selected: Color,
-    /** Soft card shadow colour (`--shadow-soft`). */
+    /** Soft card shadow colour. */
     val shadow: Color,
-    /** Pressed / sunken inner shadow colour (`--shadow-press`). */
+    /** Pressed / sunken inner shadow colour. */
     val pressShadow: Color,
-    /** Top inner highlight on cards (`inset 0 1px 0`). */
+    /** Top inner highlight on cards. */
     val highlight: Color,
-    /** A green in the palette's own tone (bookmark colours; not in the mock's swatches). */
+    /** The success colour (`--ok`). */
     val green: Color,
-    /** What the app background is laid with (ADR-0028): the mock's grain, or none (Rustic, Material). */
-    val texture: SurfaceTexture = SurfaceTexture.GRAIN,
-    /** The icon on a primary button: the mock's pink play on orange; the button's ink where the accent would vanish. */
-    val buttonGlyph: Color = glyph
+    /** What the app background is laid with (ADR-0028). */
+    val texture: SurfaceTexture = SurfaceTexture.NONE,
+    /** The icon on a primary button. */
+    val buttonGlyph: Color = glyph,
+    /** The semantic colours everything above is derived from (ADR-0052). */
+    val tokens: Tokens = LightTokens
 ) {
-    /** The mock's "Neon glow" switch off: no glows or text shadows. */
+    val bg: Color get() = tokens.bg
+    val bg2: Color get() = tokens.bg2
+    val surface3: Color get() = tokens.surface3
+    val line: Color get() = tokens.line
+    val ink: Color get() = tokens.ink
+    val ink2: Color get() = tokens.ink2
+    val ink3: Color get() = tokens.ink3
+    val accent: Color get() = tokens.accent
+    val accentInk: Color get() = tokens.accentInk
+    val accentSoft: Color get() = tokens.accentSoft
+    val ok: Color get() = tokens.ok
+    val okSoft: Color get() = tokens.okSoft
+    val danger: Color get() = tokens.danger
+    val dangerSoft: Color get() = tokens.dangerSoft
+    val scrim: Color get() = tokens.scrim
+
+    /** "Night glow" off (the default since ADR-0052): no glows or text shadows. */
     fun withoutGlow(): Palette = copy(
         titleGlow = Glow.None,
         itemGlow = Glow.None,
@@ -88,86 +137,109 @@ data class Palette(
     )
 }
 
-val DarkPalette = Palette(
-    dark = true,
-    background = Color(0xFF1D0A47),
-    backgroundDeep = Color(0xFF0F0428),
-    surface = Color(0xFF26105A),
-    surface2 = Color(0xFF311770),
-    edge = Color(0x26AA96FF),
-    title = Color(0xFFFF8A00),
-    item = Color(0xFF00F0FF),
-    hint = Color(0xFF9B9AA6),
-    subItem = Color(0xFFFF2D5A),
-    glyph = Color(0xFFC02F9A),
-    text = Color(0xFFECE8FF),
-    toggleOffTrack = Color(0xFF8E8E96),
-    toggleOffThumb = Color(0xFF3B2F90),
-    // On-state colours swapped with the light palette at the owner's request (2026-10-18).
-    toggleOnTrack = Color(0xFF2AA3CF),
-    toggleOnThumb = Color(0xFFFF7A00),
-    cardStart = Color(0xFF2D1568),
-    cardEnd = Color(0xFF1F0A4E),
-    paper = Color(0xFF1C1042),
-    paperInk = Color(0xFFDDD6F3),
-    paperShade = Color(0x73000000),
-    shelfTop = Color(0xFF3A2394),
-    shelfBottom = Color(0xFF22105C),
-    tabBar = Color(0xB81A0940),
-    buttonTop = Color(0xFFFFA133),
-    buttonBottom = Color(0xFFFF7A00),
-    buttonInk = Color(0xFF2A0C00),
-    titleGlow = Glow(Color(0x8CFF8A00), 18.dp),
-    itemGlow = Glow(Color(0x8000F0FF), 16.dp),
-    subGlow = Glow(Color(0x73FF2D5A), 12.dp),
-    hintGlow = Glow.None,
-    glyphGlow = Glow(Color(0xBFC02F9A), 7.dp),
-    selected = Color(0xFF311770),
-    shadow = Color(0xB3000000),
-    pressShadow = Color(0x73000000),
-    highlight = Color(0x0FFFFFFF),
-    green = Color(0xFF39F28F)
+/**
+ * A theme's [Palette] from its [tokens] (ADR-0052). Titles, items and labels are ink at three weights, never separate
+ * hues; the accent is the primary action and the selected state; warnings and removals are [Tokens.danger]. The only
+ * glow left is "Night glow"'s soft bloom on display titles in dark mode.
+ */
+fun quietPalette(tokens: Tokens, dark: Boolean): Palette = with(tokens) {
+    Palette(
+        dark = dark,
+        background = bg,
+        backgroundDeep = bg2,
+        surface = surface,
+        surface2 = surface2,
+        edge = line,
+        title = ink,
+        item = ink,
+        hint = ink2,
+        // Warnings and removals use [danger] by name; the old "sub-item" role is the quiet second ink.
+        subItem = ink2,
+        glyph = ink2,
+        text = ink,
+        toggleOffTrack = surface3,
+        toggleOffThumb = Color.White,
+        toggleOnTrack = accent,
+        toggleOnThumb = Color.White,
+        cardStart = surface,
+        cardEnd = surface,
+        paper = paper,
+        paperInk = paperInk,
+        paperShade = if (dark) Color(0x73000000) else Color(0x47503214),
+        shelfTop = surface3,
+        shelfBottom = line,
+        tabBar = surface.copy(alpha = TAB_BAR_ALPHA),
+        buttonTop = accent,
+        buttonBottom = accent,
+        buttonInk = accentInk,
+        titleGlow = if (dark) Glow(accent.copy(alpha = NIGHT_GLOW_ALPHA), 14.dp) else Glow.None,
+        itemGlow = Glow.None,
+        subGlow = Glow.None,
+        hintGlow = Glow.None,
+        glyphGlow = Glow.None,
+        selected = surface,
+        shadow = if (dark) Color(0x8C000000) else Color(0x293C2814),
+        pressShadow = if (dark) Color(0x59000000) else Color(0x1F3C2814),
+        highlight = Color.Transparent,
+        green = ok,
+        texture = SurfaceTexture.NONE,
+        buttonGlyph = accentInk,
+        tokens = tokens
+    )
+}
+
+/** FlowFolio, light (ADR-0052). */
+val LightTokens = Tokens(
+    bg = Color(0xFFF6EFE3),
+    bg2 = Color(0xFFEFE5D3),
+    surface = Color(0xFFFFFBF4),
+    surface2 = Color(0xFFF1E7D6),
+    surface3 = Color(0xFFE9DCC6),
+    line = Color(0xFFE3D6C0),
+    ink = Color(0xFF2A2118),
+    ink2 = Color(0xFF6B5D4E),
+    // The mock's #9A8B79 reaches 2.9:1 on bg; a step darker reaches the 3:1 AA asks of meta text (ADR-0052).
+    ink3 = Color(0xFF938574),
+    accent = Color(0xFFC2410C),
+    accentInk = Color(0xFFFFFFFF),
+    accentSoft = Color(0xFFF8E1D2),
+    ok = Color(0xFF2F7D5B),
+    okSoft = Color(0xFFDCEFE4),
+    danger = Color(0xFFB42318),
+    dangerSoft = Color(0xFFFBE3DF),
+    paper = Color(0xFFFBF7EF),
+    paperInk = Color(0xFF2B241C),
+    scrim = Color(0x612A2118)
 )
 
-val LightPalette = Palette(
-    dark = false,
-    background = Color(0xFFFDEAC6),
-    backgroundDeep = Color(0xFFF1D39C),
-    surface = Color(0xFFFFF4DE),
-    surface2 = Color(0xFFFBE6C0),
-    edge = Color(0x29784614),
-    title = Color(0xFF8B4D12),
-    item = Color(0xFF0F5F59),
-    hint = Color(0xFF4E4842),
-    subItem = Color(0xFFC8102E),
-    glyph = Color(0xFF4A2BB0),
-    text = Color(0xFF2E2219),
-    toggleOffTrack = Color(0xFF9B9B9B),
-    toggleOffThumb = Color(0xFF7D3326),
-    // On-state colours swapped with the dark palette at the owner's request (2026-10-18).
-    toggleOnTrack = Color(0xFF2ECC8A),
-    toggleOnThumb = Color(0xFFFF8A00),
-    cardStart = Color(0xFFFFF8E8),
-    cardEnd = Color(0xFFFBE4B9),
-    paper = Color(0xFFFFFAF0),
-    paperInk = Color(0xFF2C241C),
-    paperShade = Color(0x47503214),
-    shelfTop = Color(0xFFC88C51),
-    shelfBottom = Color(0xFF94602F),
-    tabBar = Color(0xC7FFF4DE),
-    buttonTop = Color(0xFFFF9A2E),
-    buttonBottom = Color(0xFFEC6A00),
-    buttonInk = Color(0xFFFFF8EE),
-    titleGlow = Glow(Color(0x475A320A), 3.dp, 2.dp),
-    itemGlow = Glow(Color(0x400A3C37), 3.dp, 2.dp),
-    subGlow = Glow(Color(0x33780A1E), 2.dp, 2.dp),
-    hintGlow = Glow(Color(0x1F000000), 2.dp, 1.dp),
-    glyphGlow = Glow(Color(0x4D281478), 3.dp, 3.dp),
-    selected = Color(0xFFFFFAF0),
-    shadow = Color(0x80784614),
-    pressShadow = Color(0x4D784614),
-    highlight = Color(0xBFFFFFFF),
-    green = Color(0xFF2C7A2E)
+/** FlowFolio, dark (ADR-0052). */
+val DarkTokens = Tokens(
+    bg = Color(0xFF15110E),
+    bg2 = Color(0xFF1B1612),
+    surface = Color(0xFF211B16),
+    surface2 = Color(0xFF2A231D),
+    surface3 = Color(0xFF342B24),
+    line = Color(0xFF3A3129),
+    ink = Color(0xFFF2EADF),
+    ink2 = Color(0xFFBDAF9E),
+    ink3 = Color(0xFF857767),
+    accent = Color(0xFFF59E5B),
+    accentInk = Color(0xFF1A120B),
+    accentSoft = Color(0xFF3B2718),
+    ok = Color(0xFF6FCF97),
+    okSoft = Color(0xFF1E3327),
+    danger = Color(0xFFFF8A7A),
+    dangerSoft = Color(0xFF3A1E1A),
+    paper = Color(0xFF1E1A16),
+    paperInk = Color(0xFFE6DCCD),
+    scrim = Color(0x8C000000)
 )
+
+val LightPalette = quietPalette(LightTokens, dark = false)
+
+val DarkPalette = quietPalette(DarkTokens, dark = true)
 
 val LocalPalette = staticCompositionLocalOf { LightPalette }
+
+private const val TAB_BAR_ALPHA = 0.84f
+private const val NIGHT_GLOW_ALPHA = 0.55f

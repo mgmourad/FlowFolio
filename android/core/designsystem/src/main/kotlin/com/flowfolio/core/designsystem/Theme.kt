@@ -38,13 +38,14 @@ val LocalAppStyle = staticCompositionLocalOf { AppStyle.FLOWFOLIO }
 
 /**
  * App theme (ADR-0014, ADR-0015, ADR-0028): the [style]'s palette in light or dark ([preference]), with the fonts and
- * shapes. [glow] is the "Neon glow" switch; [seed] picks Material You's colours. Book pages are drawn by the reader and
+ * shapes. [glow] is the "Night glow" switch (off by default, ADR-0052); [seed] picks Material You's colours. Book
+ * pages are drawn by the reader and
  * keep their own paper colours.
  */
 @Composable
 fun FlowFolioTheme(
     preference: ThemePreference = ThemePreference.SYSTEM,
-    glow: Boolean = true,
+    glow: Boolean = false,
     style: AppStyle = AppStyle.FLOWFOLIO,
     seed: MaterialSeed = MaterialSeed.WALLPAPER,
     content: @Composable () -> Unit
@@ -60,7 +61,8 @@ fun FlowFolioTheme(
     CompositionLocalProvider(
         LocalPalette provides palette,
         LocalPaletteFamily provides family,
-        LocalAppStyle provides style
+        LocalAppStyle provides style,
+        LocalReducedMotion provides rememberSystemReducedMotion()
     ) {
         MaterialTheme(
             colorScheme = palette.toColorScheme(),
@@ -135,10 +137,12 @@ object FlowFolio {
         @Composable @ReadOnlyComposable
         get() = role(palette.hint, palette.hintGlow)
 
-    /** Sub-items and other (`.r-sub`). */
+    /**
+     * Sub-items and other secondary lines: ink at its second weight since ADR-0052.
+     */
     val subItem: TextStyle
         @Composable @ReadOnlyComposable
-        get() = role(palette.subItem, palette.subGlow)
+        get() = role(palette.ink2, Glow.None)
 
     /** Plain body text on app surfaces (`--text`). */
     val text: TextStyle
@@ -172,38 +176,44 @@ object FlowFolio {
 private fun Palette.toColorScheme(): ColorScheme {
     val base = if (dark) darkColorScheme() else lightColorScheme()
     return base.copy(
-        primary = title,
-        onPrimary = buttonInk,
-        primaryContainer = surface2,
-        onPrimaryContainer = title,
-        secondary = item,
-        onSecondary = background,
+        primary = accent,
+        onPrimary = accentInk,
+        primaryContainer = accentSoft,
+        onPrimaryContainer = accent,
+        secondary = ink2,
+        onSecondary = bg,
         secondaryContainer = surface2,
-        onSecondaryContainer = item,
-        tertiary = glyph,
-        onTertiary = background,
-        background = background,
-        onBackground = text,
-        surface = background,
-        onSurface = text,
-        surfaceVariant = surface,
-        onSurfaceVariant = hint,
-        surfaceContainerLowest = backgroundDeep,
-        surfaceContainerLow = background,
+        onSecondaryContainer = ink,
+        tertiary = accent,
+        onTertiary = accentInk,
+        background = bg,
+        onBackground = ink,
+        surface = bg,
+        onSurface = ink,
+        surfaceVariant = surface2,
+        onSurfaceVariant = ink2,
+        surfaceTint = Color.Transparent,
+        surfaceContainerLowest = bg2,
+        surfaceContainerLow = bg,
         surfaceContainer = surface,
         surfaceContainerHigh = surface,
         surfaceContainerHighest = surface2,
-        surfaceBright = surface2,
-        surfaceDim = backgroundDeep,
-        outline = edge,
-        outlineVariant = edge,
-        error = subItem,
-        onError = background,
-        scrim = Color.Black
+        surfaceBright = surface,
+        surfaceDim = bg2,
+        inverseSurface = ink,
+        inverseOnSurface = bg,
+        inversePrimary = accentSoft,
+        outline = line,
+        outlineVariant = line,
+        error = danger,
+        onError = if (dark) bg else Color.White,
+        errorContainer = dangerSoft,
+        onErrorContainer = danger,
+        scrim = scrim
     )
 }
 
-/** The mock's rounding: 22 dp cards, pills, 28 dp sheets. */
+/** The mock's rounding (ADR-0052): 22 dp cards, 28 dp sheets, pills fully round. */
 private val RoundedShapes = Shapes(
     extraSmall = RoundedCornerShape(9.dp),
     small = RoundedCornerShape(14.dp),

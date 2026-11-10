@@ -334,7 +334,7 @@ private fun DeleteMark(onClick: () -> Unit) {
         FlowFolioGlyph(
             Glyph.Trash,
             contentDescription = null,
-            color = FlowFolio.palette.subItem,
+            color = FlowFolio.palette.danger,
             size = 20.dp,
             glow = false
         )

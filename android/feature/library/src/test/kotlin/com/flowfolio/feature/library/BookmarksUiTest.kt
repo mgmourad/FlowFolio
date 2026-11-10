@@ -101,6 +101,6 @@ class BookmarksUiTest {
         }
         compose.onNodeWithText(res.getString(R.string.settings_appearance)).performClick()
         compose.onNodeWithText(res.getString(R.string.settings_glow)).performScrollTo().performClick()
-        assertEquals(false, glow)
+        assertEquals(true, glow)
     }
 }

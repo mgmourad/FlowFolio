@@ -210,7 +210,7 @@ private fun RowAction(glyph: Glyph, label: Int, tag: String, onClick: () -> Unit
         FlowFolioGlyph(
             glyph,
             contentDescription = null,
-            color = if (warn) FlowFolio.palette.subItem else FlowFolio.palette.title,
+            color = if (warn) FlowFolio.palette.danger else FlowFolio.palette.title,
             size = ROW_GLYPH,
             glow = false
         )
