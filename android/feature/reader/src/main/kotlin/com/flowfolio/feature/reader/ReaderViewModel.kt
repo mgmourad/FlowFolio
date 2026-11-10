@@ -697,10 +697,20 @@ class ReaderViewModel @Inject constructor(
 
     private var searchJob: Job? = null
 
+    /** "Match case" in the search panel (ADR-0052). */
+    private val _searchMatchCase = MutableStateFlow(false)
+    internal val searchMatchCase: StateFlow<Boolean> = _searchMatchCase.asStateFlow()
+
+    internal fun setSearchMatchCase(on: Boolean) {
+        if (on == _searchMatchCase.value) return
+        _searchMatchCase.value = on
+        search(_searchQuery.value, force = true)
+    }
+
     /** Searches the open book for [query] in the current view (reflowed text or the PDF's page text). */
-    internal fun search(query: String) {
+    internal fun search(query: String, force: Boolean = false) {
         searchJob?.cancel()
-        if (query != _searchQuery.value) {
+        if (query != _searchQuery.value || force) {
             _searchQuery.value = query
             _searchHighlight.value = null // a different query invalidates the last jump's highlight
         }
@@ -730,7 +740,7 @@ class ReaderViewModel @Inject constructor(
         for (chapter in 0 until session.chapterCount) {
             val (text, offsets) = session.chapterText(chapter)
             if (text.isEmpty()) continue
-            for (range in findMatches(text, query)) {
+            for (range in findMatches(text, query, _searchMatchCase.value)) {
                 val start = offsets[range.first]
                 // The end is exclusive, like a PDF match's: the last matched character's offset, plus one.
                 val end = offsets[range.last] + 1
@@ -758,7 +768,7 @@ class ReaderViewModel @Inject constructor(
         if (doc != null) {
             outer@ for (page in 0 until doc.pageCount) {
                 val pageText = runCatching { doc.pageText(page) }.getOrNull() ?: continue
-                for (range in findMatches(pageText.text, query)) {
+                for (range in findMatches(pageText.text, query, _searchMatchCase.value)) {
                     hits += SearchHit(
                         page,
                         null,

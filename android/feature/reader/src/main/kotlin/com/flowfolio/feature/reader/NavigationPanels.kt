@@ -50,7 +50,9 @@ internal fun ContentsList(
     labels: List<String?>,
     currentPage: Int,
     onPick: (Int) -> Unit,
-    onGoTo: () -> Unit
+    onGoTo: () -> Unit,
+    /** The Contents | Ribbons tabs under the title (ADR-0052); none when there are no ribbons to list. */
+    tabs: (@Composable () -> Unit)? = null
 ) {
     Row(
         Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 8.dp, bottom = 4.dp),
@@ -70,6 +72,7 @@ internal fun ContentsList(
             FlowFolioGlyph(Glyph.GoTo, stringResource(R.string.reader_go_to))
         }
     }
+    tabs?.invoke()
     if (outline.isEmpty()) {
         Text(
             stringResource(R.string.reader_contents_empty),
@@ -112,8 +115,9 @@ private fun ContentsRow(
             )
     ) {
         // Chapters are items, nested sections sub-items; the chapter you are in is lit in the title colour.
+        // `.toc .tr.cur` (ADR-0052): the chapter you are in, in the accent.
         val role = when {
-            current -> FlowFolio.title
+            current -> androidx.compose.ui.text.TextStyle(color = FlowFolio.palette.accent)
             entry.depth == 0 -> FlowFolio.item
             else -> FlowFolio.subItem
         }

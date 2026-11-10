@@ -121,14 +121,31 @@ private const val RIBBONS_IN_A_ROW = 5
  * there. Long books keep the list to a few rows and scroll.
  */
 @Composable
-internal fun RibbonList(marks: List<Bookmark>, navigation: BookNavigation, onGo: (Int) -> Unit) {
-    if (marks.isEmpty()) return
-    HorizontalDivider(color = FlowFolio.palette.edge)
-    Text(
-        stringResource(R.string.reader_ribbons_in_book).uppercase(),
-        style = FlowFolioType.eyebrow.merge(FlowFolio.subItem),
-        modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp)
-    )
+internal fun RibbonList(
+    marks: List<Bookmark>,
+    navigation: BookNavigation,
+    onGo: (Int) -> Unit,
+    /** False under the Contents panel's Ribbons tab, which names the list itself. */
+    heading: Boolean = true
+) {
+    if (marks.isEmpty()) {
+        if (!heading) {
+            Text(
+                stringResource(R.string.reader_ribbons_none),
+                style = FlowFolioType.body.copy(color = FlowFolio.palette.ink2),
+                modifier = Modifier.padding(20.dp)
+            )
+        }
+        return
+    }
+    if (heading) {
+        HorizontalDivider(color = FlowFolio.palette.edge)
+        Text(
+            stringResource(R.string.reader_ribbons_in_book).uppercase(),
+            style = FlowFolioType.eyebrow.merge(FlowFolio.subItem),
+            modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp)
+        )
+    }
     LazyColumn(Modifier.heightIn(max = RIBBON_LIST_MAX)) {
         items(marks, key = { it.id }) { m ->
             val chapter = PageLookup.chapterAt(navigation.outline, m.page).takeIf { it >= 0 }

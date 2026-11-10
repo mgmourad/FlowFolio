@@ -17,15 +17,15 @@ internal data class SearchHit(
     val chapter: String?
 )
 
-/** Case-insensitive occurrences of [query] in [text], as index ranges; empty when the query is blank. */
-internal fun findMatches(text: String, query: String): List<IntRange> {
+/** Occurrences of [query] in [text] (case-insensitive unless [matchCase]), as index ranges; empty for a blank query. */
+internal fun findMatches(text: String, query: String, matchCase: Boolean = false): List<IntRange> {
     val q = query.trim()
     if (q.isEmpty()) return emptyList()
     val out = ArrayList<IntRange>()
-    var i = text.indexOf(q, 0, ignoreCase = true)
+    var i = text.indexOf(q, 0, ignoreCase = !matchCase)
     while (i >= 0) {
         out += i until (i + q.length)
-        i = text.indexOf(q, i + q.length, ignoreCase = true)
+        i = text.indexOf(q, i + q.length, ignoreCase = !matchCase)
     }
     return out
 }

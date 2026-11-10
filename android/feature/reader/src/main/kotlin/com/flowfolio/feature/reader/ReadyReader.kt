@@ -101,10 +101,12 @@ internal class Overlay(val chrome: ChromeClock, val textPinch: TextPinch) {
         chrome.toggle()
     }
 
-    /** Opens [which], or closes it when it is already open (a second tap on its button); dismisses the riffle bar. */
+    /**
+     * Opens [which], or closes it when it is already open (a second tap on its button). The riffle bar stays: the
+     * mock's dock, riffle included, sits under every panel (ADR-0052; owner, 2026-11-10).
+     */
     fun open(which: Panel) {
         chrome.interacted()
-        riffleDismissed = true
         val next = if (panel == which) Panel.NONE else which
         panel = next
         guide = if (next == Panel.NONE) null else which
@@ -306,12 +308,14 @@ internal fun BoxScope.Controls(
     parts: ChromeParts
 ) {
     FlowFolioPalette(dark = s.tone.dark) {
-        CompositionLocalProvider(LocalGlassStyle provides glassOver(s.tone)) {
+        val dockSpace = remember { DockSpace() }
+        CompositionLocalProvider(LocalGlassStyle provides glassOver(s.tone), LocalDockSpace provides dockSpace) {
             PanelDismiss(overlay.panel, overlay::dismiss)
             val flowNow by parts.book.flow.collectAsStateWithLifecycle()
             val settings by parts.book.userSettings.collectAsStateWithLifecycle()
             val hits by parts.book.searchResults.collectAsStateWithLifecycle()
             val searchQuery by parts.book.searchQuery.collectAsStateWithLifecycle()
+            val searchMatchCase by parts.book.searchMatchCase.collectAsStateWithLifecycle()
             val narrating by parts.book.narrating.collectAsStateWithLifecycle()
             val narratorRate by parts.book.narratorRate.collectAsStateWithLifecycle()
             val narratorContinuous by parts.book.narratorContinuous.collectAsStateWithLifecycle()
@@ -337,7 +341,8 @@ internal fun BoxScope.Controls(
                     mark = mark,
                     actions = ChromeActions(parts.onBack, onPanel = overlay::open),
                     panel = overlay.panel,
-                    bottomBarVisible = overlay.chrome.shown && overlay.panel == Panel.NONE && !overlay.riffleDismissed,
+                    // The mock keeps the whole dock, riffle included, under an open panel.
+                    bottomBarVisible = overlay.chrome.shown && !overlay.riffleDismissed,
                     bottomBar = parts.bar
                 )
             }
@@ -353,7 +358,9 @@ internal fun BoxScope.Controls(
                 onPanel = overlay::open,
                 hits = hits,
                 searchQuery = searchQuery,
-                onSearchQuery = parts.book::search,
+                onSearchQuery = { parts.book.search(it) },
+                searchMatchCase = searchMatchCase,
+                onSearchMatchCase = parts.book::setSearchMatchCase,
                 onSearchJump = { hit ->
                     parts.book.jumpTo(hit)
                     overlay.dismiss()

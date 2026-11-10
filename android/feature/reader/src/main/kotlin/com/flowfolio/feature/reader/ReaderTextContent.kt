@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioFontPicker
 import com.flowfolio.core.designsystem.FlowFolioIconButton
+import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.UiFamily
@@ -69,11 +70,12 @@ internal fun TextChoice(text: ReaderText, bookFont: android.graphics.Typeface?, 
         Modifier.padding(bottom = 6.dp).testTag(ReaderTestTags.SETTING_FONT),
         bookFont = remember(bookFont) { bookFont?.let { FontFamily(Typeface(it)) } }
     )
-    LabeledRow(stringResource(R.string.reader_text_size), Glyph.TextSize) {
+    OptRow(stringResource(R.string.reader_text_size)) {
         SizeStepper(text.sizeSp) { onChange(text.copy(sizeSp = it)) }
     }
-    LabeledRow(stringResource(R.string.reader_line_spacing), Glyph.LineSpacing, stacked = true) {
-        IconChoice(
+    // `.mini` segments in words, as the mock has them (ADR-0052).
+    OptRow(stringResource(R.string.reader_line_spacing)) {
+        FlowFolioSegmented(
             listOf(
                 stringResource(R.string.reader_spacing_tight),
                 stringResource(R.string.reader_spacing_normal),
@@ -81,36 +83,31 @@ internal fun TextChoice(text: ReaderText, bookFont: android.graphics.Typeface?, 
                 stringResource(R.string.reader_spacing_loose)
             ),
             LineSpacing.entries.indexOf(text.lineSpacing),
-            ReaderTestTags.SETTING_SPACING,
-            { onChange(text.copy(lineSpacing = LineSpacing.entries[it])) }
-        ) { i, color -> spacingIcon(i, color) }
+            { onChange(text.copy(lineSpacing = LineSpacing.entries[it])) },
+            modifier = Modifier.testTag(ReaderTestTags.SETTING_SPACING)
+        )
     }
-    LabeledRow(stringResource(R.string.reader_margins), Glyph.Margins, stacked = true) {
-        IconChoice(
+    OptRow(stringResource(R.string.reader_margins)) {
+        FlowFolioSegmented(
             listOf(
                 stringResource(R.string.reader_margins_narrow),
                 stringResource(R.string.reader_margins_normal),
                 stringResource(R.string.reader_margins_wide)
             ),
             PageMargins.entries.indexOf(text.margins),
-            ReaderTestTags.SETTING_MARGINS,
-            { onChange(text.copy(margins = PageMargins.entries[it])) }
-        ) { i, color -> marginsIcon(i, color) }
+            { onChange(text.copy(margins = PageMargins.entries[it])) },
+            modifier = Modifier.testTag(ReaderTestTags.SETTING_MARGINS)
+        )
     }
-    Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ToggleChip(
-            stringResource(R.string.reader_justify),
-            text.justify,
-            ReaderTestTags.SETTING_JUSTIFY,
-            glyph = Glyph.Justify
-        ) { onChange(text.copy(justify = it)) }
-        ToggleChip(
-            stringResource(R.string.reader_hyphenate),
-            text.hyphenate,
-            ReaderTestTags.SETTING_HYPHENATE,
-            glyph = Glyph.Hyphenate
-        ) { onChange(text.copy(hyphenate = it)) }
+    SwitchRow(stringResource(R.string.reader_justify), text.justify, ReaderTestTags.SETTING_JUSTIFY) {
+        onChange(text.copy(justify = it))
     }
+    SwitchRow(
+        stringResource(R.string.reader_hyphenate),
+        text.hyphenate,
+        ReaderTestTags.SETTING_HYPHENATE,
+        divider = false
+    ) { onChange(text.copy(hyphenate = it)) }
 }
 
 /**
@@ -132,7 +129,7 @@ private fun SizeStepper(sizeSp: Int, onSize: (Int) -> Unit) {
         }
         Text(
             "$sizeSp",
-            style = FlowFolioType.rowLabel.merge(FlowFolio.title),
+            style = FlowFolioType.stat.copy(fontSize = 20.sp, color = FlowFolio.palette.ink),
             textAlign = TextAlign.Center,
             modifier = Modifier.width(SIZE_VALUE)
         )
@@ -151,42 +148,3 @@ private fun SizeStepper(sizeSp: Int, onSize: (Int) -> Unit) {
 private val SMALL_A = 12.sp
 private val LARGE_A = 24.sp
 private val SIZE_VALUE = 44.dp
-
-/** Three lines of text, further apart for each looser spacing. */
-private fun DrawScope.spacingIcon(index: Int, color: Color) {
-    val gap = size.height * (SPACING_GAP_BASE + SPACING_GAP_STEP * index)
-    val top = (size.height - 2 * gap) / 2
-    for (k in 0..2) {
-        val y = top + k * gap
-        drawLine(
-            color,
-            Offset(0f, y),
-            Offset(size.width, y),
-            strokeWidth = LINE_STROKE * density,
-            cap = StrokeCap.Round
-        )
-    }
-}
-
-/** A page with lines of text, set further in from its sides for each wider margin. */
-private fun DrawScope.marginsIcon(index: Int, color: Color) {
-    val stroke = LINE_STROKE * density
-    drawRoundRect(
-        color,
-        style = Stroke(stroke * PAGE_STROKE),
-        cornerRadius = androidx.compose.ui.geometry.CornerRadius(stroke)
-    )
-    val inset = size.width * (MARGIN_BASE + MARGIN_STEP * index)
-    for (k in 1..TEXT_LINES) {
-        val y = size.height * k / (TEXT_LINES + 1f)
-        drawLine(color, Offset(inset, y), Offset(size.width - inset, y), strokeWidth = stroke, cap = StrokeCap.Round)
-    }
-}
-
-private const val LINE_STROKE = 1.8f
-private const val PAGE_STROKE = 0.8f
-private const val SPACING_GAP_BASE = 0.18f
-private const val SPACING_GAP_STEP = 0.07f
-private const val MARGIN_BASE = 0.14f
-private const val MARGIN_STEP = 0.1f
-private const val TEXT_LINES = 3

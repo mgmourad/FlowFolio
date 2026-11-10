@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -145,6 +146,7 @@ internal fun BoxScope.ReaderChrome(
     ) {
         // Each time the bars show, their buttons fall into place one after another (ADR-0034).
         ScreenEntrance(holdForLandings = false) {
+            val readMillis = LocalReadMillis.current
             TopBar(
                 TitleLine(
                     state.title,
@@ -153,7 +155,11 @@ internal fun BoxScope.ReaderChrome(
                         navigation.outline.filter { it.title.trim() != state.title.trim() },
                         state.anchorPage
                     ),
-                    (state.pageCount - state.anchorPage - 1).coerceAtLeast(0)
+                    ReadingEstimate.millisLeft(
+                        (state.pageCount - state.anchorPage - 1).coerceAtLeast(0),
+                        state.anchorPage + 1,
+                        readMillis
+                    ).takeIf { state.anchorPage < state.pageCount - 1 }
                 ),
                 mark,
                 actions,
@@ -166,6 +172,10 @@ internal fun BoxScope.ReaderChrome(
     // right-hand rail sat on the right page's line ends). The dock keeps clear of the riffle bar by its height.
     var riffleHeight by remember { mutableStateOf(0.dp) }
     var dockHeight by remember { mutableStateOf(0.dp) }
+    // What the panels keep clear of: the riffle card (its own navigation-bar padding included), else the tools.
+    val navBar = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
+    val space = LocalDockSpace.current
+    space.height = dockClearance(bottomBarVisible, controlsVisible, riffleHeight, dockHeight, navBar)
     // The mock's `.dock` is one glass card: the riffle strip with the tools under it. The tools stand on their own
     // only while the riffle bar is away (a panel is open, or the bar was dismissed), so they stay in reach.
     AnimatedVisibility(
@@ -290,7 +300,7 @@ private fun ToolDock(actions: ChromeActions, panel: Panel) {
         panel,
         Modifier
             .padding(horizontal = BAR_INSET, vertical = 6.dp)
-            .then(if (wide) Modifier.width(DOCK_WIDE) else Modifier.fillMaxWidth())
+            .then(if (wide) Modifier.width(READER_DOCK_WIDTH) else Modifier.fillMaxWidth())
             .glass(RoundedCornerShape(DOCK_RADIUS))
             .padding(horizontal = 6.dp, vertical = 4.dp)
             .testTag(ReaderTestTags.DOCK)
@@ -403,10 +413,12 @@ private fun TitlePill(title: TitleLine, wide: Boolean, modifier: Modifier) {
                 modifier = Modifier.widthIn(max = CHAPTER_MAX)
             )
         }
-        if (wide && title.pagesLeft > 0) {
+        val left = title.millisLeft
+        if (wide && left != null) {
+            val (amount, hours) = ReadingEstimate.parts(left)
             Spacer(Modifier.weight(1f).widthIn(min = 12.dp))
             Text(
-                pluralStringResource(R.plurals.reader_pages_left, title.pagesLeft, title.pagesLeft),
+                stringResource(if (hours) R.string.reader_hours_left else R.string.reader_minutes_left, amount),
                 style = FlowFolioType.body.copy(fontSize = 12.sp, color = p.ink3),
                 maxLines = 1
             )
@@ -415,7 +427,7 @@ private fun TitlePill(title: TitleLine, wide: Boolean, modifier: Modifier) {
 }
 
 /** The title pill's words (`.rtop .tt`): the book, the chapter it is at, and how many pages are left. */
-internal data class TitleLine(val title: String, val chapter: String?, val pagesLeft: Int)
+internal data class TitleLine(val title: String, val chapter: String?, val millisLeft: Long?)
 
 /** The print-style page number at the foot of the page while the bars are hidden. */
 @Suppress("LongMethod")
@@ -709,7 +721,6 @@ private val DETOUR_GLYPH = 15.dp
 private const val DETOUR_DIM = 0.3f
 private const val DETOUR_PULSE_MS = 900
 
-private val DOCK_WIDE = 560.dp
 private val TOOL_WIDTH = 46.dp
 private val CHAPTER_MAX = 260.dp
 private val TOOL_HEIGHT = 44.dp
@@ -721,3 +732,11 @@ private fun coachSpotOf(panel: Panel): CoachSpot? = when (panel) {
     Panel.NARRATOR -> CoachSpot.LISTEN
     else -> null
 }
+
+/** What the panels keep clear of: the riffle card (navigation bar included), else the tools, else the bar. */
+private fun dockClearance(riffle: Boolean, controls: Boolean, riffleHeight: Dp, toolsHeight: Dp, navBar: Dp): Dp =
+    when {
+        riffle -> riffleHeight
+        controls -> toolsHeight + navBar
+        else -> navBar
+    }

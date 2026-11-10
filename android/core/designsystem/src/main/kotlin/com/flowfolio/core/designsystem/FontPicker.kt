@@ -68,8 +68,8 @@ fun FlowFolioFontPicker(
                 Modifier
                     .size(FONT_CARD_WIDTH, FONT_CARD_HEIGHT)
                     .clip(shape)
-                    .background(if (on) p.selected else Color.Transparent)
-                    .border(if (on) 2.dp else 1.dp, if (on) p.ink else p.ink2.copy(alpha = OUTLINE_ALPHA), shape)
+                    // ADR-0052 (`.fontrow button.on`): the chosen card is outlined in the accent.
+                    .border(if (on) 2.dp else 1.dp, if (on) p.accent else p.line, shape)
                     .selectable(on, role = Role.RadioButton) { onSelect(font) }
                     .padding(horizontal = 6.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -110,4 +110,3 @@ private val FONT_CARD_WIDTH = 92.dp
 private val FONT_CARD_HEIGHT = 86.dp
 private val SAMPLE_HEIGHT = 46.dp
 private val SAMPLE_BASELINE = 34.dp
-private const val OUTLINE_ALPHA = 0.35f

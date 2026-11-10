@@ -28,10 +28,13 @@ object RiffleLabels {
     @Composable
     fun header(book: BookGeometry, unit: Int): String {
         val pages = book.pagesOf(unit)
-        return if (pages.first == pages.last) {
-            stringResource(R.string.riffle_header_page, book.label(pages.first))
+        val first = book.label(pages.first)
+        val last = book.label(pages.last)
+        // Two screen pages of one printed page (a reflowed book) read "Page 12", not "Page 12–12".
+        return if (first == last) {
+            stringResource(R.string.riffle_header_page, first)
         } else {
-            stringResource(R.string.riffle_header_pages, book.label(pages.first), book.label(pages.last))
+            stringResource(R.string.riffle_header_pages, first, last)
         }
     }
 

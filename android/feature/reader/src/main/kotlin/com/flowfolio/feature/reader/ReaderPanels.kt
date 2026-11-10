@@ -13,32 +13,46 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioTabs
+import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.glass
+import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.voice.Voice
 import com.flowfolio.core.voice.VoicePackState
 
@@ -73,6 +87,8 @@ internal fun BoxScope.ReaderPanels(
     hits: List<SearchHit> = emptyList(),
     searchQuery: String = "",
     onSearchQuery: (String) -> Unit = {},
+    searchMatchCase: Boolean = false,
+    onSearchMatchCase: (Boolean) -> Unit = {},
     onSearchJump: (SearchHit) -> Unit = {},
     narrator: NarratorUi = NarratorUi(),
     onNarratorToggle: () -> Unit = {},
@@ -80,31 +96,41 @@ internal fun BoxScope.ReaderPanels(
     onNarratorContinuous: (Boolean) -> Unit = {},
     onNarratorVoice: (String) -> Unit = {}
 ) {
-    CenteredPanel(panel == Panel.CONTENTS, CONTENTS_WIDTH) {
-        ContentsList(navigation.outline, navigation.labels, s.anchorPage, jump) { onPanel(Panel.GO_TO) }
+    DockPanel(panel == Panel.CONTENTS, inner = LIST_PADDING) {
+        ContentsPanel(navigation, s.anchorPage, mark.all, jump) { onPanel(Panel.GO_TO) }
     }
-    CenteredPanel(panel == Panel.DICTIONARY, CONTENTS_WIDTH) {
+    DockPanel(panel == Panel.DICTIONARY) {
         // ADR-0052: Words, on History from the dock (a selection opens it on Define or Translate).
-        WordsPanel(null, WordsTab.HISTORY, navigation, jump, onClose = null, Modifier.padding(16.dp))
+        WordsPanel(null, WordsTab.HISTORY, navigation, jump, onClose = null)
     }
-    CenteredPanel(panel == Panel.ANNOTATIONS, CONTENTS_WIDTH) {
+    DockPanel(panel == Panel.ANNOTATIONS, inner = LIST_PADDING) {
         AnnotationList(mark.notes, navigation, jump)
     }
-    DropPanel(panel == Panel.GO_TO, GO_TO_WIDTH) {
+    DockPanel(panel == Panel.GO_TO, inner = LIST_PADDING) {
         GoToForm(navigation.labels, s.pageCount, jump, onDismiss)
     }
-    DropPanel(panel == Panel.MARK, RIBBONS_WIDTH) {
+    DockPanel(panel == Panel.MARK, inner = LIST_PADDING) {
         ColourStrip(mark) { chosen ->
             if (chosen == null) mark.onUnmark() else mark.onMark(chosen)
             onDismiss()
         }
         RibbonList(mark.all, navigation, jump)
     }
-    SheetPanel(panel == Panel.SETTINGS) { ReaderSettingsContent(s.reflowable, s.bookFont, flow, onFlow) }
-    CenteredPanel(panel == Panel.SEARCH, SEARCH_WIDTH) {
-        ReaderSearchPanel(searchQuery, hits, onSearchQuery, onSearchJump)
+    DockPanel(panel == Panel.SETTINGS) { ReaderSettingsContent(s.reflowable, s.bookFont, flow, onFlow) }
+    DockPanel(panel == Panel.SEARCH) {
+        ReaderSearchPanel(
+            searchQuery,
+            hits,
+            onSearchQuery,
+            onSearchJump,
+            navigation,
+            s.anchorPage,
+            searchMatchCase,
+            onSearchMatchCase,
+            onDismiss
+        )
     }
-    DropPanel(panel == Panel.NARRATOR, SEARCH_WIDTH) {
+    DockPanel(panel == Panel.NARRATOR) {
         ReaderNarratorPanel(
             narrator.narrating,
             narrator.rate,
@@ -132,109 +158,81 @@ internal data class NarratorUi(
     val error: String? = null
 )
 
-/**
- * A glass panel centered in the middle of the screen (for unfolded Contents and the Dictionary popup), keeping clear
- * of the top control buttons and bottom bar.
- */
+/** `.rpanel` Contents (ADR-0052): the book's contents, and its ribbons under a second tab. */
 @Composable
-private fun BoxScope.CenteredPanel(visible: Boolean, width: Dp, content: @Composable ColumnScope.() -> Unit) {
-    val maxHeight = LocalWindowInfo.current.containerDpSize.height * CENTERED_MAX_HEIGHT
-    AnimatedVisibility(
-        visible,
-        Modifier
-            .align(Alignment.Center)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(horizontal = PANEL_INSET, vertical = CENTERED_VERTICAL_CLEARANCE)
-            .imePadding(),
-        enter = fadeIn(tween(Motion.FAST_MS)) +
-            slideInVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { -it / DROP_FRACTION },
-        exit = fadeOut(tween(Motion.FAST_MS)) +
-            slideOutVertically(tween(Motion.FAST_MS, easing = Motion.EaseOut)) { -it / DROP_FRACTION }
-    ) {
-        Column(
-            Modifier
-                .widthIn(max = width)
-                .fillMaxWidth()
-                .heightIn(max = maxHeight)
-                .glass(PanelShape, tint = panelTint())
-                .padding(vertical = 4.dp),
-            content = content
+private fun ContentsPanel(
+    navigation: BookNavigation,
+    page: Int,
+    ribbonMarks: List<Bookmark>,
+    jump: (Int) -> Unit,
+    onGoTo: () -> Unit
+) {
+    // `.rpanel` Contents (ADR-0052): Contents and Ribbons as tabs, the ribbons with their count.
+    var ribbons by rememberSaveable { mutableStateOf(false) }
+    val tabs: @Composable () -> Unit = {
+        FlowFolioTabs(
+            listOf(stringResource(R.string.reader_contents), stringResource(R.string.reader_ribbons_tab)),
+            if (ribbons) 1 else 0,
+            { ribbons = it == 1 },
+            Modifier.padding(horizontal = 16.dp).padding(bottom = 4.dp),
+            counts = listOf(null, ribbonMarks.size)
         )
+    }
+    if (ribbons) {
+        ContentsHeaderless(tabs) { RibbonList(ribbonMarks, navigation, jump, heading = false) }
+    } else {
+        ContentsList(navigation.outline, navigation.labels, page, jump, onGoTo, tabs)
     }
 }
 
+/** The Ribbons tab under the Contents title, with the tabs above it. */
+@Composable
+private fun ContentsHeaderless(tabs: @Composable () -> Unit, content: @Composable () -> Unit) {
+    Text(
+        stringResource(R.string.reader_contents),
+        style = FlowFolioType.dialogTitle.copy(fontSize = 20.sp, color = FlowFolio.palette.ink),
+        modifier = Modifier.padding(start = 20.dp, top = 14.dp, bottom = 10.dp)
+    )
+    tabs()
+    content()
+}
+
 /**
- * A glass panel under the top bar, at the right (under the buttons that open it). [fillDown] stretches it to just above
- * the bottom bar; [width] caps it on wide screens (null: as wide as its content).
+ * Every reader panel (`.rpanel`, ADR-0052): a glass card as wide as the dock (560 dp unfolded, the width less a margin
+ * folded), [PANEL_GAP] above it, or above the keyboard while one is up, rising into place. [LocalDockSpace] says how
+ * tall the dock is, so the gap is the same for every panel, folded and unfolded (owner, 2026-11-10).
  */
 @Composable
-private fun BoxScope.DropPanel(
+private fun BoxScope.DockPanel(
     visible: Boolean,
-    width: Dp?,
-    fillDown: Boolean = false,
+    inner: Dp = PANEL_PADDING,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    // ADR-0052: panels open above the dock, rising into place, between the top bar and the dock.
+    val density = LocalDensity.current
+    val dock = LocalDockSpace.current.height
+    val ime = with(density) { WindowInsets.ime.getBottom(this).toDp() }
+    val status = with(density) { WindowInsets.statusBars.getTop(this).toDp() }
+    val bottom = if (ime > 0.dp) ime + PANEL_GAP else dock + PANEL_GAP
+    val room = LocalWindowInfo.current.containerDpSize.height - bottom - status - TOP_BAR_CLEARANCE
     AnimatedVisibility(
         visible,
         Modifier
             .align(Alignment.BottomCenter)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(start = PANEL_INSET, end = PANEL_INSET, top = TOP_BAR_CLEARANCE, bottom = DOCK_CLEARANCE)
-            .imePadding(),
+            .padding(start = PANEL_INSET, end = PANEL_INSET, bottom = bottom),
         enter = fadeIn(tween(Motion.FAST_MS)) +
             slideInVertically(tween(Motion.RISE_MS, easing = Motion.Rise)) { it / DROP_FRACTION },
         exit = fadeOut(tween(Motion.FAST_MS)) +
             slideOutVertically(tween(Motion.FAST_MS, easing = Motion.EmphasizedExit)) { it / DROP_FRACTION }
     ) {
-        val sized = if (width != null) Modifier.widthIn(max = width).fillMaxWidth() else Modifier
-        Column(
-            sized
-                .then(if (fillDown) Modifier.fillMaxHeight() else Modifier)
-                .glass(PanelShape, tint = panelTint())
-                .padding(vertical = 4.dp),
-            content = content
-        )
-    }
-}
-
-/** The mock's `.sheet`: glass rising from the bottom (600 ms, ease-out) with a grab handle. */
-@Composable
-private fun BoxScope.SheetPanel(visible: Boolean, content: @Composable ColumnScope.() -> Unit) {
-    AnimatedVisibility(
-        visible,
-        Modifier
-            .align(Alignment.BottomCenter)
-            .navigationBarsPadding()
-            .padding(start = SHEET_INSET, end = SHEET_INSET, bottom = SHEET_INSET),
-        enter = slideInVertically(tween(SHEET_MS, easing = Motion.EaseOut)) { it * 2 },
-        exit = slideOutVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { it * 2 }
-    ) {
-        // [SHEET_MAX_HEIGHT] of the window, so the page stays in view above it (owner, 2026-10-21); the content
-        // scrolls inside if it must.
-        val maxHeight = LocalWindowInfo.current.containerDpSize.height * SHEET_MAX_HEIGHT
         Column(
             Modifier
-                .widthIn(max = SHEET_WIDTH)
+                .widthIn(max = READER_DOCK_WIDTH)
                 .fillMaxWidth()
-                // One height for every tab, so switching tabs doesn't move the sheet under the finger.
-                .height(maxHeight)
-                .glass(RoundedCornerShape(28.dp), tint = panelTint())
-                .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 16.dp)
-        ) {
-            // `.grab`
-            Box(
-                Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(bottom = 8.dp)
-                    .size(40.dp, 5.dp)
-                    .clip(RoundedCornerShape(50))
-                    .background(FlowFolio.palette.ink2.copy(alpha = GRAB_ALPHA))
-            )
-            content()
-        }
+                .heightIn(max = room.coerceAtLeast(MIN_PANEL))
+                .glass(PanelShape, tint = panelTint())
+                .padding(inner),
+            content = content
+        )
     }
 }
 
@@ -251,24 +249,14 @@ private fun panelTint(): Color {
 
 private const val DARK_PANEL_ALPHA = 0.88f
 private const val LIGHT_PANEL_ALPHA = 0.6f
-private val PanelShape = RoundedCornerShape(26.dp)
-private val PANEL_INSET = 14.dp
+private val PanelShape = RoundedCornerShape(24.dp)
+private val PANEL_GAP = 10.dp
+private val PANEL_PADDING = 18.dp
+private val LIST_PADDING = 4.dp
+private val MIN_PANEL = 160.dp
+private val PANEL_INSET = 10.dp
 
 /** The top bar is 8 + 56 + 8 dp unfolded, and 2 rows folded; panels start clearly below it. */
 private val TOP_BAR_CLEARANCE = 78.dp
 
-/** The dock and the riffle bar under it, which a panel keeps clear of. */
-private val DOCK_CLEARANCE = 168.dp
-private val CENTERED_VERTICAL_CLEARANCE = 84.dp
-private const val CENTERED_MAX_HEIGHT = 0.72f
-
-private val CONTENTS_WIDTH = 520.dp
-private val GO_TO_WIDTH = 420.dp
-private val SEARCH_WIDTH = 420.dp
-private val RIBBONS_WIDTH = 380.dp
-private val SHEET_WIDTH = 600.dp
-private const val SHEET_MAX_HEIGHT = 0.46f
-private val SHEET_INSET = 10.dp
-private const val SHEET_MS = 600
 private const val DROP_FRACTION = 8
-private const val GRAB_ALPHA = 0.4f

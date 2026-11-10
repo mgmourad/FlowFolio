@@ -8,6 +8,9 @@ import com.flowfolio.core.data.ReadingRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -26,6 +29,10 @@ class ReadingTimeViewModel @Inject constructor(
     private val tracker = SessionTracker { start, end ->
         viewModelScope.launch { withContext(NonCancellable) { reading.record(bookId, start, end) } }
     }
+
+    /** Time read in this book so far, for the title pill's time left (ADR-0052). */
+    val readMillis: StateFlow<Long> =
+        reading.observeReadMillis(bookId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), 0L)
 
     /** The reader came to the front. */
     fun onResume() = tracker.resume(clock.now())
@@ -78,3 +85,5 @@ class SessionTracker(private val save: (Long, Long) -> Unit) {
         const val MIN_SESSION_MS = 10_000L
     }
 }
+
+private const val STOP_MS = 5_000L

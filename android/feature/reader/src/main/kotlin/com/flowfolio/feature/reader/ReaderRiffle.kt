@@ -147,7 +147,7 @@ internal fun RiffleBar(
             .navigationBarsPadding()
             .padding(horizontal = 12.dp)
             .padding(bottom = 8.dp)
-            .widthIn(max = DOCK_MAX)
+            .widthIn(max = READER_DOCK_WIDTH)
             .fillMaxWidth()
     ) {
         Box(Modifier.matchParentSize().glass(RoundedCornerShape(26.dp)))
@@ -283,6 +283,3 @@ private fun flagColor(color: BookmarkColor): Color =
 
 private const val LOUPE_PAGE_HEIGHT = 162
 private const val LIGHTER = 0.45f
-
-/** The dock's width at most: the mock's 560 dp, a little wider for the strip's sake. */
-private val DOCK_MAX = 680.dp

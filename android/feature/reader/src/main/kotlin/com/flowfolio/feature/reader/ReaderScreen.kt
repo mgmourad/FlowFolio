@@ -94,7 +94,9 @@ fun ReaderScreen(
 
     val tone = (state as? ReaderState.Ready)?.tone ?: PageTone.PRINTED
     val marks = placedRibbons(viewModel, bookmarks)
+    val readMillis by readingTime.readMillis.collectAsStateWithLifecycle()
     CompositionLocalProvider(
+        LocalReadMillis provides readMillis,
         LocalTone provides tone,
         LocalRibbons provides marks.associate { it.page to it.color },
         LocalRightToLeft provides rightToLeft

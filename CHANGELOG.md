@@ -24,6 +24,42 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Settings → Text holds the defaults, and says so.
 
 ### Changed
+- **The reader's panels, held to the mock** (owner, 2026-11-10, second round). Checked on `fold8_api37` unfolded
+  except where noted; CI has not run.
+  - **One placement for every panel** (`DockPanel`): a glass card as wide as the dock, 560 dp unfolded, a fixed
+    10 dp above it, or above the keyboard while one is up. The chrome reports the dock's height (`DockSpace`), so
+    the gap is the same for every panel.
+    - The dock, riffle included, now stays under an open panel. Opening a panel used to dismiss the riffle bar.
+  - **Search** matches the mock:
+    - "Search in this book" with "Esc to close" (the Esc key closes it).
+    - An accent-bordered field with the number of matches inside it.
+    - **Whole book**, **This chapter** and **Match case**. This chapter and Match case are new.
+    - Results grouped under the chapter name with a count, each a page number and a line with the match on the
+      accent.
+    - The ⌃/⌄ stepping, which the mock does not have, is gone; tapping a result jumps there as before.
+  - **Aa** is restyled to the mock: tabs **Text · Page · Behaviour** ("Controls" renamed).
+    - The rows have the name on the left, the control on the right, and hairlines between them.
+    - **Text:** the "Ag" font cards (the chosen one outlined in the accent), Size with round A buttons, and Line
+      spacing and Margins as worded segments. Justify and Hyphenate are switches.
+    - **Page:** round "Aa" paper swatches (Auto split light and dark), Atmosphere with its value and ›, Page turn,
+      Direction, then Two pages side by side and Cover on its own as switches.
+    - **Behaviour:** Hide controls after; Page-turn sound and Riffle sound, each a switch with its loudness under
+      it; Brightness; Riffle haptics; Keep screen on.
+    - For a PDF, Dynamic Flow is now the mock's **View** row (Dynamic Flow | Original PDF) at the top of the first
+      tab, with its status and health. It replaces the card above the tabs; switching still offers to bring
+      highlights across.
+  - **Contents** gains the mock's **Contents | Ribbons** tabs, with the ribbon count, and the current chapter is
+    in the accent.
+  - **The title pill** shows the time left ("23 h left"). It uses your own pace on this book once there are 10
+    minutes over 10 pages, else the mock's 1.1 minutes a page, kept between 15 s and 5 min a page
+    (`ReadingEstimate`, tested).
+  - **The riffle header** no longer says "Page 12–12" when both screen pages are the same printed page.
+  - **The first-book guide:** "Got it" and "Never show tips again" sit side by side in the clear band between the
+    menus zone and the riffle zone, inside the side zones.
+    - Folded, the second button reads "Never show again", and the zone labels stay on one line.
+    - Checked folded and unfolded.
+  - Not checked on a device: Search on the folded screen. The emulator's taps kept landing on the page.
+
 - **The owner's fixes after the overhaul** (2026-11-10). Checked on `fold8_api37` unless noted; CI has not run.
   - **Details now follows the mock's layout.**
     - No blurred backdrop, and no shadow under the book.

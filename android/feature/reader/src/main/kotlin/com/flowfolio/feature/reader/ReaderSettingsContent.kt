@@ -9,19 +9,24 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
@@ -41,6 +46,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,9 +55,12 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioChip
+import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioSlider
+import com.flowfolio.core.designsystem.FlowFolioTabs
+import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Motion
@@ -82,15 +92,14 @@ internal fun ColumnScope.ReaderSettingsContent(
         add(SheetTab(stringResource(R.string.reader_tab_controls), Glyph.Sliders, ReaderTestTags.TAB_CONTROLS))
     }
     var selected by rememberSaveable(reflowable) { mutableIntStateOf(0) }
-    // A PDF's Dynamic Flow (ADR-0045) heads the sheet: it changes the whole book, not one tab's setting.
-    if (flow != null && flow.available && onFlow != null) {
-        Box(Modifier.padding(bottom = 12.dp)) {
-            DynamicFlowCard(flow, settings.flowCarry, FlowActions(onFlow, viewModel::setFlowCarry, viewModel::hasNotes))
-        }
-    }
-    Column(Modifier.testTag(ReaderTestTags.SETTINGS_SHEET)) {
-        SheetTabs(tabs, selected.coerceIn(0, tabs.lastIndex)) { selected = it }
-    }
+    val flowRow = flow?.takeIf { it.available }
+    // `.tabs` (ADR-0052): Text, Page and Behaviour, underlined in the accent.
+    FlowFolioTabs(
+        tabs.map { it.label },
+        selected.coerceIn(0, tabs.lastIndex),
+        { selected = it },
+        Modifier.testTag(ReaderTestTags.SETTINGS_SHEET)
+    )
     // The tabs slide over each other: the next tab comes in from the side it lies on.
     AnimatedContent(
         selected.coerceIn(0, tabs.lastIndex),
@@ -108,8 +117,17 @@ internal fun ColumnScope.ReaderSettingsContent(
         Column(
             Modifier
                 .verticalScroll(rememberScrollState())
-                .padding(top = 12.dp, start = 4.dp, end = 4.dp)
+                .padding(top = 8.dp)
         ) {
+            // A PDF's Dynamic Flow (ADR-0045) heads the first tab as the mock's "View" row: it changes the whole book.
+            val switchView = onFlow
+            if (index == 0 && flowRow != null && switchView != null) {
+                DynamicFlowRow(
+                    flowRow,
+                    settings.flowCarry,
+                    FlowActions(switchView, viewModel::setFlowCarry, viewModel::hasNotes)
+                )
+            }
             when (tabs[index].tag) {
                 ReaderTestTags.TAB_TEXT -> {
                     BookTextScope(viewModel)
@@ -124,16 +142,17 @@ internal fun ColumnScope.ReaderSettingsContent(
     }
 }
 
-/** The paper, how pages turn, which way they run, and the spread layout. */
+/** Page (`ptab === 'page'`): the paper, the atmosphere, how pages turn, which way they run, and the spreads. */
 @Composable
 private fun PageChoice(settings: UserSettings, viewModel: ReaderSettingsViewModel) {
     val reveal = LocalPaperReveal.current
-    LabeledRow(stringResource(R.string.reader_paper), Glyph.Paper) {}
-    PaperSwatches(settings.paperStyle) { style ->
-        if (reveal != null) reveal.change(style, viewModel::setPaperStyle) else viewModel.setPaperStyle(style)
+    StackedOpt(stringResource(R.string.reader_paper)) {
+        PaperSwatches(settings.paperStyle) { style ->
+            if (reveal != null) reveal.change(style, viewModel::setPaperStyle) else viewModel.setPaperStyle(style)
+        }
     }
     AtmosphereRow(settings, viewModel::chooseAtmosphere)
-    LabeledRow(stringResource(R.string.reader_turn), Glyph.PageTurn) {
+    OptRow(stringResource(R.string.reader_turn)) {
         FlowFolioSegmented(
             listOf(
                 stringResource(R.string.reader_turn_curl),
@@ -147,31 +166,28 @@ private fun PageChoice(settings: UserSettings, viewModel: ReaderSettingsViewMode
     }
     DirectionChoice(viewModel)
     val scroll = settings.pageTurn == PageTurn.SCROLL
-    Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ToggleChip(
-            stringResource(R.string.reader_chip_spreads),
-            settings.readerSpreads,
-            ReaderTestTags.SETTING_SPREADS,
-            enabled = !scroll,
-            glyph = Glyph.Spread,
-            onChange = viewModel::setSpreads
-        )
-        ToggleChip(
-            stringResource(R.string.reader_chip_cover),
-            settings.spreadCoverAlone,
-            ReaderTestTags.SETTING_COVER,
-            enabled = settings.readerSpreads && !scroll,
-            glyph = Glyph.Cover,
-            onChange = viewModel::setCoverAlone
-        )
-    }
+    SwitchRow(
+        stringResource(R.string.reader_two_pages),
+        settings.readerSpreads,
+        ReaderTestTags.SETTING_SPREADS,
+        enabled = !scroll,
+        onChange = viewModel::setSpreads
+    )
+    SwitchRow(
+        stringResource(R.string.reader_cover_alone),
+        settings.spreadCoverAlone,
+        ReaderTestTags.SETTING_COVER,
+        enabled = settings.readerSpreads && !scroll,
+        divider = false,
+        onChange = viewModel::setCoverAlone
+    )
 }
 
 /** Which way this book's pages run (a per-book choice): right to left for Arabic, Hebrew and similar books. */
 @Composable
 private fun DirectionChoice(viewModel: ReaderSettingsViewModel) {
     val rightToLeft by viewModel.rightToLeft.collectAsStateWithLifecycle()
-    LabeledRow(stringResource(R.string.reader_direction), Glyph.Direction) {
+    OptRow(stringResource(R.string.reader_direction)) {
         FlowFolioSegmented(
             listOf(
                 stringResource(R.string.reader_direction_ltr_short),
@@ -184,15 +200,16 @@ private fun DirectionChoice(viewModel: ReaderSettingsViewModel) {
     }
 }
 
-/** When the controls hide, the two paper sounds with their loudness, and riffle haptics. */
+/** Behaviour: when the controls hide, the two paper sounds with their loudness, brightness, haptics, the screen. */
+@Suppress("LongMethod") // one row per setting
 @Composable
 private fun ControlsChoice(settings: UserSettings, viewModel: ReaderSettingsViewModel) {
-    LabeledRow(stringResource(R.string.reader_auto_hide), Glyph.AutoHide) {
+    StackedOpt(stringResource(R.string.reader_auto_hide)) {
         FlowFolioSegmented(
             ControlsAutoHide.entries.map { stringResource(it.label) },
             ControlsAutoHide.entries.indexOf(settings.controlsAutoHide),
             { viewModel.setControlsAutoHide(ControlsAutoHide.entries[it]) },
-            modifier = Modifier.testTag(ReaderTestTags.SETTING_AUTO_HIDE)
+            modifier = Modifier.fillMaxWidth().testTag(ReaderTestTags.SETTING_AUTO_HIDE)
         )
     }
     val sounds = LocalReaderSounds.current
@@ -202,7 +219,6 @@ private fun ControlsChoice(settings: UserSettings, viewModel: ReaderSettingsView
         settings.turnVolume,
         ReaderTestTags.SETTING_TURN_SOUND to ReaderTestTags.SETTING_TURN_VOLUME,
         stringResource(R.string.reader_turn_volume),
-        Glyph.Sound,
         onToggle = viewModel::setTurnSound
     ) {
         viewModel.setTurnVolume(it)
@@ -215,7 +231,6 @@ private fun ControlsChoice(settings: UserSettings, viewModel: ReaderSettingsView
         settings.riffleVolume,
         ReaderTestTags.SETTING_RIFFLE_SOUND to ReaderTestTags.SETTING_RIFFLE_VOLUME,
         stringResource(R.string.reader_riffle_volume),
-        Glyph.Riffle,
         onToggle = viewModel::setRiffleSound
     ) {
         viewModel.setRiffleVolume(it)
@@ -223,22 +238,19 @@ private fun ControlsChoice(settings: UserSettings, viewModel: ReaderSettingsView
         sounds?.previewRiffle()
     }
     BrightnessRow(settings, viewModel)
-    Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ToggleChip(
-            stringResource(R.string.reader_chip_haptics),
-            settings.scrubHaptics,
-            ReaderTestTags.SETTING_HAPTICS,
-            glyph = Glyph.Haptics,
-            onChange = viewModel::setScrubHaptics
-        )
-        ToggleChip(
-            stringResource(R.string.reader_chip_keep_screen_on),
-            settings.keepScreenOn,
-            ReaderTestTags.SETTING_KEEP_SCREEN_ON,
-            glyph = Glyph.KeepScreenOn,
-            onChange = viewModel::setKeepScreenOn
-        )
-    }
+    SwitchRow(
+        stringResource(R.string.reader_chip_haptics),
+        settings.scrubHaptics,
+        ReaderTestTags.SETTING_HAPTICS,
+        onChange = viewModel::setScrubHaptics
+    )
+    SwitchRow(
+        stringResource(R.string.reader_chip_keep_screen_on),
+        settings.keepScreenOn,
+        ReaderTestTags.SETTING_KEEP_SCREEN_ON,
+        divider = false,
+        onChange = viewModel::setKeepScreenOn
+    )
 }
 
 @Composable
@@ -251,7 +263,6 @@ private fun BrightnessRow(settings: UserSettings, viewModel: ReaderSettingsViewM
         volume = brightnessValue,
         tags = ReaderTestTags.SETTING_BRIGHTNESS to ReaderTestTags.SETTING_BRIGHTNESS_SLIDER,
         volumeLabel = stringResource(R.string.reader_brightness_slider),
-        glyph = Glyph.Brightness,
         sliderAlwaysEnabled = true,
         onToggle = { viewModel.setReaderBrightness(if (brightnessOn) -1f else DEFAULT_SLIDER_BRIGHTNESS) }
     ) {
@@ -260,11 +271,10 @@ private fun BrightnessRow(settings: UserSettings, viewModel: ReaderSettingsViewM
 }
 
 /**
- * A sound on one line: its switch as a chip, then its loudness. Letting go of the slider plays the sound at the new
- * loudness (ADR-0026).
+ * `.opt.col` with a switch: the sound's name and switch on one line, its loudness under it while it is on. Letting go
+ * of the slider plays the sound at the new loudness (ADR-0026).
  */
-// A sound's switch, its loudness and their names: one row's parts.
-@Suppress("LongParameterList")
+@Suppress("LongParameterList") // a sound's switch, its loudness and their names: one row's parts
 @Composable
 private fun SoundRow(
     label: String,
@@ -272,20 +282,30 @@ private fun SoundRow(
     volume: Float,
     tags: Pair<String, String>,
     volumeLabel: String,
-    glyph: Glyph,
     sliderAlwaysEnabled: Boolean = false,
     onToggle: (Boolean) -> Unit,
     onVolume: (Float) -> Unit
 ) {
-    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        ToggleChip(label, on, tags.first, Modifier.width(SOUND_CHIP), glyph = glyph, onChange = onToggle)
-        FlowFolioSlider(
-            volume,
-            onValueChangeFinished = onVolume,
-            label = volumeLabel,
-            enabled = on || sliderAlwaysEnabled,
-            modifier = Modifier.weight(1f).padding(start = 12.dp).testTag(tags.second)
-        )
+    val p = FlowFolio.palette
+    Column(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                label,
+                style = FlowFolioType.body.copy(fontSize = 15.sp, color = p.ink),
+                modifier = Modifier.weight(1f)
+            )
+            FlowFolioToggle(on, onToggle, Modifier.testTag(tags.first))
+        }
+        if (on || sliderAlwaysEnabled) {
+            FlowFolioSlider(
+                volume,
+                onValueChangeFinished = onVolume,
+                label = volumeLabel,
+                enabled = on || sliderAlwaysEnabled,
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp).testTag(tags.second)
+            )
+        }
+        Box(Modifier.padding(top = 10.dp).fillMaxWidth().height(1.dp).background(p.line))
     }
 }
 
@@ -304,8 +324,8 @@ private val ControlsAutoHide.label: Int
 private fun PaperSwatches(selected: PaperStyle, onSelect: (PaperStyle) -> Unit) {
     val p = FlowFolio.palette
     Row(
-        Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag(ReaderTestTags.PAPER_SWATCHES),
-        horizontalArrangement = Arrangement.SpaceBetween
+        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).testTag(ReaderTestTags.PAPER_SWATCHES),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         PaperStyle.entries.forEach { style ->
             val (paper, ink, label) = when (style) {
@@ -323,36 +343,49 @@ private fun PaperSwatches(selected: PaperStyle, onSelect: (PaperStyle) -> Unit) 
 
 @Composable
 private fun Swatch(style: PaperStyle, label: String, paper: Color, ink: Color, on: Boolean, onClick: () -> Unit) {
-    val scale by animateFloatAsState(if (on) SELECTED_SCALE else 1f, tween(Motion.SPRING_MS, easing = Motion.Spring))
-    val ring = FlowFolio.palette.ink
-    val edge = FlowFolio.palette.edge
-    // The swatch and its caption are one target.
-    Column(
-        Modifier.selectable(on, role = Role.RadioButton, onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            Modifier
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
+    val p = FlowFolio.palette
+    val name = stringResource(style.label)
+    // `.papers button`: a 56 dp circle of the paper with "Aa" in its ink; Auto is split light and dark.
+    Box(
+        Modifier
+            .size(SWATCH + 8.dp)
+            .border(if (on) 2.5.dp else 0.dp, if (on) p.accent else Color.Transparent, CircleShape)
+            .padding(4.dp)
+            .clip(CircleShape)
+            .drawBehind {
+                if (style == PaperStyle.AUTO) {
+                    drawRect(AUTO_LIGHT)
+                    val half = androidx.compose.ui.graphics.Path().apply {
+                        moveTo(size.width, 0f)
+                        lineTo(size.width, size.height)
+                        lineTo(0f, size.height)
+                        close()
+                    }
+                    drawPath(half, AUTO_DARK)
+                } else {
+                    drawCircle(paper)
                 }
-                .size(SWATCH)
-                .clip(CircleShape)
-                .drawBehind { drawCircle(paper) }
-                .border(if (on) 2.5.dp else 1.dp, if (on) ring else edge, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            val face = FlowFolioType.heroTitle.fontFamily
-            Text(label, style = TextStyle(color = ink, fontSize = 15.sp, fontFamily = face))
-        }
+            }
+            .border(1.dp, p.line, CircleShape)
+            .selectable(on, role = Role.RadioButton, onClick = onClick)
+            .semantics { contentDescription = name },
+        contentAlignment = Alignment.Center
+    ) {
+        val face = FlowFolioType.heroTitle.fontFamily
         Text(
-            stringResource(style.label),
-            style = FlowFolioType.pill.merge(if (on) FlowFolio.title else FlowFolio.hint),
-            modifier = Modifier.padding(top = 6.dp)
+            label,
+            style = TextStyle(
+                color = if (style == PaperStyle.AUTO) AUTO_INK else ink,
+                fontSize = 17.sp,
+                fontFamily = face
+            )
         )
     }
 }
+
+private val AUTO_LIGHT = Color(0xFFFBF7EF)
+private val AUTO_DARK = Color(0xFF1E1A16)
+private val AUTO_INK = Color(0xFF8A7A66)
 
 private val PaperStyle.label: Int
     get() = when (this) {
@@ -364,9 +397,7 @@ private val PaperStyle.label: Int
         PaperStyle.RUSTIC -> R.string.reader_paper_rustic
     }
 
-private val SWATCH = 42.dp
-private val SOUND_CHIP = 132.dp
-private const val SELECTED_SCALE = 1.1f
+private val SWATCH = 48.dp
 private const val DEFAULT_SLIDER_BRIGHTNESS = 0.75f
 private const val MIN_BRIGHTNESS = 0.05f
 
@@ -380,14 +411,30 @@ private const val MIN_BRIGHTNESS = 0.05f
 private fun AtmosphereRow(settings: UserSettings, onChoose: (String?) -> Unit) {
     var open by remember { mutableStateOf(false) }
     val chosen = settings.atmosphereInForce()
-    LabeledRow(stringResource(R.string.reader_atmosphere), Glyph.Sound) {
+    OptRow(stringResource(R.string.reader_atmosphere), stringResource(R.string.reader_atmosphere_sub)) {
         Box {
-            FlowFolioChip(
-                text = chosen?.name ?: stringResource(R.string.reader_atmosphere_none),
-                selected = chosen != null,
-                onClick = { open = true },
-                modifier = Modifier.testTag(ReaderTestTags.ATMOSPHERE)
-            )
+            Row(
+                Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable { open = true }
+                    .padding(horizontal = 6.dp, vertical = 6.dp)
+                    .testTag(ReaderTestTags.ATMOSPHERE),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    chosen?.name ?: stringResource(R.string.reader_atmosphere_none),
+                    style = FlowFolioType.body.copy(fontSize = 15.sp, color = FlowFolio.palette.ink2)
+                )
+                FlowFolioGlyph(
+                    Glyph.Back,
+                    null,
+                    color = FlowFolio.palette.ink3,
+                    size = 16.dp,
+                    glow = false,
+                    modifier = Modifier.graphicsLayer { rotationZ = 180f }
+                )
+            }
             FlowFolioMenu(expanded = open, onDismissRequest = { open = false }) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.reader_atmosphere_none), style = FlowFolio.item) },

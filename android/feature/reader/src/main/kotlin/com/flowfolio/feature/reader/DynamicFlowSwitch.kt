@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import com.flowfolio.core.designsystem.DynamicFlowPrompt
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGlyph
+import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
@@ -58,6 +59,26 @@ import com.flowfolio.core.model.HealthGrade
 internal fun DynamicFlowCard(flow: FlowState, carry: FlowCarry, actions: FlowActions) {
     var switching by remember { mutableStateOf<Boolean?>(null) }
     FlowCard(flow) { switching = it }
+    DynamicFlowPrompt(switching, carry, actions.hasNotes, actions.onSwitch, actions.onRemember) { switching = null }
+}
+
+/**
+ * The mock's "View" row in Aa (ADR-0052; owner, 2026-11-10): Dynamic Flow or the original PDF as two segments, with
+ * what Dynamic Flow is doing (and how well the book converted) under the name. Switching asks first, as the card did,
+ * whether to bring this view's highlights, notes and ribbons into the other one.
+ */
+@Composable
+internal fun DynamicFlowRow(flow: FlowState, carry: FlowCarry, actions: FlowActions) {
+    var switching by remember { mutableStateOf<Boolean?>(null) }
+    val sub = listOfNotNull(statusLine(flow), flow.health?.let { healthLine(it) }).joinToString(" · ")
+    OptRow(stringResource(R.string.reader_view), sub) {
+        FlowFolioSegmented(
+            listOf(stringResource(R.string.flow_title), stringResource(R.string.reader_view_pdf)),
+            if (flow.wanted) 0 else 1,
+            { switching = it == 0 },
+            modifier = Modifier.testTag(ReaderTestTags.FLOW_SWITCH)
+        )
+    }
     DynamicFlowPrompt(switching, carry, actions.hasNotes, actions.onSwitch, actions.onRemember) { switching = null }
 }
 

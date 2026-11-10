@@ -23,11 +23,11 @@
     <string name="reader_relayout">Setting the pages</string>
     <string name="reader_tab_text">Text</string>
     <string name="reader_tab_page">Page</string>
-    <string name="reader_tab_controls">Controls</string>
+    <string name="reader_tab_controls">Behaviour</string>
     <string name="reader_chip_spreads">Two pages side by side</string>
     <string name="reader_chip_cover">Cover on its own</string>
-    <string name="reader_chip_turn_sound">Page turns</string>
-    <string name="reader_chip_riffle_sound">Riffle</string>
+    <string name="reader_chip_turn_sound">Page-turn sound</string>
+    <string name="reader_chip_riffle_sound">Riffle sound</string>
     <string name="reader_chip_haptics">Riffle haptics</string>
     <string name="reader_direction_ltr_short">Left → right</string>
     <string name="reader_direction_rtl_short">Right → left</string>
@@ -87,7 +87,7 @@
     <string name="reader_bookmark">Bookmark this page</string>
     <string name="reader_bookmarked">Bookmarked: change or remove</string>
     <string name="reader_bookmark_remove">Remove bookmark</string>
-    <string name="reader_paper">Page</string>
+    <string name="reader_paper">Paper</string>
     <string name="reader_paper_auto">Auto</string>
     <string name="reader_paper_paper">Paper</string>
     <string name="reader_paper_sepia">Sepia</string>
@@ -100,7 +100,7 @@
     <string name="reader_turn_scroll">Scroll</string>
     <string name="reader_layout">Layout</string>
     <string name="reader_ribbons_in_book">Ribbons in this book</string>
-    <string name="reader_direction">Reading direction</string>
+    <string name="reader_direction">Direction</string>
     <string name="reader_direction_ltr">Left to right</string>
     <string name="reader_direction_rtl">Right to left</string>
     <string name="reader_controls">Controls</string>
@@ -259,14 +259,26 @@
     <string name="reader_coach_page_body">Tap the edges to turn, the middle to hide these controls, and press and hold any sentence to highlight, define or translate it.</string>
     <string name="reader_flow_preparing">Preparing</string>
     <string name="reader_flow_preparing_percent">Preparing · %1$d%%</string>
-    <plurals name="reader_pages_left">
-        <item quantity="one">%1$d page left</item>
-        <item quantity="other">%1$d pages left</item>
-    </plurals>
     <string name="reader_words_offline">On your phone, no connection</string>
     <string name="reader_words_history">History</string>
     <string name="reader_words_history_note">Every word and passage from this book</string>
     <string name="reader_words_define_hint">Press and hold a word in the book, then choose Define. Its meanings come from Wiktionary and WordNet on your phone, and Wikipedia when you are online.</string>
     <string name="reader_words_translate_hint">Press and hold a passage in the book, then choose Translate. It is translated on your phone into the languages you keep here.</string>
     <string name="reader_words_saved">Saved to History</string>
+    <string name="reader_search_title">Search in this book</string>
+    <string name="reader_search_esc">Esc to close</string>
+    <string name="reader_search_whole">Whole book</string>
+    <string name="reader_search_chapter">This chapter</string>
+    <string name="reader_search_case">Match case</string>
+    <string name="reader_search_page_label">p. %1$s</string>
+    <string name="reader_two_pages">Two pages side by side</string>
+    <string name="reader_cover_alone">Cover on its own</string>
+    <string name="reader_atmosphere_sub">A sound that plays while you read</string>
+    <string name="reader_hours_left">%1$d h left</string>
+    <string name="reader_minutes_left">%1$d min left</string>
+    <string name="reader_view">View</string>
+    <string name="reader_view_pdf">Original PDF</string>
+    <string name="reader_ribbons_tab">Ribbons</string>
+    <string name="reader_ribbons_none">No ribbons in this book yet. Tap the ribbon at the top to mark a page.</string>
+    <string name="reader_demo_never_short">Never show again</string>
 </resources>

@@ -209,6 +209,11 @@ local.
     edge is monochrome via `BoardColors.ink`.
   - Words is one panel (`WordsPanel`: Define, Translate, History); `DefineOverlay` is gone.
   - The folded goal ring shows the reading glasses, then 🎉.
+- **Reader panels held to the mock, 2026-11-10 (second round).**
+  - Every panel is a `DockPanel`: the dock's width, 10 dp above it (`DockSpace`), with the riffle kept under it.
+  - Search has Whole book, This chapter and Match case.
+  - Aa is Text, Page and Behaviour in `OptRow`/`SwitchRow`s, with Dynamic Flow as the "View" row.
+  - Contents has a Ribbons tab, and the pill shows the time left (`ReadingEstimate`).
 - Handover APKs get a new name every build (`app/build/outputs/apk/debug/handover/`) and are installed on the owner's
   phone as well as the emulator.
 

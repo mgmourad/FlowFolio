@@ -5,7 +5,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,10 +25,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.flowfolio.core.designsystem.ButtonStyle
 import com.flowfolio.core.designsystem.FlowFolio
-import com.flowfolio.core.designsystem.FlowFolioGhostButton
+import com.flowfolio.core.designsystem.FlowFolioButton
 import com.flowfolio.core.designsystem.FlowFolioPalette
-import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
 import com.flowfolio.core.designsystem.FlowFolioType
 
 /** The guide id the reader remembers having shown (owner, 2026-11-07). */
@@ -37,9 +39,14 @@ internal const val READER_DEMO = "reader_demo"
  * menus, and the riffle bar. "Got it" dismisses; "Never show tips again" turns every first-use tip off.
  */
 @Composable
+@Suppress("LongMethod") // the scrim, the words, four zones and the two buttons
 internal fun BoxScope.ReaderDemo(onDone: () -> Unit, onNeverShow: () -> Unit) {
     FlowFolioPalette(dark = true) {
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = SCRIM))) {
+        BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black.copy(alpha = SCRIM))) {
+            // Narrower side zones on a folded screen, so the two buttons fit side by side between them.
+            val folded = maxWidth < WIDE
+            val side = if (folded) ZONE_FOLDED else ZONE
+            val centre = maxHeight * CENTRE_SHARE
             Column(
                 Modifier
                     .align(Alignment.TopCenter)
@@ -62,29 +69,38 @@ internal fun BoxScope.ReaderDemo(onDone: () -> Unit, onNeverShow: () -> Unit) {
             }
             Zone(
                 stringResource(R.string.reader_demo_back),
-                Modifier.align(Alignment.CenterStart).fillMaxHeight().width(ZONE)
+                Modifier.align(Alignment.CenterStart).fillMaxHeight().width(side)
             )
             Zone(
                 stringResource(R.string.reader_demo_forward),
-                Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(ZONE)
+                Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(side)
             )
             Zone(
                 stringResource(R.string.reader_demo_menus),
-                Modifier.align(Alignment.Center).fillMaxHeight(CENTRE_SHARE).fillMaxWidth(CENTRE_SHARE)
+                Modifier.align(Alignment.Center).height(centre).fillMaxWidth(CENTRE_SHARE)
             )
             Zone(
                 stringResource(R.string.reader_demo_riffle),
                 Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(RIFLE_ZONE)
             )
-            Column(
-                Modifier.align(
-                    Alignment.BottomCenter
-                ).padding(horizontal = 28.dp, vertical = 24.dp).widthIn(max = DEMO_TEXT_WIDTH),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+            // Owner, 2026-11-10: the two buttons on one line, in the clear band between the menus zone and the
+            // riffle zone and inside the side zones, so neither sits on a zone or its label.
+            val band = (maxHeight - centre) / 2 - RIFLE_ZONE
+            Row(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(start = side + 2.dp, end = side + 2.dp, bottom = RIFLE_ZONE + (band - BUTTONS) / 2),
+                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                FlowFolioPrimaryButton(text = stringResource(R.string.reader_demo_got_it), onClick = onDone)
-                FlowFolioGhostButton(text = stringResource(R.string.reader_demo_never), onClick = onNeverShow)
+                FlowFolioButton(stringResource(R.string.reader_demo_got_it), onDone, small = folded)
+                FlowFolioButton(
+                    // Folded, the owner's own words for it: "Never show again" fits beside "Got it".
+                    stringResource(if (folded) R.string.reader_demo_never_short else R.string.reader_demo_never),
+                    onNeverShow,
+                    style = ButtonStyle.GHOST,
+                    small = folded
+                )
             }
         }
     }
@@ -101,17 +117,23 @@ private fun BoxScope.Zone(label: String, modifier: Modifier) {
             .border(1.dp, p.ink.copy(alpha = ZONE_EDGE), ZONE_SHAPE),
         contentAlignment = Alignment.Center
     ) {
+        // One line at any width: a narrow folded side zone still reads "Forward", not "Forwa / rd".
         Text(
             label,
             style = FlowFolioType.rowLabel.merge(FlowFolio.title),
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(8.dp)
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.padding(2.dp)
         )
     }
 }
 
 private val ZONE_SHAPE = RoundedCornerShape(14.dp)
 private val ZONE = 88.dp
+private val ZONE_FOLDED = 64.dp
+private val WIDE = 600.dp
+private val BUTTONS = 42.dp
 private const val CENTRE_SHARE = 0.44f
 private val RIFLE_ZONE = 72.dp
 private val DEMO_TEXT_WIDTH = 440.dp

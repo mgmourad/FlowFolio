@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,8 +40,10 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGlyph
+import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 
@@ -132,12 +136,13 @@ private fun SettingName(label: String, glyph: Glyph?, modifier: Modifier = Modif
 @Composable
 internal fun SquareButton(label: String, tag: String, onClick: () -> Unit, content: @Composable () -> Unit) {
     val p = FlowFolio.palette
-    val shape = RoundedCornerShape(12.dp)
+    // `.stepper button`: round, on a hairline (ADR-0052).
+    val shape = CircleShape
     Box(
         Modifier
             .size(ICON_BOX)
             .clip(shape)
-            .border(1.dp, p.ink2.copy(alpha = OUTLINE_ALPHA), shape)
+            .border(1.dp, p.line, shape)
             .clickable(onClick = onClick)
             .semantics { contentDescription = label }
             .testTag(tag),
@@ -237,3 +242,64 @@ private val ICON_BOX = 40.dp
 private const val TRACK_ALPHA = 0.12f
 private const val OUTLINE_ALPHA = 0.35f
 private const val DISABLED_ALPHA = 0.4f
+
+/**
+ * `.opt` (ADR-0052): the setting's name on the left (with an optional line under it), its control on the right, and a
+ * hairline under the row. Where the control is too wide to sit beside the name, it drops under it.
+ */
+@Composable
+internal fun OptRow(
+    label: String,
+    sub: String? = null,
+    divider: Boolean = true,
+    modifier: Modifier = Modifier,
+    content: @Composable RowScope.() -> Unit
+) {
+    val p = FlowFolio.palette
+    Column(modifier.fillMaxWidth()) {
+        FlowRow(
+            Modifier.fillMaxWidth().heightIn(min = OPT_HEIGHT).padding(vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            itemVerticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.padding(end = 12.dp)) {
+                Text(label, style = FlowFolioType.body.copy(fontSize = 15.sp, color = p.ink))
+                sub?.let { Text(it, style = FlowFolioType.body.copy(fontSize = 12.5.sp, color = p.ink3)) }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, content = content)
+        }
+        if (divider) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+    }
+}
+
+/** `.opt` with a switch (`.sw`). [tag] is the switch's test tag. */
+@Composable
+internal fun SwitchRow(
+    label: String,
+    checked: Boolean,
+    tag: String,
+    enabled: Boolean = true,
+    sub: String? = null,
+    divider: Boolean = true,
+    onChange: (Boolean) -> Unit
+) {
+    OptRow(label, sub, divider, Modifier.alpha(if (enabled) 1f else DISABLED_ALPHA)) {
+        FlowFolioToggle(checked, if (enabled) onChange else null, Modifier.testTag(tag), enabled = enabled)
+    }
+}
+
+/** `.opt.col`: the name above, the control across the width under it. */
+@Composable
+internal fun StackedOpt(label: String, divider: Boolean = true, content: @Composable ColumnScope.() -> Unit) {
+    val p = FlowFolio.palette
+    Column(Modifier.fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(label, style = FlowFolioType.body.copy(fontSize = 15.sp, color = p.ink))
+            content()
+        }
+        if (divider) Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+    }
+}
+
+private val OPT_HEIGHT = 56.dp
