@@ -27,33 +27,35 @@ import dev.chrisbanes.haze.blur.hazeBlur
 /**
  * Soft, blurred fades at the top and bottom of the screen (owner, 2026-10-23), so content scrolling under the status
  * bar, the front camera and the navigation bar melts into the theme instead of running into them. Each fade blurs what
- * is behind the system bar and tints it with the background colour drawn at that edge (the surface at the top, the
- * deep background at the bottom), the tint fading out a little past the bar. The blur needs [LocalGlassState]; without
- * it the tint alone shows.
+ * is behind the system bar and tints it with the background colour (ADR-0052: the status-bar fade), the tint fading out
+ * a little past the bar. [bottom] is off where the screen's bottom edge is clear (the unfolded rail). The blur needs
+ * [LocalGlassState]; without it the tint alone shows.
  */
 @Composable
-fun BoxScope.EdgeFades(alpha: Float = 1f, topStrength: Float = 1f) {
+fun BoxScope.EdgeFades(alpha: Float = 1f, topStrength: Float = 1f, bottom: Boolean = true) {
     val density = LocalDensity.current
     val status = with(density) { WindowInsets.statusBars.getTop(this).toDp() }
     val navigation = with(density) { WindowInsets.navigationBars.getBottom(this).toDp() }
     val p = FlowFolio.palette
     val top = status + TOP_REACH
-    val bottom = navigation + BOTTOM_REACH
+    val bottomHeight = navigation + BOTTOM_REACH
     EdgeFade(
         Modifier.align(Alignment.TopCenter).alpha(alpha),
         top,
-        p.surface,
+        p.background,
         fromTop = true,
         hold = status / top,
         strength = topStrength
     )
-    EdgeFade(
-        Modifier.align(Alignment.BottomCenter).alpha(alpha),
-        bottom,
-        p.backgroundDeep,
-        fromTop = false,
-        hold = navigation / bottom
-    )
+    if (bottom) {
+        EdgeFade(
+            Modifier.align(Alignment.BottomCenter).alpha(alpha),
+            bottomHeight,
+            p.background,
+            fromTop = false,
+            hold = navigation / bottomHeight
+        )
+    }
 }
 
 /**

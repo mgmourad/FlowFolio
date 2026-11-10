@@ -34,6 +34,14 @@ class ShelfRowsTest {
     }
 
     @Test
+    fun favoritesChipKeepsOnlyStarredBooks() {
+        val starred = LibraryItem(book("s"), isFavorite = true)
+        assertTrue(LibraryFilter.FAVORITES.accepts(starred, now = 0))
+        assertFalse(LibraryFilter.FAVORITES.accepts(a, now = 0))
+        assertTrue(LibraryFilter.ALL.accepts(a, now = 0))
+    }
+
+    @Test
     fun filtersAndSearch() {
         val started = book("s").copy(lastPage = 3, title = "Optics", author = "Hecht")
         val fresh = book("f").copy(addedAtMillis = 1_000)

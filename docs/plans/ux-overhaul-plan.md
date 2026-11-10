@@ -97,6 +97,10 @@ the additions below.
 
 ### Phase 2: app shell and navigation
 
+> **Done 2026-11-09** (CHANGELOG, Unreleased). The rail is flat, as the mock draws it, not the floating glass rail of
+> ADR-0015. The Notebook's VoiceMarks stay inside "Highlights & notes" until Phase 5 gives them a chip. Verified on
+> `fold8_api37` folded and unfolded, light and dark. CI has not run.
+
 - `TopLevel` becomes Library, Shelves, Notebook, Settings. Glass tab bar folded; rail ≥ 600 dp with the app mark on
   top and Settings at the bottom.
 - **Redirects:** the `favorites`, `bookmarks`, `annotations`, `dictionary` routes and the per-book

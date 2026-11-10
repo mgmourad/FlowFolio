@@ -50,9 +50,9 @@ data class LibraryItem(
 
 /**
  * The library chips. [TEXTBOOKS] and [NOVELS] (the mock's chips) appear once a book has that type; [FOLDERS] shows the
- * imported folders instead of the shelves (owner, 2026-10-26).
+ * imported folders instead of the shelves (owner, 2026-10-26). [FAVORITES] replaced the Favorites tab (ADR-0052).
  */
-enum class LibraryFilter { ALL, IN_PROGRESS, NOT_STARTED, FINISHED, TEXTBOOKS, NOVELS, RECENT, FOLDERS }
+enum class LibraryFilter { ALL, IN_PROGRESS, NOT_STARTED, FINISHED, FAVORITES, TEXTBOOKS, NOVELS, RECENT, FOLDERS }
 
 /** What the reader picked to import: some files, or a whole folder with every folder inside it. */
 sealed interface ImportRequest {
@@ -130,13 +130,26 @@ internal fun Book.started(): Boolean = (lastPage ?: 0) > 0
 
 internal fun LibraryFilter.accepts(book: Book, now: Long): Boolean = when (this) {
     LibraryFilter.ALL -> true
+
     LibraryFilter.IN_PROGRESS -> book.started() && book.progress < 1f && !book.finished
+
     LibraryFilter.NOT_STARTED -> !book.started() && !book.finished
+
     LibraryFilter.FINISHED -> book.finished
+
     LibraryFilter.RECENT -> now - book.addedAtMillis <= RECENT_WINDOW_MS
+
     LibraryFilter.TEXTBOOKS, LibraryFilter.NOVELS -> book.details.type == type
+
     LibraryFilter.FOLDERS -> book.folder != null
+
+    // Starred books are known from the item, not the book ([accepts] with a [LibraryItem]).
+    LibraryFilter.FAVORITES -> false
 }
+
+/** Whether [item] passes this chip: the book's own state, or for [LibraryFilter.FAVORITES] its star. */
+internal fun LibraryFilter.accepts(item: LibraryItem, now: Long): Boolean =
+    if (this == LibraryFilter.FAVORITES) item.isFavorite else accepts(item.book, now)
 
 /** The book type a chip stands for, or null for the reading-state chips. */
 internal val LibraryFilter.type: BookType?
@@ -334,7 +347,7 @@ class LibraryViewModel @Inject constructor(
         ->
         val now = System.currentTimeMillis()
         LibraryUiState(
-            items = all.filter { v.filter.accepts(it.book, now) && it.book.matches(v.query) },
+            items = all.filter { v.filter.accepts(it, now) && it.book.matches(v.query) },
             loading = false,
             sort = s.librarySort,
             shelfSort = shelfSort,

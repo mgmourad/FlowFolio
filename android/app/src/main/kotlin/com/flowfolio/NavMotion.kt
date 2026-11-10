@@ -16,8 +16,9 @@ import com.flowfolio.core.designsystem.Motion
 
 /**
  * How screens change (ADR-0033), after Material 3's motion patterns:
- * - between the top-level tabs, **zoom through** (ADR-0034): the old tab recedes and fades quickly, the new one
- *   settles down from slightly larger as its elements fall into place ([com.flowfolio.core.designsystem.reveal]);
+ * - between the top-level tabs, **fade through** (ADR-0052, calmer than ADR-0034's zoom): the old tab fades and
+ *   recedes a touch, the new one fades in from 98% as its elements rise into place
+ *   ([com.flowfolio.core.designsystem.reveal]);
  * - into a page and back (a shelf, a book's bookmarks or annotations, edit details), **shared axis X**: the new page
  *   slides in from the side as the old one drifts back the other way, reversed on Back (and followed by the predictive
  *   back gesture);
@@ -29,7 +30,7 @@ import com.flowfolio.core.designsystem.Motion
 internal object NavMotion {
     private val tabRoutes = TopLevel.entries.map { it.route }.toSet()
 
-    private fun NavBackStackEntry.isTab() = destination.route in tabRoutes
+    private fun NavBackStackEntry.isTab() = destination.route?.substringBefore('?') in tabRoutes
 
     /** The details page and the reader animate their cover and book themselves. */
     private fun NavBackStackEntry.ownsMotion() =
@@ -112,11 +113,11 @@ internal object NavMotion {
     private val Emphasized = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
     private val Accelerate = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
 
-    private const val THROUGH_OUT_MS = 110
-    private const val THROUGH_IN_MS = 420
-    private const val THROUGH_SCALE = 1.05f
-    private const val OUT_SCALE = 0.96f
-    private const val AXIS_MS = 380
+    private const val THROUGH_OUT_MS = 90
+    private const val THROUGH_IN_MS = 300
+    private const val THROUGH_SCALE = 0.98f
+    private const val OUT_SCALE = 0.99f
+    private const val AXIS_MS = 360
     private const val AXIS_SHARE = 0.12f
     private const val AXIS_FADE_IN_MS = 260
     private const val AXIS_FADE_DELAY_MS = 60

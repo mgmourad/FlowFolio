@@ -631,4 +631,11 @@
     <string name="licenses_shipped">Also included</string>
     <string name="licenses_show">Show licence</string>
     <string name="licenses_hide">Hide licence</string>
+    <!-- The Notebook tab (ADR-0052): Bookmarks, Annotations and Dictionary in one place. -->
+    <string name="notebook_title">Notebook</string>
+    <string name="notebook_slogan">Everything you marked, book by book</string>
+    <string name="notebook_highlights">Highlights &amp; notes</string>
+    <string name="notebook_bookmarks">Bookmarks</string>
+    <string name="notebook_words">Words</string>
+    <string name="filter_favorites">Favorites</string>
 </resources>

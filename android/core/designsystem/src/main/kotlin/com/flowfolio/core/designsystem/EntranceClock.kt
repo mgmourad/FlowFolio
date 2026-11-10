@@ -56,26 +56,26 @@ fun ScreenEntrance(
 }
 
 /**
- * Falls into place as the screen appears (ADR-0034): starting [order] x 40 ms in, the element fades in and shrinks
- * from 112% to its size over 560 ms on Material's emphasized curve, so a screen's sections, rows and tiles arrive as a
- * wave. Elements composed after their turn (rows scrolled into view later) simply appear. Outside a [ScreenEntrance]
- * nothing moves.
+ * Rises into place as the screen appears (ADR-0034, calmed by ADR-0052): starting [order] x 30 ms in, the element fades
+ * in while rising the last 16 dp to its place over 420 ms on Material's emphasized curve, so a screen's sections, rows
+ * and tiles arrive as a gentle wave. Elements composed after their turn (rows scrolled into view later) simply appear.
+ * Outside a [ScreenEntrance], or with the system's animations removed, nothing moves.
  *
  * The fade has no offscreen buffer, which would clip glows and shadows to the element's bounds; the layer is dropped
  * once the element has landed, so a still screen pays nothing (ADR-0013).
  */
 fun Modifier.reveal(order: Int): Modifier = composed {
     val clock = LocalEntrance.current ?: return@composed this
+    if (LocalReducedMotion.current) return@composed this
     val start = order.coerceIn(0, MAX_ORDER) * STAGGER_MS
     val falling by remember(clock, start) { derivedStateOf { clock.ms.value < start + FALL_MS } }
     if (!falling) return@composed this
+    val rise = with(LocalDensity.current) { RISE.toPx() }
     graphicsLayer {
         val t = ((clock.ms.value - start) / FALL_MS).coerceIn(0f, 1f)
         val settle = Fall.transform(t)
         alpha = Fall.transform((t / FADE_SHARE).coerceAtMost(1f))
-        val scale = 1f + (FALL_SCALE - 1f) * (1f - settle)
-        scaleX = scale
-        scaleY = scale
+        translationY = rise * (1f - settle)
         compositingStrategy = CompositingStrategy.ModulateAlpha
     }
 }
@@ -88,6 +88,7 @@ fun Modifier.reveal(order: Int): Modifier = composed {
  */
 fun Modifier.cascade(order: Int): Modifier = composed {
     val clock = LocalEntrance.current ?: return@composed this
+    if (LocalReducedMotion.current) return@composed this
     val start = order.coerceIn(0, MAX_ORDER) * CASCADE_STAGGER_MS
     val falling by remember(clock, start) { derivedStateOf { clock.ms.value < start + CASCADE_MS } }
     if (!falling) return@composed this
@@ -104,10 +105,10 @@ fun Modifier.cascade(order: Int): Modifier = composed {
 /** Material 3's emphasized decelerate curve. */
 private val Fall = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
 
-private const val STAGGER_MS = 40f
-private const val FALL_MS = 560f
+private const val STAGGER_MS = 30f
+private const val FALL_MS = 420f
 private const val MAX_ORDER = 12
-private const val FALL_SCALE = 1.12f
+private val RISE = 16.dp
 private const val FADE_SHARE = 0.6f
 private const val WAVE_END_MS = MAX_ORDER * STAGGER_MS + FALL_MS
 private const val CASCADE_STAGGER_MS = 35f

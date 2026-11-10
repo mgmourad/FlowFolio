@@ -3,6 +3,8 @@ package com.flowfolio.feature.library
 /** Semantic tags used by UI tests to find library, shelves and details elements. */
 @Suppress("TooManyFunctions")
 object LibraryTestTags {
+    fun notebookSection(section: NotebookSection) = "notebook.section.${section.name.lowercase()}"
+
     fun searchGroup(group: SearchGroup) = "library.search.${group.name.lowercase()}"
 
     const val IMPORT_PROGRESS = "library_import_progress"

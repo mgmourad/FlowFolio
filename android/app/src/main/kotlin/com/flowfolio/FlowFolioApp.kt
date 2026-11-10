@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
@@ -51,9 +52,12 @@ import com.flowfolio.feature.library.DetailsViewModel
 import com.flowfolio.feature.library.DictionaryScreen
 import com.flowfolio.feature.library.DictionaryViewModel
 import com.flowfolio.feature.library.EditDetailsScreen
+import com.flowfolio.feature.library.LibraryFilter
 import com.flowfolio.feature.library.LibraryScreen
 import com.flowfolio.feature.library.LibraryViewModel
 import com.flowfolio.feature.library.LicensesScreen
+import com.flowfolio.feature.library.NotebookScreen
+import com.flowfolio.feature.library.NotebookSection
 import com.flowfolio.feature.library.SettingsScreen
 import com.flowfolio.feature.library.ShelfPageScreen
 import com.flowfolio.feature.library.ShelfPageViewModel
@@ -83,9 +87,16 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                     popEnterTransition = NavMotion.popEnter,
                     popExitTransition = NavMotion.popExit
                 ) {
-                    destination(TopLevel.Library.route) {
+                    destination(TopLevel.Library.route) { entry ->
                         val library: LibraryViewModel = hiltViewModel()
                         LaunchedEffect(library) { appViewModel.sharedFiles.collect(library::onFileShared) }
+                        // A chip asked for from elsewhere (the retired Favorites route): chosen once, then cleared.
+                        LaunchedEffect(entry) {
+                            entry.savedStateHandle.getStateFlow<String?>(LIBRARY_FILTER, null).collect { name ->
+                                LibraryFilter.entries.firstOrNull { it.name == name }?.let(library::onFilter)
+                                if (name != null) entry.savedStateHandle[LIBRARY_FILTER] = null
+                            }
+                        }
                         ScreenEntrance {
                             LibraryScreen(
                                 onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) },
@@ -105,22 +116,8 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                     destination(TopLevel.Shelves.route) {
                         ScreenEntrance { ShelvesScreen(onOpenShelf = { id -> nav.navigate(Routes.shelf(id)) }) }
                     }
-                    destination(TopLevel.Bookmarks.route) {
-                        ScreenEntrance {
-                            BookmarksScreen(
-                                onRead = { nav.navigate(Routes.reader(it.id)) },
-                                onOpenBook = { book -> nav.navigate(Routes.bookBookmarks(book.id)) }
-                            )
-                        }
-                    }
-                    destination(TopLevel.Annotations.route) {
-                        ScreenEntrance {
-                            AnnotationsScreen(onOpenBook = { book -> nav.navigate(Routes.bookAnnotations(book.id)) })
-                        }
-                    }
-                    destination(TopLevel.Dictionary.route) {
-                        ScreenEntrance { DictionaryScreen(onRead = { nav.navigate(Routes.reader(it.id)) }) }
-                    }
+                    notebookDestination(nav)
+                    retiredDestinations(nav)
                     destination(TopLevel.Settings.route) {
                         ScreenEntrance {
                             SettingsScreen(onOpenLicenses = {
@@ -144,10 +141,12 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
 }
 
 /** A top-level destination whose content can take part in shared-element transitions. */
-private fun NavGraphBuilder.destination(route: String, content: @Composable AnimatedContentScope.() -> Unit) =
-    composable(route) {
-        CompositionLocalProvider(LocalDestinationScope provides this) { content() }
-    }
+private fun NavGraphBuilder.destination(
+    route: String,
+    content: @Composable AnimatedContentScope.(NavBackStackEntry) -> Unit
+) = composable(route) { entry ->
+    CompositionLocalProvider(LocalDestinationScope provides this) { content(entry) }
+}
 
 /** A book's details; `from` names the library row it was opened from, for the cover flight. */
 private fun NavGraphBuilder.detailsDestination(nav: NavHostController) = composable(
@@ -242,8 +241,8 @@ private fun NavGraphBuilder.readerDestination(nav: NavHostController) = composab
  * Switches tabs: one copy of each top-level screen, and Back returns to Library. A tab opens on its own main page
  * (owner, M3T1): a shelf left open under Shelves is closed, not brought back, when the reader comes back to the tab.
  */
-private fun NavHostController.switchTo(destination: TopLevel) {
-    navigate(destination.route) {
+internal fun NavHostController.switchTo(destination: TopLevel) {
+    navigate(if (destination == TopLevel.Notebook) Destinations.notebook() else destination.route) {
         popUpTo(graph.findStartDestination().id)
         launchSingleTop = true
     }

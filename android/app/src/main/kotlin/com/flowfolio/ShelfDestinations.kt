@@ -13,10 +13,9 @@ import com.flowfolio.core.designsystem.clearOfChrome
 import com.flowfolio.feature.library.ShelfPageScreen
 import com.flowfolio.feature.library.ShelfPageViewModel
 
-/** The pages that show books as a shelf: a shelf, the Favourites tab and an imported folder. */
+/** The pages that show books as a shelf: a shelf and an imported folder (Favourites is a Library chip, ADR-0052). */
 internal fun NavGraphBuilder.shelfPages(nav: NavHostController) {
     shelfDestination(nav)
-    favoritesDestination(nav)
     folderDestination(nav)
 }
 
@@ -29,30 +28,6 @@ private fun NavGraphBuilder.shelfDestination(nav: NavHostController) = composabl
         ScreenEntrance(Modifier.clearOfChrome()) {
             ShelfPageScreen(
                 onBack = { nav.popBackStack() },
-                onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) },
-                onBookmarks = { book -> nav.navigate(Routes.bookBookmarks(book.id)) }
-            )
-        }
-    }
-}
-
-/**
- * The Favourites tab (owner, M3T2): the starred books on a shelf page of their own, with no Back since it is a tab.
- * The shelf id is the route's default argument, so the page's view model reads it like any shelf's.
- */
-private fun NavGraphBuilder.favoritesDestination(nav: NavHostController) = composable(
-    TopLevel.Favorites.route,
-    arguments = listOf(
-        navArgument(ShelfPageViewModel.ARG_SHELF_ID) {
-            type = NavType.LongType
-            defaultValue = ShelfPageViewModel.FAVORITES
-        }
-    )
-) {
-    CompositionLocalProvider(LocalDestinationScope provides this) {
-        ScreenEntrance(Modifier.clearOfChrome()) {
-            ShelfPageScreen(
-                onBack = null,
                 onOpenDetails = { book, origin -> nav.navigate(Routes.details(book.id, origin)) },
                 onBookmarks = { book -> nav.navigate(Routes.bookBookmarks(book.id)) }
             )

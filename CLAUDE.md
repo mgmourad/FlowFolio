@@ -168,6 +168,10 @@ local.
 - **Phase 1 (design system) built 2026-11-09.** Semantic `Tokens` per theme, built by `quietPalette`. The old role
   fields are aliases until Phase 9. Night glow is off by default. New components: menu, sheet, dialog, snackbar,
   tooltip, stepper, settings tile and `BookCover`.
+- **Phase 2 (app shell) built 2026-11-09.** The tabs are Library, Shelves, Notebook and Settings (`TopLevel`). Folded,
+  they sit on a glass bar; unfolded, on a flat rail with the app mark and Settings at the bottom. Favorites is a
+  Library chip. The Notebook hosts the old Bookmarks, Annotations and Dictionary pages as sections. The retired routes
+  forward through `Destinations` in `app/`.
 - Handover APKs get a new name every build (`app/build/outputs/apk/debug/handover/`) and are installed on the owner's
   phone as well as the emulator.
 

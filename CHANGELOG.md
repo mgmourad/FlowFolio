@@ -10,6 +10,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 > **CI has not run** for any of it yet.
 
 ### Changed
+- **Overhaul Phase 2: app shell and navigation** (2026-11-09).
+  - **Four destinations instead of seven:** Library, Shelves, Notebook and Settings.
+    - Folded, a glass tab bar with labels.
+    - Unfolded, a rail down the left edge: the app's mark at the top, the tabs, and Settings pinned to the bottom.
+    - The selected tab sits on a soft accent pill that grows from its centre on a spring.
+  - **Favorites** is now a ★ chip in the Library (`LibraryFilter.FAVORITES`), not a tab.
+  - **Notebook** (`NotebookScreen`, `NotebookSection`) holds the Bookmarks, Annotations and Dictionary pages as
+    sections under one header and three chips. Each page keeps its own search, select mode and lists until Phase 5
+    rebuilds the Notebook.
+  - **Retired routes forward to their new homes:** `favorites`, `bookmarks`, `annotations` and `dictionary` go to the
+    Library with the Favorites chip, or to the Notebook at the right section (`Destinations`). Their tabs stay lit.
+    Notification intents and the adb debug extras are unchanged.
+  - **Status-bar fade:** content never shows through under the clock. The fade uses the background colour, and
+    unfolded there is no bottom fade.
+  - **Calmer motion:**
+    - Tab switches fade through from 98% over 300 ms.
+    - Screen elements rise 16 dp as they fade in, in place of the 112% fall-in. The stagger is 30 ms and each rise
+      takes 420 ms.
+    - The rail and bar slide on Material's emphasized curves.
+    - With the system's animations removed, entrances are skipped.
+  - **Tests:** `DestinationsTest` covers the tabs, the retired routes and the Notebook sections. `ShelfRowsTest` adds
+    the Favorites chip.
 - **Overhaul Phase 1: design system** (2026-11-09).
   - **Tokens.** Every theme is now one set of semantic colours (`Tokens`: bg, bg2, surface 1 to 3, line, three inks,
     one accent with its ink and soft tint, ok, danger, paper), built into a `Palette` by `quietPalette`.

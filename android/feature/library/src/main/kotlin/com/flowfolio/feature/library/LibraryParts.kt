@@ -256,6 +256,7 @@ private val LibraryFilter.glyph: Glyph
         LibraryFilter.IN_PROGRESS -> Glyph.Hourglass
         LibraryFilter.NOT_STARTED -> Glyph.Book
         LibraryFilter.FINISHED -> Glyph.Select
+        LibraryFilter.FAVORITES -> Glyph.Star
         LibraryFilter.TEXTBOOKS -> Glyph.OpenBook
         LibraryFilter.NOVELS -> Glyph.Cover
         LibraryFilter.RECENT -> Glyph.Clock
@@ -268,6 +269,7 @@ private val LibraryFilter.label: Int
         LibraryFilter.IN_PROGRESS -> R.string.filter_in_progress
         LibraryFilter.NOT_STARTED -> R.string.filter_not_started
         LibraryFilter.FINISHED -> R.string.filter_finished
+        LibraryFilter.FAVORITES -> R.string.filter_favorites
         LibraryFilter.RECENT -> R.string.filter_recent
         LibraryFilter.TEXTBOOKS -> R.string.filter_textbooks
         LibraryFilter.NOVELS -> R.string.filter_novels

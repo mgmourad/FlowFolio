@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,6 +30,10 @@ internal fun ScreenHeader(
     leading: (@Composable () -> Unit)? = null,
     actions: (@Composable () -> Unit)? = null
 ) {
+    // Inside the Notebook, a page wears the Notebook's header with its section chips (ADR-0052).
+    val notebook = LocalNotebookHeader.current
+    val title = if (notebook != null && leading == null) stringResource(R.string.notebook_title) else title
+    val slogan = if (notebook != null && leading == null) stringResource(R.string.notebook_slogan) else slogan
     Column(modifier.fillMaxWidth().padding(start = 4.dp, top = 10.dp, bottom = 6.dp)) {
         val narrow = LocalWindowInfo.current.containerDpSize.width < HEADER_WIDE
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -67,6 +72,7 @@ internal fun ScreenHeader(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 6.dp)
         )
+        if (notebook != null && leading == null) NotebookChips(notebook)
     }
 }
 
