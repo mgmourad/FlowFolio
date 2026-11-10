@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -37,6 +38,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -70,9 +72,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -82,6 +87,7 @@ import com.flowfolio.core.designsystem.CoverSpot
 import com.flowfolio.core.designsystem.DialogAction
 import com.flowfolio.core.designsystem.DialogField
 import com.flowfolio.core.designsystem.FlowFolio
+import com.flowfolio.core.designsystem.FlowFolioButton
 import com.flowfolio.core.designsystem.FlowFolioDialog
 import com.flowfolio.core.designsystem.FlowFolioGhostButton
 import com.flowfolio.core.designsystem.FlowFolioGlyph
@@ -122,11 +128,15 @@ fun DetailsScreen(
     onEdit: (Book) -> Unit = {},
     onOpenBook: (Book) -> Unit = {},
     onNotebook: (Book) -> Unit = {},
+    onShelf: (Long) -> Unit = {},
     viewModel: DetailsViewModel = hiltViewModel(),
     shelvesVm: ShelvesViewModel = hiltViewModel(),
     libraryVm: LibraryViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val base by viewModel.uiState.collectAsStateWithLifecycle()
+    val tags by viewModel.tags.collectAsStateWithLifecycle()
+    val allTags by viewModel.allTags.collectAsStateWithLifecycle()
+    val state = base.copy(tags = tags, allTags = allTags)
     var picking by remember { mutableStateOf(false) }
     var resetting by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -166,7 +176,10 @@ fun DetailsScreen(
         onNotebook = { onNotebook(book) },
         onAddToShelf = { picking = true },
         onExportNotes = { scope.launch { share(context, viewModel.notesMarkdown(), "text/markdown") } },
-        onResetProgress = { resetting = true }
+        onResetProgress = { resetting = true },
+        onShelf = onShelf,
+        onAddTag = { viewModel.addTag(it) },
+        onRemoveTag = { viewModel.removeTag(it) }
     )
     // System Back flies the cover home too.
     BackHandler(onBack = actions.onBack)
@@ -196,44 +209,51 @@ internal data class DetailsActions(
     val onAddToShelf: () -> Unit = {},
     val onExportNotes: () -> Unit = {},
     /** Asks, then starts the book again from its first page. */
-    val onResetProgress: () -> Unit = {}
+    val onResetProgress: () -> Unit = {},
+    /** Opens one of the book's shelves (the Overview's shelf chip). */
+    val onShelf: (Long) -> Unit = {},
+    /** The book's own tags (owner, 2026-11-10). */
+    val onAddTag: (String) -> Unit = {},
+    val onRemoveTag: (String) -> Unit = {}
 )
 
-/** Folded: hero, then title, actions and tabs under it. Unfolded (600 dp and wider): cover pane and tabs pane. */
+/**
+ * The details page (`.det`, ADR-0052; owner, 2026-11-10: "the same setup as the mock"). Folded, one centred column:
+ * the cover, title, author, the actions, the four facts and the tabs. Unfolded, the cover stands in a 240 dp column
+ * on the left and everything else reads down the right, aligned to the start. No blurred backdrop, and no shadow
+ * under the book.
+ */
 @Composable
 internal fun DetailsContent(state: DetailsUiState, book: Book, hero: CoverSpot, actions: DetailsActions) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     // A sideways swipe anywhere on the page moves between the tabs (owner, 2026-10-23).
     BoxWithConstraints(Modifier.fillMaxSize().swipeTabs(tab, TAB_COUNT) { tab = it }.testTag(LibraryTestTags.DETAILS)) {
-        if (maxWidth >= TWO_PANE_WIDTH) {
-            // Unfolded, the blurred cover spans the top half of the whole screen, as it does folded (owner).
-            val blurred by rememberBackdrop(book)
-            Backdrop(blurred, Modifier.fillMaxWidth().height(maxHeight * BACKDROP_SHARE))
-            Row(Modifier.fillMaxSize()) {
-                Column(Modifier.weight(LEFT_PANE).verticalScroll(rememberScrollState())) {
-                    DetailsHero(book, hero, backdrop = false)
-                    DetailsHeading(state, book, actions, Modifier.offset(y = -HERO_OVERLAP))
+        val wide = maxWidth >= TWO_PANE_WIDTH
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(WindowInsets.safeDrawing.asPaddingValues())
+                .padding(start = SIDE, end = SIDE, top = TOP_ROOM, bottom = 24.dp)
+        ) {
+            if (wide) {
+                Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+                    Box(Modifier.width(WIDE_COVER_COLUMN).padding(top = 4.dp)) {
+                        DetailsCover(book, hero, WIDE_COVER)
+                    }
+                    Column(Modifier.weight(1f)) {
+                        DetailsHeading(state, book, actions, wide = true)
+                        FactTiles(state, book, wide = true)
+                        DetailsTabs(state, book, tab, { tab = it }, actions)
+                    }
                 }
-                Column(
-                    Modifier
-                        .weight(1f - LEFT_PANE)
-                        .verticalScroll(rememberScrollState())
-                        .padding(WindowInsets.safeDrawing.asPaddingValues())
-                        .padding(start = 22.dp, end = 22.dp, top = PANE_TOP, bottom = 24.dp)
-                ) {
-                    DetailsTabs(state, book, tab, { tab = it }, actions)
+            } else {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    DetailsCover(book, hero, FOLDED_COVER)
                 }
-            }
-        } else {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                DetailsHero(book, hero)
-                Column(Modifier.offset(y = -HERO_OVERLAP).padding(horizontal = 22.dp)) {
-                    DetailsHeading(state, book, actions)
-                    DetailsTabs(state, book, tab, { tab = it }, actions)
-                    androidx.compose.foundation.layout.Spacer(
-                        Modifier.height(WindowInsets.safeDrawing.asPaddingValues().calculateBottomPadding() + 24.dp)
-                    )
-                }
+                DetailsHeading(state, book, actions, wide = false, modifier = Modifier.padding(top = 18.dp))
+                FactTiles(state, book, wide = false)
+                DetailsTabs(state, book, tab, { tab = it }, actions)
             }
         }
         TopButtons(state, actions)
@@ -241,12 +261,11 @@ internal fun DetailsContent(state: DetailsUiState, book: Book, hero: CoverSpot, 
 }
 
 /**
- * `.det-hero`: the cover blurred behind (unless the screen draws it itself, unfolded), fading into the background, and
- * the 3D book swaying in front. [hero] records where the book is, for the book-opening animation.
+ * The cover (`.covwrap`): the 3D book swaying gently, with no contact shadow under it (owner, 2026-11-10). [hero]
+ * records where the book is, for the book-opening animation.
  */
 @Composable
-private fun DetailsHero(book: Book, hero: CoverSpot, backdrop: Boolean = true) {
-    val blurred by rememberBackdrop(book)
+private fun DetailsCover(book: Book, hero: CoverSpot, width: Dp) {
     val cover by rememberCover(book)
     val sway = rememberInfiniteTransition(label = "sway")
     val t by sway.animateFloat(
@@ -256,77 +275,47 @@ private fun DetailsHero(book: Book, hero: CoverSpot, backdrop: Boolean = true) {
         label = "swayT"
     )
     hero.face = book.face(cover)
-    Box(Modifier.fillMaxWidth().height(HERO_HEIGHT)) {
-        if (backdrop) Backdrop(blurred)
-        // `@keyframes sway`: rotateY 22 -> 8 degrees while rising 8 dp, 6 s each way. The book redraws its angle;
-        // the rise is a layer move, so its blurred contact shadow is not re-rasterized every frame.
-        Box(
-            Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = COVER_TOP)
-                .graphicsLayer { translationY = -SWAY_RISE.toPx() * t }
-                .coverSpot(hero)
-        ) {
-            Book3D(
-                book.face(cover),
-                COVER_WIDTH,
-                COVER_HEIGHT,
-                modifier = Modifier.coverLanding(detailsCoverKey(book.id), SWAY_FROM),
-                restAngle = SWAY_FROM + (SWAY_TO - SWAY_FROM) * t
-            )
-        }
+    Box(Modifier.graphicsLayer { translationY = -SWAY_RISE.toPx() * t }.coverSpot(hero)) {
+        Book3D(
+            book.face(cover),
+            width,
+            width * COVER_RATIO,
+            modifier = Modifier.coverLanding(detailsCoverKey(book.id), SWAY_FROM),
+            restAngle = SWAY_FROM + (SWAY_TO - SWAY_FROM) * t,
+            shadow = false
+        )
     }
 }
 
 /**
- * `.det-bg` + `.det-fade`: the blurred cover, faded out toward the bottom
- * with a mask rather than a flat colour, so it melts into the gradient app background without a seam.
+ * Title, subtitle, the author in the accent, the format line, then the actions (`.det h2` ... `.acts`): Continue (or
+ * Start reading, Read again, Locate), Shelf, Goal and the star. Centred folded, aligned to the start unfolded.
  */
+@Suppress("LongMethod") // one label per state of the book
 @Composable
-private fun Backdrop(backdrop: androidx.compose.ui.graphics.ImageBitmap?, modifier: Modifier = Modifier.fillMaxSize()) {
-    val veil = FlowFolio.palette.background.copy(alpha = BACKDROP_VEIL)
-    Box(
-        modifier
-            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-            .drawWithContent {
-                drawContent()
-                // A veil of the theme's background, so a pale cover still leaves the tabs and text over it legible.
-                drawRect(veil)
-                drawRect(
-                    Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = FADE_TOP),
-                        FADE_MID_STOP to Color.Black.copy(alpha = FADE_MID),
-                        FADE_END_STOP to Color.Transparent
-                    ),
-                    blendMode = BlendMode.DstIn
-                )
-            }
-    ) {
-        backdrop?.let {
-            Image(
-                it,
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                filterQuality = FilterQuality.Low,
-                colorFilter = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(BACKDROP_SATURATION) }),
-                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = BACKDROP_ALPHA }
-            )
-        }
-    }
-}
-
-/** Title, author, pills and the actions row (`.det-body` up to `.actions`). */
-@Suppress("LongMethod", "CyclomaticComplexMethod") // one label per state of the book
-@Composable
-private fun DetailsHeading(state: DetailsUiState, book: Book, actions: DetailsActions, modifier: Modifier = Modifier) {
+private fun DetailsHeading(
+    state: DetailsUiState,
+    book: Book,
+    actions: DetailsActions,
+    wide: Boolean,
+    modifier: Modifier = Modifier
+) {
     var showFullTitle by remember { mutableStateOf(false) }
     var truncated by remember { mutableStateOf(false) }
-    Column(modifier.fillMaxWidth().padding(horizontal = 22.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        // Around the cover flying in, the page settles one line after another (ADR-0034).
+    val p = FlowFolio.palette
+    val align = if (wide) TextAlign.Start else TextAlign.Center
+    Column(
+        modifier.fillMaxWidth(),
+        horizontalAlignment = if (wide) Alignment.Start else Alignment.CenterHorizontally
+    ) {
         Text(
             book.title,
-            style = FlowFolioType.bookTitle.merge(FlowFolio.title),
-            textAlign = TextAlign.Center,
+            style = FlowFolioType.bookTitle.copy(
+                fontSize = if (wide) 36.sp else 28.sp,
+                lineHeight = if (wide) 39.sp else 30.sp,
+                color = p.ink
+            ),
+            textAlign = align,
             // Three lines at most; a longer title truncates and the ellipsis opens it whole (owner, 2026-11-07).
             maxLines = 3,
             overflow = TextOverflow.Ellipsis,
@@ -338,85 +327,85 @@ private fun DetailsHeading(state: DetailsUiState, book: Book, actions: DetailsAc
         book.details.subtitle?.let {
             Text(
                 it,
-                style = FlowFolioType.sub.merge(FlowFolio.hint),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 4.dp).reveal(2)
+                style = FlowFolioType.sub.copy(color = p.ink2),
+                textAlign = align,
+                modifier = Modifier.padding(top = 6.dp).reveal(2)
             )
         }
         book.author?.let {
             Text(
                 it,
-                style = FlowFolioType.rowLabel.merge(FlowFolio.item),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = 10.dp).reveal(2)
+                style = FlowFolioType.rowLabel.copy(color = p.accent, fontWeight = FontWeight.SemiBold),
+                textAlign = align,
+                modifier = Modifier.padding(top = 8.dp).reveal(2)
             )
         }
-        DetailsMeta(state, book, Modifier.padding(top = 10.dp).reveal(3))
-        IntentChips(book.intent, actions.onIntent, Modifier.padding(top = 5.dp).reveal(3))
-        // Read/Continue across the top, the two quieter actions centred on a second row under it (owner,
-        // M4b). Two to a row leaves room for their words, so only the narrowest screens shorten them.
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 18.dp).reveal(4)) {
-            val compact = maxWidth < ACTIONS_ROOMY
-            Column(
-                Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // The button says where it lands (ADR-0052): "Continue · p. 55", "Start reading" or "Read again".
-                val read = when {
-                    state.availability == Availability.MISSING -> stringResource(R.string.action_locate)
-
-                    book.finished -> stringResource(R.string.details_read_again)
-
-                    (book.lastPage ?: 0) > 0 ->
-                        stringResource(R.string.details_continue_at, book.pageLabel(book.lastPage ?: 0))
-
-                    else -> stringResource(R.string.details_start)
-                }
-                FlowFolioPrimaryButton(
-                    text = read,
-                    onClick = actions.onRead,
-                    modifier = Modifier.fillMaxWidth(READ_WIDTH).testTag(LibraryTestTags.READ),
-                    icon = { PlayGlyph() }
-                )
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SecondaryButton(
-                        Glyph.Shelves,
-                        if (compact) R.string.action_add_to_shelf_compact else R.string.action_add_to_shelf,
-                        LibraryTestTags.ADD_TO_SHELF,
-                        compact,
-                        onClick = actions.onShelves
-                    )
-                    SecondaryButton(
-                        Glyph.ReadingGoal,
-                        if (compact) R.string.action_add_goal_short else R.string.action_add_goal,
-                        LibraryTestTags.ADD_GOAL,
-                        compact,
-                        onClick = actions.onGoal
-                    )
-                    FlowFolioIconButton(
-                        onClick = actions.onFavorite,
-                        glowing = book.favorite,
-                        tooltip = stringResource(
-                            if (book.favorite) R.string.action_favorite_remove else R.string.action_favorite_add
-                        ),
-                        modifier = Modifier.testTag(LibraryTestTags.DETAILS_FAVORITE)
-                    ) {
-                        FlowFolioGlyph(
-                            if (book.favorite) Glyph.StarFilled else Glyph.Star,
-                            null,
-                            color = if (book.favorite) FlowFolio.palette.accent else FlowFolio.palette.ink2,
-                            size = 20.dp
-                        )
-                    }
-                }
-            }
-        }
+        DetailsMeta(state, book, Modifier.padding(top = 6.dp).reveal(3))
+        DetailsActionsRow(state, book, actions, wide)
     }
     if (showFullTitle) FullTitleDialog(book.title) { showFullTitle = false }
+}
+
+/** The actions under the title (`.acts`): Continue (or Start reading, Read again, Locate), Shelf, Goal and the star. */
+@Composable
+private fun DetailsActionsRow(state: DetailsUiState, book: Book, actions: DetailsActions, wide: Boolean) {
+    val p = FlowFolio.palette
+    // The button says where it lands (ADR-0052): "Continue · p. 55", "Start reading" or "Read again".
+    val read = when {
+        state.availability == Availability.MISSING -> stringResource(R.string.action_locate)
+        book.finished -> stringResource(R.string.details_read_again)
+        (book.lastPage ?: 0) > 0 -> stringResource(R.string.details_continue_at, book.pageLabel(book.lastPage ?: 0))
+        else -> stringResource(R.string.details_start)
+    }
+    FlowRow(
+        Modifier.padding(top = 16.dp).reveal(4),
+        horizontalArrangement = Arrangement.spacedBy(
+            8.dp,
+            if (wide) Alignment.Start else Alignment.CenterHorizontally
+        ),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        itemVerticalAlignment = Alignment.CenterVertically
+    ) {
+        // Unfolded the right column is narrower than the mock's, so the row takes the compact size to stay on one line.
+        FlowFolioButton(
+            read,
+            actions.onRead,
+            Modifier.testTag(LibraryTestTags.READ),
+            small = wide,
+            icon = Glyph.Play
+        )
+        FlowFolioButton(
+            stringResource(R.string.action_add_to_shelf_compact),
+            actions.onShelves,
+            Modifier.testTag(LibraryTestTags.ADD_TO_SHELF),
+            style = ButtonStyle.GHOST,
+            small = wide,
+            icon = Glyph.Shelves
+        )
+        FlowFolioButton(
+            stringResource(R.string.action_add_goal_short),
+            actions.onGoal,
+            Modifier.testTag(LibraryTestTags.ADD_GOAL),
+            style = ButtonStyle.GHOST,
+            small = wide,
+            icon = Glyph.ReadingGoal
+        )
+        FlowFolioIconButton(
+            onClick = actions.onFavorite,
+            tooltip = stringResource(
+                if (book.favorite) R.string.action_favorite_remove else R.string.action_favorite_add
+            ),
+            modifier = Modifier.testTag(LibraryTestTags.DETAILS_FAVORITE)
+        ) {
+            FlowFolioGlyph(
+                if (book.favorite) Glyph.StarFilled else Glyph.Star,
+                null,
+                color = if (book.favorite) p.accent else p.ink2,
+                size = 20.dp,
+                glow = false
+            )
+        }
+    }
 }
 
 /** The full book title in a small window, opened by tapping a title that truncated (owner, 2026-11-07). */
@@ -441,51 +430,7 @@ private fun FullTitleDialog(title: String, onDismiss: () -> Unit) {
     }
 }
 
-/** "Add to shelf" and "Add Reading Goal" beside Read: outlined, quieter actions. [compact] tightens them up. */
-@Composable
-private fun SecondaryButton(
-    glyph: Glyph,
-    label: Int,
-    tag: String,
-    compact: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    val p = FlowFolio.palette
-    val shape = RoundedCornerShape(50)
-    Row(
-        modifier
-            .clip(shape)
-            .border(1.dp, p.edge, shape)
-            .clickable(onClick = onClick)
-            .heightIn(min = 48.dp)
-            .padding(horizontal = if (compact) 8.dp else 18.dp)
-            .testTag(tag),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(
-            if (compact) 4.dp else 8.dp,
-            Alignment.CenterHorizontally
-        )
-    ) {
-        FlowFolioGlyph(
-            glyph,
-            contentDescription = null,
-            size = if (compact) 16.dp else 18.dp,
-            color = p.ink2,
-            glow = false
-        )
-        Text(
-            stringResource(label),
-            // A third of a folded screen, or of the unfolded page's left half, is not wide enough for the
-            // 15 sp label beside a glyph; the chip size keeps the whole word (owner, M4).
-            style = (if (compact) FlowFolioType.chip else FlowFolioType.rowLabel).merge(FlowFolio.item),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-/** Back and More, on glass, over the hero (`.det-top`). */
+/** Back and More at the top of the page (`.hrow`). */
 @Composable
 private fun TopButtons(state: DetailsUiState, actions: DetailsActions) {
     var menu by remember { mutableStateOf(false) }
@@ -543,7 +488,7 @@ private fun DetailsTabs(state: DetailsUiState, book: Book, tab: Int, onTab: (Int
         label = "detailsTab"
     ) { shown ->
         when (shown) {
-            0 -> OverviewPanel(state, book)
+            0 -> OverviewPanel(state, book, actions)
             1 -> ContentsPanel(state.contents, book, actions.onChapter)
             2 -> NotebookPanel(state, actions.onNotebook)
             3 -> InfoPanel(state, book)
@@ -589,31 +534,18 @@ private fun Modifier.swipeTabs(tab: Int, count: Int, onTab: (Int) -> Unit): Modi
     }
 }
 
-/** Under this, the two quieter actions take their one-word labels. */
-private val ACTIONS_ROOMY = 360.dp
+private val SIDE = 22.dp
 
-/** How much of the line Read/Continue takes: wide, but not edge to edge. */
-private const val READ_WIDTH = 0.72f
-
-private const val LEFT_PANE = 0.46f
-private val HERO_HEIGHT = 430.dp
-private val HERO_OVERLAP = 40.dp
-private val COVER_TOP = 104.dp
-private val COVER_WIDTH = 156.dp
-private val COVER_HEIGHT = 228.dp
+/** Room for Back and ⋯ above the page. */
+private val TOP_ROOM = 64.dp
+private val WIDE_COVER_COLUMN = 200.dp
+private val WIDE_COVER = 190.dp
+private val FOLDED_COVER = 170.dp
+private const val COVER_RATIO = 1.5f
 private val SWAY_RISE = 8.dp
 private const val SWAY_MS = 6000
 private const val SWAY_FROM = 22f
 private const val SWAY_TO = 8f
-private const val BACKDROP_ALPHA = 0.95f
-private const val BACKDROP_SATURATION = 1.35f
-private const val FADE_TOP = 0.9f
-private const val FADE_MID = 0.8f
-private const val FADE_MID_STOP = 0.45f
-private const val FADE_END_STOP = 0.96f
-private const val BACKDROP_SHARE = 0.5f
-private const val BACKDROP_VEIL = 0.45f
-private val PANE_TOP = 72.dp
 
 /** The sway's middle angle: where the opening flight starts from. */
 private const val HERO_ANGLE = 15f

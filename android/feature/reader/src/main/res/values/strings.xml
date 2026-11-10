@@ -178,8 +178,8 @@
     <string name="reader_guide_mark_body">Put a ribbon on this page. Its colour follows your theme.</string>
     <string name="reader_guide_annotations_title">Annotations</string>
     <string name="reader_guide_annotations_body">This book\'s highlights and notes, newest first.</string>
-    <string name="reader_guide_dictionary_title">Dictionary</string>
-    <string name="reader_guide_dictionary_body">Select a word and look it up right here.</string>
+    <string name="reader_guide_dictionary_title">Words</string>
+    <string name="reader_guide_dictionary_body">Define a word, translate a passage, and find every word and translation from this book under History.</string>
     <string name="flow_status_queued">Waiting for another book to finish</string>
     <string name="flow_status_hot">Paused while your phone cools down</string>
     <string name="flow_status_battery">Paused: the battery is low</string>
@@ -259,4 +259,14 @@
     <string name="reader_coach_page_body">Tap the edges to turn, the middle to hide these controls, and press and hold any sentence to highlight, define or translate it.</string>
     <string name="reader_flow_preparing">Preparing</string>
     <string name="reader_flow_preparing_percent">Preparing · %1$d%%</string>
+    <plurals name="reader_pages_left">
+        <item quantity="one">%1$d page left</item>
+        <item quantity="other">%1$d pages left</item>
+    </plurals>
+    <string name="reader_words_offline">On your phone, no connection</string>
+    <string name="reader_words_history">History</string>
+    <string name="reader_words_history_note">Every word and passage from this book</string>
+    <string name="reader_words_define_hint">Press and hold a word in the book, then choose Define. Its meanings come from Wiktionary and WordNet on your phone, and Wikipedia when you are online.</string>
+    <string name="reader_words_translate_hint">Press and hold a passage in the book, then choose Translate. It is translated on your phone into the languages you keep here.</string>
+    <string name="reader_words_saved">Saved to History</string>
 </resources>

@@ -34,13 +34,19 @@ internal object PageLookup {
         return best
     }
 
-    /** The top-level (depth 0) outline entry [page] falls under, or null when the book has no such chapter. */
+    /**
+     * The top-level (depth 0) outline entry [page] falls under, or null when the book has no such chapter: the one
+     * starting closest before or on it, going by page rather than list order (an OpenStax outline's last entry points
+     * back to page 1 under the book's own name, which list order made every page's chapter). On a tie the earlier
+     * entry wins, for the same reason.
+     */
     fun chapterTitleAt(outline: List<OutlineEntry>, page: Int): String? {
-        var title: String? = null
+        var best: OutlineEntry? = null
         for (entry in outline) {
-            if (entry.depth == 0 && entry.pageIndex in 0..page) title = entry.title
+            val later = best == null || entry.pageIndex > best.pageIndex
+            if (entry.depth == 0 && entry.pageIndex in 0..page && later) best = entry
         }
-        return title
+        return best?.title
     }
 
     /** The section (depth >= 1) [page] is in, or null when the page sits in no section. */

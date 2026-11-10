@@ -291,7 +291,12 @@ internal fun Annotating.byPage(): Map<Int, List<Annotation>> = byPage
  * editor. Drawn in the palette of the page colour, like the reader's bars.
  */
 @Composable
-internal fun BoxScope.AnnotatingLayer(annotating: Annotating, s: ReaderState.Ready) {
+internal fun BoxScope.AnnotatingLayer(
+    annotating: Annotating,
+    s: ReaderState.Ready,
+    navigation: BookNavigation,
+    onGo: (Int) -> Unit
+) {
     val pick = annotating.pick
     Lens(annotating)
     val hasOverlay = annotating.note != null || annotating.translating != null ||
@@ -309,14 +314,31 @@ internal fun BoxScope.AnnotatingLayer(annotating: Annotating, s: ReaderState.Rea
         val translating = annotating.translating
         val defining = annotating.defining
         when {
+            // ADR-0052: Define and Translate open the one Words panel, on their own tab.
             defining != null -> {
                 SelectionCatcher { annotating.defining = null }
-                DefineOverlay(defining, onClose = { annotating.defining = null })
+                WordsSheet(
+                    WordsTarget(defining.word, defining.page, defining.locator),
+                    WordsTab.DEFINE,
+                    navigation,
+                    { page ->
+                        annotating.defining = null
+                        onGo(page)
+                    }
+                ) { annotating.defining = null }
             }
 
             translating != null -> {
                 SelectionCatcher { annotating.translating = null }
-                TranslateOverlay(translating, onClose = { annotating.translating = null })
+                WordsSheet(
+                    WordsTarget(translating.text, translating.page, translating.locator),
+                    WordsTab.TRANSLATE,
+                    navigation,
+                    { page ->
+                        annotating.translating = null
+                        onGo(page)
+                    }
+                ) { annotating.translating = null }
             }
 
             voiceMark != null -> VoiceMarkLayer(annotating, voiceMark)

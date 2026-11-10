@@ -10,6 +10,11 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 > **CI has not run** for any of it yet.
 
 ### Added
+- **Tags of your own** (owner, 2026-11-10). **Room v22** adds `book_tags` (one row per book and tag, removed with
+  the book; additive auto-migration 21 → 22, held by `BookTagMigrationTest`).
+  - Details → Overview has "+ Tag": type a word or two, or tap one of the library's other tags. Tap a tag to take it
+    off.
+  - `BookTagRepository` (`:core:data`) trims and de-duplicates.
 - **Text settings per book** (owner, 2026-11-09). **Room v21** adds `book_text` (one row per book that has text of its
   own, removed with the book; additive auto-migration 20 → 21, held by `BookTextMigrationTest`, which replays the
   committed v20 schema into SQLite and opens it under v21).
@@ -19,6 +24,36 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Settings → Text holds the defaults, and says so.
 
 ### Changed
+- **The owner's fixes after the overhaul** (2026-11-10). Checked on `fold8_api37` unless noted; CI has not run.
+  - **Details now follows the mock's layout.**
+    - No blurred backdrop, and no shadow under the book.
+    - Folded: one centred column. Unfolded: the cover on the left; the title, the author in the accent and the
+      format line on the right, then Continue, Shelf, Goal and ★ on one line, the four fact tiles, and the tabs.
+    - Overview holds the description, then the chips: the book's shelves with their colour (tap one to open it),
+      the reading intentions, your own tags and "+ Tag". A PDF also gets the Dynamic Flow box.
+  - **Reader, top bar:** the title pill fills the bar, with **title** · chapter and, unfolded, "N pages left". The
+    title shortens before the chapter does. No reading-speed estimate exists, so it counts pages rather than hours.
+  - **Reader, dock:** one glass card, as the mock has it. The riffle header and strip sit on top, and the six tools
+    below as icons with their names in tooltips. While a panel is open, or the riffle bar is dismissed, the tools
+    stand on their own.
+  - **Riffle strip: monochrome.** The leaves still bow and riffle as before, the 3D motion is unchanged, and the
+    riffle book stays. They are now drawn in the theme's ink, darker on the part already read. Chapter bands are in
+    the accent, the boards are ink, and ribbon flags keep their colours above the strip. It is opt-in through
+    `BoardColors.ink`/`accent`, so the riffle demo and its screenshot tests keep the original look.
+  - **Words is one panel** with Define, Translate and History tabs. The dock's Words tool opens it on History; a
+    selection's Define or Translate open it on that tab.
+    - Define shows the word in Fraunces italic, its sources as chips, the part of speech and the numbered meanings,
+      then Saved to History, Translate and Copy.
+    - Translate shows from and to, the passage, your language chips, and the result on the second surface.
+    - The old full-screen Define and Translate overlays are removed.
+  - **Library:**
+    - Folded, the goal ring holds the reading glasses. A reached goal turns them into 🎉 with confetti; the burst
+      stays inside the card, so it is small.
+    - Unfolded, Details sits on Resume's line.
+  - **Fixed:** the chapter shown for a page could be the book's own name. OpenStax outlines carry a bookmark to page 1
+    named after the book, and `PageLookup.chapterTitleAt` went by list order. It now goes by page, and the title pill
+    also skips entries named after the book. Covered by `PageLookupTest`.
+
 - **Overhaul: the items Phases 8 and 9 deferred** (2026-11-10).
   - **Riffle header:** the chapter in the accent, then one tappable label, "Page 216–217 of 842 · 26%", that opens
     Go to page (hold it for the detour mark, as before).

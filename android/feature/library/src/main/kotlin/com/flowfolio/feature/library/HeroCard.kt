@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
@@ -113,28 +112,31 @@ internal fun ContinueReadingCard(
                     )
                 }
                 FlowFolioProgressBar(book.progress.coerceAtLeast(MIN_SHOWN))
-                FlowRow(
+                // Owner, 2026-11-10: unfolded, Details sits on Resume's line rather than wrapping under it.
+                Row(
                     Modifier.padding(top = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
                     FlowFolioButton(
                         stringResource(R.string.action_resume),
                         { actions.onResume(item) },
                         Modifier.testTag(LibraryTestTags.RESUME),
+                        small = wide,
                         icon = Glyph.Play
                     )
                     if (wide) {
                         FlowFolioButton(
                             stringResource(R.string.action_details),
                             { actions.onOpen(item, HERO_ORIGIN) },
-                            style = ButtonStyle.GHOST
+                            style = ButtonStyle.GHOST,
+                            small = true
                         )
                     }
                 }
             }
             if (wide && goal != null) {
-                GoalRing(goal, actions.onReadingGoal, Modifier.width(160.dp).align(Alignment.CenterVertically))
+                GoalRing(goal, actions.onReadingGoal, Modifier.width(136.dp).align(Alignment.CenterVertically))
             }
         }
         Box(Modifier.align(Alignment.TopEnd).offset(x = MORE_NUDGE, y = -MORE_NUDGE)) {

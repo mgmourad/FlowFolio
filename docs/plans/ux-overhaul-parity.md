@@ -85,3 +85,16 @@ The palette aliases are deleted. The design-system screenshot tests match unchan
 
 **Not built,** being new features rather than restyles: a narrator sleep timer, a narrator mini bar, and the
 spoken-sentence highlight.
+
+## The owner's fixes, 2026-11-10
+
+These were checked on `fold8_api37`:
+- Details follows the mock unfolded, with no shadow under the book; tags work through "+ Tag".
+- The reader's top bar shows title · chapter · pages left.
+- The dock is one card (riffle, then the tools), with a monochrome strip.
+- Words is one panel: Define and Translate were both opened from a selection, and History from the dock.
+- The folded goal ring shows the glasses, then 🎉. It was checked by briefly setting the emulator's goal to 5
+  minutes, then restoring 45.
+- Unfolded, Resume and Details share a line.
+
+Not seen on a device: the folded Details layout.

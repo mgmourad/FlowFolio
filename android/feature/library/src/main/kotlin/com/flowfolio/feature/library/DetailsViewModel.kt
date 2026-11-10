@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.BookMarkCounts
+import com.flowfolio.core.data.BookTagRepository
 import com.flowfolio.core.data.BookmarkRepository
 import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.data.MarkCounts
@@ -55,7 +56,10 @@ data class DetailsUiState(
     /** This book's reading goal (M3T3), if set. */
     val bookGoal: ReadingGoal? = null,
     /** This book's marks by kind, from the count every screen shares (ADR-0052). */
-    val counts: BookMarkCounts = BookMarkCounts()
+    val counts: BookMarkCounts = BookMarkCounts(),
+    /** The book's own tags, and every tag in the library (owner, 2026-11-10); filled in by the screen. */
+    val tags: List<String> = emptyList(),
+    val allTags: List<String> = emptyList()
 ) {
     val bookShelves: List<Shelf> get() = book?.let { b -> shelves.filter { b.id in it.bookIds } }.orEmpty()
 }
@@ -72,9 +76,20 @@ class DetailsViewModel @Inject constructor(
     bookmarks: BookmarkRepository,
     @Suppress("unused") views: ReadingViews,
     private val goals: ReadingGoalRepository,
-    private val marks: MarkCounts
+    private val marks: MarkCounts,
+    private val tagRepo: BookTagRepository
 ) : ViewModel() {
     val bookId: String = checkNotNull(saved[ARG_BOOK_ID]) { "details needs a book id" }
+
+    /** The book's own tags (Room v22), and every tag in the library for suggestions (owner, 2026-11-10). */
+    val tags: StateFlow<List<String>> =
+        tagRepo.tagsOf(bookId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(TAG_STOP_MS), emptyList())
+    val allTags: StateFlow<List<String>> =
+        tagRepo.allTags().stateIn(viewModelScope, SharingStarted.WhileSubscribed(TAG_STOP_MS), emptyList())
+
+    fun addTag(tag: String) = viewModelScope.launch { tagRepo.add(bookId, tag) }
+
+    fun removeTag(tag: String) = viewModelScope.launch { tagRepo.remove(bookId, tag) }
 
     private val contents = MutableStateFlow<DetailsContents>(DetailsContents.Loading)
     private val availability = MutableStateFlow(Availability.AVAILABLE)
@@ -177,3 +192,5 @@ class DetailsViewModel @Inject constructor(
         private const val STOP_TIMEOUT_MS = 5_000L
     }
 }
+
+private const val TAG_STOP_MS = 5_000L

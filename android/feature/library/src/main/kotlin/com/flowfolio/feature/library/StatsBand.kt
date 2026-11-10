@@ -1,12 +1,16 @@
 package com.flowfolio.feature.library
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,6 +32,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.AnnotatedString
@@ -267,7 +272,13 @@ internal fun GoalCard(status: GoalStatus, onOpen: () -> Unit, modifier: Modifier
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        FlowFolioRing(status.progress, diameter = 46.dp, color = if (status.reached) p.ok else null)
+        // Owner, 2026-11-10: the ring holds the reading glasses; a reached goal turns them into 🎉, with confetti.
+        FlowFolioRing(
+            status.progress,
+            diameter = 46.dp,
+            color = if (status.reached) p.ok else null,
+            celebrationId = status.goal?.let { "library-goal-${it.period}" }
+        ) { GoalRingCentre(status.reached) }
         Column(Modifier.weight(1f)) {
             if (goal == null) {
                 Text(stringResource(R.string.goal_card_none), style = FlowFolioType.rowLabel.copy(color = p.ink))
@@ -390,3 +401,24 @@ private const val CHEVRON_DOWN = -90f
 private const val WIDE_COLUMNS = 8
 private const val NARROW_COLUMNS = 4
 private const val BAND_STIFFNESS = 500f
+
+/** The folded goal ring's centre: the reading glasses, or 🎉 popping in once the goal is reached. */
+@Composable
+private fun GoalRingCentre(reached: Boolean) {
+    AnimatedContent(
+        reached,
+        transitionSpec = {
+            (scaleIn(Motion.bouncySpec(), initialScale = POP_FROM) + fadeIn()) togetherWith
+                (scaleOut(targetScale = POP_FROM) + fadeOut())
+        },
+        label = "goalCentre"
+    ) { done ->
+        if (done) {
+            Text("🎉", fontSize = 18.sp, modifier = Modifier.semantics { contentDescription = "" })
+        } else {
+            FlowFolioGlyph(Glyph.Glasses, null, color = FlowFolio.palette.ink2, size = 20.dp, glow = false)
+        }
+    }
+}
+
+private const val POP_FROM = 0.4f

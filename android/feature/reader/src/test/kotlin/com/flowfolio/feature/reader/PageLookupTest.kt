@@ -92,4 +92,17 @@ class PageLookupTest {
         assertEquals("7", PageLookup.labelOf(6, labels))
         assertEquals("43", PageLookup.labelOf(42, emptyList()))
     }
+
+    @Test
+    fun chapterTitleGoesByPageNotListOrder() {
+        // An OpenStax outline ends with a bookmark back to page 1 named after the book.
+        val outline = listOf(
+            OutlineEntry(0, 0, "Preface"),
+            OutlineEntry(0, 20, "1 Statements"),
+            OutlineEntry(1, 22, "1.1 Background"),
+            OutlineEntry(0, 0, "Introduction to Python Programming")
+        )
+        assertEquals("Preface", PageLookup.chapterTitleAt(outline, 5))
+        assertEquals("1 Statements", PageLookup.chapterTitleAt(outline, 25))
+    }
 }

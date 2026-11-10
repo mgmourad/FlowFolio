@@ -140,6 +140,8 @@ internal class ReaderDictionaryViewModel @Inject constructor(
 internal fun ReaderDictionaryPanel(
     navigation: BookNavigation,
     onGo: (Int) -> Unit,
+    /** False inside the Words panel (ADR-0052), which has its own title. */
+    header: Boolean = true,
     viewModel: ReaderDictionaryViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -152,7 +154,7 @@ internal fun ReaderDictionaryPanel(
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .padding(horizontal = if (header) 16.dp else 0.dp, vertical = if (header) 12.dp else 0.dp)
             .testTag(ReaderTestTags.DICTIONARY_PANEL)
     ) {
         Row(
@@ -160,10 +162,17 @@ internal fun ReaderDictionaryPanel(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                stringResource(R.string.reader_dictionary),
-                style = MaterialTheme.typography.titleLarge.merge(FlowFolio.title)
-            )
+            if (header) {
+                Text(
+                    stringResource(R.string.reader_dictionary),
+                    style = MaterialTheme.typography.titleLarge.merge(FlowFolio.title)
+                )
+            } else {
+                Text(
+                    stringResource(R.string.reader_words_history_note),
+                    style = FlowFolioType.rowDetail.copy(color = FlowFolio.palette.ink3)
+                )
+            }
             FlowFolioIconButton(
                 onClick = {
                     searching = !searching

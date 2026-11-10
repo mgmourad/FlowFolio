@@ -52,64 +52,9 @@ import com.flowfolio.core.designsystem.glass
 import com.flowfolio.core.model.Translation
 import java.util.Locale
 
-/**
- * FlowFolio's Translate panel (owner, 2026-10-18; ADR-0018): glass, in the reader's palette. The source language
- * (detected, or chosen) and the target language as chips with a swap between them, the passage, its translation, Copy
- * and Share, and the recent translations below. Translation happens on the phone (Google ML Kit).
- */
-@Composable
-internal fun BoxScope.TranslateOverlay(
-    request: TranslateRequest,
-    onClose: () -> Unit,
-    viewModel: TranslateViewModel = hiltViewModel()
-) {
-    val text = request.text
-    LaunchedEffect(request) { viewModel.start(text, request.page, request.locator) }
-    val state by viewModel.state.collectAsStateWithLifecycle()
-    val history by viewModel.history.collectAsStateWithLifecycle()
-    Column(
-        Modifier
-            .align(Alignment.Center)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(18.dp)
-            .widthIn(max = PANEL_WIDTH)
-            .fillMaxWidth()
-            .fillMaxHeight(HEIGHT_SHARE)
-            .glass(RoundedCornerShape(28.dp))
-            .padding(18.dp)
-            .testTag(ReaderTestTags.TRANSLATE)
-    ) {
-        Header(onClose)
-        LanguageRow(state, viewModel)
-        TargetChips(state, viewModel)
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-            Passage(state)
-            Result(state)
-        }
-        History(history, viewModel::show, viewModel::clearHistory)
-    }
-}
-
-@Composable
-private fun Header(onClose: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                stringResource(R.string.reader_translate),
-                style = FlowFolioType.screenTitle.copy(fontSize = 26.sp).merge(FlowFolio.title)
-            )
-            Text(stringResource(R.string.reader_translate_note), style = FlowFolioType.rowDetail.merge(FlowFolio.hint))
-        }
-        FlowFolioIconButton(onClick = onClose, glass = true, tooltip = stringResource(R.string.reader_close)) {
-            FlowFolioGlyph(Glyph.Back, stringResource(R.string.reader_close), color = FlowFolio.palette.text)
-        }
-    }
-}
-
 /** Source chip, swap, target chip. */
 @Composable
-private fun LanguageRow(state: TranslateUiState, viewModel: TranslateViewModel) {
+internal fun LanguageRow(state: TranslateUiState, viewModel: TranslateViewModel) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -176,7 +121,7 @@ private fun LanguageChip(
 }
 
 @Composable
-private fun Passage(state: TranslateUiState) {
+internal fun Passage(state: TranslateUiState) {
     Text(
         "“${state.source}”",
         style = FlowFolioType.sub.copy(
@@ -191,7 +136,7 @@ private fun Passage(state: TranslateUiState) {
 }
 
 @Composable
-private fun Result(state: TranslateUiState) {
+internal fun Result(state: TranslateUiState) {
     val context = LocalContext.current
     Column(Modifier.padding(top = 16.dp)) {
         when (state.status) {
@@ -244,51 +189,11 @@ private fun Action(label: Int, onClick: () -> Unit) {
     )
 }
 
-/** Earlier translations, newest first; a tap shows one again. */
-@Composable
-private fun History(history: List<Translation>, onShow: (Translation) -> Unit, onClear: () -> Unit) {
-    if (history.isEmpty()) return
-    HorizontalDivider(color = FlowFolio.palette.edge, modifier = Modifier.padding(top = 12.dp))
-    Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            stringResource(R.string.reader_translate_history).uppercase(),
-            style = FlowFolioType.eyebrow.merge(FlowFolio.subItem),
-            modifier = Modifier.weight(1f)
-        )
-        Action(R.string.reader_translate_clear, onClear)
-    }
-    LazyColumn(Modifier.heightIn(max = HISTORY_HEIGHT).testTag(ReaderTestTags.TRANSLATE_HISTORY)) {
-        items(history, key = { it.id }) { t ->
-            Column(Modifier.fillMaxWidth().clickable { onShow(t) }.padding(vertical = 8.dp)) {
-                Text(
-                    "${languageName(t.from)} → ${languageName(t.to)}",
-                    style = FlowFolioType.pill.merge(FlowFolio.hint)
-                )
-                Text(
-                    t.source,
-                    style = FlowFolioType.rowDetail.merge(FlowFolio.item),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    t.translated,
-                    style = FlowFolioType.rowDetail.merge(FlowFolio.text),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
-
 /** "es" -> "Spanish" (in the phone's language). */
 internal fun languageName(code: String): String = Locale.forLanguageTag(code).let {
     it.getDisplayLanguage(Locale.getDefault()).replaceFirstChar { c -> c.titlecase(Locale.getDefault()) }
 }
     .ifBlank { code }
 
-private val PANEL_WIDTH = 640.dp
-private const val HEIGHT_SHARE = 0.8f
 private val MENU_HEIGHT = 420.dp
-private val HISTORY_HEIGHT = 220.dp
 private const val PASSAGE_LINES = 5

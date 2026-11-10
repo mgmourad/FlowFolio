@@ -57,17 +57,19 @@ class BookDetailsUiTest {
     }
 
     @Test
-    fun overviewShowsTimeRead() {
+    fun factTilesShowTimeRead() {
+        // Since the overhaul the time read is a fact tile above the tabs, not a line in Overview (ADR-0052).
         compose.setContent {
             FlowFolioTheme {
-                OverviewPanel(
+                FactTiles(
                     DetailsUiState(
                         loading = false,
                         book = physics,
                         readMillis =
                             2 * 3_600_000L + 300_000L
                     ),
-                    physics
+                    physics,
+                    wide = false
                 )
             }
         }

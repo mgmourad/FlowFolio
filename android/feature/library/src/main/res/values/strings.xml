@@ -808,4 +808,14 @@
     <string name="changelog_show">Show</string>
     <string name="changelog_hide">Hide</string>
     <string name="settings_whats_new_detail">Everything new in this version and the ones before</string>
+    <string name="tag_add">Tag</string>
+    <string name="tag_add_title">Add a tag</string>
+    <string name="tag_add_body">A word or two of your own: what this book is for, or where it belongs.</string>
+    <string name="tag_hint">e.g. summer, work, re-read</string>
+    <string name="tag_add_confirm">Add tag</string>
+    <string name="tag_remove">Remove tag %1$s</string>
+    <string name="details_flow_off_title">Dynamic Flow is available.</string>
+    <string name="details_flow_off_body">Reflow this PDF to fit your screen. It is prepared on your phone, about a minute the first time, and the original stays as it is.</string>
+    <string name="details_flow_on_title">Dynamic Flow is on.</string>
+    <string name="details_flow_on_body">This PDF opens reflowed to your font and size. The original is untouched; switch views from Aa.</string>
 </resources>

@@ -3,10 +3,12 @@ package com.flowfolio.feature.library
 import android.text.format.DateFormat
 import android.text.format.Formatter
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,30 +19,52 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.flowfolio.core.data.DefaultBookTagRepository
+import com.flowfolio.core.designsystem.ButtonStyle
+import com.flowfolio.core.designsystem.DialogAction
+import com.flowfolio.core.designsystem.DialogField
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioCard
+import com.flowfolio.core.designsystem.FlowFolioChip
+import com.flowfolio.core.designsystem.FlowFolioDialog
+import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioProgressBar
 import com.flowfolio.core.designsystem.FlowFolioType
+import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.tint
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookFormat
 import com.flowfolio.core.model.BookStorage
 import com.flowfolio.core.model.OutlineEntry
+import com.flowfolio.core.model.ReadingIntent
 import com.flowfolio.core.model.pageLabel
 import kotlin.math.roundToInt
 
@@ -81,44 +105,28 @@ internal fun DetailsMeta(state: DetailsUiState, book: Book, modifier: Modifier =
  * split by hairlines: time read, ribbons, shelves.
  */
 @Composable
-internal fun OverviewPanel(state: DetailsUiState, book: Book) {
+internal fun OverviewPanel(state: DetailsUiState, book: Book, actions: DetailsActions = DetailsActions()) {
+    val p = FlowFolio.palette
     Column(Modifier.fillMaxWidth()) {
         book.details.description?.let {
-            Text(
-                it,
-                style = FlowFolioType.sub.copy(fontSize = 15.sp, lineHeight = 23.sp).merge(FlowFolio.item),
-                modifier = Modifier.padding(bottom = 22.dp)
-            )
+            Text(it, style = FlowFolioType.body.copy(fontSize = 14.5.sp, lineHeight = 23.sp, color = p.ink2))
         }
-        Text(
-            stringResource(R.string.percent_complete, (book.progress * PERCENT).roundToInt()),
-            style = FlowFolioType.rowLabel.merge(FlowFolio.title),
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        FlowFolioProgressBar(book.progress)
+        BookChips(state, book, actions, Modifier.padding(top = 14.dp))
+        if (book.format == BookFormat.PDF) FlowBox(book, Modifier.padding(top = 16.dp))
         state.bookGoal?.let { goal ->
             Text(
                 stringResource(R.string.goal_book_progress, readTime(state.readMillis), readTime(goal.targetMillis)),
-                style = FlowFolioType.rowLabel.merge(FlowFolio.item),
-                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
+                style = FlowFolioType.rowLabel.copy(color = p.ink),
+                modifier = Modifier.padding(top = 18.dp, bottom = 8.dp)
             )
             FlowFolioProgressBar(goal.progress(state.readMillis))
             if (goal.exceeded(state.readMillis)) {
                 Text(
                     stringResource(R.string.goal_exceeded_tip),
-                    style = FlowFolioType.rowDetail.merge(FlowFolio.subItem),
+                    style = FlowFolioType.rowDetail.copy(color = p.ink2),
                     modifier = Modifier.padding(top = 6.dp).testTag(LibraryTestTags.GOAL_EXCEEDED_TIP)
                 )
             }
-        }
-        FactTiles(state, book)
-        if (state.bookShelves.isNotEmpty()) {
-            Text(
-                state.bookShelves.joinToString(SEPARATOR) { it.name },
-                style = FlowFolioType.sub.merge(FlowFolio.hint),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(top = 18.dp)
-            )
         }
     }
 }
@@ -135,23 +143,6 @@ internal fun readTime(millis: Long): String {
         rest == 0L || hours >= WHOLE_HOURS_FROM -> stringResource(R.string.read_hours, hours)
         else -> stringResource(R.string.read_hours_minutes, hours, rest.toInt())
     }
-}
-
-@Composable
-private fun Stat(value: String, label: String, modifier: Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, style = FlowFolioType.stat.merge(FlowFolio.item))
-        Text(
-            label.uppercase(),
-            style = FlowFolioType.eyebrow.merge(FlowFolio.hint),
-            modifier = Modifier.padding(top = 2.dp)
-        )
-    }
-}
-
-@Composable
-private fun StatRule() {
-    Box(Modifier.width(1.dp).fillMaxHeight().padding(vertical = 4.dp).background(FlowFolio.palette.edge))
 }
 
 /**
@@ -253,32 +244,53 @@ internal fun NotebookPanel(state: DetailsUiState, onOpen: () -> Unit) {
     }
 }
 
-/** The four fact tiles (ADR-0052): Complete, Read, Ribbons and Shelves, named singular or plural as needed. */
+/** The four fact tiles (`.facts`, ADR-0052): Complete, Read, Ribbons and Shelves, named singular or plural. */
 @Composable
-private fun FactTiles(state: DetailsUiState, book: Book) {
-    // Four fact tiles (ADR-0052), their names singular or plural as the figure needs ("1 SHELF").
+internal fun FactTiles(state: DetailsUiState, book: Book, wide: Boolean) {
     Row(
-        Modifier.fillMaxWidth().padding(top = 26.dp).height(IntrinsicSize.Min),
-        verticalAlignment = Alignment.CenterVertically
+        Modifier.fillMaxWidth().padding(top = 20.dp).height(IntrinsicSize.Min),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        val tile = Modifier.weight(1f).fillMaxHeight()
         Stat(
             stringResource(R.string.percent_value, (book.progress * PERCENT).roundToInt()),
             stringResource(R.string.stat_complete),
-            Modifier.weight(1f)
+            wide,
+            tile
         )
-        StatRule()
-        Stat(readTime(state.readMillis), stringResource(R.string.stat_read), Modifier.weight(1f))
-        StatRule()
+        Stat(readTime(state.readMillis), stringResource(R.string.stat_read), wide, tile)
         Stat(
             state.counts.bookmarks.toString(),
             pluralStringResource(R.plurals.stat_ribbons_n, state.counts.bookmarks),
-            Modifier.weight(1f)
+            wide,
+            tile
         )
-        StatRule()
         Stat(
             state.bookShelves.size.toString(),
             pluralStringResource(R.plurals.stat_shelves_n, state.bookShelves.size),
-            Modifier.weight(1f)
+            wide,
+            tile
+        )
+    }
+}
+
+/** One tile: the figure in Fraunces over its name, on the second surface; centred folded, start-aligned unfolded. */
+@Composable
+private fun Stat(value: String, label: String, wide: Boolean, modifier: Modifier) {
+    val p = FlowFolio.palette
+    Column(
+        modifier
+            .background(p.surface2, RoundedCornerShape(16.dp))
+            .padding(horizontal = if (wide) 10.dp else 4.dp, vertical = if (wide) 14.dp else 12.dp),
+        horizontalAlignment = if (wide) Alignment.Start else Alignment.CenterHorizontally
+    ) {
+        Text(value, style = FlowFolioType.stat.copy(fontSize = 22.sp, color = p.ink), maxLines = 1)
+        Text(
+            label.uppercase(),
+            style = FlowFolioType.eyebrow.copy(fontSize = 9.5.sp, letterSpacing = 0.4.sp, color = p.ink3),
+            softWrap = false,
+            maxLines = 1,
+            modifier = Modifier.padding(top = 2.dp)
         )
     }
 }

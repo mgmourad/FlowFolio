@@ -207,7 +207,7 @@ internal fun BoxScope.ReadyReader(
         ZoomView(it, framesFor, images, tiles, viewModel::showTiles, annotating, onExit = { overlay.zoom = null })
     }
     // Selection and highlight menus: over the pages, and over the zoomed view too; under the bars.
-    CompositionLocalProvider(LocalGlassState provides haze) { AnnotatingLayer(annotating, s) }
+    CompositionLocalProvider(LocalGlassState provides haze) { AnnotatingLayer(annotating, s, navigation, jump) }
     if (overlay.zoom == null) {
         ReaderControls(s, navigation, viewModel, riffling, overlay, mark, marks, haze, detour, onBack, jump)
     }
@@ -288,7 +288,7 @@ private fun MirroredBook(mirrored: Boolean, content: @Composable () -> Unit) {
 internal class ChromeParts(
     val onBack: () -> Unit,
     val jump: (Int) -> Unit,
-    val bar: @Composable () -> Unit,
+    val bar: @Composable (footer: @Composable () -> Unit) -> Unit,
     val book: ReaderViewModel
 )
 

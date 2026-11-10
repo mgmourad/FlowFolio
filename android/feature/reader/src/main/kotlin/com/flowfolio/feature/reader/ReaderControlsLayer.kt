@@ -83,7 +83,9 @@ internal fun BoxScope.ReaderControls(
     onBack: () -> Unit,
     jump: (Int) -> Unit
 ) {
-    val bar: @Composable () -> Unit = { RiffleBar(s, riffling, marks, viewModel, overlay.chrome) }
+    val bar: @Composable (@Composable () -> Unit) -> Unit = { footer ->
+        RiffleBar(s, riffling, marks, viewModel, overlay.chrome, footer)
+    }
     CompositionLocalProvider(
         LocalGlassState provides haze,
         LocalReaderSounds provides riffling.sounds,

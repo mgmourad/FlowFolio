@@ -23,9 +23,10 @@ import javax.inject.Singleton
         TranslationEntity::class,
         ReadingGoalEntity::class,
         DefinitionEntity::class,
-        BookTextEntity::class
+        BookTextEntity::class,
+        BookTagEntity::class
     ],
-    version = 21,
+    version = 22,
     exportSchema = true,
     // v2: books.last_page (reading position, Phase 1 milestone 4).
     // v3: books.author, shelves and shelf_books (milestone 5, slice 3).
@@ -64,7 +65,9 @@ import javax.inject.Singleton
         AutoMigration(from = 17, to = 18),
         AutoMigration(from = 18, to = 19),
         AutoMigration(from = 19, to = 20),
-        AutoMigration(from = 20, to = 21)
+        AutoMigration(from = 20, to = 21),
+        // v22: book_tags, a book's own tags (owner, 2026-11-10).
+        AutoMigration(from = 21, to = 22)
     ]
 )
 abstract class FlowFolioDatabase : RoomDatabase() {
@@ -87,6 +90,8 @@ abstract class FlowFolioDatabase : RoomDatabase() {
     abstract fun definitionDao(): DefinitionDao
 
     abstract fun bookTextDao(): BookTextDao
+
+    abstract fun bookTagDao(): BookTagDao
 }
 
 @Suppress("TooManyFunctions") // one provider per DAO: it grows with the tables
@@ -127,4 +132,7 @@ object DatabaseModule {
 
     @Provides
     fun bookTextDao(db: FlowFolioDatabase): BookTextDao = db.bookTextDao()
+
+    @Provides
+    fun bookTagDao(db: FlowFolioDatabase): BookTagDao = db.bookTagDao()
 }

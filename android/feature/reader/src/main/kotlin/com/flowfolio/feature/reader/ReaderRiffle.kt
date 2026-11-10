@@ -1,9 +1,11 @@
 package com.flowfolio.feature.reader
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -19,6 +21,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.color
 import com.flowfolio.core.designsystem.glass
 import com.flowfolio.core.model.Bookmark
@@ -110,7 +113,8 @@ internal fun RiffleBar(
     riffling: Riffling,
     marks: List<Bookmark>,
     viewModel: ReaderViewModel,
-    chrome: ChromeClock
+    chrome: ChromeClock,
+    footer: @Composable () -> Unit = {}
 ) {
     val book = riffling.book
     val settings by viewModel.userSettings.collectAsStateWithLifecycle()
@@ -130,12 +134,27 @@ internal fun RiffleBar(
         val height = with(density) { LOUPE_PAGE_HEIGHT.dp.roundToPx() }
         thumbnails?.use(PixelSize((height * s.pageAspect).toInt().coerceAtLeast(1), height), s.tone)
     }
-    val boards = remember(s.tone) { boardColors(s.tone) }
+    // Monochrome fore edge (ADR-0052, owner 2026-11-10): ink leaves and boards, the chapter bands in the accent.
+    val p = FlowFolio.palette
+    val boards = remember(s.tone, p) {
+        boardColors(s.tone).copy(main = p.ink2, dark = p.ink, ink = p.ink, accent = p.accent)
+    }
     val events = rememberReaderEvents(state, settings.scrubHaptics, chrome, riffling.sounds, riffling.land)
     // The glass is drawn behind the dock rather than on it: glass clips, and the loupe rises above the dock.
-    Box(Modifier.navigationBarsPadding().padding(horizontal = 12.dp).padding(bottom = 8.dp).fillMaxWidth()) {
-        Box(Modifier.matchParentSize().glass(RoundedCornerShape(22.dp)))
-        RiffleDock(state, boards, Modifier.fillMaxWidth(), events, thumbnails, chrome::remaining)
+    // One glass card (`.dock`): the riffle with the tools under it, centred at the mock's width when unfolded.
+    Box(
+        Modifier
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp)
+            .padding(bottom = 8.dp)
+            .widthIn(max = DOCK_MAX)
+            .fillMaxWidth()
+    ) {
+        Box(Modifier.matchParentSize().glass(RoundedCornerShape(26.dp)))
+        Column(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+            RiffleDock(state, boards, Modifier.fillMaxWidth(), events, thumbnails, chrome::remaining)
+            footer()
+        }
     }
 }
 
@@ -264,3 +283,6 @@ private fun flagColor(color: BookmarkColor): Color =
 
 private const val LOUPE_PAGE_HEIGHT = 162
 private const val LIGHTER = 0.45f
+
+/** The dock's width at most: the mock's 560 dp, a little wider for the strip's sake. */
+private val DOCK_MAX = 680.dp

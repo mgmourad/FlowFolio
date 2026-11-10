@@ -84,7 +84,8 @@ internal fun BoxScope.ReaderPanels(
         ContentsList(navigation.outline, navigation.labels, s.anchorPage, jump) { onPanel(Panel.GO_TO) }
     }
     CenteredPanel(panel == Panel.DICTIONARY, CONTENTS_WIDTH) {
-        ReaderDictionaryPanel(navigation, jump)
+        // ADR-0052: Words, on History from the dock (a selection opens it on Define or Translate).
+        WordsPanel(null, WordsTab.HISTORY, navigation, jump, onClose = null, Modifier.padding(16.dp))
     }
     CenteredPanel(panel == Panel.ANNOTATIONS, CONTENTS_WIDTH) {
         AnnotationList(mark.notes, navigation, jump)

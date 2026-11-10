@@ -202,6 +202,13 @@ local.
     `:feature:library`).
   - `docs/plans/ux-overhaul-parity.md` maps every feature to its new home.
   - **Nothing is pushed yet**: 0.6.0-canary.2 waits for the owner.
+- **Owner's post-overhaul fixes, 2026-11-10.**
+  - Details follows the mock (cover column, actions on one line, fact tiles, Overview chips). **Room v22**
+    `book_tags`, a book's own tags (`BookTagRepository`).
+  - The reader's dock is one glass card, the riffle with the tools under it (`RiffleBar(footer)`), and its fore
+    edge is monochrome via `BoardColors.ink`.
+  - Words is one panel (`WordsPanel`: Define, Translate, History); `DefineOverlay` is gone.
+  - The folded goal ring shows the reading glasses, then 🎉.
 - Handover APKs get a new name every build (`app/build/outputs/apk/debug/handover/`) and are installed on the owner's
   phone as well as the emulator.
 
@@ -454,6 +461,8 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     `app/build.gradle.kts` (the plugin overwrites DSL settings on those build types); real release builds keep it false.
     Gradle's connected run uninstalls the test APK and hides crashes: when a run reports 0 tests, install both APKs and
     run `am instrument -w -r -e class ... -e androidx.benchmark.enabledRules BaselineProfile` by hand.
+48. **Room is at schema v22** (v22: `book_tags`; v21: `book_text`). The migration tests replay the committed schema JSON
+    into SQLite (`BookTextMigrationTest`, `BookTagMigrationTest`), since `room-testing` is not a dependency.
 32. Room is at schema v14 (v14: `annotations.locator` and `bookmarks.locator`, an EPUB highlight's or ribbon's
     `chapter:offset`; an EPUB highlight's `char_start`/`char_end` are then chapter offsets and its `page` and `rects` only
     where the reader last placed it, ADR-0040). At v13: `shelf_books.position`, a shelf's drag-and-drop order, smallest first, ties newest first).
