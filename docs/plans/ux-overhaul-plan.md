@@ -205,6 +205,16 @@ the additions below.
 
 ### Phase 8: reader
 
+> **Done 2026-11-09, in part.**
+> - Built: the top bar, the six-tool dock (the right rail is removed), panels anchored above the dock, and every part
+>   of bug 1 (search).
+> - **Deferred, nothing removed:** the riffle restyle (its header already shows the chapter and "Page X–Y of N — %"),
+>   the nine-colour selection menu, the Translate language chips and (+) sheet, Listen's speed segments, the
+>   Preparing banner and coach marks. The existing panels and the selection toolbar serve those features unchanged.
+>
+> Verified on `fold8_api37` unfolded: the dock fits all six tools, and Search opens above it with 50 matches for
+> "whale" in *Moby-Dick*, grouped by chapter. CI has not run.
+
 - Top bar (back, title chip with chapter and time left unfolded, ribbon button: tap toggles, long-press colours; ⋯
   with Go to page, Ribbon colour, Book details, PDF/Dynamic Flow, Keep screen on, debug-only detour demo, Show reader
   tips, Share book). Bottom dock: riffle + Contents, Search, Aa, Listen, Notebook, Words. **The unfolded right rail

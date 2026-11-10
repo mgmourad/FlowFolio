@@ -706,13 +706,23 @@ class ReaderViewModel @Inject constructor(
         }
         val q = query.trim()
         searchJob = viewModelScope.launch(Dispatchers.Default) {
-            _searchResults.value = if (q.isEmpty()) emptyList() else doSearch(q).take(SEARCH_CAP)
+            // Nothing for one letter, and a short wait while typing (ADR-0052: "p" matched half the book).
+            if (q.length < SEARCH_MIN_CHARS) {
+                _searchResults.value = emptyList()
+                return@launch
+            }
+            delay(SEARCH_DEBOUNCE_MS)
+            _searchResults.value = doSearch(q).take(SEARCH_CAP)
         }
     }
 
     private suspend fun doSearch(query: String): List<SearchHit> {
         val session = epub
-        return if (session != null) searchEpub(session, query) else searchPdf(query)
+        val hits = if (session != null) searchEpub(session, query) else searchPdf(query)
+        // While Dynamic Flow is still preparing, chapters not yet converted have no text: the PDF's own text layer
+        // answers instead of "No matches" (ADR-0052). Its pages are PDF pages, which the PDF view opens at.
+        val preparing = flow.value.status.let { it is FlowStatus.Converting || it == FlowStatus.Queued }
+        return if (hits.isEmpty() && session != null && preparing) searchPdf(query) else hits
     }
 
     private suspend fun searchEpub(session: EpubSession, query: String): List<SearchHit> {
@@ -722,7 +732,8 @@ class ReaderViewModel @Inject constructor(
             if (text.isEmpty()) continue
             for (range in findMatches(text, query)) {
                 val start = offsets[range.first]
-                val end = offsets[range.last]
+                // The end is exclusive, like a PDF match's: the last matched character's offset, plus one.
+                val end = offsets[range.last] + 1
                 val locator = Locator(chapter, start)
                 val page = session.pageOf(locator)
                 hits += SearchHit(
@@ -731,7 +742,7 @@ class ReaderViewModel @Inject constructor(
                     start,
                     end,
                     text.substring(range),
-                    snippet(text, range),
+                    snippet(text, range, offsets),
                     labelFor(page)
                 )
                 if (hits.size >= SEARCH_HARD_CAP) return hits
@@ -1484,6 +1495,8 @@ class ReaderViewModel @Inject constructor(
         /** Logcat tag for EPUB layout times (M3's 300 ms target for a text change). */
         private const val LAYOUT_TAG = "FlowFolioLayout"
         const val ARG_BOOK_ID = "bookId"
+        private const val SEARCH_MIN_CHARS = 2
+        private const val SEARCH_DEBOUNCE_MS = 250L
         const val ARG_LAYOUT = "layout"
         private const val KEY_ANCHOR = "anchorPage"
         private const val KEY_LOCATOR = "locator"

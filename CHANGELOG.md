@@ -19,6 +19,24 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Settings → Text holds the defaults, and says so.
 
 ### Changed
+- **Overhaul Phase 8: the reader's chrome and in-book search** (2026-11-09).
+  - **Top bar:** Back, the book's title on a glass chip, the ribbon button (tap toggles, long-press picks a colour)
+    and ⋯ (Go to page, Ribbon colour).
+  - **The dock:** six tools on glass above the riffle bar: Contents, Search, Aa, Listen, Notebook, Words. Each has a
+    glyph and a label, and the open panel's tool sits on the soft accent. **The unfolded right-hand rail is gone**:
+    it sat on the right page's line ends. Every tool it held is in the dock or the top bar.
+  - **Panels** now open from the bottom, just above the dock, rather than under the top bar.
+  - **In-book search (bug 1):**
+    - It waits for two characters and 250 ms of quiet before it searches.
+    - Snippets put a space where two blocks meet ("Brief Contents Title Page", not "Brief ContentsTitle Page").
+    - The hit's highlight now ends on the match's last character; the EPUB end offset was off by one.
+    - Results show a count and ⌃/⌄ stepping, and are grouped by chapter with printed page labels.
+    - While Dynamic Flow is still preparing a book, search reads the PDF's own text instead of finding nothing.
+    - `SearchSnippetTest` covers the snippet joining and the bounds.
+  - **Not in this phase** (left for a later batch, with nothing removed): the riffle's restyle, the
+    nine-colour selection menu, the Words panel's language chips, Listen's speed segments, and coach marks.
+    Those panels work as before.
+
 - **Overhaul Phase 7: Settings** (2026-11-09).
   - **The hub:** ten sections in the mock's order: Appearance, Text, Reading, Sound & voice, Atmosphere, Library,
     Dynamic Flow, Updates, Storage, and Help & about. Each row shows the orange `SettingsTile`, the section's name,

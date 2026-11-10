@@ -80,7 +80,6 @@ internal fun BoxScope.ReaderPanels(
     onNarratorContinuous: (Boolean) -> Unit = {},
     onNarratorVoice: (String) -> Unit = {}
 ) {
-    val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
     CenteredPanel(panel == Panel.CONTENTS, CONTENTS_WIDTH) {
         ContentsList(navigation.outline, navigation.labels, s.anchorPage, jump) { onPanel(Panel.GO_TO) }
     }
@@ -175,25 +174,19 @@ private fun BoxScope.DropPanel(
     fillDown: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
-    val topClearance = if (wide) WIDE_TOP_BAR_CLEARANCE else FOLDED_TOP_BAR_CLEARANCE
+    // ADR-0052: panels open above the dock, rising into place, between the top bar and the dock.
     AnimatedVisibility(
         visible,
         Modifier
-            // Unfolded, the tools are a rail on the right, so these drop beside it; folded, under the top bar.
-            .align(if (wide) Alignment.CenterEnd else Alignment.TopEnd)
+            .align(Alignment.BottomCenter)
             .statusBarsPadding()
-            .padding(
-                start = PANEL_INSET,
-                end = if (wide) PANEL_INSET + RAIL_CLEARANCE else PANEL_INSET,
-                top = if (wide) 0.dp else topClearance
-            )
-            .then(if (fillDown) Modifier.navigationBarsPadding().padding(bottom = BOTTOM_BAR_CLEARANCE) else Modifier)
+            .navigationBarsPadding()
+            .padding(start = PANEL_INSET, end = PANEL_INSET, top = TOP_BAR_CLEARANCE, bottom = DOCK_CLEARANCE)
             .imePadding(),
         enter = fadeIn(tween(Motion.FAST_MS)) +
-            slideInVertically(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { -it / DROP_FRACTION },
+            slideInVertically(tween(Motion.RISE_MS, easing = Motion.Rise)) { it / DROP_FRACTION },
         exit = fadeOut(tween(Motion.FAST_MS)) +
-            slideOutVertically(tween(Motion.FAST_MS, easing = Motion.EaseOut)) { -it / DROP_FRACTION }
+            slideOutVertically(tween(Motion.FAST_MS, easing = Motion.EmphasizedExit)) { it / DROP_FRACTION }
     ) {
         val sized = if (width != null) Modifier.widthIn(max = width).fillMaxWidth() else Modifier
         Column(
@@ -261,16 +254,13 @@ private val PanelShape = RoundedCornerShape(26.dp)
 private val PANEL_INSET = 14.dp
 
 /** The top bar is 8 + 56 + 8 dp unfolded, and 2 rows folded; panels start clearly below it. */
-private val WIDE_TOP_BAR_CLEARANCE = 78.dp
-private val FOLDED_TOP_BAR_CLEARANCE = 116.dp
+private val TOP_BAR_CLEARANCE = 78.dp
+
+/** The dock and the riffle bar under it, which a panel keeps clear of. */
+private val DOCK_CLEARANCE = 168.dp
 private val CENTERED_VERTICAL_CLEARANCE = 84.dp
 private const val CENTERED_MAX_HEIGHT = 0.72f
 
-/** Unfolded, the right rail (56 dp button + 14 dp inset) plus a gap, so drop panels clear it. */
-private val RAIL_CLEARANCE = 78.dp
-
-/** The bottom bar is 56 dp tall, 26 dp above the navigation bar; the contents stop 10 dp above it. */
-private val BOTTOM_BAR_CLEARANCE = 92.dp
 private val CONTENTS_WIDTH = 520.dp
 private val GO_TO_WIDTH = 420.dp
 private val SEARCH_WIDTH = 420.dp

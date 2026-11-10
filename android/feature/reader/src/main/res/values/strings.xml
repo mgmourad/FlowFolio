@@ -224,4 +224,19 @@
     <string name="reader_text_own">This book has text settings of its own.</string>
     <string name="reader_text_reset">Use defaults</string>
     <string name="reader_text_make_default">Make default</string>
+    <string name="reader_more">More</string>
+    <string name="reader_listen">Listen</string>
+    <string name="reader_notebook">Notebook</string>
+    <string name="reader_words">Words</string>
+    <string name="reader_ribbon_colour">Ribbon colour</string>
+    <string name="reader_search_min">Type two or more letters.</string>
+    <string name="reader_search_previous">Previous match</string>
+    <string name="reader_search_next">Next match</string>
+    <string name="reader_search_no_chapter">Start of the book</string>
+    <string name="reader_search_page">p. %1$d</string>
+    <plurals name="reader_search_count">
+        <item quantity="one">%d match</item>
+        <item quantity="other">%d matches</item>
+    </plurals>
+    <string name="reader_dock_search">Search</string>
 </resources>

@@ -89,6 +89,7 @@ abstract class FlowFolioDatabase : RoomDatabase() {
     abstract fun bookTextDao(): BookTextDao
 }
 
+@Suppress("TooManyFunctions") // one provider per DAO: it grows with the tables
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {

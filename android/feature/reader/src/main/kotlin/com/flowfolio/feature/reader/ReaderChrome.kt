@@ -15,6 +15,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,6 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -73,6 +76,8 @@ import com.flowfolio.core.designsystem.EdgeFade
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
+import com.flowfolio.core.designsystem.FlowFolioMenu
+import com.flowfolio.core.designsystem.FlowFolioMenuItem
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Motion
@@ -92,6 +97,7 @@ import kotlin.math.abs
  * bookmark on top; [bottomBar], the riffle scrubber (ADR-0022), at the bottom. While they are hidden, the page number
  * stays at the foot of the page in print style.
  */
+@Suppress("LongMethod") // the bars, the dock and the riffle bar, each sliding in its own way
 @Composable
 internal fun BoxScope.ReaderChrome(
     state: ReaderState.Ready,
@@ -139,17 +145,19 @@ internal fun BoxScope.ReaderChrome(
             )
         }
     }
-    // Unfolded, the reading tools move to a vertical rail on the right (owner, 2026-11-08): the title gets the whole
-    // top bar beside Back, and the buttons are never snug.
-    if (LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK) {
-        AnimatedVisibility(
-            controlsVisible,
-            Modifier.align(Alignment.CenterEnd),
-            enter = slideInHorizontally(slide) { it * 2 } + fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)),
-            exit = slideOutHorizontally(slide) { it * 2 } + fadeOut(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut))
-        ) {
-            ScreenEntrance(holdForLandings = false) { RightRail(mark, actions, panel) }
-        }
+    // ADR-0052: the reading tools sit in a dock above the riffle bar, so nothing covers the text (the unfolded
+    // right-hand rail sat on the right page's line ends). The dock keeps clear of the riffle bar by its height.
+    var riffleHeight by remember { mutableStateOf(0.dp) }
+    AnimatedVisibility(
+        controlsVisible,
+        Modifier
+            .align(Alignment.BottomCenter)
+            .padding(bottom = if (bottomBarVisible) riffleHeight else 0.dp)
+            .then(if (bottomBarVisible) Modifier else Modifier.navigationBarsPadding()),
+        enter = slideInVertically(slide) { it } + fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)),
+        exit = slideOutVertically(slide) { it } + fadeOut(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut))
+    ) {
+        ScreenEntrance(holdForLandings = false) { ToolDock(actions, panel) }
     }
     AnimatedVisibility(
         bottomBarVisible,
@@ -157,7 +165,13 @@ internal fun BoxScope.ReaderChrome(
         enter = slideInVertically(slide) { it * 2 } + fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)),
         exit = slideOutVertically(slide) { it * 2 } + fadeOut(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut))
     ) {
-        ScreenEntrance(holdForLandings = false) { Box(Modifier.reveal(DOCK_ORDER)) { bottomBar() } }
+        ScreenEntrance(holdForLandings = false) {
+            Box(
+                Modifier
+                    .reveal(DOCK_ORDER)
+                    .onSizeChanged { riffleHeight = with(density) { it.height.toDp() } }
+            ) { bottomBar() }
+        }
     }
     // In Scroll the number would float over the text; the bars show the page there. Whenever the riffle bar is not
     // showing -- hidden with the rest of the chrome, or dismissed on its own -- the page number stands in for it, and
@@ -170,9 +184,8 @@ internal fun BoxScope.ReaderChrome(
 }
 
 /**
- * `.r-top`: Back, the title, and the reading tools, each on glass. Unfolded, one row with the title beside Back
- * (owner, 2026-10-18). Folded, the whole title has a centred row of its own above Back and the tools (owner,
- * 2026-10-23), which leaves the second row room for the tools EPUBs will gain.
+ * `.rtop` (ADR-0052): Back, the book's title chip, the ribbon button (tap to mark this page, long press for its colour)
+ * and ⋯, folded and unfolded alike. The reading tools are in the dock at the bottom.
  */
 @Composable
 private fun TopBar(
@@ -182,124 +195,133 @@ private fun TopBar(
     panel: Panel,
     modifier: Modifier = Modifier
 ) {
-    val width = LocalWindowInfo.current.containerDpSize.width
-    val wide = width >= TITLE_BESIDE_BACK
-    // A third larger than the app's usual 42 dp for easy reach (owner, 2026-10-22); folded, a little less, and never
-    // more than the row holds: a PDF's six buttons overflowed the cover screen and the row squeezed the last one, the
-    // ribbon, smaller than the rest (owner, 2026-10-26). Every button shares the width equally instead.
-    val buttons = TOOL_BUTTONS
-    // The row's gaps: one between each button and around the spacer that pushes the tools right.
-    val fits = (width - BAR_INSET * 2 - TOOL_GAP * buttons) / buttons
-    val button = if (wide) BIG_BUTTON else minOf(FOLDED_BUTTON, fits)
-    Column(
+    val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
+    val button = if (wide) BIG_BUTTON else FOLDED_BUTTON
+    Row(
         modifier
             .fillMaxWidth()
             .statusBarsPadding()
             .padding(horizontal = BAR_INSET, vertical = BAR_VERTICAL_PADDING),
-        verticalArrangement = Arrangement.spacedBy(BAR_ROW_GAP)
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(TOOL_GAP)
     ) {
-        if (!wide) TitlePill(title, wide = false, Modifier.fillMaxWidth().reveal(0))
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(TOOL_GAP)
+        FlowFolioIconButton(
+            onClick = actions.onBack,
+            Modifier.reveal(0),
+            glass = true,
+            size = button,
+            tooltip = stringResource(R.string.reader_back)
         ) {
-            FlowFolioIconButton(onClick = actions.onBack, Modifier.reveal(1), glass = true, size = button) {
-                FlowFolioGlyph(
-                    Glyph.Back,
-                    stringResource(R.string.reader_back),
-                    color = FlowFolio.palette.text,
-                    size = button * GLYPH_SHARE
-                )
-            }
-            if (wide) {
-                TitlePill(
-                    title,
-                    wide = true,
-                    Modifier.weight(1f, fill = false).reveal(1)
-                )
-            } else {
-                Spacer(Modifier.weight(1f))
-                TopTools(mark, actions, button, panel)
-            }
+            FlowFolioGlyph(Glyph.Back, null, color = FlowFolio.palette.text, size = button * GLYPH_SHARE)
+        }
+        TitlePill(title, wide = true, Modifier.weight(1f).reveal(1))
+        Box(Modifier.reveal(2)) { BookmarkButton(mark, actions, button, glowing = panel == Panel.MARK) }
+        Box(Modifier.reveal(3)) { MoreMenu(actions, button) }
+    }
+}
+
+/** The top bar's ⋯ (ADR-0052): Go to page and the ribbon's colour. */
+@Composable
+private fun MoreMenu(actions: ChromeActions, button: Dp) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        FlowFolioIconButton(
+            onClick = { open = true },
+            glass = true,
+            size = button,
+            tooltip = stringResource(R.string.reader_more),
+            modifier = Modifier.testTag(ReaderTestTags.MORE)
+        ) {
+            FlowFolioGlyph(Glyph.More, null, color = FlowFolio.palette.text, size = button * GLYPH_SHARE)
+        }
+        FlowFolioMenu(expanded = open, onDismissRequest = { open = false }) {
+            FlowFolioMenuItem(stringResource(R.string.reader_go_to), {
+                open = false
+                actions.onPanel(Panel.GO_TO)
+            }, glyph = Glyph.GoTo)
+            FlowFolioMenuItem(stringResource(R.string.reader_ribbon_colour), {
+                open = false
+                actions.onPanel(Panel.MARK)
+            }, glyph = Glyph.Bookmark)
         }
     }
 }
 
 /**
- * Unfolded, the reading tools in a vertical rail on the right, so the top bar holds just Back and the title
- * (owner, 2026-11-08). The buttons keep the same order as the folded top bar, read top to bottom. The rail is
- * centred above the riffle bar, so its last button never touches it.
+ * The dock (`.dock`, ADR-0052): six reading tools on glass above the riffle bar: Contents, Search, Aa, Listen,
+ * Notebook and Words. The tool whose panel is open sits on the soft accent; panels open above the dock.
  */
 @Composable
-private fun BoxScope.RightRail(mark: ChromeMark, actions: ChromeActions, panel: Panel) {
+private fun ToolDock(actions: ChromeActions, panel: Panel) {
+    val wide = LocalWindowInfo.current.containerDpSize.width >= TITLE_BESIDE_BACK
+    Row(
+        Modifier
+            .padding(horizontal = BAR_INSET, vertical = 6.dp)
+            .then(if (wide) Modifier.width(DOCK_WIDE) else Modifier.fillMaxWidth())
+            .glass(RoundedCornerShape(DOCK_RADIUS))
+            .padding(horizontal = 6.dp, vertical = 4.dp)
+            .testTag(ReaderTestTags.DOCK),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        DockTool(Panel.CONTENTS, Glyph.Contents, R.string.reader_contents, ReaderTestTags.CONTENTS, panel, actions, 4)
+        DockTool(Panel.SEARCH, Glyph.Search, R.string.reader_dock_search, ReaderTestTags.SEARCH, panel, actions, 5)
+        DockTool(
+            Panel.SETTINGS,
+            Glyph.TextSize,
+            R.string.reader_settings_button,
+            ReaderTestTags.SETTINGS,
+            panel,
+            actions,
+            6
+        )
+        DockTool(Panel.NARRATOR, Glyph.Sound, R.string.reader_listen, ReaderTestTags.NARRATOR, panel, actions, 7)
+        DockTool(
+            Panel.ANNOTATIONS,
+            Glyph.Notebook,
+            R.string.reader_notebook,
+            ReaderTestTags.ANNOTATIONS,
+            panel,
+            actions,
+            8
+        )
+        DockTool(Panel.DICTIONARY, Glyph.Translate, R.string.reader_words, ReaderTestTags.DICTIONARY, panel, actions, 9)
+    }
+}
+
+@Suppress("LongParameterList")
+@Composable
+private fun RowScope.DockTool(
+    open: Panel,
+    glyph: Glyph,
+    label: Int,
+    tag: String,
+    active: Panel,
+    actions: ChromeActions,
+    order: Int
+) {
+    val p = FlowFolio.palette
+    val on = active == open
+    val name = stringResource(label)
     Column(
         Modifier
-            .align(Alignment.CenterEnd)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(end = BAR_INSET, bottom = RAIL_BOTTOM_CLEARANCE),
-        verticalArrangement = Arrangement.spacedBy(TOOL_GAP, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .weight(1f)
+            .reveal(order)
+            .clip(RoundedCornerShape(16.dp))
+            .background(if (on) p.accentSoft else androidx.compose.ui.graphics.Color.Transparent)
+            .clickable(role = androidx.compose.ui.semantics.Role.Button) { actions.onPanel(open) }
+            .semantics(mergeDescendants = true) { contentDescription = name }
+            .padding(horizontal = 2.dp, vertical = 6.dp)
+            .testTag(tag),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        TopTools(mark, actions, BIG_BUTTON, panel)
-    }
-}
-
-/**
- * The reading tools, top to bottom in the vertical rail: Page setup, Narrator, Bookmarks, Annotations,
- * Dictionary, Search, Contents (owner, 2026-11-08). Folded, the same order reads left to right.
- */
-@Composable
-private fun TopTools(mark: ChromeMark, actions: ChromeActions, button: Dp, panel: Panel) {
-    val glyph = button * GLYPH_SHARE
-    ToolButton(Panel.SETTINGS, panel, ReaderTestTags.SETTINGS, 2, button, actions.onPanel) {
+        FlowFolioGlyph(glyph, null, color = if (on) p.accent else p.text, size = 22.dp, glow = false)
         Text(
-            stringResource(R.string.reader_settings_button),
-            style = FlowFolioType.button.copy(
-                fontSize = (SETTINGS_TEXT_SP * button.value / BASE_BUTTON.value).sp,
-                fontFamily = FlowFolioType.heroTitle.fontFamily
-            )
-                .merge(FlowFolio.title)
+            name,
+            style = FlowFolioType.tab.copy(color = if (on) p.accent else p.text.copy(alpha = DOCK_LABEL_ALPHA)),
+            maxLines = 1
         )
     }
-    ToolButton(Panel.NARRATOR, panel, ReaderTestTags.NARRATOR, 3, button, actions.onPanel) {
-        FlowFolioGlyph(Glyph.Sound, stringResource(R.string.reader_narrator), size = glyph)
-    }
-    Box(Modifier.reveal(4)) { BookmarkButton(mark, actions, button, glowing = panel == Panel.MARK) }
-    ToolButton(Panel.ANNOTATIONS, panel, ReaderTestTags.ANNOTATIONS, 5, button, actions.onPanel) {
-        FlowFolioGlyph(Glyph.Highlight, stringResource(R.string.reader_annotations), size = glyph)
-    }
-    ToolButton(Panel.DICTIONARY, panel, ReaderTestTags.DICTIONARY, 6, button, actions.onPanel) {
-        FlowFolioGlyph(Glyph.Translate, stringResource(R.string.reader_dictionary), size = glyph)
-    }
-    ToolButton(Panel.SEARCH, panel, ReaderTestTags.SEARCH, 7, button, actions.onPanel) {
-        FlowFolioGlyph(Glyph.Search, stringResource(R.string.reader_search), size = glyph)
-    }
-    ToolButton(Panel.CONTENTS, panel, ReaderTestTags.CONTENTS, 8, button, actions.onPanel) {
-        FlowFolioGlyph(Glyph.Contents, stringResource(R.string.reader_contents), size = glyph)
-    }
-}
-
-/** A round tool button that glows while [active] is its panel. */
-@Composable
-private fun ToolButton(
-    open: Panel,
-    active: Panel,
-    testTag: String,
-    order: Int,
-    button: Dp,
-    onPanel: (Panel) -> Unit,
-    content: @Composable BoxScope.() -> Unit
-) {
-    FlowFolioIconButton(
-        { onPanel(open) },
-        Modifier.testTag(testTag).reveal(order),
-        glass = true,
-        size = button,
-        glowing = active == open,
-        content = content
-    )
 }
 
 /** The book's title on glass, beside Back (unfolded) or centred (folded). */
@@ -530,11 +552,9 @@ private const val CENTRE_ZONE = 0.4f
 private val BAR_INSET = 14.dp
 private val BAR_VERTICAL_PADDING = 8.dp
 private val TOP_FADE_TAIL = 36.dp
-private val BAR_ROW_GAP = 10.dp
 private val PAGE_MARGIN = 32.dp
 private val FOOTER_MARGIN = 14.dp
 private val TITLE_MAX_WIDTH = 420.dp
-private val RAIL_BOTTOM_CLEARANCE = 104.dp
 internal val TITLE_BESIDE_BACK = 600.dp
 
 /** The folded running head sits left of the page text border, ending just before the camera (owner, 2026-11-07). */
@@ -542,15 +562,9 @@ private val FOLDED_HEAD_INSET = 8.dp
 private val HEAD_GAP = 8.dp
 private val CUTOUT_BAND = 200.dp
 
-/** The reader's round buttons: 56 dp unfolded, 50 dp folded (the app's usual is 42 dp; owner, 2026-10-22). */
-private val BASE_BUTTON = 42.dp
 private val BIG_BUTTON = 56.dp
 private val FOLDED_BUTTON = 50.dp
 private val TOOL_GAP = 8.dp
-
-/** Back, Search, Contents, Go to page, annotations, Aa, the ribbon and Narrator, for PDFs and EPUBs alike. */
-private const val TOOL_BUTTONS = 8
-private const val SETTINGS_TEXT_SP = 16f
 
 /** A glyph's share of its round button (24 dp in 42 dp). */
 internal const val GLYPH_SHARE = 24f / 42f
@@ -608,3 +622,7 @@ val LocalDetourJump = staticCompositionLocalOf<(Int) -> Unit> { {} }
 private val DETOUR_GLYPH = 15.dp
 private const val DETOUR_DIM = 0.3f
 private const val DETOUR_PULSE_MS = 900
+
+private val DOCK_WIDE = 560.dp
+private val DOCK_RADIUS = 26.dp
+private const val DOCK_LABEL_ALPHA = 0.8f

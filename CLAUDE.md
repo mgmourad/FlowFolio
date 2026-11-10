@@ -187,6 +187,10 @@ local.
 - **Phase 7 (Settings) built 2026-11-09.** A ten-section hub (`SettingsPage`, `SettingsHubRow`); folded it opens pages,
   unfolded it shows list and page side by side. **Room v21** `book_text`: per-book text (`BookTextRepository.effective`),
   set from the reader's Aa and pinch; Settings → Text holds the defaults.
+- **Phase 8 (Reader) built 2026-11-09, in part.** A top bar (Back, a title chip, the ribbon, ⋯) and a six-tool dock
+  above the riffle bar (`ToolDock`) replace the right rail, and panels open above the dock. In-book search waits for
+  two letters, groups its results by chapter, and falls back to the PDF while Dynamic Flow prepares. Deferred: the
+  riffle restyle, the selection menu, the language chips, Listen's speed segments and coach marks.
 - Handover APKs get a new name every build (`app/build/outputs/apk/debug/handover/`) and are installed on the owner's
   phone as well as the emulator.
 
