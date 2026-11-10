@@ -53,6 +53,9 @@ enum class Glyph(internal val pathData: String, internal val stroke: Float = 2f,
     Edit("M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3z M13.5 8.5l2 2"),
     Trash("M4 7h16 M10 11v6 M14 11v6 M6 7l1 13h10l1-13 M9 7V4h6v3"),
 
+    /** Headphones: Reading Atmosphere, the ambience under the page (ADR-0052; the smiley read as a mood). */
+    Ambience("M4 15v-3a8 8 0 0 1 16 0v3 M4 15h3v6H5.5A1.5 1.5 0 0 1 4 19.5z M20 15h-3v6h1.5a1.5 1.5 0 0 0 1.5-1.5z"),
+
     /** A ringed notebook with ruled lines: the Notebook tab, everything marked in every book (ADR-0052). */
     Notebook(
         "M7 3h10a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H7z M7 3v18 M10.5 8h5 M10.5 12h5 M10.5 16h3 " +

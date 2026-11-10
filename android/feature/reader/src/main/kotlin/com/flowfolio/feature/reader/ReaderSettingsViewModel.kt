@@ -4,8 +4,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.AnnotationRepository
+import com.flowfolio.core.data.BookTextRepository
 import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.data.effective
 import com.flowfolio.core.data.flow.DynamicFlow
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.PageTurn
@@ -30,12 +32,29 @@ class ReaderSettingsViewModel @Inject constructor(
     private val repository: SettingsRepository,
     library: LibraryRepository,
     private val annotations: AnnotationRepository,
-    private val flow: DynamicFlow
+    private val flow: DynamicFlow,
+    /** The book's own text settings (ADR-0052): what the Aa panel changes. */
+    private val bookText: BookTextRepository = BookTextRepository.None
 ) : ViewModel() {
     private val bookId: String = checkNotNull(saved[ReaderViewModel.ARG_BOOK_ID]) { "reader needs a bookId" }
 
-    val settings: StateFlow<UserSettings> =
-        repository.settings.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), UserSettings())
+    /** The settings as this book shows them: its own text, or the defaults (ADR-0052). */
+    val settings: StateFlow<UserSettings> = bookText.effective(bookId, repository.settings)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), UserSettings())
+
+    /** Whether this book has text settings of its own, rather than following Settings → Text. */
+    val ownText: StateFlow<Boolean> = bookText.observe(bookId).map { it != null }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
+
+    /** Back to the defaults for this book. */
+    fun resetText() {
+        viewModelScope.launch { bookText.clear(bookId) }
+    }
+
+    /** Makes this book's text the default for every book that has none of its own. */
+    fun useTextAsDefault() {
+        viewModelScope.launch { repository.setReaderText(settings.value.text) }
+    }
 
     /** This book's pages run right to left (a per-book choice, owner 2026-10-18). */
     val rightToLeft: StateFlow<Boolean> = library.observeBook(bookId).map { it?.rightToLeft == true }
@@ -69,6 +88,8 @@ class ReaderSettingsViewModel @Inject constructor(
             repository.setAtmosphereName(name)
             if (!settings.atmosphereOn) repository.setAtmosphereOn(true)
             repository.setReaderText(chosen.text)
+            // An atmosphere sets the book open too, which may have text of its own (ADR-0052).
+            bookText.set(bookId, chosen.text)
             repository.setPaperStyle(chosen.paper)
         }
     }
@@ -81,9 +102,12 @@ class ReaderSettingsViewModel @Inject constructor(
         viewModelScope.launch { repository.setPageTurn(turn) }
     }
 
-    /** The EPUB text settings (M3); the reader lays the book out again at the reader's place. */
+    /**
+     * The EPUB text settings (M3); the reader lays the book out again at the reader's place. From the Aa panel they
+     * belong to this book (ADR-0052); Settings → Text holds the defaults.
+     */
     fun setText(text: ReaderText) {
-        viewModelScope.launch { repository.setReaderText(text) }
+        viewModelScope.launch { bookText.set(bookId, text) }
     }
 
     fun setControlsAutoHide(value: ControlsAutoHide) {

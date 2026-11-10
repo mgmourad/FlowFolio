@@ -7,12 +7,14 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.Ambience
+import com.flowfolio.core.data.BookTextRepository
 import com.flowfolio.core.data.FolioScanner
 import com.flowfolio.core.data.NotYetReadableException
 import com.flowfolio.core.data.OpenedBook
 import com.flowfolio.core.data.OpenedEpub
 import com.flowfolio.core.data.ReaderRepository
 import com.flowfolio.core.data.SettingsRepository
+import com.flowfolio.core.data.effective
 import com.flowfolio.core.data.flow.DynamicFlow
 import com.flowfolio.core.designsystem.R as DesignR
 import com.flowfolio.core.designsystem.fontRes
@@ -129,7 +131,7 @@ data class Viewport(
 )
 
 // One handler per reader event, with a PDF path and an EPUB path for opening, layout and planning.
-@Suppress("TooManyFunctions", "LargeClass")
+@Suppress("TooManyFunctions", "LargeClass", "LongParameterList")
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     private val repository: ReaderRepository,
@@ -137,7 +139,9 @@ class ReaderViewModel @Inject constructor(
     private val saved: SavedStateHandle,
     @ApplicationContext private val context: Context,
     private val ambience: Ambience,
-    dynamicFlow: DynamicFlow
+    dynamicFlow: DynamicFlow,
+    /** The book's own text settings, over the defaults (ADR-0052). */
+    private val bookText: BookTextRepository = BookTextRepository.None
 ) : ViewModel() {
     /** The ambience being started: cancelled when the atmosphere changes, so two sounds never race. */
     private var sound: Job? = null
@@ -345,7 +349,7 @@ class ReaderViewModel @Inject constructor(
     init {
         open(password = null)
         viewModelScope.launch {
-            settingsRepository.settings.collect {
+            bookText.effective(bookId, settingsRepository.settings).collect {
                 settings = it
                 _userSettings.value = it
                 playAmbience(it)
@@ -1424,10 +1428,13 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
-    /** The EPUB text size, from a pinch on the page (M3); the book is laid out again at the reader's place. */
+    /**
+     * The EPUB text size, from a pinch on the page (M3); the book is laid out again at the reader's place. A pinch sets
+     * this book's size only (ADR-0052); Settings → Text holds the default.
+     */
     fun setTextSize(sizeSp: Int) {
         val text = settings.text.copy(sizeSp = sizeSp.coerceIn(ReaderText.MIN_SIZE_SP, ReaderText.MAX_SIZE_SP))
-        viewModelScope.launch { settingsRepository.setReaderText(text) }
+        viewModelScope.launch { bookText.set(bookId, text) }
     }
 
     /** [font] as a typeface with its bold and italic, loaded once; null (the system serif) if it can't be read. */

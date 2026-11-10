@@ -184,6 +184,9 @@ local.
   Open, Share, Delete with Undo).
 - **Phase 6 (Details) built 2026-11-09.** The main button names where it lands, a ★ beside it, four fact tiles with
   plurals, the Notebook tab, and Export notes and Reset progress in ⋯.
+- **Phase 7 (Settings) built 2026-11-09.** A ten-section hub (`SettingsPage`, `SettingsHubRow`); folded it opens pages,
+  unfolded it shows list and page side by side. **Room v21** `book_text`: per-book text (`BookTextRepository.effective`),
+  set from the reader's Aa and pinch; Settings → Text holds the defaults.
 - Handover APKs get a new name every build (`app/build/outputs/apk/debug/handover/`) and are installed on the owner's
   phone as well as the emulator.
 

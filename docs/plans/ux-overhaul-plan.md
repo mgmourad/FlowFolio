@@ -184,6 +184,15 @@ the additions below.
 
 ### Phase 7: settings
 
+> **Done 2026-11-09.**
+> - `book_text` stores a book's whole text set when it has one; no row means it follows the defaults. That is
+>   simpler than the nullable columns planned, with the same behaviour.
+> - The migration test replays the committed v20 schema JSON into SQLite rather than using `room-testing`, so no
+>   dependency was added.
+> - The reading-goal row and the typed-RESET confirmation are left to Phase 9's sweep. Reset still asks first.
+>
+> Verified on `fold8_api37` unfolded. CI has not run.
+
 - Folded: hub list (tile, title, live summary, chevron) opening dedicated pages; unfolded: list on the left, the page
   on the right. Ten sections as the prompt lists, including Library stats (Collapsed/Expanded/Hidden), the circular
   theme reveal (existing `ThemeReveal.kt`), and Reset FlowFolio behind a typed RESET.

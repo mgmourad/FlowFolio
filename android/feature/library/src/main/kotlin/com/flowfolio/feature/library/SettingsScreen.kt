@@ -9,6 +9,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
@@ -30,6 +31,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
@@ -55,7 +57,9 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.data.UpdateState
@@ -70,7 +74,11 @@ import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalChromePadding
 import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.ScrollToTopOnTab
+import com.flowfolio.core.designsystem.SettingsTile
+import com.flowfolio.core.designsystem.TileSize
+import com.flowfolio.core.designsystem.card
 import com.flowfolio.core.designsystem.chromeStart
+import com.flowfolio.core.designsystem.displayName
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.designsystem.softShadow
 import com.flowfolio.core.model.AppStyle
@@ -143,96 +151,193 @@ fun SettingsScreen(
 /** What Settings needs beyond the stored settings: the build it is running, and what the cache weighs. */
 data class Housekeeping(val version: String = "", val update: UpdateState = UpdateState.Idle, val cacheBytes: Long = 0L)
 
-/** One settings page behind the main menu (M3): its icon and name. */
+/** The Settings sections (ADR-0052), in the mock's order: each a hub row and a page of its own. */
 private enum class SettingsPage(val glyph: Glyph, @StringRes val title: Int) {
     Appearance(Glyph.Paper, R.string.settings_appearance),
     Text(Glyph.TextSize, R.string.settings_text),
     Reading(Glyph.OpenBook, R.string.settings_reading),
-    Atmosphere(Glyph.Smile, R.string.settings_atmosphere),
+    Sound(Glyph.Sound, R.string.settings_sound),
+    Atmosphere(Glyph.Ambience, R.string.settings_atmosphere),
     Library(Glyph.Library, R.string.settings_library),
     Flow(Glyph.DynamicFlow, R.string.settings_conversion),
     Updates(Glyph.Refresh, R.string.settings_updates),
-    Storage(Glyph.Storage, R.string.settings_housekeeping)
+    Storage(Glyph.Storage, R.string.settings_housekeeping),
+    Help(Glyph.Help, R.string.settings_help)
 }
 
-/** The Settings menu (M3): one row per page, with About and "Show me around" kept here. */
+/** A section's current values in one line, for its hub row (ADR-0052). */
+@Suppress("CyclomaticComplexMethod") // one line per section
+@Composable
+private fun SettingsPage.summary(settings: UserSettings, housekeeping: Housekeeping): String = when (this) {
+    SettingsPage.Appearance -> listOf(
+        stringResource(settings.appStyle.styleNameRes()),
+        stringResource(
+            when (settings.theme) {
+                ThemePreference.SYSTEM -> R.string.theme_system_short
+                ThemePreference.DARK -> R.string.theme_dark
+                ThemePreference.LIGHT -> R.string.theme_light
+            }
+        )
+    ).joinToString(" · ")
+
+    SettingsPage.Text -> stringResource(
+        R.string.settings_text_summary,
+        settings.text.font.displayName.ifEmpty { stringResource(R.string.settings_book_font) },
+        settings.text.sizeSp
+    )
+
+    SettingsPage.Reading -> stringResource(
+        if (settings.readerSpreads) {
+            R.string.settings_reading_summary_spread
+        } else {
+            R.string.settings_reading_summary_single
+        },
+        stringResource(
+            when (settings.pageTurn) {
+                PageTurn.CURL -> R.string.turn_curl
+                PageTurn.SLIDE -> R.string.turn_slide
+                PageTurn.SCROLL -> R.string.turn_scroll
+            }
+        )
+    )
+
+    SettingsPage.Sound -> stringResource(
+        R.string.settings_sound_summary,
+        stringResource(if (settings.turnSound) R.string.state_on else R.string.state_off),
+        stringResource(if (settings.riffleSound) R.string.state_on else R.string.state_off)
+    )
+
+    SettingsPage.Atmosphere -> settings.atmosphereName?.takeIf { settings.atmosphereOn }
+        ?: stringResource(R.string.state_off)
+
+    SettingsPage.Library -> stringResource(
+        if (settings.storageMode == StorageMode.COPY) {
+            R.string.settings_library_summary_copy
+        } else {
+            R.string.settings_library_summary_link
+        }
+    )
+
+    SettingsPage.Flow -> stringResource(
+        if (settings.dynamicFlowOnOpen) R.string.settings_flow_summary_on else R.string.settings_flow_summary_off
+    )
+
+    SettingsPage.Updates -> housekeeping.version
+
+    SettingsPage.Storage -> stringResource(R.string.settings_storage_summary, readableBytes(housekeeping.cacheBytes))
+
+    SettingsPage.Help -> stringResource(R.string.settings_help_summary)
+}
+
+/**
+ * The Settings hub (ADR-0052): one row per section, its orange tile, its name and its current values, opening the
+ * section's own page. Unfolded the same list stands, compact, beside the chosen page ([compact], [selected]).
+ */
 @Composable
 private fun SettingsMenu(
     settings: UserSettings,
-    actions: SettingsActions,
-    onOpenLicenses: () -> Unit,
-    onPage: (SettingsPage) -> Unit
+    housekeeping: Housekeeping,
+    onPage: (SettingsPage) -> Unit,
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+    selected: SettingsPage? = null
 ) {
     val chrome = LocalChromePadding.current
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     var tutorial by rememberSaveable { mutableStateOf(false) }
     if (tutorial) TutorialSheet { tutorial = false }
     Column(
-        Modifier
-            .fillMaxSize()
-            .chromeStart()
+        modifier
             .verticalScroll(rememberScrollState())
-            .testTag(LibraryTestTags.SETTINGS)
             .padding(top = insets.calculateTopPadding())
-            .padding(horizontal = 18.dp)
+            .padding(horizontal = if (compact) 8.dp else libraryGutter())
     ) {
         ScreenHeader(
             title = stringResource(R.string.settings_title),
             slogan = stringResource(R.string.settings_sub),
-            actions = { HelpButton { tutorial = true } },
+            actions = if (compact) null else ({ HelpButton { tutorial = true } }),
             modifier = Modifier.reveal(0)
         )
-        SettingsPage.entries.forEachIndexed { i, page ->
-            SettingsMenuItem(page, Modifier.reveal(1 + i)) { onPage(page) }
+        Column(
+            Modifier.padding(top = if (compact) 12.dp else 20.dp),
+            verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 10.dp)
+        ) {
+            SettingsPage.entries.forEachIndexed { i, page ->
+                SettingsHubRow(
+                    page,
+                    page.summary(settings, housekeeping),
+                    compact,
+                    page == selected,
+                    Modifier.reveal(1 + i)
+                ) { onPage(page) }
+            }
         }
-        Spacer(Modifier.height(16.dp))
-        AboutGroup(onOpenLicenses)
-        GuideTip(Guide.Atmosphere, settings, actions.onGuideSeen, Modifier.padding(top = 8.dp))
-        GuidesResetRow(actions.onGuidesReset)
-        Spacer(
-            Modifier.height(insets.calculateBottomPadding() + chrome.calculateBottomPadding() + 24.dp)
-        )
+        Spacer(Modifier.height(insets.calculateBottomPadding() + chrome.calculateBottomPadding() + 24.dp))
     }
 }
 
-/** The "?" help button, at the top right of the Settings menu only (owner, 2026-11-07). */
+/** The "?" help button, at the top right of the Settings hub (owner, 2026-11-07). */
 @Composable
 private fun HelpButton(onClick: () -> Unit) {
-    FlowFolioIconButton(onClick = onClick, modifier = Modifier.testTag(LibraryTestTags.HELP_BUTTON)) {
-        FlowFolioGlyph(Glyph.Help, stringResource(R.string.action_help))
+    FlowFolioIconButton(
+        onClick = onClick,
+        tooltip = stringResource(R.string.action_help),
+        modifier = Modifier.testTag(LibraryTestTags.HELP_BUTTON)
+    ) {
+        FlowFolioGlyph(Glyph.Help, null, size = 20.dp)
     }
 }
 
-/** One menu row: a glowing icon plate, the page's name, and a chevron. */
+/**
+ * A hub row (`.hubrow`): the section's tile, its name, its values in one line and a chevron, on a card. Compact, it
+ * drops the card and the chevron, and the chosen one sits on the soft accent.
+ */
 @Composable
-private fun SettingsMenuItem(page: SettingsPage, modifier: Modifier, onClick: () -> Unit) {
+private fun SettingsHubRow(
+    page: SettingsPage,
+    summary: String,
+    compact: Boolean,
+    selected: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
     val p = FlowFolio.palette
-    FlowFolioCard(
-        modifier.fillMaxWidth().padding(vertical = 5.dp).clickable(onClick = onClick),
-        radius = 20.dp,
-        padding = PaddingValues(0.dp)
+    val shape = RoundedCornerShape(if (compact) 14.dp else 20.dp)
+    val surface = when {
+        compact && selected -> Modifier.background(p.accentSoft, shape)
+        compact -> Modifier
+        else -> Modifier.card(shape)
+    }
+    Row(
+        modifier
+            .fillMaxWidth()
+            .then(surface)
+            .clip(shape)
+            .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick)
+            .padding(horizontal = if (compact) 10.dp else 14.dp, vertical = if (compact) 8.dp else 12.dp)
+            .testTag(LibraryTestTags.settingsPage(page.name)),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Row(Modifier.padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier.size(
-                    48.dp
-                ).clip(
-                    RoundedCornerShape(16.dp)
-                ).background(Brush.verticalGradient(listOf(p.buttonTop, p.buttonBottom))),
-                contentAlignment = Alignment.Center
-            ) {
-                FlowFolioGlyph(page.glyph, contentDescription = null, color = p.buttonInk, size = 28.dp)
-            }
+        SettingsTile(page.glyph, size = if (compact) TileSize.COMPACT else TileSize.ROW)
+        Column(Modifier.weight(1f)) {
             Text(
                 stringResource(page.title),
-                style = FlowFolioType.rowLabel.merge(FlowFolio.item),
-                modifier = Modifier.weight(1f).padding(start = 14.dp)
+                style = FlowFolioType.rowLabel.copy(fontSize = if (compact) 14.sp else 15.5.sp, color = p.ink)
             )
+            Text(
+                summary,
+                style = FlowFolioType.body.copy(fontSize = if (compact) 11.5.sp else 12.5.sp, color = p.ink3),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        if (!compact) {
             FlowFolioGlyph(
                 Glyph.Back,
                 contentDescription = null,
-                color = p.hint,
-                size = 16.dp,
+                color = p.ink3,
+                size = 18.dp,
                 glow = false,
                 modifier = Modifier.graphicsLayer { rotationZ = 180f }
             )
@@ -248,52 +353,70 @@ private fun SettingsPageScreen(
     actions: SettingsActions,
     audition: Audition,
     housekeeping: Housekeeping,
-    onBack: () -> Unit
+    onOpenLicenses: () -> Unit,
+    modifier: Modifier = Modifier,
+    onBack: (() -> Unit)?
 ) {
     val chrome = LocalChromePadding.current
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     Column(
-        Modifier
-            .fillMaxSize()
-            .chromeStart()
+        modifier
             .verticalScroll(rememberScrollState())
             .padding(top = insets.calculateTopPadding())
             .padding(horizontal = 18.dp)
     ) {
-        Box(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-            FlowFolioIconButton(onClick = onBack, glass = true, modifier = Modifier.padding(end = 12.dp)) {
-                FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = FlowFolio.palette.text)
+        // A dedicated page (ADR-0052): Back (folded), then the section's large tile and its name.
+        if (onBack != null) {
+            FlowFolioIconButton(
+                onClick = onBack,
+                tooltip = stringResource(R.string.action_back),
+                modifier = Modifier.padding(top = 8.dp)
+            ) {
+                FlowFolioGlyph(Glyph.Back, null, size = 20.dp)
             }
+        }
+        Row(
+            Modifier.padding(top = 16.dp, bottom = 8.dp).reveal(0),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            SettingsTile(page.glyph, size = TileSize.BIG)
             Text(
                 stringResource(page.title),
-                style = FlowFolioType.screenTitle.merge(FlowFolio.title),
-                modifier = Modifier.align(Alignment.Center)
+                style = FlowFolioType.screenTitle.copy(
+                    fontSize = 30.sp,
+                    lineHeight = 33.sp,
+                    color = FlowFolio.palette.ink
+                )
             )
-        }
-        // The art: the page's icon on a glowing, gradient plate, centred (M3).
-        Box(Modifier.fillMaxWidth().padding(vertical = 18.dp), contentAlignment = Alignment.Center) {
-            val p = FlowFolio.palette
-            Box(
-                Modifier
-                    .size(104.dp)
-                    .clip(RoundedCornerShape(32.dp))
-                    .softShadow(RoundedCornerShape(32.dp), p.title.copy(alpha = 0.35f), blur = 28.dp)
-                    .background(Brush.linearGradient(listOf(p.buttonTop, p.buttonBottom, p.buttonTop)))
-                    .reveal(0),
-                contentAlignment = Alignment.Center
-            ) {
-                FlowFolioGlyph(page.glyph, contentDescription = null, color = p.buttonInk, size = 52.dp)
-            }
         }
         when (page) {
             SettingsPage.Appearance -> AppearanceGroup(settings, actions)
-            SettingsPage.Text -> TextGroup(settings.text, 2, actions.onReaderText)
+
+            SettingsPage.Text -> {
+                Text(
+                    stringResource(R.string.settings_text_defaults),
+                    style = FlowFolioType.body.copy(fontSize = 13.sp, color = FlowFolio.palette.ink2),
+                    modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)
+                )
+                TextGroup(settings.text, 2, actions.onReaderText)
+            }
+
             SettingsPage.Reading -> ReadingGroup(settings, actions)
+
+            SettingsPage.Sound -> SoundGroup(settings, actions)
+
             SettingsPage.Atmosphere -> AtmosphereGroup(settings, actions, audition)
+
             SettingsPage.Library -> LibraryGroup(settings, actions)
+
             SettingsPage.Flow -> ConversionGroup(settings, actions)
+
             SettingsPage.Updates -> UpdatesGroup(settings, housekeeping.version, housekeeping.update, actions)
+
             SettingsPage.Storage -> HousekeepingGroup(housekeeping.cacheBytes, actions)
+
+            SettingsPage.Help -> HelpGroup(settings, housekeeping.version, actions, onOpenLicenses)
         }
         Spacer(Modifier.height(insets.calculateBottomPadding() + chrome.calculateBottomPadding() + 24.dp))
     }
@@ -320,46 +443,89 @@ fun SettingsContent(
     }
     // System Back on a dedicated page returns to the menu, not out to the Library (owner, 2026-11-07).
     BackHandler(enabled = page != null) { page = null }
-    Box(Modifier.fillMaxSize().testTag(LibraryTestTags.SETTINGS)) {
-        AnimatedContent(
-            targetState = page,
-            transitionSpec = {
-                val way = if (targetState == null) -1 else 1
-                (
-                    slideInHorizontally(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { it * way } +
-                        fadeIn(tween(Motion.MEDIUM_MS))
+    val wide = libraryWide()
+    Box(Modifier.fillMaxSize().chromeStart().testTag(LibraryTestTags.SETTINGS)) {
+        if (wide) {
+            // Unfolded (ADR-0052): the hub as a compact list on the left, the chosen page on the right.
+            val shown = page ?: SettingsPage.Appearance
+            Row(Modifier.fillMaxSize()) {
+                SettingsMenu(
+                    settings,
+                    housekeeping,
+                    { page = it },
+                    Modifier.width(WIDE_LIST),
+                    compact = true,
+                    selected = shown
+                )
+                AnimatedContent(
+                    targetState = shown,
+                    transitionSpec = {
+                        (
+                            fadeIn(tween(Motion.MEDIUM_MS, delayMillis = PANE_DELAY_MS)) +
+                                slideInVertically(tween(Motion.MEDIUM_MS, easing = Motion.Rise)) { it / PANE_RISE }
+                            )
+                            .togetherWith(fadeOut(tween(Motion.FAST_MS)))
+                    },
+                    label = "settingsPane",
+                    modifier = Modifier.weight(1f)
+                ) { p ->
+                    SettingsPageScreen(
+                        p,
+                        settings,
+                        actions,
+                        audition,
+                        housekeeping,
+                        onOpenLicenses,
+                        Modifier.fillMaxSize(),
+                        onBack = null
                     )
-                    .togetherWith(
-                        slideOutHorizontally(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { -it * way } +
-                            fadeOut(tween(Motion.MEDIUM_MS))
-                    )
-            },
-            label = "settingsPage"
-        ) { p ->
-            if (p == null) {
-                SettingsMenu(settings, actions, onOpenLicenses) { page = it }
-            } else {
-                SettingsPageScreen(p, settings, actions, audition, housekeeping) { page = null }
+                }
+            }
+        } else {
+            AnimatedContent(
+                targetState = page,
+                transitionSpec = {
+                    val way = if (targetState == null) -1 else 1
+                    (
+                        slideInHorizontally(tween(Motion.MEDIUM_MS, easing = Motion.Emphasized)) {
+                            it / PAGE_IN * way
+                        } +
+                            fadeIn(tween(Motion.MEDIUM_MS))
+                        )
+                        .togetherWith(
+                            slideOutHorizontally(tween(Motion.FAST_MS, easing = Motion.EmphasizedExit)) {
+                                -it / PAGE_OUT * way
+                            } +
+                                fadeOut(tween(Motion.FAST_MS))
+                        )
+                },
+                label = "settingsPage"
+            ) { p ->
+                if (p == null) {
+                    SettingsMenu(settings, housekeeping, { page = it }, Modifier.fillMaxSize())
+                } else {
+                    SettingsPageScreen(
+                        p,
+                        settings,
+                        actions,
+                        audition,
+                        housekeeping,
+                        onOpenLicenses,
+                        Modifier.fillMaxSize()
+                    ) {
+                        page = null
+                    }
+                }
             }
         }
     }
 }
 
-/** "Introduce features again": empties what the app remembers having shown (owner, M5). */
-@Composable
-private fun GuidesResetRow(onReset: () -> Unit) {
-    Group(R.string.settings_tutorial, 1) {
-        ActionRow(R.string.settings_guides_reset, R.string.settings_guides_reset_detail, onReset)
-    }
-}
-
-/** The open-source licences for what ships in the app, one row opening the full list (known issue 8). */
-@Composable
-private fun AboutGroup(onOpenLicenses: () -> Unit) {
-    Group(R.string.settings_about, 6) {
-        ActionRow(R.string.settings_licenses, R.string.settings_licenses_detail, onOpenLicenses)
-    }
-}
+private val WIDE_LIST = 260.dp
+private const val PANE_DELAY_MS = 60
+private const val PANE_RISE = 24
+private const val PAGE_OUT = 8
+private const val PAGE_IN = 5
 
 @Composable
 private fun AppearanceGroup(settings: UserSettings, actions: SettingsActions) {
@@ -436,7 +602,13 @@ private fun ReadingGroup(settings: UserSettings, actions: SettingsActions) {
             ControlsAutoHide.entries.indexOf(settings.controlsAutoHide),
             stacked = true
         ) { actions.onAutoHide(ControlsAutoHide.entries[it]) }
-        Divider()
+    }
+}
+
+/** Sound & voice (ADR-0052): page-turn and riffle sounds with their volumes, and the riffle's haptics. */
+@Composable
+private fun SoundGroup(settings: UserSettings, actions: SettingsActions) {
+    Group(R.string.settings_sound, 3) {
         SoundRow(
             R.string.settings_turn_sound,
             R.string.settings_turn_sound_detail,
@@ -460,7 +632,42 @@ private fun ReadingGroup(settings: UserSettings, actions: SettingsActions) {
             actions.onScrubHaptics
         )
     }
+    Text(
+        stringResource(R.string.settings_voice_note),
+        style = FlowFolioType.body.copy(fontSize = 13.sp, color = FlowFolio.palette.ink2),
+        modifier = Modifier.padding(horizontal = 6.dp, vertical = 12.dp)
+    )
 }
+
+/** Help & about (ADR-0052): the tour again, reader tips again, licences, feedback and the version. */
+@Composable
+private fun HelpGroup(settings: UserSettings, version: String, actions: SettingsActions, onOpenLicenses: () -> Unit) {
+    var tutorial by rememberSaveable { mutableStateOf(false) }
+    if (tutorial) TutorialSheet { tutorial = false }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    Group(R.string.settings_help, 6) {
+        ActionRow(R.string.settings_tour_again, R.string.settings_tour_again_detail) { tutorial = true }
+        Divider()
+        ActionRow(R.string.settings_guides_reset, R.string.settings_guides_reset_detail, actions.onGuidesReset)
+        Divider()
+        ActionRow(R.string.settings_licenses, R.string.settings_licenses_detail, onOpenLicenses)
+        Divider()
+        ActionRow(R.string.settings_feedback, R.string.settings_feedback_detail) {
+            context.startActivity(
+                android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(FEEDBACK_URL))
+            )
+        }
+    }
+    GuideTip(Guide.Atmosphere, settings, actions.onGuideSeen, Modifier.padding(top = 8.dp))
+    Text(
+        stringResource(R.string.settings_version_line, version),
+        style = FlowFolioType.body.copy(fontSize = 12.5.sp, color = FlowFolio.palette.ink3),
+        modifier = Modifier.padding(horizontal = 6.dp, vertical = 16.dp)
+    )
+}
+
+/** Where feedback goes: the project's public issues. */
+private const val FEEDBACK_URL = "https://github.com/mgmourad/FlowFolio/issues"
 
 @Composable
 private fun LibraryGroup(settings: UserSettings, actions: SettingsActions) {
@@ -521,4 +728,11 @@ internal fun Group(title: Int, order: Int, content: @Composable ColumnScope.() -
             Column(content = content)
         }
     }
+}
+
+private fun AppStyle.styleNameRes(): Int = when (this) {
+    AppStyle.FLOWFOLIO -> R.string.style_flowfolio
+    AppStyle.RUSTIC -> R.string.style_rustic
+    AppStyle.MATERIAL -> R.string.style_material
+    AppStyle.AMOLED -> R.string.style_amoled
 }

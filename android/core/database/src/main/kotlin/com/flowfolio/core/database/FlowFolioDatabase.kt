@@ -22,9 +22,10 @@ import javax.inject.Singleton
         AnnotationEntity::class,
         TranslationEntity::class,
         ReadingGoalEntity::class,
-        DefinitionEntity::class
+        DefinitionEntity::class,
+        BookTextEntity::class
     ],
-    version = 20,
+    version = 21,
     exportSchema = true,
     // v2: books.last_page (reading position, Phase 1 milestone 4).
     // v3: books.author, shelves and shelf_books (milestone 5, slice 3).
@@ -42,6 +43,7 @@ import javax.inject.Singleton
     // v15: books.flow_mode and books.flow_locator (Dynamic Flow, ADR-0045).
     // v16: books.favorite and books.finished_at (favourites and finished books, M3T2).
     // v17: reading_goals and definitions (Reading Goal and offline Dictionary, M3T3).
+    // v21: book_text (a book's own text settings, ADR-0052).
     autoMigrations = [
         AutoMigration(from = 1, to = 2),
         AutoMigration(from = 2, to = 3),
@@ -61,7 +63,8 @@ import javax.inject.Singleton
         AutoMigration(from = 16, to = 17),
         AutoMigration(from = 17, to = 18),
         AutoMigration(from = 18, to = 19),
-        AutoMigration(from = 19, to = 20)
+        AutoMigration(from = 19, to = 20),
+        AutoMigration(from = 20, to = 21)
     ]
 )
 abstract class FlowFolioDatabase : RoomDatabase() {
@@ -82,6 +85,8 @@ abstract class FlowFolioDatabase : RoomDatabase() {
     abstract fun readingGoalDao(): ReadingGoalDao
 
     abstract fun definitionDao(): DefinitionDao
+
+    abstract fun bookTextDao(): BookTextDao
 }
 
 @Module
@@ -118,4 +123,7 @@ object DatabaseModule {
 
     @Provides
     fun definitionDao(db: FlowFolioDatabase): DefinitionDao = db.definitionDao()
+
+    @Provides
+    fun bookTextDao(db: FlowFolioDatabase): BookTextDao = db.bookTextDao()
 }

@@ -220,4 +220,8 @@
     <string name="reader_tab_notes">Notes</string>
     <string name="reader_voicemarks_empty">No VoiceMarks in this book yet. Select a passage and tap VoiceMark to speak one.</string>
     <string name="reader_detour_marked">Detour marked \u2014 tap the mark to come back</string>
+    <string name="reader_text_defaults">This book follows your default text (Settings → Text). Changing it here sets this book only.</string>
+    <string name="reader_text_own">This book has text settings of its own.</string>
+    <string name="reader_text_reset">Use defaults</string>
+    <string name="reader_text_make_default">Make default</string>
 </resources>

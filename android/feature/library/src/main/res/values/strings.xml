@@ -776,4 +776,26 @@
         <item quantity="one">%d mark in this book</item>
         <item quantity="other">%d marks in this book</item>
     </plurals>
+    <string name="settings_sound">Sound &amp; voice</string>
+    <string name="settings_help">Help &amp; about</string>
+    <string name="settings_text_summary">%1$s · %2$d</string>
+    <string name="settings_reading_summary_spread">Two pages · %1$s</string>
+    <string name="settings_reading_summary_single">One page · %1$s</string>
+    <string name="settings_sound_summary">Page turns %1$s · Riffle %2$s</string>
+    <string name="state_on">on</string>
+    <string name="state_off">Off</string>
+    <string name="settings_library_summary_copy">Copy into FlowFolio</string>
+    <string name="settings_library_summary_link">Read in place</string>
+    <string name="settings_flow_summary_on">On when a PDF opens</string>
+    <string name="settings_flow_summary_off">Off when a PDF opens</string>
+    <string name="settings_storage_summary">Cache %1$s</string>
+    <string name="settings_help_summary">Tour, tips, licences, feedback</string>
+    <string name="settings_text_defaults">Defaults for every book whose text you haven’t changed in the reader. The reader’s Aa panel sets a book’s own.</string>
+    <string name="settings_voice_note">Narrator voices, their speed and voice packs live in the reader’s Listen panel.</string>
+    <string name="settings_tour_again">Replay the tour</string>
+    <string name="settings_tour_again_detail">The app’s introduction, from the start</string>
+    <string name="settings_feedback">Send feedback</string>
+    <string name="settings_feedback_detail">Opens the project’s issues page</string>
+    <string name="settings_version_line">FlowFolio %1$s</string>
+    <string name="settings_book_font">Book’s font</string>
 </resources>

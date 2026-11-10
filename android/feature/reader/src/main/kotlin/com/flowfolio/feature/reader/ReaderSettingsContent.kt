@@ -111,8 +111,13 @@ internal fun ColumnScope.ReaderSettingsContent(
                 .padding(top = 12.dp, start = 4.dp, end = 4.dp)
         ) {
             when (tabs[index].tag) {
-                ReaderTestTags.TAB_TEXT -> TextChoice(settings.text, bookFont, viewModel::setText)
+                ReaderTestTags.TAB_TEXT -> {
+                    BookTextScope(viewModel)
+                    TextChoice(settings.text, bookFont, viewModel::setText)
+                }
+
                 ReaderTestTags.TAB_PAGE -> PageChoice(settings, viewModel)
+
                 else -> ControlsChoice(settings, viewModel)
             }
         }
@@ -405,6 +410,38 @@ private fun AtmosphereRow(settings: UserSettings, onChoose: (String?) -> Unit) {
                         }
                     )
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Whose text this is (ADR-0052): the Aa panel sets this book's text; Settings → Text holds the defaults. Once the book
+ * has its own, it can go back to the defaults or make its own the new default.
+ */
+@Composable
+private fun BookTextScope(viewModel: ReaderSettingsViewModel) {
+    val own by viewModel.ownText.collectAsStateWithLifecycle()
+    val p = com.flowfolio.core.designsystem.FlowFolio.palette
+    Column(Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+        Text(
+            stringResource(if (own) R.string.reader_text_own else R.string.reader_text_defaults),
+            style = com.flowfolio.core.designsystem.FlowFolioType.body.copy(fontSize = 12.5.sp, color = p.ink2)
+        )
+        if (own) {
+            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                com.flowfolio.core.designsystem.FlowFolioButton(
+                    stringResource(R.string.reader_text_reset),
+                    viewModel::resetText,
+                    style = com.flowfolio.core.designsystem.ButtonStyle.GHOST,
+                    small = true
+                )
+                com.flowfolio.core.designsystem.FlowFolioButton(
+                    stringResource(R.string.reader_text_make_default),
+                    viewModel::useTextAsDefault,
+                    style = com.flowfolio.core.designsystem.ButtonStyle.SOFT,
+                    small = true
+                )
             }
         }
     }

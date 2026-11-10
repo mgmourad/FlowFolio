@@ -9,6 +9,7 @@ import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
@@ -134,7 +135,7 @@ class LibraryUiTest {
             FlowFolioTheme { SettingsContent(UserSettings(), SettingsActions()) }
         }
         // Storage options and "ask each time" live on the Library page (M3).
-        compose.onNodeWithText(res.getString(R.string.settings_library)).performClick()
+        compose.onNodeWithText(res.getString(R.string.settings_library)).performScrollTo().performClick()
         compose.onNodeWithText(res.getString(R.string.storage_copy)).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(res.getString(R.string.settings_ask_each)).performScrollTo().assertIsDisplayed()
     }

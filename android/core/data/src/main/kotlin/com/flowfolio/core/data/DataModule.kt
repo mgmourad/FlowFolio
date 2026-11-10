@@ -35,6 +35,9 @@ abstract class DataBindings {
     abstract fun library(impl: DefaultLibraryRepository): LibraryRepository
 
     @Binds
+    abstract fun bookText(impl: DefaultBookTextRepository): BookTextRepository
+
+    @Binds
     abstract fun bookmarks(impl: DefaultBookmarkRepository): BookmarkRepository
 
     @Binds

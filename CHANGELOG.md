@@ -9,7 +9,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 > Phase 6 and Phase 7, released together as 0.6.0-canary.2. Each phase is verified locally and on `fold8_api37`;
 > **CI has not run** for any of it yet.
 
+### Added
+- **Text settings per book** (owner, 2026-11-09). **Room v21** adds `book_text` (one row per book that has text of its
+  own, removed with the book; additive auto-migration 20 → 21, held by `BookTextMigrationTest`, which replays the
+  committed v20 schema into SQLite and opens it under v21).
+  - `BookTextRepository` (`:core:data`) gives each book its own text or the defaults (`effective`).
+  - The reader uses the book's text. Its Aa panel and pinch-to-zoom set this book only, and Aa offers "Use defaults"
+    and "Make default".
+  - Settings → Text holds the defaults, and says so.
+
 ### Changed
+- **Overhaul Phase 7: Settings** (2026-11-09).
+  - **The hub:** ten sections in the mock's order: Appearance, Text, Reading, Sound & voice, Atmosphere, Library,
+    Dynamic Flow, Updates, Storage, and Help & about. Each row shows the orange `SettingsTile`, the section's name,
+    a live one-line summary of its values, and a chevron.
+  - **Folded,** a row opens the section's own page (Back, a large tile, the title). **Unfolded,** the hub stands as a
+    compact list on the left with the chosen page on the right.
+  - **New pages:**
+    - **Sound & voice** gathers the page-turn and riffle sounds, their volumes and the haptics, and says where
+      narrator voices live.
+    - **Help & about** holds the tour, reader tips again, licences, Send feedback (the project's issues page) and the
+      version line.
+  - **Atmosphere** has a headphones glyph (`Glyph.Ambience`) in place of the smiley.
 - **Overhaul Phase 6: book details** (2026-11-09).
   - **The primary action says where it lands:** "Continue · p. 55" (the page's printed label), "Start reading" or
     "Read again". Beside it: Shelf, Goal, and a ★ that makes the book a favourite.
