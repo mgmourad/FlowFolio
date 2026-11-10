@@ -309,7 +309,7 @@ private fun PaperSwatches(selected: PaperStyle, onSelect: (PaperStyle) -> Unit) 
     ) {
         PaperStyle.entries.forEach { style ->
             val (paper, ink, label) = when (style) {
-                PaperStyle.AUTO -> Triple(p.background, p.title, "A")
+                PaperStyle.AUTO -> Triple(p.background, p.ink, "A")
                 PaperStyle.PAPER -> Triple(PageTone.PAPER.paper, PageTone.PAPER.ink!!, "Aa")
                 PaperStyle.SEPIA -> Triple(PageTone.SEPIA.paper, PageTone.SEPIA.ink!!, "Aa")
                 PaperStyle.NIGHT -> Triple(PageTone.NIGHT.paper, PageTone.NIGHT.ink!!, "Aa")
@@ -324,7 +324,7 @@ private fun PaperSwatches(selected: PaperStyle, onSelect: (PaperStyle) -> Unit) 
 @Composable
 private fun Swatch(style: PaperStyle, label: String, paper: Color, ink: Color, on: Boolean, onClick: () -> Unit) {
     val scale by animateFloatAsState(if (on) SELECTED_SCALE else 1f, tween(Motion.SPRING_MS, easing = Motion.Spring))
-    val ring = FlowFolio.palette.title
+    val ring = FlowFolio.palette.ink
     val edge = FlowFolio.palette.edge
     // The swatch and its caption are one target.
     Column(

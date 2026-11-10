@@ -19,6 +19,35 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Settings → Text holds the defaults, and says so.
 
 ### Changed
+- **Overhaul: the items Phases 8 and 9 deferred** (2026-11-10).
+  - **Riffle header:** the chapter in the accent, then one tappable label, "Page 216–217 of 842 · 26%", that opens
+    Go to page (hold it for the detour mark, as before).
+  - **Selection menu:** the mock's `.selmenu`: the nine highlighter colours in one row over six labelled actions
+    (Note, VoiceMark, Define, Translate, Copy, Share; Delete last on a tapped highlight), on the surface with a
+    hairline and a soft shadow.
+  - **Translate:** your target languages as chips (at first the phone's and English), the current one filled, and
+    (+) opening a sheet of every ML Kit language. Tap to add, tap a ticked one to take it off. Kept in settings
+    (`translate_languages`); a language still downloads the first time it is used.
+  - **Listen:** five speed segments, 0.8× to 2×, instead of a slider. A rate saved from the old slider shows on its
+    nearest segment.
+  - **Coach marks:** five steps after the first-book demo (the ribbon, the strip, Aa, Listen, the page). The page
+    dims round an outlined cut-out of each control, and the card stays centred so it can't be clipped. Shown once;
+    Settings → Help → "Introduce features again" brings them back.
+  - **Dynamic Flow's progress** beside the page number now says "Preparing · 42%".
+  - **The page number** no longer sits under the dock: it hides while a panel is open, and rides above the dock when
+    the riffle bar has been dismissed.
+  - **Reading goal:** a sheet rather than a centred window: a ring showing the target, 15m to 1h 30m presets with
+    five minutes less or more, Day/Week/Month, the reminder, Reset and Save, then the books in progress.
+  - **The tour:** 11 slides (Listen added), "N of 11", tappable dots, Back, and the picture beside the words when
+    unfolded. Every picture was retaken on this build (known issue 43), in the app and in `docs/screenshots/`.
+  - **What's new reads `CHANGELOG.md`**, which the build copies into the APK (`copyChangelog`), so the notes work
+    offline and describe this exact build. Sections are New, Changed and Fixed, and earlier versions open one at a
+    time. After an update it shows this version's notes, falling back to the releases page's. Settings → Help has
+    it too. `ChangelogTest` covers the parser.
+  - **Palette aliases removed:** `title`, `item`, `hint`, `subItem` and `glyph` are gone from `Palette`; about 500
+    uses now name `ink` or `ink2`. The design-system screenshot tests match pixel for pixel, so no colour moved.
+  - `Glyph.Close` (✕) added.
+
 - **Overhaul Phase 9: the sweep and close-out** (2026-11-09).
   - **Reset progress waits for RESET to be typed.** The button stays greyed until the word matches. `DialogAction`
     gains `enabled` for this.
@@ -26,8 +55,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - **Lint fixes:** the Notebook and Shelves snackbars read their strings through `LocalResources`, which follows
     configuration changes, not `LocalContext`. `DatabaseModule` is allowed one provider per DAO.
   - **`docs/plans/ux-overhaul-parity.md`** lists where every existing feature now lives and how it was checked.
-  - **Deferred, with the existing versions kept:** the 11-slide intro, What's new rendered from this file, the new
-    reading-goal sheet, removing the palette aliases, and retaking the tour screenshots (known issue 43).
+  - The intro, What's new, the goal sheet, the alias removal and the tour pictures followed on 2026-11-10 (above).
 
 - **Overhaul Phase 8: the reader's chrome and in-book search** (2026-11-09).
   - **Top bar:** Back, the book's title on a glass chip, the ribbon button (tap toggles, long-press picks a colour)
@@ -43,9 +71,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     - Results show a count and ⌃/⌄ stepping, and are grouped by chapter with printed page labels.
     - While Dynamic Flow is still preparing a book, search reads the PDF's own text instead of finding nothing.
     - `SearchSnippetTest` covers the snippet joining and the bounds.
-  - **Not in this phase** (left for a later batch, with nothing removed): the riffle's restyle, the
-    nine-colour selection menu, the Words panel's language chips, Listen's speed segments, and coach marks.
-    Those panels work as before.
+  - The riffle restyle, the selection menu, the language chips, Listen's speeds and the coach marks followed on
+    2026-11-10 (above).
 
 - **Overhaul Phase 7: Settings** (2026-11-09).
   - **The hub:** ten sections in the mock's order: Appearance, Text, Reading, Sound & voice, Atmosphere, Library,
@@ -184,7 +211,7 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
     - Rustic, AMOLED and the Material You fallback take the mock's overrides. Material You still maps the wallpaper's
       dynamic scheme onto the same slots.
   - **Aliases.** The older role fields (`title`, `item`, `hint`, `subItem`, `glyph`, toggle and button colours) are now
-    aliases of the semantic set, so every screen took the new look at once. They will be removed at the end of the
+    aliases of the semantic set, so every screen took the new look at once. They were removed at the end of the
     overhaul.
     - Warnings and removals now name `danger` explicitly: swipe-to-delete, the selection bin, VoiceMark recording and
       discard, the annotation and shelf warnings.

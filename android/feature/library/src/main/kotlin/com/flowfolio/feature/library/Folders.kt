@@ -172,10 +172,10 @@ private fun FolderBadge(modifier: Modifier) {
     Box(
         modifier
             .clip(RoundedCornerShape(14.dp))
-            .background(FlowFolio.palette.item.copy(alpha = BADGE_SHADE)),
+            .background(FlowFolio.palette.ink.copy(alpha = BADGE_SHADE)),
         contentAlignment = Alignment.Center
     ) {
-        FlowFolioGlyph(Glyph.Folder, contentDescription = null, color = FlowFolio.palette.item, size = 34.dp)
+        FlowFolioGlyph(Glyph.Folder, contentDescription = null, color = FlowFolio.palette.ink, size = 34.dp)
     }
 }
 

@@ -327,17 +327,20 @@ internal fun BoxScope.Controls(
                 packState = voicePackState,
                 error = narratorError
             )
-            ReaderChrome(
-                s,
-                navigation,
-                flowNow,
-                controlsVisible = overlay.chrome.shown,
-                mark = mark,
-                actions = ChromeActions(parts.onBack, onPanel = overlay::open),
-                panel = overlay.panel,
-                bottomBarVisible = overlay.chrome.shown && overlay.panel == Panel.NONE && !overlay.riffleDismissed,
-                bottomBar = parts.bar
-            )
+            val coachTargets = remember { CoachTargets() }
+            CompositionLocalProvider(LocalCoachTargets provides coachTargets) {
+                ReaderChrome(
+                    s,
+                    navigation,
+                    flowNow,
+                    controlsVisible = overlay.chrome.shown,
+                    mark = mark,
+                    actions = ChromeActions(parts.onBack, onPanel = overlay::open),
+                    panel = overlay.panel,
+                    bottomBarVisible = overlay.chrome.shown && overlay.panel == Panel.NONE && !overlay.riffleDismissed,
+                    bottomBar = parts.bar
+                )
+            }
             ReaderPanels(
                 overlay.panel,
                 s,
@@ -365,6 +368,14 @@ internal fun BoxScope.Controls(
             VoiceDownloadOverlay(voicePackState)
             FootnotePopover(overlay.note, parts.book::footnote, onDismiss = { overlay.note = null })
             overlay.figure?.let { FigureZoom(it, parts.book, onDismiss = { overlay.figure = null }) }
+            // The coach marks (ADR-0052): once, after the first-book demo, with the chrome held up to point at.
+            val coaching = settings.tipsEnabled && READER_DEMO in settings.seenGuides &&
+                READER_COACH !in settings.seenGuides && overlay.panel == Panel.NONE
+            LaunchedEffect(coaching) {
+                if (coaching && !overlay.chrome.shown) overlay.chrome.toggle()
+                overlay.chrome.pause(ChromePause.POPOVER, coaching)
+            }
+            if (coaching) ReaderCoach(coachTargets) { parts.book.markGuideSeen(READER_COACH) }
             // A first-use guide on the button just tapped: a centred window, not a spotlight, so it can't be clipped
             // or misaligned on any screen (owner, 2026-11-07).
             overlay.guide?.let { panel ->

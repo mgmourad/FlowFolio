@@ -69,7 +69,7 @@ fun FlowFolioFontPicker(
                     .size(FONT_CARD_WIDTH, FONT_CARD_HEIGHT)
                     .clip(shape)
                     .background(if (on) p.selected else Color.Transparent)
-                    .border(if (on) 2.dp else 1.dp, if (on) p.title else p.hint.copy(alpha = OUTLINE_ALPHA), shape)
+                    .border(if (on) 2.dp else 1.dp, if (on) p.ink else p.ink2.copy(alpha = OUTLINE_ALPHA), shape)
                     .selectable(on, role = Role.RadioButton) { onSelect(font) }
                     .padding(horizontal = 6.dp, vertical = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -91,7 +91,7 @@ fun FlowFolioFontPicker(
                             fontSize = 28.sp,
                             fontStyle = if (font == ReadingFont.BOOK && bookFont == null) FontStyle.Italic else null
                         ),
-                        color = if (on) p.title else p.item,
+                        color = if (on) p.ink else p.ink,
                         maxLines = 1
                     )
                 }

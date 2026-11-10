@@ -182,9 +182,9 @@ internal fun ContentsPanel(contents: DetailsContents, book: Book, onChapter: (In
 private fun ChapterRow(entry: OutlineEntry, label: String, index: Int, current: Int, onChapter: (Int) -> Unit) {
     val p = FlowFolio.palette
     val (dot, dotAlpha) = when {
-        index < current -> p.item to 1f
-        index == current -> p.title to 1f
-        else -> p.hint to DOT_IDLE_ALPHA
+        index < current -> p.ink to 1f
+        index == current -> p.ink to 1f
+        else -> p.ink2 to DOT_IDLE_ALPHA
     }
     Row(
         Modifier

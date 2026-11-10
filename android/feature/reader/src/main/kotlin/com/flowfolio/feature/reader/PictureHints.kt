@@ -59,7 +59,7 @@ internal fun BoxScope.PictureHints(links: Map<Int, List<ReaderLink>>, framesFor:
                 FlowFolioGlyph(
                     Glyph.Search,
                     stringResource(R.string.reader_picture_hint),
-                    color = FlowFolio.palette.item.copy(alpha = pulse),
+                    color = FlowFolio.palette.ink.copy(alpha = pulse),
                     size = HINT_GLYPH,
                     glow = false
                 )

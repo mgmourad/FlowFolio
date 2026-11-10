@@ -127,7 +127,7 @@ private fun SizeStepper(sizeSp: Int, onSize: (Int) -> Unit) {
             Text(
                 "A",
                 style = TextStyle(fontFamily = UiFamily, fontSize = SMALL_A, fontWeight = FontWeight.SemiBold),
-                color = p.item
+                color = p.ink
             )
         }
         Text(
@@ -142,7 +142,7 @@ private fun SizeStepper(sizeSp: Int, onSize: (Int) -> Unit) {
             Text(
                 "A",
                 style = TextStyle(fontFamily = UiFamily, fontSize = LARGE_A, fontWeight = FontWeight.SemiBold),
-                color = p.item
+                color = p.ink
             )
         }
     }

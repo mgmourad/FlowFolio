@@ -61,6 +61,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             onlineLookup = p[ONLINE_LOOKUP] ?: defaults.onlineLookup,
             onlineLookupAsked = p[ONLINE_LOOKUP_ASKED] ?: defaults.onlineLookupAsked,
             translateTo = p[TRANSLATE_TO],
+            translateLanguages = p[TRANSLATE_LANGUAGES]?.split(',')?.filter { it.isNotBlank() }.orEmpty(),
             controlsAutoHide = p[AUTO_HIDE].toEnum(defaults.controlsAutoHide),
             riffleSound = p[RIFFLE_SOUND] ?: defaults.riffleSound,
             riffleVolume = p[RIFFLE_VOLUME]?.coerceIn(0f, 1f) ?: defaults.riffleVolume,
@@ -204,6 +205,10 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         store.edit { it[TRANSLATE_TO] = language }
     }
 
+    suspend fun setTranslateLanguages(languages: List<String>) {
+        store.edit { it[TRANSLATE_LANGUAGES] = languages.joinToString(",") }
+    }
+
     suspend fun setDynamicFlowOnOpen(on: Boolean) {
         store.edit { it[FLOW_ON_OPEN] = on }
     }
@@ -282,6 +287,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val ONLINE_LOOKUP = booleanPreferencesKey("online_lookup")
         val ONLINE_LOOKUP_ASKED = booleanPreferencesKey("online_lookup_asked")
         val TRANSLATE_TO = stringPreferencesKey("translate_to")
+        val TRANSLATE_LANGUAGES = stringPreferencesKey("translate_languages")
         val AUTO_HIDE = stringPreferencesKey("reader_auto_hide")
 
         // The riffle keeps the old "paper sound" key, so a reader who turned that off keeps it off.

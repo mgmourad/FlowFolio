@@ -139,6 +139,9 @@ class FakeSettings(initial: UserSettings = UserSettings()) : SettingsRepository 
         state.update { it.copy(onlineLookup = on, onlineLookupAsked = true) }
 
     override suspend fun setTranslateTo(language: String) = state.update { it.copy(translateTo = language) }
+
+    override suspend fun setTranslateLanguages(languages: List<String>) =
+        state.update { it.copy(translateLanguages = languages) }
 }
 
 class FakeShelves(initial: List<Shelf> = emptyList()) : ShelfRepository {

@@ -78,7 +78,7 @@ internal fun DemoPage(page: Int?, modifier: Modifier) {
         return
     }
     Box(modifier.background(palette.paper)) {
-        Canvas(Modifier.fillMaxSize()) { drawSkeleton(page, palette.paperInk, palette.title, isRecto = page % 2 == 0) }
+        Canvas(Modifier.fillMaxSize()) { drawSkeleton(page, palette.paperInk, palette.ink, isRecto = page % 2 == 0) }
         Text(
             (page + 1).toString(),
             Modifier.align(Alignment.BottomCenter).padding(bottom = 28.dp),

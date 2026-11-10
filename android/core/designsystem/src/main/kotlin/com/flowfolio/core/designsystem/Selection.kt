@@ -127,8 +127,8 @@ fun SelectionCheck(chosen: Boolean, modifier: Modifier = Modifier) {
     Box(
         modifier
             .size(CHECK)
-            .background(if (chosen) p.title else Color.Black.copy(alpha = RING_FILL), CircleShape)
-            .border(2.dp, if (chosen) p.title else Color.White, CircleShape)
+            .background(if (chosen) p.ink else Color.Black.copy(alpha = RING_FILL), CircleShape)
+            .border(2.dp, if (chosen) p.ink else Color.White, CircleShape)
             .semantics { selected = chosen },
         contentAlignment = Alignment.Center
     ) {
@@ -179,7 +179,7 @@ fun SelectionBar(
             FlowFolioGlyph(
                 Glyph.Trash,
                 labels.delete,
-                color = if (selection.chosen.isEmpty()) p.hint else p.danger
+                color = if (selection.chosen.isEmpty()) p.ink2 else p.danger
             )
         }
         Text(

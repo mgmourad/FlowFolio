@@ -353,7 +353,7 @@ private fun ColourChip(colour: BookmarkColor, selected: Boolean, onClick: () -> 
     val ring = if (selected) {
         Modifier.border(
             1.5.dp,
-            FlowFolio.palette.title.copy(alpha = RING_ALPHA),
+            FlowFolio.palette.ink.copy(alpha = RING_ALPHA),
             shape
         )
     } else {
@@ -652,7 +652,7 @@ internal fun MiniCover(book: Book, cover: CoverArt?, modifier: Modifier) {
 private fun EmptyBookmarks(modifier: Modifier) {
     FlowFolioCard(modifier.fillMaxWidth().padding(top = 12.dp), radius = 24.dp, padding = PaddingValues(24.dp)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-            FlowFolioGlyph(Glyph.Bookmark, contentDescription = null, color = FlowFolio.palette.subItem, size = 34.dp)
+            FlowFolioGlyph(Glyph.Bookmark, contentDescription = null, color = FlowFolio.palette.ink2, size = 34.dp)
             Spacer(Modifier.size(12.dp))
             Text(stringResource(R.string.bookmarks_empty_title), style = FlowFolioType.rowLabel.merge(FlowFolio.item))
             Text(

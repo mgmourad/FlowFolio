@@ -79,6 +79,7 @@ enum class Glyph(internal val pathData: String, internal val stroke: Float = 2f,
 
     /** A tick: chosen. */
     Check("M5 12.5l4.5 4.5L19 7.5", stroke = 2.6f),
+    Close("M6 6l12 12M18 6L6 18"),
 
     /** An hourglass: books in progress. */
     Hourglass(
@@ -264,7 +265,7 @@ fun FlowFolioGlyph(
     glyph: Glyph,
     contentDescription: String?,
     modifier: Modifier = Modifier,
-    color: Color = FlowFolio.palette.glyph,
+    color: Color = FlowFolio.palette.ink2,
     size: Dp = 24.dp,
     glow: Boolean = true
 ) {

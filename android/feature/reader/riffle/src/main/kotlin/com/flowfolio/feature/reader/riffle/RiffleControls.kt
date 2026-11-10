@@ -94,13 +94,13 @@ private fun Arrow(left: Boolean, label: String, modifier: Modifier, onClick: () 
                 .size(ARROW_WIDTH, ARROW_HEIGHT)
                 .clip(shape)
                 .background(Brush.verticalGradient(listOf(palette.surface2, palette.surface)))
-                .border(1.dp, Brush.verticalGradient(listOf(palette.title.copy(alpha = 0.7f), palette.edge)), shape),
+                .border(1.dp, Brush.verticalGradient(listOf(palette.ink.copy(alpha = 0.7f), palette.edge)), shape),
             contentAlignment = Alignment.Center
         ) {
             FlowFolioGlyph(
                 Glyph.Back,
                 contentDescription = null,
-                color = palette.item,
+                color = palette.ink,
                 size = 20.dp,
                 glow = false,
                 modifier = Modifier.graphicsLayer { scaleX = if (left) 1f else -1f }
@@ -142,7 +142,7 @@ internal fun GoToPageField(state: RiffleScrubberState, events: RiffleEvents) {
         ) {
             Text(
                 stringResource(R.string.riffle_go_to),
-                color = palette.hint,
+                color = palette.ink2,
                 style = style.copy(fontWeight = FontWeight.SemiBold)
             )
             LabelField(state.book, text, focus, style, onText = {
@@ -160,7 +160,7 @@ internal fun GoToPageField(state: RiffleScrubberState, events: RiffleEvents) {
             if (wrong) {
                 Text(
                     stringResource(R.string.riffle_no_such_page),
-                    color = palette.subItem,
+                    color = palette.ink2,
                     style = style.copy(fontSize = 12.sp)
                 )
             }
@@ -185,7 +185,7 @@ private fun LabelField(
         modifier = Modifier.width(72.dp).focusRequester(focus),
         singleLine = true,
         textStyle = style,
-        cursorBrush = SolidColor(FlowFolio.palette.title),
+        cursorBrush = SolidColor(FlowFolio.palette.ink),
         keyboardOptions = KeyboardOptions(
             capitalization = KeyboardCapitalization.None,
             keyboardType = if (numbersOnly(book)) KeyboardType.Number else KeyboardType.Ascii,

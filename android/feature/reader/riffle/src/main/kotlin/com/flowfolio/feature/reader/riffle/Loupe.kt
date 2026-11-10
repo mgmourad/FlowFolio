@@ -186,7 +186,7 @@ private fun MiniPage(book: BookGeometry, page: Int?, thumbnails: PageThumbnailPr
     }
     val paper = palette.paper
     val ink = palette.paperInk
-    val accent = palette.title
+    val accent = palette.ink
     Canvas(modifier.background(if (page == null) palette.backgroundDeep else paper)) {
         val bmp = usable
         when {
@@ -233,7 +233,7 @@ private fun LoupeCaption(state: RiffleScrubberState, unit: Int) {
         Text(
             RiffleLabels.section(state.book, unit),
             Modifier.weight(1f),
-            color = palette.subItem,
+            color = palette.ink2,
             style = TextStyle(
                 fontFamily = UiFamily,
                 fontWeight = FontWeight.ExtraBold,
@@ -245,14 +245,14 @@ private fun LoupeCaption(state: RiffleScrubberState, unit: Int) {
         )
         Text(
             RiffleLabels.pages(state.book, unit),
-            color = palette.title,
+            color = palette.ink,
             style = TextStyle(fontFamily = DisplayFamily, fontWeight = FontWeight.Bold, fontSize = 18.sp)
         )
     }
     speedLabel(state.scrubSpeed)?.let {
         Text(
             it,
-            color = palette.item,
+            color = palette.ink,
             style = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight.Bold, fontSize = 11.sp)
         )
     }
@@ -262,13 +262,13 @@ private fun LoupeCaption(state: RiffleScrubberState, unit: Int) {
             .padding(top = 7.dp)
             .fillMaxWidth()
             .height(4.dp)
-            .background(palette.hint.copy(alpha = 0.25f), RoundedCornerShape(2.dp))
+            .background(palette.ink2.copy(alpha = 0.25f), RoundedCornerShape(2.dp))
     ) {
         Box(
             Modifier
                 .fillMaxWidth(fraction.coerceIn(0f, 1f))
                 .fillMaxHeight()
-                .background(Brush.horizontalGradient(listOf(palette.title, palette.subItem)), RoundedCornerShape(2.dp))
+                .background(Brush.horizontalGradient(listOf(palette.ink, palette.ink2)), RoundedCornerShape(2.dp))
         )
     }
 }

@@ -82,6 +82,7 @@ internal fun BoxScope.TranslateOverlay(
     ) {
         Header(onClose)
         LanguageRow(state, viewModel)
+        TargetChips(state, viewModel)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
             Passage(state)
             Result(state)
@@ -218,7 +219,7 @@ private fun Result(state: TranslateUiState) {
             )
 
             else -> Row(verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = FlowFolio.palette.title)
+                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = FlowFolio.palette.ink)
                 val label = when (state.status) {
                     TranslateStatus.DOWNLOADING -> R.string.reader_translate_downloading
                     TranslateStatus.DETECTING -> R.string.reader_translate_detecting

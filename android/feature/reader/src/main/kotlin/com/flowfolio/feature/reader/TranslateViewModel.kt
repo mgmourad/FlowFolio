@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -54,6 +55,31 @@ class TranslateViewModel @Inject constructor(
 
     /** The languages to choose from, as codes. */
     val languages: List<String> get() = repository.translator.languages
+
+    /**
+     * The target languages kept as chips (ADR-0052): the ones the reader added, else the phone's and English. The
+     * current target is always among them.
+     */
+    val chips: StateFlow<List<String>> = settings.settings
+        .map { s -> chipLanguages(s.translateLanguages, Locale.getDefault().language) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), emptyList())
+
+    /** Adds [language] to the chips (from the (+) sheet) and translates into it. */
+    fun addChip(language: String) {
+        viewModelScope.launch {
+            val now = chipLanguages(settings.settings.first().translateLanguages, Locale.getDefault().language)
+            if (language !in now) settings.setTranslateLanguages(now + language)
+        }
+        setTo(language)
+    }
+
+    /** Takes [language] off the chips; the last one stays. */
+    fun removeChip(language: String) {
+        viewModelScope.launch {
+            val now = chipLanguages(settings.settings.first().translateLanguages, Locale.getDefault().language)
+            if (now.size > 1) settings.setTranslateLanguages(now - language)
+        }
+    }
 
     private var job: Job? = null
 
@@ -155,3 +181,7 @@ class TranslateViewModel @Inject constructor(
         const val STOP_MS = 5_000L
     }
 }
+
+/** The chips: the saved list, else the phone's language and English (ADR-0052). */
+internal fun chipLanguages(saved: List<String>, phone: String): List<String> =
+    saved.ifEmpty { listOf(phone, "en").distinct() }

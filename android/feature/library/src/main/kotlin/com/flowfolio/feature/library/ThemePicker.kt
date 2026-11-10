@@ -84,7 +84,7 @@ internal fun ThemeCards(selected: AppStyle, seed: MaterialSeed, onSelect: (AppSt
                             .clip(shape)
                             .border(
                                 if (on) 2.5.dp else 1.dp,
-                                if (on) FlowFolio.palette.title else FlowFolio.palette.edge,
+                                if (on) FlowFolio.palette.ink else FlowFolio.palette.edge,
                                 shape
                             )
                     ) {
@@ -117,7 +117,7 @@ internal fun SeedSwatches(selected: MaterialSeed, onSelect: (MaterialSeed) -> Un
         seeds.forEach { seed ->
             val on = seed == selected
             val color = if (seed == MaterialSeed.WALLPAPER) {
-                paletteFamily(AppStyle.MATERIAL, seed).of(dark).title
+                paletteFamily(AppStyle.MATERIAL, seed).of(dark).ink
             } else {
                 seed.swatch(dark)
             }
@@ -165,7 +165,7 @@ private fun DrawScope.preview(p: Palette) {
     val line = size.height * LINE
     // The title, then two lines of text.
     drawRoundRect(
-        p.title,
+        p.ink,
         Offset(pad * 2, cardTop + pad),
         Size(size.width * TITLE_WIDTH, line * 1.4f),
         CornerRadius(line)
@@ -177,7 +177,7 @@ private fun DrawScope.preview(p: Palette) {
         CornerRadius(line)
     )
     drawRoundRect(
-        p.hint.copy(alpha = TEXT_ALPHA),
+        p.ink2.copy(alpha = TEXT_ALPHA),
         Offset(pad * 2, cardTop + pad * 3.6f),
         Size(size.width * HINT_WIDTH, line),
         CornerRadius(line)
@@ -195,7 +195,7 @@ private fun DrawScope.preview(p: Palette) {
         Size(size.width * BUTTON_WIDTH, size.height * BUTTON_HEIGHT),
         CornerRadius(size.height)
     )
-    drawCircle(p.glyph, size.width * DOT, Offset(size.width - pad * 1.8f, buttonTop + size.height * BUTTON_HEIGHT / 2))
+    drawCircle(p.ink2, size.width * DOT, Offset(size.width - pad * 1.8f, buttonTop + size.height * BUTTON_HEIGHT / 2))
     drawRoundRect(p.shelfTop, Offset(0f, size.height * SHELF_TOP), Size(size.width, size.height * (1 - SHELF_TOP)))
 }
 

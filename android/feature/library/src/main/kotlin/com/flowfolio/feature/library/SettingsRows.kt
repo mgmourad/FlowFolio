@@ -118,7 +118,7 @@ internal fun ActionRow(title: Int, detail: Int, onClick: () -> Unit) {
         FlowFolioGlyph(
             Glyph.GoTo,
             contentDescription = null,
-            color = FlowFolio.palette.glyph,
+            color = FlowFolio.palette.ink2,
             size = 18.dp,
             glow = false
         )

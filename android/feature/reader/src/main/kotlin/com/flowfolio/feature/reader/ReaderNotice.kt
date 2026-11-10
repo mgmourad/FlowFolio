@@ -48,7 +48,7 @@ internal fun ReaderNotice(failed: ReaderState.Failed, onBack: () -> Unit) {
     ) {
         FlowFolioCard(Modifier.widthIn(max = NOTICE_WIDTH), radius = 24.dp, padding = PaddingValues(28.dp)) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                FlowFolioGlyph(Glyph.Book, contentDescription = null, color = p.subItem, size = 38.dp)
+                FlowFolioGlyph(Glyph.Book, contentDescription = null, color = p.ink2, size = 38.dp)
                 Spacer(Modifier.size(14.dp))
                 Text(
                     stringResource(title),

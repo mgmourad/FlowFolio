@@ -137,14 +137,14 @@ private fun AtmosphereMenuRow(
                     .fillMaxWidth()
                     .clip(shape)
                     .background(p.surface, shape)
-                    .border(1.dp, p.title.copy(alpha = MENU_EDGE), shape)
+                    .border(1.dp, p.ink.copy(alpha = MENU_EDGE), shape)
                     .clickable { open = true }
                     .padding(horizontal = 14.dp, vertical = 12.dp)
                     .testTag(LibraryTestTags.ATMOSPHERE_ROW),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                FlowFolioGlyph(Glyph.Sound, contentDescription = null, color = p.glyph, size = 18.dp, glow = false)
+                FlowFolioGlyph(Glyph.Sound, contentDescription = null, color = p.ink2, size = 18.dp, glow = false)
                 Column(Modifier.weight(1f)) {
                     Text(
                         chosen?.name ?: stringResource(R.string.atmosphere_none),
@@ -159,7 +159,7 @@ private fun AtmosphereMenuRow(
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                FlowFolioGlyph(Glyph.Sort, contentDescription = null, color = p.hint, size = 16.dp, glow = false)
+                FlowFolioGlyph(Glyph.Sort, contentDescription = null, color = p.ink2, size = 16.dp, glow = false)
             }
             AtmosphereMenu(settings, open, chosen?.name, { open = false }, onPick, onCreate, onEdit)
         }
@@ -227,7 +227,7 @@ private fun EditMark(onClick: () -> Unit) {
         FlowFolioGlyph(
             Glyph.EditBox,
             stringResource(R.string.atmosphere_edit),
-            color = FlowFolio.palette.glyph,
+            color = FlowFolio.palette.ink2,
             size = 18.dp,
             glow = false
         )

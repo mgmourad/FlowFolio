@@ -92,8 +92,8 @@ internal fun ShelfPickerDialog(
                             checked = on,
                             onCheckedChange = null,
                             colors = CheckboxDefaults.colors(
-                                checkedColor = FlowFolio.palette.title,
-                                uncheckedColor = FlowFolio.palette.hint,
+                                checkedColor = FlowFolio.palette.ink,
+                                uncheckedColor = FlowFolio.palette.ink2,
                                 checkmarkColor = FlowFolio.palette.background
                             )
                         )
@@ -189,9 +189,9 @@ private fun NameField(name: String, hint: String, onName: (String) -> Unit) {
         singleLine = true,
         placeholder = { Text(hint, style = FlowFolio.hint) },
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = p.title,
+            focusedBorderColor = p.ink,
             unfocusedBorderColor = p.edge,
-            cursorColor = p.title,
+            cursorColor = p.ink,
             focusedTextColor = p.text,
             unfocusedTextColor = p.text
         ),

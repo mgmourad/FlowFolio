@@ -60,7 +60,7 @@ fun FeatureSplash(
                     .background(p.surface, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                FlowFolioGlyph(glyph, contentDescription = null, color = p.title, size = SPLASH_GLYPH)
+                FlowFolioGlyph(glyph, contentDescription = null, color = p.ink, size = SPLASH_GLYPH)
             }
             Text(
                 title,
@@ -93,12 +93,12 @@ fun TipCard(text: String, onDismiss: () -> Unit, modifier: Modifier = Modifier) 
             .fillMaxWidth()
             .clip(shape)
             .background(p.surface.copy(alpha = TIP_FILL), shape)
-            .border(1.dp, p.title.copy(alpha = TIP_EDGE), shape)
+            .border(1.dp, p.ink.copy(alpha = TIP_EDGE), shape)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        FlowFolioGlyph(Glyph.Hint, contentDescription = null, color = p.title, size = 18.dp, glow = false)
+        FlowFolioGlyph(Glyph.Hint, contentDescription = null, color = p.ink, size = 18.dp, glow = false)
         Text(
             text,
             style = FlowFolioType.sub.merge(FlowFolio.item),
@@ -110,7 +110,7 @@ fun TipCard(text: String, onDismiss: () -> Unit, modifier: Modifier = Modifier) 
                 .clickable(onClick = onDismiss)
                 .padding(4.dp)
         ) {
-            FlowFolioGlyph(Glyph.Back, contentDescription = null, color = p.hint, size = 14.dp, glow = false)
+            FlowFolioGlyph(Glyph.Back, contentDescription = null, color = p.ink2, size = 14.dp, glow = false)
         }
     }
 }

@@ -176,7 +176,7 @@ internal fun ReaderDictionaryPanel(
                 FlowFolioGlyph(
                     Glyph.Search,
                     contentDescription = stringResource(R.string.reader_dictionary_search_hint),
-                    color = if (searching) FlowFolio.palette.title else FlowFolio.palette.glyph,
+                    color = if (searching) FlowFolio.palette.ink else FlowFolio.palette.ink2,
                     size = 20.dp
                 )
             }
@@ -264,9 +264,9 @@ private fun DictionarySearchField(query: String, onQuery: (String) -> Unit) {
         leadingIcon = { FlowFolioGlyph(Glyph.Search, contentDescription = null, size = 18.dp, glow = false) },
         shape = RoundedCornerShape(50),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = p.title,
+            focusedBorderColor = p.ink,
             unfocusedBorderColor = p.edge,
-            cursorColor = p.title,
+            cursorColor = p.ink,
             focusedTextColor = p.text,
             unfocusedTextColor = p.text,
             focusedContainerColor = p.surface.copy(alpha = 0.55f),

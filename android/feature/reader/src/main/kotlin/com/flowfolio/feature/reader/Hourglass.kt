@@ -107,14 +107,14 @@ internal fun BoxScope.RelayoutHourglass(working: Boolean = false, visible: Boole
                         coverColor = boards.main,
                         pageColor = boards.pageColor ?: if (p.dark) Color(0xFFD6CBB8) else Color(0xFFF3EBDB),
                         inkColor = if (p.dark) p.backgroundDeep else Color(0xFF1F1712),
-                        accentColor = p.title,
+                        accentColor = p.ink,
                         modifier = Modifier.size(88.dp, 60.dp)
                     )
                     Spacer(Modifier.height(18.dp))
                     SwingingLoadingBar(
-                        trackColor = p.hint.copy(alpha = 0.24f),
+                        trackColor = p.ink2.copy(alpha = 0.24f),
                         barStart = p.buttonTop,
-                        barEnd = p.title,
+                        barEnd = p.ink,
                         modifier = Modifier.width(104.dp).height(5.dp)
                     )
                 }

@@ -103,7 +103,7 @@ internal fun SelectionRow(
                         com.flowfolio.core.designsystem.FlowFolioGlyph(
                             com.flowfolio.core.designsystem.Glyph.Shelves,
                             stringResource(R.string.action_add_to_shelf_short),
-                            color = if (selection.chosen.isEmpty()) FlowFolio.palette.hint else FlowFolio.palette.item
+                            color = if (selection.chosen.isEmpty()) FlowFolio.palette.ink2 else FlowFolio.palette.ink
                         )
                     }
                 }

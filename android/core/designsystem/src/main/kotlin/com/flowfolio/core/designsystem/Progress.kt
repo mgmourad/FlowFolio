@@ -134,7 +134,7 @@ fun FlowFolioRing(
             val topLeft = Offset(inset, inset)
             drawArc(p.surface3, 0f, FULL_TURN, false, topLeft, arcSize, style = Stroke(stroke))
             if (p.itemGlow.color.alpha > 0f) {
-                blurred(p.item.copy(alpha = 0.7f), 12.dp.toPx()) { paint ->
+                blurred(p.ink.copy(alpha = 0.7f), 12.dp.toPx()) { paint ->
                     paint.style = android.graphics.Paint.Style.STROKE
                     paint.strokeWidth = stroke
                     paint.strokeCap = android.graphics.Paint.Cap.ROUND

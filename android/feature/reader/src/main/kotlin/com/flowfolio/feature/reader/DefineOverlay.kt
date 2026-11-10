@@ -112,7 +112,7 @@ private fun DefineBody(state: DefineUiState) {
                 Modifier.padding(top = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = FlowFolio.palette.title)
+                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = FlowFolio.palette.ink)
                 Text(
                     stringResource(R.string.reader_define_working),
                     style = FlowFolioType.sub.merge(FlowFolio.hint),

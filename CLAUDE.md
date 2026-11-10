@@ -166,7 +166,7 @@ This runs between Phase 6 and Phase 7 in nine phases, one at a time. Stop and re
 until the end, which ships as 0.6.0-canary.2. `docs/ux-review/` (the mock, the review, captures) is gitignored and stays
 local.
 - **Phase 1 (design system) built 2026-11-09.** Semantic `Tokens` per theme, built by `quietPalette`. The old role
-  fields are aliases until Phase 9. Night glow is off by default. New components: menu, sheet, dialog, snackbar,
+  fields (`title`, `item`, `hint`, `subItem`, `glyph`) were removed on 2026-11-10: name `ink`, `ink2` or `ink3`. Night glow is off by default. New components: menu, sheet, dialog, snackbar,
   tooltip, stepper, settings tile and `BookCover`.
 - **Phase 2 (app shell) built 2026-11-09.** The tabs are Library, Shelves, Notebook and Settings (`TopLevel`). Folded,
   they sit on a glass bar; unfolded, on a flat rail with the app mark and Settings at the bottom. Favorites is a
@@ -187,14 +187,21 @@ local.
 - **Phase 7 (Settings) built 2026-11-09.** A ten-section hub (`SettingsPage`, `SettingsHubRow`); folded it opens pages,
   unfolded it shows list and page side by side. **Room v21** `book_text`: per-book text (`BookTextRepository.effective`),
   set from the reader's Aa and pinch; Settings → Text holds the defaults.
-- **Phase 8 (Reader) built 2026-11-09, in part.** A top bar (Back, a title chip, the ribbon, ⋯) and a six-tool dock
-  above the riffle bar (`ToolDock`) replace the right rail, and panels open above the dock. In-book search waits for
-  two letters, groups its results by chapter, and falls back to the PDF while Dynamic Flow prepares. Deferred: the
-  riffle restyle, the selection menu, the language chips, Listen's speed segments and coach marks.
-- **Phase 9 (sweep) built 2026-11-09, in part.** Reset progress waits for RESET to be typed, and every icon button
-  has a tooltip. `docs/plans/ux-overhaul-parity.md` maps every feature to its new home. Deferred: the intro, What's
-  new from the CHANGELOG, the goal sheet, and removing the palette aliases. **Nothing is pushed yet**: 0.6.0-canary.2
-  waits for the owner.
+- **Phase 8 (Reader) built 2026-11-09, finished 2026-11-10.**
+  - A top bar (Back, a title chip, the ribbon, ⋯) and a six-tool dock above the riffle bar (`ToolDock`) replace the
+    right rail; panels open above the dock.
+  - In-book search waits for two letters, groups its results by chapter, and falls back to the PDF while Dynamic Flow
+    prepares.
+  - The selection menu has nine colours over six labelled actions (`HighlightBar`).
+  - Translate keeps language chips (`UserSettings.translateLanguages`); Listen has speed segments.
+  - Coach marks (`ReaderCoach`, guide id `reader_coach`) point at `Modifier.coachSpot` targets.
+- **Phase 9 (sweep) built 2026-11-09, finished 2026-11-10.**
+  - Reset progress waits for RESET to be typed, and every icon button has a tooltip.
+  - The tour has 11 slides with retaken pictures; the goal is a sheet.
+  - What's new reads the `CHANGELOG.md` that `copyChangelog` bundles into the APK (`Changelog` in
+    `:feature:library`).
+  - `docs/plans/ux-overhaul-parity.md` maps every feature to its new home.
+  - **Nothing is pushed yet**: 0.6.0-canary.2 waits for the owner.
 - Handover APKs get a new name every build (`app/build/outputs/apk/debug/handover/`) and are installed on the owner's
   phone as well as the emulator.
 

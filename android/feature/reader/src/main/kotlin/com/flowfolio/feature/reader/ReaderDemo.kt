@@ -97,8 +97,8 @@ private fun BoxScope.Zone(label: String, modifier: Modifier) {
     Box(
         modifier
             .clip(ZONE_SHAPE)
-            .background(p.title.copy(alpha = ZONE_FILL))
-            .border(1.dp, p.title.copy(alpha = ZONE_EDGE), ZONE_SHAPE),
+            .background(p.ink.copy(alpha = ZONE_FILL))
+            .border(1.dp, p.ink.copy(alpha = ZONE_EDGE), ZONE_SHAPE),
         contentAlignment = Alignment.Center
     ) {
         Text(

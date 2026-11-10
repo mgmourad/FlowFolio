@@ -128,8 +128,8 @@ private fun SwitchNotice(
                         checked = dontAsk,
                         onCheckedChange = null,
                         colors = CheckboxDefaults.colors(
-                            checkedColor = p.title,
-                            uncheckedColor = p.hint,
+                            checkedColor = p.ink,
+                            uncheckedColor = p.ink2,
                             checkmarkColor = p.background
                         )
                     )

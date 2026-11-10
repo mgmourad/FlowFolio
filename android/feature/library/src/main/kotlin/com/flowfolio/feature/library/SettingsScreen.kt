@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -68,6 +69,7 @@ import com.flowfolio.core.designsystem.FlowFolioCard
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioSegmented
+import com.flowfolio.core.designsystem.FlowFolioSheet
 import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
@@ -643,10 +645,23 @@ private fun SoundGroup(settings: UserSettings, actions: SettingsActions) {
 @Composable
 private fun HelpGroup(settings: UserSettings, version: String, actions: SettingsActions, onOpenLicenses: () -> Unit) {
     var tutorial by rememberSaveable { mutableStateOf(false) }
+    var notes by rememberSaveable { mutableStateOf(false) }
     if (tutorial) TutorialSheet { tutorial = false }
     val context = androidx.compose.ui.platform.LocalContext.current
+    if (notes) {
+        val all = androidx.compose.runtime.remember { Changelog.read(context) }
+        FlowFolioSheet(onDismissRequest = {
+            notes = false
+        }, title = stringResource(R.string.settings_update_whats_new)) {
+            Column(Modifier.heightIn(max = 560.dp).verticalScroll(rememberScrollState())) {
+                ChangelogView(all, Changelog.current(all, version))
+            }
+        }
+    }
     Group(R.string.settings_help, 6) {
         ActionRow(R.string.settings_tour_again, R.string.settings_tour_again_detail) { tutorial = true }
+        Divider()
+        ActionRow(R.string.settings_update_whats_new, R.string.settings_whats_new_detail) { notes = true }
         Divider()
         ActionRow(R.string.settings_guides_reset, R.string.settings_guides_reset_detail, actions.onGuidesReset)
         Divider()

@@ -55,7 +55,7 @@ internal fun HoldEntry(label: Int, warn: Boolean = false, glyph: Glyph? = null, 
                 FlowFolioGlyph(
                     it,
                     contentDescription = null,
-                    color = if (warn) FlowFolio.palette.danger else FlowFolio.palette.glyph,
+                    color = if (warn) FlowFolio.palette.danger else FlowFolio.palette.ink2,
                     size = 18.dp,
                     glow = false
                 )
@@ -118,9 +118,9 @@ private fun BookSearch(query: String, onQuery: (String) -> Unit) {
         placeholder = { Text(stringResource(R.string.search_hint), style = FlowFolio.hint) },
         shape = RoundedCornerShape(50),
         colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = p.title,
+            focusedBorderColor = p.ink,
             unfocusedBorderColor = p.edge,
-            cursorColor = p.title,
+            cursorColor = p.ink,
             focusedTextColor = p.text,
             unfocusedTextColor = p.text
         ),
@@ -241,10 +241,10 @@ internal fun ShelveBooksFlow(
 
 @Composable
 private fun tickColors() = CheckboxDefaults.colors(
-    checkedColor = FlowFolio.palette.title,
-    uncheckedColor = FlowFolio.palette.hint,
+    checkedColor = FlowFolio.palette.ink,
+    uncheckedColor = FlowFolio.palette.ink2,
     checkmarkColor = FlowFolio.palette.background,
-    disabledCheckedColor = FlowFolio.palette.hint
+    disabledCheckedColor = FlowFolio.palette.ink2
 )
 
 /** With more books than this, the picker offers a search field. */

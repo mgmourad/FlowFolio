@@ -125,17 +125,17 @@ object FlowFolio {
     /** Titles and menu entries (`.r-title`). */
     val title: TextStyle
         @Composable @ReadOnlyComposable
-        get() = role(palette.title, palette.titleGlow)
+        get() = role(palette.ink, palette.titleGlow)
 
     /** Primary items (`.r-item`). */
     val item: TextStyle
         @Composable @ReadOnlyComposable
-        get() = role(palette.item, palette.itemGlow)
+        get() = role(palette.ink, palette.itemGlow)
 
     /** Secondary text (`.r-hint`). */
     val hint: TextStyle
         @Composable @ReadOnlyComposable
-        get() = role(palette.hint, palette.hintGlow)
+        get() = role(palette.ink2, palette.hintGlow)
 
     /**
      * Sub-items and other secondary lines: ink at its second weight since ADR-0052.

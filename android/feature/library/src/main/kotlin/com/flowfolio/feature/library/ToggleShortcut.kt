@@ -39,9 +39,9 @@ internal fun ToggleShortcut(
             if (checked) checkedGlyph else glyph,
             contentDescription = stringResource(label),
             color = if (checked) {
-                checkedColor ?: p.title
+                checkedColor ?: p.ink
             } else {
-                (uncheckedColor ?: p.hint).copy(alpha = OFF_ALPHA)
+                (uncheckedColor ?: p.ink2).copy(alpha = OFF_ALPHA)
             },
             glow = checked
         )

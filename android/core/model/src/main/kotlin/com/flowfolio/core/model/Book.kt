@@ -129,6 +129,8 @@ data class UserSettings(
     val onlineLookupAsked: Boolean = false,
     /** The language passages are translated into last (BCP-47); null means the phone's language. */
     val translateTo: String? = null,
+    /** The languages the reader keeps as chips in Translate (BCP-47), newest last (ADR-0052). */
+    val translateLanguages: List<String> = emptyList(),
     /** How long the reader's controls stay up after the last use (the riffle scrubber, ADR-0022). */
     val controlsAutoHide: ControlsAutoHide = ControlsAutoHide.S5,
     /** The riffle sound while dragging the scrubber's ribbon (ADR-0025); never in silent or vibrate mode. */

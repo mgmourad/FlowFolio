@@ -114,7 +114,7 @@ internal fun TutorialSheet(onDismiss: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                FlowFolioGlyph(Glyph.Help, contentDescription = null, color = p.title, size = 24.dp)
+                FlowFolioGlyph(Glyph.Help, contentDescription = null, color = p.ink, size = 24.dp)
                 Text(
                     stringResource(R.string.tutorial_title),
                     style = FlowFolioType.sectionTitle.merge(FlowFolio.title),
@@ -145,7 +145,7 @@ private fun TutorialEntry(guide: Guide) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            FlowFolioGlyph(guide.glyph, contentDescription = null, color = p.glyph, size = 20.dp, glow = false)
+            FlowFolioGlyph(guide.glyph, contentDescription = null, color = p.ink2, size = 20.dp, glow = false)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(stringResource(guide.title), style = FlowFolioType.rowLabel.merge(FlowFolio.item))

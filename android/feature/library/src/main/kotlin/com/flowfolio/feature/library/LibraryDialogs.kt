@@ -189,7 +189,7 @@ internal fun ImportProgress(progress: Pair<Int, Int>?) {
         if (progress == null) {
             LinearProgressIndicator(
                 Modifier.fillMaxWidth(),
-                color = FlowFolio.palette.title,
+                color = FlowFolio.palette.ink,
                 trackColor = FlowFolio.palette.edge
             )
         } else {
@@ -197,7 +197,7 @@ internal fun ImportProgress(progress: Pair<Int, Int>?) {
             LinearProgressIndicator(
                 progress = { done.toFloat() / total.coerceAtLeast(1) },
                 modifier = Modifier.fillMaxWidth(),
-                color = FlowFolio.palette.title,
+                color = FlowFolio.palette.ink,
                 trackColor = FlowFolio.palette.edge
             )
             Text(

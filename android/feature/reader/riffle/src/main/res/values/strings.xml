@@ -7,10 +7,9 @@
     <string name="riffle_chapter">Chapter %1$d · %2$s</string>
     <string name="riffle_pages">pp. %1$s–%2$s</string>
     <string name="riffle_page">p. %1$s</string>
-    <!-- En spaces around the dash: plain double spaces would collapse into one. -->
-    <string name="riffle_of">of %1$d — %2$d%%</string>
+    <string name="riffle_of">of %1$s · %2$d%%</string>
     <string name="riffle_header_page">Page %1$s</string>
-    <string name="riffle_header_pages">Page %1$s – %2$s</string>
+    <string name="riffle_header_pages">Page %1$s–%2$s</string>
     <!-- In the loupe while fine scrubbing (moving the finger up off the ribbon slows it down). -->
     <string name="riffle_speed_half">Half speed</string>
     <string name="riffle_speed_quarter">Quarter speed</string>

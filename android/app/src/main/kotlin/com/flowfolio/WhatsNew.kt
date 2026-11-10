@@ -64,7 +64,18 @@ internal fun WhatsNewDialog(release: Release, onOk: () -> Unit) {
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                ReleaseNotes(release.notes)
+                // ADR-0052: this build's own notes from the bundled CHANGELOG, offline; the releases page's notes
+                // only when the changelog has nothing for it.
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val bundled = androidx.compose.runtime.remember {
+                    com.flowfolio.feature.library.Changelog.read(context)
+                        .firstOrNull { it.version == BuildConfig.VERSION_NAME }
+                }
+                if (bundled != null) {
+                    com.flowfolio.feature.library.VersionNotesView(bundled)
+                } else {
+                    ReleaseNotes(release.notes)
+                }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                 FlowFolioPrimaryButton(text = stringResource(R.string.whats_new_ok), onClick = onOk)

@@ -65,16 +65,23 @@ All of the old Settings rows sit in the ten-section hub (`SettingsPage`). Each w
 unfolded in Phase 7: Appearance, Text, Reading, Sound & voice, Atmosphere, Library, Dynamic Flow, Updates, Storage,
 Help & about (licences, tour, What's new).
 
-## Deferred from the mock (the features exist; only the new styling is missing)
+## Finished on 2026-11-10 (formerly deferred)
 
-- **Riffle header restyle:** the current header already shows the chapter and the page, and opens Go to page.
-- **Nine-colour selection menu:** the current selection toolbar keeps every action.
-- **Translate language chips and the (+) sheet:** the Words panel translates as before.
-- **Listen speed segments:** the existing speed control remains.
-- **Coach marks:** the first-use guides from Phase 6 M0 remain.
-- **Intro (11 slides):** the existing first-launch tour remains, but its screenshots predate the overhaul (known
-  issue 43).
-- **What's new from the CHANGELOG:** the existing update check's "What's new" link remains.
-- **Reading goal sheet:** the existing `ReadingGoalDialog` remains.
-- **Deleting the palette aliases** (`title`, `item`, `hint`, `subItem`, `glyph`): they still map onto the semantic
-  tokens. Removing them is a mechanical sweep across every screen, best done on its own.
+Each of these was opened on `fold8_api37` unfolded with the final build:
+- the riffle header;
+- the nine-colour selection menu ("VoiceMark" now reads in full);
+- the Translate chips and the (+) sheet (Spanish added and used: "God" → "Dios");
+- Listen's speed segments;
+- the five coach marks;
+- the 11-slide tour with retaken pictures;
+- What's new from the bundled CHANGELOG (Settings → Help);
+- the reading-goal sheet.
+
+The palette aliases are deleted. The design-system screenshot tests match unchanged, so no colour moved.
+
+**Not opened on a device:**
+- "Preparing · N%": no book was converting during the check.
+- The post-update What's new window: it needs an update from an older build.
+
+**Not built,** being new features rather than restyles: a narrator sleep timer, a narrator mini bar, and the
+spoken-sentence highlight.

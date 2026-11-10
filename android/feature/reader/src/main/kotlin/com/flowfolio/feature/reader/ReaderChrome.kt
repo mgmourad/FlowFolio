@@ -90,6 +90,7 @@ import com.flowfolio.feature.reader.layout.ReaderLayout
 import com.flowfolio.feature.reader.layout.Spreads
 import com.flowfolio.feature.reader.riffle.R as RiffleR
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * The mock's reader chrome (`.r-top`, `.r-bottom`): glass bars over the full-bleed pages. A tap in the centre of the
@@ -148,6 +149,7 @@ internal fun BoxScope.ReaderChrome(
     // ADR-0052: the reading tools sit in a dock above the riffle bar, so nothing covers the text (the unfolded
     // right-hand rail sat on the right page's line ends). The dock keeps clear of the riffle bar by its height.
     var riffleHeight by remember { mutableStateOf(0.dp) }
+    var dockHeight by remember { mutableStateOf(0.dp) }
     AnimatedVisibility(
         controlsVisible,
         Modifier
@@ -157,7 +159,9 @@ internal fun BoxScope.ReaderChrome(
         enter = slideInVertically(slide) { it } + fadeIn(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)),
         exit = slideOutVertically(slide) { it } + fadeOut(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut))
     ) {
-        ScreenEntrance(holdForLandings = false) { ToolDock(actions, panel) }
+        ScreenEntrance(holdForLandings = false) {
+            Box(Modifier.onSizeChanged { dockHeight = with(density) { it.height.toDp() } }) { ToolDock(actions, panel) }
+        }
     }
     AnimatedVisibility(
         bottomBarVisible,
@@ -169,6 +173,7 @@ internal fun BoxScope.ReaderChrome(
             Box(
                 Modifier
                     .reveal(DOCK_ORDER)
+                    .coachSpot(CoachSpot.STRIP)
                     .onSizeChanged { riffleHeight = with(density) { it.height.toDp() } }
             ) { bottomBar() }
         }
@@ -176,10 +181,11 @@ internal fun BoxScope.ReaderChrome(
     // In Scroll the number would float over the text; the bars show the page there. Whenever the riffle bar is not
     // showing -- hidden with the rest of the chrome, or dismissed on its own -- the page number stands in for it, and
     // carries the way back from a detour with it (owner, M5 round 3).
-    if (!bottomBarVisible &&
-        state.turn != PageTurn.SCROLL
-    ) {
-        PageNumber(state, navigation, flow, actions, controlsVisible)
+    // While a panel is open the number would sit under the dock, over the text; the panel has the reader's attention.
+    val panelOpen = controlsVisible && panel != Panel.NONE
+    if (!bottomBarVisible && state.turn != PageTurn.SCROLL && !panelOpen) {
+        // With the riffle bar dismissed the dock still sits at the foot: the number rides above it.
+        PageNumber(state, navigation, flow, actions, controlsVisible, lift = if (controlsVisible) dockHeight else 0.dp)
     }
 }
 
@@ -215,7 +221,15 @@ private fun TopBar(
             FlowFolioGlyph(Glyph.Back, null, color = FlowFolio.palette.text, size = button * GLYPH_SHARE)
         }
         TitlePill(title, wide = true, Modifier.weight(1f).reveal(1))
-        Box(Modifier.reveal(2)) { BookmarkButton(mark, actions, button, glowing = panel == Panel.MARK) }
+        Box(Modifier.reveal(2).coachSpot(CoachSpot.RIBBON)) {
+            BookmarkButton(
+                mark,
+                actions,
+                button,
+                glowing =
+                    panel == Panel.MARK
+            )
+        }
         Box(Modifier.reveal(3)) { MoreMenu(actions, button) }
     }
 }
@@ -305,6 +319,7 @@ private fun RowScope.DockTool(
     Column(
         Modifier
             .weight(1f)
+            .then(coachSpotOf(open)?.let { Modifier.coachSpot(it) } ?: Modifier)
             .reveal(order)
             .clip(RoundedCornerShape(16.dp))
             .background(if (on) p.accentSoft else androidx.compose.ui.graphics.Color.Transparent)
@@ -352,7 +367,8 @@ private fun BoxScope.PageNumber(
     navigation: BookNavigation,
     flow: FlowState,
     actions: ChromeActions,
-    controlsVisible: Boolean
+    controlsVisible: Boolean,
+    lift: Dp
 ) {
     val spread = state.layout == ReaderLayout.SPREAD
     val pages = if (spread) Spreads.pagesOf(state.unit, state.pageCount, state.coverAlone) else listOf(state.anchorPage)
@@ -366,6 +382,7 @@ private fun BoxScope.PageNumber(
             Modifier
                 .align(if (spread) Alignment.BottomStart else Alignment.BottomCenter)
                 .navigationBarsPadding()
+                .padding(bottom = lift)
                 .padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN)
                 .clickable { actions.onPanel(Panel.GO_TO) },
             verticalAlignment = Alignment.CenterVertically
@@ -466,7 +483,7 @@ private fun FlowProgressBar(flow: FlowState) {
     val busy = flow.wanted && !flow.reading && (status is FlowStatus.Converting || status == FlowStatus.Queued)
     AnimatedVisibility(busy, enter = fadeIn(tween(Motion.MEDIUM_MS)), exit = fadeOut(tween(Motion.MEDIUM_MS))) {
         val ink = LocalTone.current.folioInk
-        val accent = FlowFolio.palette.title
+        val accent = FlowFolio.palette.ink
         val fraction = (status as? FlowStatus.Converting)?.fraction ?: 0f
         val shown by animateFloatAsState(fraction, tween(Motion.MEDIUM_MS), label = "flowBar")
         val glint = rememberInfiniteTransition(label = "flowGlint")
@@ -493,10 +510,22 @@ private fun FlowProgressBar(flow: FlowState) {
                     )
                 }
             }
+            // ADR-0052: the bar says what it is, "Preparing · 42%", so it doesn't read as a stray line.
+            Text(
+                if (fraction > 0f) {
+                    stringResource(R.string.reader_flow_preparing_percent, (fraction * PERCENT).roundToInt())
+                } else {
+                    stringResource(R.string.reader_flow_preparing)
+                },
+                style = FlowFolioType.tab.copy(color = ink, fontSize = 11.sp),
+                modifier = Modifier.padding(start = 6.dp),
+                maxLines = 1
+            )
         }
     }
 }
 
+private const val PERCENT = 100
 private val BAR_WIDTH = 34.dp
 private val BAR_HEIGHT = 4.dp
 private const val BAR_TRACK_ALPHA = 0.22f
@@ -626,3 +655,10 @@ private const val DETOUR_PULSE_MS = 900
 private val DOCK_WIDE = 560.dp
 private val DOCK_RADIUS = 26.dp
 private const val DOCK_LABEL_ALPHA = 0.8f
+
+/** The dock tools the coach marks point at. */
+private fun coachSpotOf(panel: Panel): CoachSpot? = when (panel) {
+    Panel.SETTINGS -> CoachSpot.AA
+    Panel.NARRATOR -> CoachSpot.LISTEN
+    else -> null
+}

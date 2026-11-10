@@ -471,7 +471,7 @@ private fun SecondaryButton(
             glyph,
             contentDescription = null,
             size = if (compact) 16.dp else 18.dp,
-            color = p.glyph,
+            color = p.ink2,
             glow = false
         )
         Text(

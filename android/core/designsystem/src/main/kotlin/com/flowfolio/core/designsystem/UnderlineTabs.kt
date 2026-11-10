@@ -51,12 +51,12 @@ fun FlowFolioUnderlineTabs(tabs: List<String>, selected: Int, onSelect: (Int) ->
                 val hair = 1.dp.toPx()
                 drawRect(p.edge, Offset(0f, size.height - hair), Size(size.width, hair))
                 val bar = INDICATOR.toPx()
-                drawRoundRect(p.title, Offset(left, size.height - bar), Size(width, bar), CornerRadius(bar))
+                drawRoundRect(p.ink, Offset(left, size.height - bar), Size(width, bar), CornerRadius(bar))
             }
     ) {
         tabs.forEachIndexed { i, label ->
             val on = i == selected
-            val color by animateColorAsState(if (on) p.title else p.hint, label = "tabText")
+            val color by animateColorAsState(if (on) p.ink else p.ink2, label = "tabText")
             Box(
                 Modifier
                     .weight(1f)

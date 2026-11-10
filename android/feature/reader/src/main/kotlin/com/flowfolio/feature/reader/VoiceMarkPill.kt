@@ -195,7 +195,7 @@ private fun RecordButton(recording: Boolean, hasMark: Boolean, playing: Boolean,
             .size(BUTTON)
             .scale(scale)
             .clip(CircleShape)
-            .background(if (recording) p.danger else p.title, CircleShape)
+            .background(if (recording) p.danger else p.ink, CircleShape)
             .clickable(onClick = onClick)
             .testTag(ReaderTestTags.VOICEMARK_RECORD),
         contentAlignment = Alignment.Center

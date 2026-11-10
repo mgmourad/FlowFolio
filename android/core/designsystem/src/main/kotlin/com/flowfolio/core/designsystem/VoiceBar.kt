@@ -53,8 +53,8 @@ fun VoiceBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        RoundGlyph(if (playing) Glyph.AutoHide else Glyph.Play, p.title, onPlayPause)
-        RoundGlyph(Glyph.Trash, p.hint, onStop)
+        RoundGlyph(if (playing) Glyph.AutoHide else Glyph.Play, p.ink, onPlayPause)
+        RoundGlyph(Glyph.Trash, p.ink2, onStop)
         Waveform(
             levels = levels,
             progress = progress,
@@ -80,7 +80,7 @@ fun Waveform(levels: List<Float>, progress: Float, modifier: Modifier = Modifier
         shown.forEachIndexed { index, level ->
             val x = index * step + barWidth / 2f
             val height = max(barWidth, level.coerceIn(0f, 1f) * size.height)
-            val colour = if (index <= played) p.title else p.hint.copy(alpha = 0.45f)
+            val colour = if (index <= played) p.ink else p.ink2.copy(alpha = 0.45f)
             drawLine(
                 colour,
                 Offset(x, size.height / 2f - height / 2f),

@@ -307,7 +307,7 @@ private fun Dot(colour: Color) {
 @Composable
 private fun Count(glyph: Glyph, n: Int) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-        FlowFolioGlyph(glyph, contentDescription = null, color = FlowFolio.palette.hint, size = 14.dp, glow = false)
+        FlowFolioGlyph(glyph, contentDescription = null, color = FlowFolio.palette.ink2, size = 14.dp, glow = false)
         Text("$n", style = FlowFolioType.pill.merge(FlowFolio.subItem))
     }
 }
@@ -316,7 +316,7 @@ private fun Count(glyph: Glyph, n: Int) {
 private fun NoAnnotations(modifier: Modifier) {
     FlowFolioCard(modifier.fillMaxWidth().padding(top = 12.dp), radius = 24.dp, padding = PaddingValues(24.dp)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-            FlowFolioGlyph(Glyph.Highlight, contentDescription = null, color = FlowFolio.palette.title, size = 34.dp)
+            FlowFolioGlyph(Glyph.Highlight, contentDescription = null, color = FlowFolio.palette.ink, size = 34.dp)
             Text(
                 stringResource(R.string.annotations_empty_title),
                 style = FlowFolioType.rowLabel.merge(FlowFolio.item),

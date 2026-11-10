@@ -76,6 +76,9 @@ interface SettingsRepository {
 
     suspend fun setTranslateTo(language: String)
 
+    /** The languages kept as chips in Translate (ADR-0052). */
+    suspend fun setTranslateLanguages(languages: List<String>)
+
     // The reader's controls (riffle scrubber, ADR-0022 and ADR-0023). Defaults do nothing, for test fakes.
     suspend fun setControlsAutoHide(value: ControlsAutoHide) = Unit
 
@@ -245,6 +248,10 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setTranslateTo(language: String) {
         source.setTranslateTo(language)
+    }
+
+    override suspend fun setTranslateLanguages(languages: List<String>) {
+        source.setTranslateLanguages(languages)
     }
 
     override suspend fun setDynamicFlowOnOpen(on: Boolean) {

@@ -82,17 +82,17 @@ private fun FlowCard(flow: FlowState, onSwitch: (Boolean) -> Unit) {
         Modifier
             .fillMaxWidth()
             .padding(horizontal = 4.dp)
-            .softShadow(shape, p.title.copy(alpha = glow), GLOW_BLUR)
+            .softShadow(shape, p.ink.copy(alpha = glow), GLOW_BLUR)
             .clip(shape)
             .background(p.surface2.copy(alpha = CARD_ALPHA))
-            .border(OUTLINE, Brush.linearGradient(listOf(p.title, p.glyph, p.title)), shape)
+            .border(OUTLINE, Brush.linearGradient(listOf(p.ink, p.ink2, p.ink)), shape)
             .toggleable(flow.wanted, role = Role.Switch, onValueChange = onSwitch)
             .padding(horizontal = 14.dp, vertical = 12.dp)
             .testTag(ReaderTestTags.FLOW_SWITCH),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            Modifier.size(GLYPH_TILE).clip(RoundedCornerShape(12.dp)).background(p.title.copy(alpha = TILE_ALPHA)),
+            Modifier.size(GLYPH_TILE).clip(RoundedCornerShape(12.dp)).background(p.ink.copy(alpha = TILE_ALPHA)),
             contentAlignment = Alignment.Center
         ) {
             FlowFolioGlyph(Glyph.DynamicFlow, contentDescription = null, size = 24.dp)

@@ -58,7 +58,7 @@ internal fun BookmarkButton(mark: ChromeMark, actions: ChromeActions, size: Dp, 
         FlowFolioGlyph(
             Glyph.Bookmark,
             stringResource(if (mark.color != null) R.string.reader_bookmarked else R.string.reader_bookmark),
-            color = mark.color?.color ?: FlowFolio.palette.subItem,
+            color = mark.color?.color ?: FlowFolio.palette.ink2,
             size = size * GLYPH_SHARE,
             glow = mark.color != null
         )
@@ -102,7 +102,7 @@ internal fun ColourStrip(mark: ChromeMark, onChoose: (BookmarkColor?) -> Unit) {
                 FlowFolioGlyph(
                     Glyph.Trash,
                     stringResource(R.string.reader_bookmark_remove),
-                    color = FlowFolio.palette.hint,
+                    color = FlowFolio.palette.ink2,
                     size = 22.dp,
                     glow = false
                 )

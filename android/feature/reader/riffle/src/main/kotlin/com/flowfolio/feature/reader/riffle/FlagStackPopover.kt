@@ -102,11 +102,11 @@ private fun FlagItem(book: BookGeometry, flag: RiffleFlag, onClick: () -> Unit) 
     ) {
         Box(Modifier.size(10.dp).background(Color(flag.color), CircleShape))
         Column {
-            Text(page, color = palette.title, style = FlowFolio.item.copy(color = palette.title))
+            Text(page, color = palette.ink, style = FlowFolio.item.copy(color = palette.ink))
             flag.note?.let {
                 Text(
                     it,
-                    color = palette.hint,
+                    color = palette.ink2,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.widthIn(max = 140.dp)

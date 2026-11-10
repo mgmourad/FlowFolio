@@ -193,7 +193,7 @@ private fun DemoButton(label: String, onClick: () -> Unit) {
             .background(palette.surface2, RoundedCornerShape(50))
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 8.dp),
-        color = palette.item
+        color = palette.ink
     )
 }
 

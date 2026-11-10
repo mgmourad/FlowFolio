@@ -239,4 +239,24 @@
         <item quantity="other">%d matches</item>
     </plurals>
     <string name="reader_dock_search">Search</string>
+    <string name="reader_translate_add">Add</string>
+    <string name="reader_translate_languages">Languages</string>
+    <string name="reader_translate_languages_note">Tap to add a language to your chips, or tap a ticked one to take it off. Each language downloads once, about 30 MB, the first time you translate into it.</string>
+    <!-- Coach marks (ADR-0052), shown once after the first-book demo. -->
+    <string name="reader_coach_step">%1$d of %2$d</string>
+    <string name="reader_coach_skip">Skip</string>
+    <string name="reader_coach_next">Next</string>
+    <string name="reader_coach_done">Start reading</string>
+    <string name="reader_coach_ribbon_title">Drop a ribbon</string>
+    <string name="reader_coach_ribbon_body">Tap to mark this page. Hold to choose the ribbon’s colour. Ribbons show on the riffle strip and in your Notebook.</string>
+    <string name="reader_coach_strip_title">Riffle through the book</string>
+    <string name="reader_coach_strip_body">Drag along the page edges to flick through with a page preview. Taller ticks are chapters; tap a ribbon flag to jump to it. Hold the page numbers to drop a detour mark you can come straight back to.</string>
+    <string name="reader_coach_aa_title">Make it comfortable</string>
+    <string name="reader_coach_aa_body">Fonts, size, spacing, paper colour, page turn and, for PDFs, Dynamic Flow all live under Aa.</string>
+    <string name="reader_coach_listen_title">Listen</string>
+    <string name="reader_coach_listen_body">Narrator Mode reads aloud with offline voices and turns the pages for you.</string>
+    <string name="reader_coach_page_title">Tap to read</string>
+    <string name="reader_coach_page_body">Tap the edges to turn, the middle to hide these controls, and press and hold any sentence to highlight, define or translate it.</string>
+    <string name="reader_flow_preparing">Preparing</string>
+    <string name="reader_flow_preparing_percent">Preparing · %1$d%%</string>
 </resources>

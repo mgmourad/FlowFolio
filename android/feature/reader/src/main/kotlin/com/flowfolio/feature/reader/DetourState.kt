@@ -129,7 +129,7 @@ internal fun BoxScope.DetourNotice(detour: DetourState) {
             FlowFolioGlyph(
                 Glyph.Detour,
                 contentDescription = null,
-                color = FlowFolio.palette.title,
+                color = FlowFolio.palette.ink,
                 size = 16.dp,
                 glow = false
             )

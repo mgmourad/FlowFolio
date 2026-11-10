@@ -155,13 +155,13 @@ private fun DayToggles(daysMask: Int, onDays: (Int) -> Unit) {
                     .size(DAY_SIZE)
                     .then(
                         if (active) {
-                            Modifier.softShadow(CircleShape, p.title.copy(alpha = DAY_GLOW), blur = 12.dp)
+                            Modifier.softShadow(CircleShape, p.ink.copy(alpha = DAY_GLOW), blur = 12.dp)
                         } else {
                             Modifier
                         }
                     )
                     .clip(CircleShape)
-                    .background(if (active) p.title else Color.Transparent, CircleShape)
+                    .background(if (active) p.ink else Color.Transparent, CircleShape)
                     .border(if (active) 0.dp else 1.dp, if (active) Color.Transparent else p.edge, CircleShape)
                     .clickable {
                         val toggled = daysMask xor bit
@@ -175,7 +175,7 @@ private fun DayToggles(daysMask: Int, onDays: (Int) -> Unit) {
                 Text(
                     letter,
                     style = FlowFolioType.pill.copy(
-                        color = if (active) p.buttonInk else p.hint.copy(alpha = DAY_OFF_INK)
+                        color = if (active) p.buttonInk else p.ink2.copy(alpha = DAY_OFF_INK)
                     )
                 )
             }
@@ -204,7 +204,7 @@ private fun TimeOfDayDialog(hour: Int, minute: Int, onDismiss: () -> Unit, onSet
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                FlowFolioGlyph(Glyph.Clock, contentDescription = null, color = p.title, size = 22.dp)
+                FlowFolioGlyph(Glyph.Clock, contentDescription = null, color = p.ink, size = 22.dp)
                 Text(
                     stringResource(R.string.goal_time_title),
                     style = FlowFolioType.sectionTitle.merge(FlowFolio.title),
@@ -267,7 +267,7 @@ private fun TimeWheels(hour: Int, step: Int, onHour: (Int) -> Unit, onStep: (Int
                 .align(Alignment.Center)
                 .fillMaxWidth()
                 .height(WHEEL_ITEM_HEIGHT)
-                .border(1.dp, p.title.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                .border(1.dp, p.ink.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
         )
     }
 }

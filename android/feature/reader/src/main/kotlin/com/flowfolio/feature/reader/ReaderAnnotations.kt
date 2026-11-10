@@ -65,33 +65,36 @@ import com.flowfolio.core.designsystem.VoiceBar
 import com.flowfolio.core.designsystem.Waveform
 import com.flowfolio.core.designsystem.glass
 import com.flowfolio.core.designsystem.marker
+import com.flowfolio.core.designsystem.softShadow
 import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.HighlightColor
 import kotlin.math.roundToInt
 
 /**
- * The glass box over a selection or a tapped highlight: the five highlighter colours stacked in two rows on the left,
- * and the actions (Note, Share, Define, Translate, Copy/Delete) stacked in two rows on the right. It sits above
- * [around], or below it when there is no room above.
+ * The selection menu (`.selmenu`, ADR-0052) over a selection or a tapped highlight: the nine highlighter colours in
+ * one row, a hairline, then the actions with their names under them (Note, VoiceMark, Define, Translate, Copy or
+ * Delete, Share). It sits above [around], or below it when there is no room above.
  */
 @Composable
 internal fun BoxScope.HighlightBar(around: Rect, actions: HighlightActions) {
     val density = androidx.compose.ui.platform.LocalDensity.current
     val gap = with(density) { BAR_GAP.toPx() }
     val margin = with(density) { BAR_EDGE_MARGIN.roundToPx() }
+    val p = FlowFolio.palette
     Layout(
         content = {
-            Row(
+            Column(
                 Modifier
-                    .glass(RoundedCornerShape(22.dp))
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
-                    .testTag(ReaderTestTags.HIGHLIGHT_BAR),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .width(MENU_WIDTH)
+                    .softShadow(RoundedCornerShape(18.dp), MENU_SHADOW, blur = 40.dp, offsetY = 14.dp)
+                    .background(p.surface, RoundedCornerShape(18.dp))
+                    .border(1.dp, p.line, RoundedCornerShape(18.dp))
+                    .padding(8.dp)
+                    .testTag(ReaderTestTags.HIGHLIGHT_BAR)
             ) {
-                HighlightColourGrid(actions.current, actions.onColour)
-                Box(Modifier.width(1.dp).height(56.dp).background(FlowFolio.palette.edge))
-                HighlightActionGrid(actions)
+                HighlightColourRow(actions.current, actions.onColour)
+                Box(Modifier.fillMaxWidth().height(1.dp).background(p.line))
+                HighlightActionRow(actions)
             }
         },
         modifier = Modifier.matchParentSize()
@@ -116,84 +119,88 @@ internal fun BoxScope.HighlightBar(around: Rect, actions: HighlightActions) {
 }
 
 @Composable
-private fun HighlightColourGrid(current: HighlightColor?, onColour: (HighlightColor) -> Unit) {
-    val colours = HighlightColor.entries
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+private fun HighlightColourRow(current: HighlightColor?, onColour: (HighlightColor) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 4.dp, bottom = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            colours.take(TOP_COLOUR_COUNT).forEach { c -> ColourDot(c, c == current) { onColour(c) } }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            colours.drop(TOP_COLOUR_COUNT).forEach { c -> ColourDot(c, c == current) { onColour(c) } }
-        }
+        HighlightColor.entries.forEach { c -> ColourDot(c, c == current) { onColour(c) } }
     }
 }
 
 @Composable
-private fun HighlightActionGrid(actions: HighlightActions) {
+private fun HighlightActionRow(actions: HighlightActions) {
     val items = buildList {
         add(BarExtra(R.string.reader_note, Glyph.Edit, warn = false, onClick = actions.onNote))
         add(BarExtra(R.string.reader_voicemark, Glyph.Mic, warn = false, onClick = actions.onVoiceMark))
-        add(BarExtra(R.string.reader_share, Glyph.Share, warn = false, onClick = actions.onShare))
         actions.onDefine?.let { add(BarExtra(R.string.reader_define, Glyph.Book, warn = false, onClick = it)) }
         add(BarExtra(R.string.reader_translate, Glyph.Translate, warn = false, onClick = actions.onTranslate))
-        add(actions.extra)
+        // Copy before Share, as the mock has it; Delete (on a tapped highlight) goes last, away from the rest.
+        if (!actions.extra.warn) add(actions.extra)
+        add(BarExtra(R.string.reader_share, Glyph.Share, warn = false, onClick = actions.onShare))
+        if (actions.extra.warn) add(actions.extra)
     }
-    val split = (items.size + 1) / 2
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            items.take(split).forEach { item -> BarAction(item.label, item.glyph, item.onClick, item.warn) }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            items.drop(split).forEach { item -> BarAction(item.label, item.glyph, item.onClick, item.warn) }
-        }
+    Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
+        items.forEach { item -> BarAction(item.label, item.glyph, item.onClick, item.warn, Modifier.weight(1f)) }
     }
 }
 
 @Composable
 private fun ColourDot(colour: HighlightColor, current: Boolean, onClick: () -> Unit) {
     val fill = colour.marker
-    val ring = FlowFolio.palette.text
+    val ring = FlowFolio.palette.ink
     val name = stringResource(colour.label)
+    // A 30 dp target around the 22 dp dot: nine of them fit the 300 dp menu.
     Box(
         Modifier
-            .size(28.dp)
+            .size(DOT_TARGET)
+            .clip(CircleShape)
+            .clickable(onClick = onClick)
             .semantics {
                 contentDescription = name
                 selected = current
-            }
-            .clip(CircleShape)
-            .drawBehind { drawCircle(fill) }
-            .then(if (current) Modifier.border(2.5.dp, ring, CircleShape) else Modifier)
-            .clickable(onClick = onClick)
-    )
-}
-
-@Composable
-private fun BarAction(label: Int, glyph: Glyph, onClick: () -> Unit, warn: Boolean = false) {
-    val name = stringResource(label)
-    Box(
-        Modifier
-            .size(BAR_ACTION)
-            .clip(RoundedCornerShape(50))
-            .clickable(onClick = onClick)
-            .semantics { contentDescription = name },
+            },
         contentAlignment = Alignment.Center
     ) {
-        FlowFolioGlyph(
-            glyph,
-            contentDescription = null,
-            color = if (warn) FlowFolio.palette.danger else FlowFolio.palette.title,
-            size = BAR_GLYPH,
-            glow = false
+        Box(
+            Modifier
+                .size(DOT)
+                .clip(CircleShape)
+                .drawBehind { drawCircle(fill) }
+                .border(if (current) 2.5.dp else 2.dp, if (current) ring else DOT_EDGE, CircleShape)
         )
     }
 }
+
+@Composable
+private fun BarAction(label: Int, glyph: Glyph, onClick: () -> Unit, warn: Boolean, modifier: Modifier) {
+    val name = stringResource(label)
+    val p = FlowFolio.palette
+    val ink = if (warn) p.danger else p.ink2
+    Column(
+        modifier
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .semantics(mergeDescendants = true) { contentDescription = name }
+            .padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        FlowFolioGlyph(glyph, contentDescription = null, color = ink, size = BAR_GLYPH, glow = false)
+        Text(
+            name,
+            style = FlowFolioType.tab.copy(color = ink, fontSize = 10.5.sp, letterSpacing = 0.sp),
+            maxLines = 1,
+            softWrap = false
+        )
+    }
+}
+
+private val MENU_WIDTH = 320.dp
+private val DOT = 22.dp
+private val DOT_TARGET = 30.dp
+private val MENU_SHADOW = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.25f)
+private val DOT_EDGE = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.08f)
 
 /** Writing a note for a highlight: a glass card with a text field, Save and Cancel. */
 @Composable
@@ -263,12 +270,10 @@ internal val HighlightColor.label: Int
         HighlightColor.CORAL -> R.string.highlight_coral
     }
 
-private val BAR_ACTION = 40.dp
 private val BAR_GLYPH = 20.dp
 private val BAR_GAP = 14.dp
 private val BAR_EDGE_MARGIN = 8.dp
 
 /** The top row of the highlighter grid; the rest go under it (five and four since M4b). */
-private const val TOP_COLOUR_COUNT = 5
 private const val TOP_ROOM = 6f
 private val NOTE_WIDTH = 480.dp

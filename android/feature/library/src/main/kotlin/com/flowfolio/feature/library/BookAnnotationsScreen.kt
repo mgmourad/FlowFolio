@@ -237,7 +237,7 @@ private fun NotesTab(glyph: Glyph, label: String, on: Boolean, onClick: () -> Un
         FlowFolioGlyph(
             glyph,
             contentDescription = null,
-            color = if (on) p.title else p.hint,
+            color = if (on) p.ink else p.ink2,
             size = 14.dp,
             glow = false
         )
@@ -257,11 +257,11 @@ private fun AnnotationRow(a: Annotation, chapter: String?, actions: AnnotationAc
         startWidth = ACTION * 2,
         endWidth = ACTION,
         start = { close ->
-            SwipeAction(R.string.action_share, Glyph.GoTo, FlowFolio.palette.item) {
+            SwipeAction(R.string.action_share, Glyph.GoTo, FlowFolio.palette.ink) {
                 close()
                 actions.onShare(a)
             }
-            SwipeAction(R.string.action_note, Glyph.Edit, FlowFolio.palette.title) {
+            SwipeAction(R.string.action_note, Glyph.Edit, FlowFolio.palette.ink) {
                 close()
                 actions.onNote(a)
             }

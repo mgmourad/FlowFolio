@@ -232,11 +232,11 @@ private fun BookListRow(item: LibraryItem, actions: BookRowActions) {
         startWidth = ACTION_WIDTH * (2 + (if (linked) 1 else 0) + (if (flow != null) 1 else 0)),
         endWidth = ACTION_WIDTH * 2,
         start = { close ->
-            SwipeAction(R.string.action_add_to_shelf, Glyph.Shelves, FlowFolio.palette.item) {
+            SwipeAction(R.string.action_add_to_shelf, Glyph.Shelves, FlowFolio.palette.ink) {
                 close()
                 actions.onShelves(book)
             }
-            SwipeAction(R.string.action_bookmarks, Glyph.Bookmark, FlowFolio.palette.subItem) {
+            SwipeAction(R.string.action_bookmarks, Glyph.Bookmark, FlowFolio.palette.ink2) {
                 close()
                 actions.onBookmarks(book)
             }
@@ -245,21 +245,21 @@ private fun BookListRow(item: LibraryItem, actions: BookRowActions) {
                 SwipeAction(
                     if (on) R.string.action_flow_off_short else R.string.action_flow_short,
                     Glyph.DynamicFlow,
-                    FlowFolio.palette.title
+                    FlowFolio.palette.ink
                 ) {
                     close()
                     flow(book)
                 }
             }
             if (linked) {
-                SwipeAction(R.string.action_locate, Glyph.Search, FlowFolio.palette.title) {
+                SwipeAction(R.string.action_locate, Glyph.Search, FlowFolio.palette.ink) {
                     close()
                     actions.onLocate(book)
                 }
             }
         },
         end = { close ->
-            SwipeAction(R.string.action_rename, Glyph.Edit, FlowFolio.palette.glyph) {
+            SwipeAction(R.string.action_rename, Glyph.Edit, FlowFolio.palette.ink2) {
                 close()
                 actions.onRename(book)
             }

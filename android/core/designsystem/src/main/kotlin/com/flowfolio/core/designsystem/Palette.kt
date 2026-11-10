@@ -65,12 +65,6 @@ data class Palette(
     val surface2: Color,
     /** Hairlines and outlines (`--line`). */
     val edge: Color,
-    val title: Color,
-    val item: Color,
-    val hint: Color,
-    val subItem: Color,
-    /** Icons. */
-    val glyph: Color,
     /** Body text on app surfaces. */
     val text: Color,
     val toggleOffTrack: Color,
@@ -107,7 +101,7 @@ data class Palette(
     /** What the app background is laid with (ADR-0028). */
     val texture: SurfaceTexture = SurfaceTexture.NONE,
     /** The icon on a primary button. */
-    val buttonGlyph: Color = glyph,
+    val buttonGlyph: Color,
     /** The semantic colours everything above is derived from (ADR-0052). */
     val tokens: Tokens = LightTokens
 ) {
@@ -150,12 +144,6 @@ fun quietPalette(tokens: Tokens, dark: Boolean): Palette = with(tokens) {
         surface = surface,
         surface2 = surface2,
         edge = line,
-        title = ink,
-        item = ink,
-        hint = ink2,
-        // Warnings and removals use [danger] by name; the old "sub-item" role is the quiet second ink.
-        subItem = ink2,
-        glyph = ink2,
         text = ink,
         toggleOffTrack = surface3,
         toggleOffThumb = Color.White,

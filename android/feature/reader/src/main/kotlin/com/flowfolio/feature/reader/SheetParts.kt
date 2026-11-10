@@ -54,7 +54,7 @@ internal fun SheetTabs(tabs: List<SheetTab>, selected: Int, onSelect: (Int) -> U
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(p.hint.copy(alpha = TRACK_ALPHA))
+            .background(p.ink2.copy(alpha = TRACK_ALPHA))
             .padding(4.dp)
             .selectableGroup(),
         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -73,7 +73,7 @@ internal fun SheetTabs(tabs: List<SheetTab>, selected: Int, onSelect: (Int) -> U
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center
             ) {
-                FlowFolioGlyph(tab.glyph, null, color = if (on) p.title else p.hint, size = 18.dp, glow = false)
+                FlowFolioGlyph(tab.glyph, null, color = if (on) p.ink else p.ink2, size = 18.dp, glow = false)
                 Text(
                     tab.label,
                     style = FlowFolioType.pill.merge(if (on) FlowFolio.title else FlowFolio.hint),
@@ -137,7 +137,7 @@ internal fun SquareButton(label: String, tag: String, onClick: () -> Unit, conte
         Modifier
             .size(ICON_BOX)
             .clip(shape)
-            .border(1.dp, p.hint.copy(alpha = OUTLINE_ALPHA), shape)
+            .border(1.dp, p.ink2.copy(alpha = OUTLINE_ALPHA), shape)
             .clickable(onClick = onClick)
             .semantics { contentDescription = label }
             .testTag(tag),
@@ -164,7 +164,7 @@ internal fun ToggleChip(
             .alpha(if (enabled) 1f else DISABLED_ALPHA)
             .clip(shape)
             .background(fill)
-            .border(if (checked) 1.5.dp else 1.dp, if (checked) p.title else p.hint.copy(alpha = OUTLINE_ALPHA), shape)
+            .border(if (checked) 1.5.dp else 1.dp, if (checked) p.ink else p.ink2.copy(alpha = OUTLINE_ALPHA), shape)
             .toggleable(checked, enabled = enabled, role = Role.Switch, onValueChange = onChange)
             .heightIn(min = 40.dp)
             .padding(horizontal = 16.dp, vertical = 10.dp)
@@ -176,7 +176,7 @@ internal fun ToggleChip(
                 FlowFolioGlyph(
                     glyph,
                     null,
-                    color = if (checked) p.title else p.hint,
+                    color = if (checked) p.ink else p.ink2,
                     size = CHIP_GLYPH,
                     glow = false,
                     modifier = Modifier.padding(end = 6.dp)
@@ -219,12 +219,12 @@ internal fun IconChoice(
                     .size(ICON_BOX)
                     .clip(shape)
                     .background(if (on) p.selected else Color.Transparent)
-                    .border(if (on) 1.5.dp else 1.dp, if (on) p.title else p.hint.copy(alpha = OUTLINE_ALPHA), shape)
+                    .border(if (on) 1.5.dp else 1.dp, if (on) p.ink else p.ink2.copy(alpha = OUTLINE_ALPHA), shape)
                     .selectable(on, role = Role.RadioButton) { onSelect(i) }
                     .semantics { contentDescription = label },
                 contentAlignment = Alignment.Center
             ) {
-                val color = if (on) p.title else p.item
+                val color = if (on) p.ink else p.ink
                 Canvas(Modifier.size(22.dp)) { icon(i, color) }
             }
         }

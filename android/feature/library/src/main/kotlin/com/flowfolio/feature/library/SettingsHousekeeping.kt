@@ -72,7 +72,7 @@ private fun UpdateRow(state: UpdateState, actions: SettingsActions) {
         if (state is UpdateState.Downloading) {
             LinearProgressIndicator(
                 progress = { state.fraction },
-                color = FlowFolio.palette.title,
+                color = FlowFolio.palette.ink,
                 trackColor = FlowFolio.palette.edge,
                 modifier = Modifier.fillMaxWidth()
             )

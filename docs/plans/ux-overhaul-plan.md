@@ -205,12 +205,14 @@ the additions below.
 
 ### Phase 8: reader
 
-> **Done 2026-11-09, in part.**
+> **Done 2026-11-09; the deferred parts done 2026-11-10** (CHANGELOG, Unreleased).
 > - Built: the top bar, the six-tool dock (the right rail is removed), panels anchored above the dock, and every part
 >   of bug 1 (search).
-> - **Deferred, nothing removed:** the riffle restyle (its header already shows the chapter and "Page X–Y of N — %"),
->   the nine-colour selection menu, the Translate language chips and (+) sheet, Listen's speed segments, the
->   Preparing banner and coach marks. The existing panels and the selection toolbar serve those features unchanged.
+> - 2026-11-10: the riffle header, the nine-colour selection menu, the Translate language chips and (+) sheet,
+>   Listen's speed segments, "Preparing · N%", and coach marks. The coach card stays centred (the owner's rule for
+>   first-use guides, 2026-11-07), with the spotlight round the control.
+> - Not built: a sleep timer, a narrator mini bar and the spoken-sentence highlight. These are new features, not
+>   restyles, and need the owner's say.
 >
 > Verified on `fold8_api37` unfolded: the dock fits all six tools, and Search opens above it with 50 matches for
 > "whale" in *Moby-Dick*, grouped by chapter. CI has not run.
@@ -242,11 +244,13 @@ the additions below.
 
 ### Phase 9: intro, What's new, tooltips, feedback, close-out
 
-> **Done 2026-11-09, in part.**
+> **Done 2026-11-09; the deferred parts done 2026-11-10.**
 > - Built: the typed-RESET confirmation, a tooltip on every icon button, the lint fixes, and the parity checklist
 >   (`ux-overhaul-parity.md`).
-> - Deferred, with the existing versions kept: the 11-slide intro, What's new from the CHANGELOG, the reading-goal
->   sheet, the palette-alias removal, the tour screenshots, and the cold-start check (bug 4).
+> - 2026-11-10: the 11-slide intro with retaken pictures, What's new from the bundled CHANGELOG, the reading-goal
+>   sheet, and the palette aliases removed.
+> - Not checked: the cold start (bug 4). The splash and window background already share the theme's colour, but no
+>   frame-by-frame capture was taken.
 > - The release (0.6.0-canary.2) waits for the owner's go-ahead.
 >
 > CI has not run.

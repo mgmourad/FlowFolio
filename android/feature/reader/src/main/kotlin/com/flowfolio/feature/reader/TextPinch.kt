@@ -76,6 +76,6 @@ internal fun BoxScope.TextPinchBadge(pinch: TextPinch) {
             .padding(horizontal = 28.dp, vertical = 16.dp)
             .testTag(ReaderTestTags.TEXT_PINCH)
     ) {
-        Text("Aa  $size", style = TextStyle(fontSize = 34.sp), color = FlowFolio.palette.title)
+        Text("Aa  $size", style = TextStyle(fontSize = 34.sp), color = FlowFolio.palette.ink)
     }
 }

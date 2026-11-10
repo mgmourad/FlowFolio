@@ -201,7 +201,7 @@ private fun DictionaryGroupCard(
                     FlowFolioGlyph(
                         Glyph.Translate,
                         contentDescription = null,
-                        color = FlowFolio.palette.title,
+                        color = FlowFolio.palette.ink,
                         size = 28.dp
                     )
                 }
@@ -282,7 +282,7 @@ private fun DictionaryWordRow(word: DictionaryWord, book: Book?, onClick: () -> 
 private fun EmptyDictionary(modifier: Modifier = Modifier) {
     FlowFolioCard(modifier.fillMaxWidth().padding(top = 12.dp), radius = 24.dp, padding = PaddingValues(24.dp)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-            FlowFolioGlyph(Glyph.Translate, contentDescription = null, color = FlowFolio.palette.title, size = 34.dp)
+            FlowFolioGlyph(Glyph.Translate, contentDescription = null, color = FlowFolio.palette.ink, size = 34.dp)
             Text(
                 stringResource(R.string.dictionary_empty_title),
                 style = FlowFolioType.rowLabel.merge(FlowFolio.item),

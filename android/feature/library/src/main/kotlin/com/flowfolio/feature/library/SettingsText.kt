@@ -115,7 +115,7 @@ private fun SizeStepper(sizeSp: Int, onSize: (Int) -> Unit) {
             onClick = { onSize((sizeSp - 1).coerceAtLeast(ReaderText.MIN_SIZE_SP)) },
             modifier = Modifier.semantics { contentDescription = smaller }.testTag(LibraryTestTags.TEXT_SMALLER),
             tooltip = smaller
-        ) { Text("A", style = TextStyle(fontSize = 13.sp), color = p.item) }
+        ) { Text("A", style = TextStyle(fontSize = 13.sp), color = p.ink) }
         Text(
             "$sizeSp",
             style = FlowFolioType.rowLabel.merge(FlowFolio.title),
@@ -126,7 +126,7 @@ private fun SizeStepper(sizeSp: Int, onSize: (Int) -> Unit) {
             onClick = { onSize((sizeSp + 1).coerceAtMost(ReaderText.MAX_SIZE_SP)) },
             modifier = Modifier.semantics { contentDescription = larger }.testTag(LibraryTestTags.TEXT_LARGER),
             tooltip = larger
-        ) { Text("A", style = TextStyle(fontSize = 21.sp), color = p.item) }
+        ) { Text("A", style = TextStyle(fontSize = 21.sp), color = p.ink) }
     }
 }
 

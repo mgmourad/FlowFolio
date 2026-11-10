@@ -80,7 +80,7 @@ internal fun UpdateBanner(release: Release, onOpen: () -> Unit, onDismiss: () ->
                 FlowFolioGlyph(
                     Glyph.Back,
                     stringResource(R.string.update_banner_dismiss),
-                    color = FlowFolio.palette.hint,
+                    color = FlowFolio.palette.ink2,
                     size = 18.dp,
                     glow = false,
                     modifier = Modifier

@@ -299,7 +299,7 @@ internal fun BoxScope.AnnotatingLayer(annotating: Annotating, s: ReaderState.Rea
     if (!pick.active && !hasOverlay) return
     FlowFolioPalette(dark = s.tone.dark) {
         if (pick.selecting) {
-            SelectionMarks(pick, annotating::frameOfPick, FlowFolio.palette.item, onLens = { annotating.lens = it }) {
+            SelectionMarks(pick, annotating::frameOfPick, FlowFolio.palette.ink, onLens = { annotating.lens = it }) {
                 pick.clear()
             }
         }

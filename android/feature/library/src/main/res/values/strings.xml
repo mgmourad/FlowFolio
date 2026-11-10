@@ -571,19 +571,23 @@
     <string name="tour_reading_title">A book that turns</string>
     <string name="tour_reading_body">Pages curl as you turn them, two at a time on an unfolded screen. Tap the middle for the controls, the sides to turn, and pinch to change the type size.</string>
     <string name="tour_riffle_title">Flick through it</string>
-    <string name="tour_riffle_body">Drag the book on the bottom bar to riffle the pages, with the chapters and your ribbons marked along the way. Hold it to drop a detour mark you can come straight back to.</string>
+    <string name="tour_riffle_body">Drag along the riffle strip to flick through the pages, with the chapters and your ribbons marked along the way. Hold the page numbers to drop a detour mark you can come straight back to.</string>
     <string name="tour_flow_title">Dynamic Flow</string>
     <string name="tour_flow_body">A PDF whose text is too small to read reflows to fit your screen, prepared on your phone. The original stays exactly as it is, and the \u201cAa\u201d menu switches between the two.</string>
     <string name="tour_marking_title">Mark it up</string>
-    <string name="tour_marking_body">Hold a passage to highlight it in any of nine colours, add a note, share it or copy it. Everything you mark is gathered under the pencil at the top.</string>
+    <string name="tour_marking_body">Hold a passage to highlight it in any of nine colours, add a note, share it or copy it. Everything you mark is gathered in your Notebook, book by book.</string>
     <string name="tour_voice_title">VoiceMark</string>
     <string name="tour_voice_body">Say what you were thinking instead of typing it. Hold a passage, tap the microphone, and the recording stays with those words, ready to play back later.</string>
     <string name="tour_words_title">Words and languages</string>
     <string name="tour_words_body">Look a word up in the dictionary on your phone \u2014 no connection needed \u2014 or translate a passage. Both remember where you asked, so a tap takes you back to the page.</string>
+    <string name="tour_listen_title">Listen</string>
+    <string name="tour_listen_body">Narrator Mode reads any book aloud with natural offline voices, turning the pages as it goes. Pick a voice and a speed once, and it remembers.</string>
+    <string name="tour_step">%1$d of %2$d</string>
+    <string name="tour_back">Back</string>
     <string name="tour_atmosphere_title">Reading Atmosphere</string>
     <string name="tour_atmosphere_body">Set the page and the sound together: rain, a fire, a quiet caf\u00e9, a file of your own or any stream address. Pick a mood once and every book opens that way.</string>
     <string name="tour_goal_title">A reading habit</string>
-    <string name="tour_goal_body">Set a goal for a day, a week or a month, pick the days that count and when to be reminded. The path fills as you read, and finishing it is worth seeing.</string>
+    <string name="tour_goal_body">Set a goal for a day, a week or a month, pick the days that count and when to be reminded. The ring fills as you read, and finishing it is worth seeing.</string>
     <string name="tour_yours_title">Make it yours</string>
     <string name="tour_yours_body">Four themes including a true black one, seven reading fonts or the book\u2019s own, page colours, margins, page-turn styles and sounds. Settings has all of it.</string>
     <string name="settings_updates">Updates</string>
@@ -799,4 +803,9 @@
     <string name="settings_feedback_detail">Opens the project’s issues page</string>
     <string name="settings_version_line">FlowFolio %1$s</string>
     <string name="settings_book_font">Book’s font</string>
+    <string name="goal_less">5 minutes less</string>
+    <string name="goal_more">5 minutes more</string>
+    <string name="changelog_show">Show</string>
+    <string name="changelog_hide">Hide</string>
+    <string name="settings_whats_new_detail">Everything new in this version and the ones before</string>
 </resources>

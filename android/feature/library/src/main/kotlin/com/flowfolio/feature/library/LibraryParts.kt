@@ -177,7 +177,7 @@ internal fun SearchField(
                     .drawBehind {
                         val radius = 16.dp.toPx()
                         drawCircle(
-                            Brush.radialGradient(listOf(p.title.copy(alpha = 0.3f), Color.Transparent), center, radius),
+                            Brush.radialGradient(listOf(p.ink.copy(alpha = 0.3f), Color.Transparent), center, radius),
                             radius = radius,
                             center = center
                         )
@@ -193,9 +193,9 @@ internal fun SearchField(
             leadingIcon = { FlowFolioGlyph(Glyph.Search, contentDescription = null, size = 20.dp, glow = false) },
             shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = p.title,
-                unfocusedBorderColor = p.title.copy(alpha = SEARCH_OUTLINE),
-                cursorColor = p.title,
+                focusedBorderColor = p.ink,
+                unfocusedBorderColor = p.ink.copy(alpha = SEARCH_OUTLINE),
+                cursorColor = p.ink,
                 focusedTextColor = p.text,
                 unfocusedTextColor = p.text,
                 focusedContainerColor = p.surface.copy(alpha = SEARCH_FILL),

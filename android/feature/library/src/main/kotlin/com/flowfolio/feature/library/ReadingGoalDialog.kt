@@ -10,6 +10,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.snapping.SnapPosition
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,6 +53,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
@@ -62,6 +64,8 @@ import com.flowfolio.core.designsystem.FlowFolioGhostButton
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
+import com.flowfolio.core.designsystem.FlowFolioRing
+import com.flowfolio.core.designsystem.FlowFolioSheet
 import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
@@ -75,10 +79,11 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
- * The centred Reading Goal window (owner, M3T3): Set Reading Goal (with iPhone-style hours/minutes wheels, period
- * selector, Reset, and Remind me) and, when opened from the library, the In-progress books section with gradient
- * progress bars.
+ * The Reading Goal sheet (ADR-0052, the mock's `goalSheet`; owner, M3T3): a ring showing the target, preset
+ * chips with five minutes less or more either side, Day/Week/Month (library goal), the reminder (time of day and
+ * days), Reset and Save goal; opened from the library, it ends with the books in progress.
  */
+@Suppress("LongMethod") // one sheet, section by section
 @Composable
 internal fun ReadingGoalDialog(
     scope: String,
@@ -89,33 +94,46 @@ internal fun ReadingGoalDialog(
     onOpenBook: (Book) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val startMinutes = initial?.targetMinutes ?: DEFAULT_GOAL_MINUTES
-    var hours by rememberSaveable(scope) { mutableIntStateOf((startMinutes / 60).coerceIn(0, MAX_HOURS)) }
-    var minutes by rememberSaveable(scope) { mutableIntStateOf(startMinutes % 60) }
+    var target by rememberSaveable(scope) { mutableIntStateOf(initial?.targetMinutes ?: DEFAULT_GOAL_MINUTES) }
     var period by rememberSaveable(scope) { mutableStateOf(initial?.period ?: GoalPeriod.DAY) }
     var remind by rememberSaveable(scope) { mutableStateOf(initial?.remindEnabled ?: false) }
     var remHour by rememberSaveable(scope) { mutableIntStateOf(initial?.remindHour ?: DEFAULT_REM_HOUR) }
     var remMinute by rememberSaveable(scope) { mutableIntStateOf(initial?.remindMinute ?: 0) }
     var remDays by rememberSaveable(scope) { mutableIntStateOf(initial?.remindDaysMask ?: ReadingGoal.ALL_DAYS_MASK) }
     val p = FlowFolio.palette
-    val shape = RoundedCornerShape(28.dp)
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    FlowFolioSheet(
+        onDismissRequest = onDismiss,
+        title = stringResource(R.string.goal_set_title),
+        trailing = {
+            FlowFolioIconButton(onClick = onDismiss, size = 36.dp, tooltip = stringResource(R.string.action_cancel)) {
+                FlowFolioGlyph(Glyph.Close, stringResource(R.string.action_cancel), size = 18.dp, glow = false)
+            }
+        }
+    ) {
         Column(
             Modifier
-                .padding(horizontal = 20.dp, vertical = 24.dp)
-                .widthIn(max = DIALOG_MAX_WIDTH)
-                .fillMaxWidth()
-                .heightIn(max = DIALOG_MAX_HEIGHT)
-                .clip(shape)
-                .background(p.background, shape)
-                .border(1.dp, p.edge, shape)
-                .padding(20.dp)
+                .heightIn(max = SHEET_MAX_HEIGHT)
                 .verticalScroll(rememberScrollState())
                 .testTag(LibraryTestTags.GOAL_DIALOG),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            GoalHeader(onDismiss)
-            WheelPickerRow(hours, minutes, onHours = { hours = it }, onMinutes = { minutes = it })
+            FlowFolioRing(
+                (target / RING_FULL_MINUTES.toFloat()).coerceAtMost(1f),
+                Modifier.align(Alignment.CenterHorizontally),
+                diameter = RING_SIZE
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        formatGoalMinutes(target),
+                        style = FlowFolioType.screenTitle.copy(color = p.ink, fontSize = 30.sp)
+                    )
+                    Text(
+                        stringResource(period.perLabel),
+                        style = FlowFolioType.rowDetail.copy(color = p.ink2)
+                    )
+                }
+            }
+            GoalPresets(target) { target = it.coerceIn(MIN_GOAL_MINUTES, MAX_GOAL_MINUTES) }
             if (scope == ReadingGoal.LIBRARY_SCOPE) PeriodSelector(period) { period = it }
             ReminderSection(remind, remHour, remMinute, remDays, { remind = it }, { h, m ->
                 remHour = h
@@ -127,8 +145,7 @@ internal fun ReadingGoalDialog(
                     onDismiss()
                 },
                 onSave = {
-                    val total = (hours * 60 + minutes).coerceAtLeast(MIN_GOAL_MINUTES)
-                    onSave(ReadingGoal(scope, total, period, remind, remHour, remMinute, remDays))
+                    onSave(ReadingGoal(scope, target, period, remind, remHour, remMinute, remDays))
                     onDismiss()
                 }
             )
@@ -142,63 +159,58 @@ internal fun ReadingGoalDialog(
     }
 }
 
+/** The presets (15 m to 1 h 30 m) between − and +, five minutes a step. */
 @Composable
-private fun GoalHeader(onDismiss: () -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        FlowFolioGlyph(Glyph.ReadingGoal, contentDescription = null, color = FlowFolio.palette.title, size = 24.dp)
-        Text(
-            stringResource(R.string.goal_set_title),
-            style = FlowFolioType.sectionTitle.merge(FlowFolio.title),
-            modifier = Modifier.weight(1f).padding(start = 10.dp)
-        )
-        FlowFolioIconButton(onClick = onDismiss, size = 36.dp, tooltip = stringResource(R.string.action_cancel)) {
-            FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_cancel), size = 18.dp, glow = false)
+private fun GoalPresets(target: Int, onTarget: (Int) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val less = stringResource(R.string.goal_less)
+        val more = stringResource(R.string.goal_more)
+        FlowFolioIconButton(onClick = { onTarget(target - STEP_MINUTES) }, size = 34.dp, tooltip = less) {
+            Text("−", style = FlowFolioType.button.copy(color = FlowFolio.palette.ink))
+        }
+        Row(
+            Modifier.weight(1f, fill = false).horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            PRESETS.forEach { m ->
+                FlowFolioChip(formatGoalMinutes(m), selected = m == target, onClick = { onTarget(m) })
+            }
+        }
+        FlowFolioIconButton(onClick = { onTarget(target + STEP_MINUTES) }, size = 34.dp, tooltip = more) {
+            Text("+", style = FlowFolioType.button.copy(color = FlowFolio.palette.ink))
         }
     }
 }
 
-@Composable
-private fun WheelPickerRow(hours: Int, minutes: Int, onHours: (Int) -> Unit, onMinutes: (Int) -> Unit) {
-    val p = FlowFolio.palette
-    FlowFolioCard(
-        Modifier.fillMaxWidth(),
-        radius = 20.dp,
-        padding = PaddingValues(vertical = 10.dp, horizontal = 16.dp)
-    ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            WheelColumn(
-                count = MAX_HOURS + 1,
-                selected = hours,
-                label = { stringResource(R.string.goal_wheel_hours, it) },
-                onSelect = onHours,
-                modifier = Modifier.width(104.dp)
-            )
-            Text(
-                ":",
-                style = FlowFolioType.heroTitle.merge(FlowFolio.title),
-                modifier = Modifier.padding(horizontal = 8.dp)
-            )
-            WheelColumn(
-                count = 60,
-                selected = minutes,
-                label = { stringResource(R.string.goal_wheel_minutes, it) },
-                onSelect = onMinutes,
-                modifier = Modifier.width(104.dp)
-            )
-        }
-        Box(
-            Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth()
-                .height(WHEEL_ITEM_HEIGHT)
-                .border(1.dp, p.title.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-        )
+/** "45m", "1h", "1h 30m". */
+internal fun formatGoalMinutes(minutes: Int): String {
+    val h = minutes / MINUTES_PER_HOUR
+    val m = minutes % MINUTES_PER_HOUR
+    return when {
+        h == 0 -> "${m}m"
+        m == 0 -> "${h}h"
+        else -> "${h}h ${m}m"
     }
 }
+
+private val GoalPeriod.perLabel: Int
+    get() = when (this) {
+        GoalPeriod.DAY -> R.string.goal_period_day
+        GoalPeriod.WEEK -> R.string.goal_period_week_chip
+        GoalPeriod.MONTH -> R.string.goal_period_month_chip
+    }
+
+private val PRESETS = listOf(15, 30, 45, 60, 90)
+private const val STEP_MINUTES = 5
+private const val MINUTES_PER_HOUR = 60
+private const val RING_FULL_MINUTES = 120
+private const val MAX_GOAL_MINUTES = 720
+private val RING_SIZE = 168.dp
+private val SHEET_MAX_HEIGHT = 680.dp
 
 @Composable
 internal fun WheelColumn(
@@ -328,8 +340,5 @@ private fun InProgressSection(books: List<Book>, onOpenBook: (Book) -> Unit) {
 
 private const val DEFAULT_GOAL_MINUTES = 30
 private const val MIN_GOAL_MINUTES = 5
-private const val MAX_HOURS = 12
 private const val DEFAULT_REM_HOUR = 20
 internal val WHEEL_ITEM_HEIGHT = 36.dp
-private val DIALOG_MAX_WIDTH = 440.dp
-private val DIALOG_MAX_HEIGHT = 640.dp

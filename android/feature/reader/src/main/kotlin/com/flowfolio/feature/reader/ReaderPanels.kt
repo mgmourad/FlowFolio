@@ -230,7 +230,7 @@ private fun BoxScope.SheetPanel(visible: Boolean, content: @Composable ColumnSco
                     .padding(bottom = 8.dp)
                     .size(40.dp, 5.dp)
                     .clip(RoundedCornerShape(50))
-                    .background(FlowFolio.palette.hint.copy(alpha = GRAB_ALPHA))
+                    .background(FlowFolio.palette.ink2.copy(alpha = GRAB_ALPHA))
             )
             content()
         }

@@ -73,7 +73,7 @@ internal fun GoalPath(goal: ReadingGoal?, readMillis: Long, onClick: () -> Unit,
         tween(Motion.GROW_MS, Motion.GROW_DELAY_MS, Motion.EaseOut),
         label = "goalPath"
     )
-    val endColor = gradientColorAt(progress, p.subItem, p.item, p.title)
+    val endColor = gradientColorAt(progress, p.ink2, p.ink, p.ink)
     val reached = targetProgress >= 1f
     val celebrate = rememberCelebration(targetProgress, goal?.scope?.let { "goal:" + it })
     Box(modifier, contentAlignment = Alignment.BottomCenter) {
@@ -94,22 +94,22 @@ internal fun GoalPath(goal: ReadingGoal?, readMillis: Long, onClick: () -> Unit,
                 FlowFolioGlyph(
                     Glyph.Glasses,
                     contentDescription = null,
-                    color = if (goal != null) p.subItem else p.hint,
+                    color = if (goal != null) p.ink2 else p.ink2,
                     size = PATH_GLYPH,
                     glow = false
                 )
                 CurvedRoute(
                     progress = progress,
-                    startColor = p.subItem,
-                    midColor = p.item,
+                    startColor = p.ink2,
+                    midColor = p.ink,
                     endColor = endColor,
-                    trackColor = p.hint.copy(alpha = TRACK_ALPHA),
+                    trackColor = p.ink2.copy(alpha = TRACK_ALPHA),
                     modifier = Modifier.weight(1f).height(PATH_HEIGHT)
                 )
                 FlowFolioGlyph(
                     Glyph.OpenBook,
                     contentDescription = null,
-                    color = if (reached) p.title else p.item,
+                    color = if (reached) p.ink else p.ink,
                     size = PATH_GLYPH,
                     glow = reached
                 )
@@ -233,7 +233,7 @@ internal fun GradientProgressBar(progress: Float, modifier: Modifier = Modifier,
         tween(Motion.GROW_MS, Motion.GROW_DELAY_MS, Motion.EaseOut),
         label = "gradientProgress"
     )
-    val tipColor = gradientColorAt(clamped, p.subItem, p.item, p.title)
+    val tipColor = gradientColorAt(clamped, p.ink2, p.ink, p.ink)
     val shape = RoundedCornerShape(6.dp)
     Box(modifier.fillMaxWidth()) {
         Box(
@@ -241,7 +241,7 @@ internal fun GradientProgressBar(progress: Float, modifier: Modifier = Modifier,
                 .fillMaxWidth()
                 .height(6.dp)
                 .clip(shape)
-                .drawBehind { drawRect(p.hint.copy(alpha = 0.25f)) }
+                .drawBehind { drawRect(p.ink2.copy(alpha = 0.25f)) }
         ) {
             Spacer(
                 Modifier
@@ -250,7 +250,7 @@ internal fun GradientProgressBar(progress: Float, modifier: Modifier = Modifier,
                     .softShadow(shape, tipColor.copy(alpha = if (p.dark) 0.55f else 0f), blur = 8.dp)
                     .clip(shape)
                     .drawBehind {
-                        drawRect(Brush.horizontalGradient(listOf(p.subItem, p.item, tipColor)))
+                        drawRect(Brush.horizontalGradient(listOf(p.ink2, p.ink, tipColor)))
                     }
             )
         }

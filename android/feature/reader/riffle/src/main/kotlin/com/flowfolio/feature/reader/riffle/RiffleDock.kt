@@ -54,6 +54,7 @@ import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.UiFamily
+import java.text.NumberFormat
 import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
@@ -78,14 +79,14 @@ fun RiffleDock(
             events?.let { GoToPageField(state, it) }
         }
         // The countdown is read while drawing, so a ticking clock redraws this line and nothing else.
-        val left = palette.item.copy(alpha = 0.45f)
+        val left = palette.ink.copy(alpha = 0.45f)
         Box(
             Modifier
                 .padding(horizontal = 6.dp)
                 .padding(bottom = 4.dp)
                 .fillMaxWidth()
                 .height(2.dp)
-                .background(palette.hint.copy(alpha = 0.18f), RoundedCornerShape(1.dp))
+                .background(palette.ink2.copy(alpha = 0.18f), RoundedCornerShape(1.dp))
                 .drawBehind {
                     val w = size.width * remaining().coerceIn(0f, 1f)
                     drawRoundRect(left, size = Size(w, size.height), cornerRadius = CornerRadius(size.height / 2))
@@ -134,11 +135,13 @@ private fun RiffleHeader(state: RiffleScrubberState, events: RiffleEvents?) {
         Modifier.fillMaxWidth().height(26.dp).padding(horizontal = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val style = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+        // ADR-0052 (`.rhead`): the chapter in the accent, then one label for the pages, the length and the progress,
+        // which opens go-to-page as a whole.
+        val style = TextStyle(fontFamily = UiFamily, fontWeight = FontWeight.Bold, fontSize = 12.sp)
         Text(
             RiffleLabels.section(book, unit),
             Modifier.weight(1f),
-            color = palette.subItem,
+            color = palette.accent,
             style = style,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -167,22 +170,17 @@ private fun RiffleHeader(state: RiffleScrubberState, events: RiffleEvents?) {
                 .semantics { contentDescription = "$goTo. $mark" }
                 .defaultMinSize(minHeight = 48.dp)
         }
+        val percent = (state.mapping.fractionOf(unit).let { if (book.rightToLeft) 1 - it else it } * PERCENT)
+            .roundToInt()
+        val of = stringResource(R.string.riffle_of, NumberFormat.getIntegerInstance().format(book.pageCount), percent)
         Box(open, contentAlignment = Alignment.Center) {
             Text(
-                RiffleLabels.header(book, unit),
-                color = if (state.live) palette.title else palette.hint,
-                style = style
+                RiffleLabels.header(book, unit) + " " + of,
+                color = if (state.live) palette.text else palette.ink2,
+                style = style.copy(fontWeight = FontWeight.SemiBold, fontSize = 11.5.sp),
+                maxLines = 1
             )
         }
-        Text(
-            " " + stringResource(
-                R.string.riffle_of,
-                book.pageCount,
-                (state.mapping.fractionOf(unit).let { if (book.rightToLeft) 1 - it else it } * PERCENT).roundToInt()
-            ),
-            color = palette.hint,
-            style = style.copy(fontWeight = FontWeight.SemiBold)
-        )
         // After the whole label: between its halves the mark read as part of the page number (owner, M5 round 3).
         events?.let { DetourMark(state, it) }
     }
@@ -195,9 +193,9 @@ private fun RiffleHeader(state: RiffleScrubberState, events: RiffleEvents?) {
 @Composable
 fun RiffleStrip(state: RiffleScrubberState, boards: BoardColors, modifier: Modifier = Modifier) {
     val dark = FlowFolio.palette.dark
-    val glow = FlowFolio.palette.title
+    val glow = FlowFolio.palette.ink
     // The detour mark's colour, read here so the draw lambda captures it once (owner, M5).
-    val detourTint = FlowFolio.palette.item
+    val detourTint = FlowFolio.palette.ink
     // The book's outline (owner, M3T1): the theme's darkest colour on its paper-white pages, or black on a light theme.
     val ink = if (dark) FlowFolio.palette.backgroundDeep else androidx.compose.ui.graphics.Color.Black
     val density = LocalDensity.current.density
@@ -312,7 +310,7 @@ private fun DetourMark(state: RiffleScrubberState, events: RiffleEvents) {
         FlowFolioGlyph(
             Glyph.Detour,
             contentDescription = null,
-            color = palette.title.copy(alpha = glow),
+            color = palette.ink.copy(alpha = glow),
             size = DETOUR_GLYPH,
             glow = false
         )

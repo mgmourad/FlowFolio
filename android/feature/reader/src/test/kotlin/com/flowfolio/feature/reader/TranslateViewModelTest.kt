@@ -84,6 +84,9 @@ private class Settings(initial: UserSettings) : SettingsRepository {
 
     override suspend fun setOnlineLookup(on: Boolean) = Unit
     override suspend fun setTranslateTo(language: String) = state.update { it.copy(translateTo = language) }
+
+    override suspend fun setTranslateLanguages(languages: List<String>) =
+        state.update { it.copy(translateLanguages = languages) }
 }
 
 @OptIn(ExperimentalCoroutinesApi::class)

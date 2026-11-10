@@ -96,9 +96,34 @@ val checkReleaseSigning = tasks.register("checkReleaseSigning") {
 
 tasks.matching { it.name == "packageRelease" }.configureEach { dependsOn(checkReleaseSigning) }
 
+/**
+ * Copies the repository's `CHANGELOG.md` into the APK's assets (ADR-0052), so What's new reads this build's own notes
+ * on the phone, offline, instead of asking the releases page.
+ */
+abstract class CopyChangelog : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val changelog: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun copy() {
+        val out = outputDir.get().asFile
+        out.mkdirs()
+        changelog.get().asFile.copyTo(out.resolve("CHANGELOG.md"), overwrite = true)
+    }
+}
+
+val copyChangelog = tasks.register<CopyChangelog>("copyChangelog") {
+    changelog.set(rootProject.layout.projectDirectory.file("../CHANGELOG.md"))
+}
+
 // The plugin copies `release` into these build types after the DSL runs, so the flag is set per variant instead.
 androidComponents {
     onVariants { variant ->
+        variant.sources.assets?.addGeneratedSourceDirectory(copyChangelog, CopyChangelog::outputDir)
         if (variant.buildType in benchmarkBuildTypes) {
             variant.buildConfigFields?.put(
                 "MEASUREMENT_HOOKS",

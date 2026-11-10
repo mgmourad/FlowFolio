@@ -119,7 +119,7 @@ private fun LicenseEntryRow(entry: LicenseEntry) {
                 FlowFolioGlyph(
                     Glyph.GoTo,
                     stringResource(if (expanded) R.string.licenses_hide else R.string.licenses_show),
-                    color = FlowFolio.palette.glyph,
+                    color = FlowFolio.palette.ink2,
                     size = 18.dp,
                     glow = false,
                     modifier = Modifier.padding(start = 10.dp).rotate(if (expanded) 90f else 0f)
