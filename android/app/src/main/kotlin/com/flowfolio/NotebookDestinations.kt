@@ -6,24 +6,28 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.flowfolio.core.data.MarkKind
 import com.flowfolio.core.designsystem.LocalDestinationScope
 import com.flowfolio.core.designsystem.ScreenEntrance
+import com.flowfolio.core.designsystem.clearOfChrome
 import com.flowfolio.feature.library.AnnotationsScreen
 import com.flowfolio.feature.library.BookmarksScreen
 import com.flowfolio.feature.library.DictionaryScreen
 import com.flowfolio.feature.library.LibraryFilter
-import com.flowfolio.feature.library.NotebookScreen
+import com.flowfolio.feature.library.NotebookBookScreen
+import com.flowfolio.feature.library.NotebookHome
 import com.flowfolio.feature.library.NotebookSection
 
 /**
- * The Notebook tab (ADR-0052): Bookmarks, Annotations and Dictionary as its sections. The section shown is kept
- * across visits; `notebook?section=` opens a given one.
+ * The Notebook tab (ADR-0052): every book's marks, counted once ([com.flowfolio.core.data.MarkCounts]).
+ * `notebook?section=` opens it on one kind (the stats tiles, the retired routes).
  */
 internal fun NavGraphBuilder.notebookDestination(nav: NavHostController) = composable(
     Destinations.NOTEBOOK,
@@ -34,25 +38,35 @@ internal fun NavGraphBuilder.notebookDestination(nav: NavHostController) = compo
             defaultValue = null
         }
     )
-) { entry ->
-    val asked = entry.arguments?.getString("section")
-    var section by rememberSaveable(asked) { mutableStateOf(Destinations.sectionOf(asked)) }
+) {
     CompositionLocalProvider(LocalDestinationScope provides this) {
         ScreenEntrance {
-            NotebookScreen(section, onSection = { section = it }) { shown ->
-                when (shown) {
-                    NotebookSection.HIGHLIGHTS ->
-                        AnnotationsScreen(onOpenBook = { book -> nav.navigate(Routes.bookAnnotations(book.id)) })
-
-                    NotebookSection.BOOKMARKS -> BookmarksScreen(
-                        onRead = { nav.navigate(Routes.reader(it.id)) },
-                        onOpenBook = { book -> nav.navigate(Routes.bookBookmarks(book.id)) }
-                    )
-
-                    NotebookSection.WORDS -> DictionaryScreen(onRead = { nav.navigate(Routes.reader(it.id)) })
-                }
-            }
+            NotebookHome(onOpenBook = { book, kind -> nav.navigate(Destinations.notebookBook(book.id, kind)) })
         }
+    }
+}
+
+/** One book's notebook: its marks by kind, each opening at its page (ADR-0052). */
+internal fun NavGraphBuilder.notebookBookDestination(nav: NavHostController) = composable(
+    Destinations.NOTEBOOK_BOOK,
+    arguments = listOf(
+        navArgument("bookId") { type = NavType.StringType },
+        navArgument("kind") {
+            type = NavType.StringType
+            nullable = true
+            defaultValue = null
+        }
+    )
+) { entry ->
+    val bookId = entry.arguments?.getString("bookId").orEmpty()
+    val kind = MarkKind.entries.firstOrNull { it.name == entry.arguments?.getString("kind") }
+    ScreenEntrance(Modifier.clearOfChrome()) {
+        NotebookBookScreen(
+            bookId = bookId,
+            initialKind = kind,
+            onBack = { nav.popBackStack() },
+            onRead = { book -> nav.navigate(Routes.reader(book.id)) }
+        )
     }
 }
 

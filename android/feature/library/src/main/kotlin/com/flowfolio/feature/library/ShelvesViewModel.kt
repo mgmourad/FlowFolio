@@ -7,12 +7,15 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.flowfolio.core.data.AnnotationRepository
+import com.flowfolio.core.data.BookMarkCounts
 import com.flowfolio.core.data.BookmarkRepository
 import com.flowfolio.core.data.DictionaryRepository
 import com.flowfolio.core.data.LibraryRepository
+import com.flowfolio.core.data.MarkCounts
 import com.flowfolio.core.data.ReadingRepository
 import com.flowfolio.core.data.SettingsRepository
 import com.flowfolio.core.data.ShelfRepository
+import com.flowfolio.core.data.countByBook
 import com.flowfolio.core.data.flow.DynamicFlow
 import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.Book
@@ -104,8 +107,15 @@ class ShelvesViewModel @Inject constructor(
     readingRepo: ReadingRepository = EmptyShelfReadingRepository,
     private val flow: DynamicFlow = DynamicFlow.None,
     @ApplicationContext private val appContext: Context? = null,
-    private val settings: SettingsRepository? = null
+    private val settings: SettingsRepository? = null,
+    /** The one count of marks every screen shares (ADR-0052); null in tests, which count the repositories. */
+    markCounts: MarkCounts? = null
 ) : ViewModel() {
+    private val countsByBook: Flow<Map<String, BookMarkCounts>> = markCounts?.all?.map { it.byBook }
+        ?: combine(annotationsRepo.observeAll(), bookmarksRepo.observeAll(), dictionaryRepo.observeWords()) { a, b, w ->
+            countByBook(a, b, w)
+        }
+
     private val order = settings?.settings?.map { it.shelvesOrder } ?: flowOf(ShelvesOrder.CUSTOM)
 
     /** Orders the shelves (ADR-0052), remembered. */
@@ -125,9 +135,7 @@ class ShelvesViewModel @Inject constructor(
     }
 
     private data class StatsBundle(
-        val annotationsByBook: Map<String, Int>,
-        val bookmarksByBook: Map<String, Int>,
-        val dictionaryByBook: Map<String, Int>,
+        val counts: Map<String, BookMarkCounts>,
         val readMillisByBook: Map<String, Long>,
         val flowStatuses: Map<String, FlowStatus>
     )
@@ -135,16 +143,12 @@ class ShelvesViewModel @Inject constructor(
     private val pendingBatchShelves = LinkedHashSet<Long>()
 
     private val statsBundle = combine(
-        annotationsRepo.observeAll(),
-        bookmarksRepo.observeAll(),
-        dictionaryRepo.observeCountsByBook(),
+        countsByBook,
         readingRepo.observeReadMillisByBook(),
         flow.statuses
-    ) { annotations, bookmarks, dictCounts, readMillis, statuses ->
+    ) { counts, readMillis, statuses ->
         StatsBundle(
-            annotationsByBook = annotations.groupingBy { it.bookId }.eachCount(),
-            bookmarksByBook = bookmarks.groupingBy { it.bookId }.eachCount(),
-            dictionaryByBook = dictCounts,
+            counts = counts,
             readMillisByBook = readMillis,
             flowStatuses = statuses
         )
@@ -175,9 +179,9 @@ class ShelvesViewModel @Inject constructor(
                 ShelfCard(
                     shelf = s,
                     books = shelfBooks,
-                    annotationsCount = shelfBooks.sumOf { stats.annotationsByBook[it.id] ?: 0 },
-                    bookmarksCount = shelfBooks.sumOf { stats.bookmarksByBook[it.id] ?: 0 },
-                    dictionaryCount = shelfBooks.sumOf { stats.dictionaryByBook[it.id] ?: 0 },
+                    annotationsCount = shelfBooks.sumOf { stats.counts[it.id]?.annotations ?: 0 },
+                    bookmarksCount = shelfBooks.sumOf { stats.counts[it.id]?.bookmarks ?: 0 },
+                    dictionaryCount = shelfBooks.sumOf { stats.counts[it.id]?.words ?: 0 },
                     readTimeMillis = shelfBooks.sumOf { stats.readMillisByBook[it.id] ?: 0L },
                     flowActive = active,
                     flowConverting = converting

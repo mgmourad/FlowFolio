@@ -3,8 +3,6 @@ package com.flowfolio.feature.library
 /** Semantic tags used by UI tests to find library, shelves and details elements. */
 @Suppress("TooManyFunctions")
 object LibraryTestTags {
-    fun notebookSection(section: NotebookSection) = "notebook.section.${section.name.lowercase()}"
-
     fun searchGroup(group: SearchGroup) = "library.search.${group.name.lowercase()}"
 
     const val IMPORT_PROGRESS = "library_import_progress"
@@ -18,6 +16,11 @@ object LibraryTestTags {
     const val IMPORT = "library_import"
     const val SORT = "library_sort"
     const val SHELVES_SORT = "shelves_sort"
+    const val NOTEBOOK = "notebook_home"
+    const val NOTEBOOK_BOOK = "notebook_book"
+    fun notebookKind(name: String) = "notebook_kind_${name.lowercase()}"
+    fun notebookBook(id: String) = "notebook_book_$id"
+    fun notebookDelete(key: String) = "notebook_delete_$key"
     const val STATS_BAND = "library_stats"
     const val GLOBAL_SEARCH = "library_global_search"
     const val GOAL_CARD = "library_goal_card"

@@ -10,6 +10,27 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 > **CI has not run** for any of it yet.
 
 ### Changed
+- **Overhaul Phase 5: the Notebook** (2026-11-09).
+  - **One count for every screen** (`MarkCounts`, `countByBook` in `:core:data`). Every mark is counted after the
+    reader's current-view filter (`ReadingViews`), so the Library, the Notebook and Shelves give the same figures.
+    - Annotations split into highlights, notes (those with words) and VoiceMarks (those with a recording).
+    - Ribbons and saved words are counted by book.
+  - **Notebook landing** (`NotebookHome`): "Everything you marked, book by book", with:
+    - Search, Sort (Recently marked, Book title, Most marks) and ⋯ (Export as Markdown, Export as CSV, Share all,
+      through the system's share sheet);
+    - chips for All, Highlights, Notes, Bookmarks, VoiceMarks and Words, each with its count;
+    - one card per book with a count pill per kind, zeros dimmed. Unfolded, cards sit in two columns and show the
+      latest mark.
+  - **A book's notebook** (`NotebookBookScreen`, route `notebook/book/{id}?kind=`): its cover and counts, tabs by kind
+    with counts, and Sort (Page order, Newest first, Type). Each mark shows its page and kind:
+    - quotes ruled in their highlight colour, with the note under them;
+    - a play row for VoiceMarks;
+    - words with their part of speech, or a "Translation" label when there is only a translation.
+
+    Each has Open at this page, Share, and Delete with Undo (the mark is hidden at once and deleted when the snackbar
+    goes).
+  - The Library's book menu opens these pages at the right kind. The old per-book Bookmarks, Annotations and
+    Dictionary routes still work.
 - **Overhaul Phase 4: Shelves** (2026-11-09).
   - **Shelves tab:** two columns folded and three unfolded, each card with:
     - a 2 dp border in the shelf's colour;
@@ -67,6 +88,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   beyond update downloads.
 
 ### Fixed
+- **Counts that disagreed** (5 ribbons on the library card, 2 on the Bookmarks page): every count now comes from
+  `MarkCounts`.
+- **Translation-only words** show a "Translation" label instead of a missing part-of-speech chip.
 - **Library scroll crash** `IllegalArgumentException: Key "row-loose" was already used`. The "Not on a shelf" row and
   the "Finished" row both had no shelf and so took the same lazy key. Every row now has its own key (`ShelfRow.key`),
   and `LibraryOverhaulTest` holds the regression.

@@ -179,6 +179,9 @@ local.
 - **Phase 4 (Shelves) built 2026-11-09.** Folder cards with flat fanned covers, the ⋯ menu, `ShelvesOrder` sort
   (remembered), New shelf with colours and an "Add books" snackbar, Delete with Undo; shelf pages restyled; `ShelfBook`
   draws the flat cover.
+- **Phase 5 (Notebook) built 2026-11-09.** `MarkCounts` (`:core:data`) is the one count of marks every screen
+  reads. `NotebookHome` (kind chips, a card per book, export and share as text) and `NotebookBookScreen` (tabs by kind,
+  Open, Share, Delete with Undo).
 - Handover APKs get a new name every build (`app/build/outputs/apk/debug/handover/`) and are installed on the owner's
   phone as well as the emulator.
 

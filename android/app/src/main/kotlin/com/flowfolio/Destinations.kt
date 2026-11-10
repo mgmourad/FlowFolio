@@ -1,5 +1,6 @@
 package com.flowfolio
 
+import com.flowfolio.core.data.MarkKind
 import com.flowfolio.feature.library.NotebookSection
 
 /**
@@ -16,6 +17,12 @@ internal object Destinations {
 
     /** The Notebook, optionally opened at one [NotebookSection] (`notebook?section=WORDS`). */
     const val NOTEBOOK = "notebook?section={section}"
+
+    /** One book's notebook, optionally on one kind of mark. */
+    const val NOTEBOOK_BOOK = "notebook/book/{bookId}?kind={kind}"
+
+    fun notebookBook(bookId: String, kind: MarkKind? = null) =
+        "notebook/book/$bookId" + (kind?.let { "?kind=${it.name}" } ?: "")
 
     fun notebook(section: NotebookSection? = null) = "notebook" + (section?.let { "?section=${it.name}" } ?: "")
 

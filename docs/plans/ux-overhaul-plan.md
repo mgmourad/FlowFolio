@@ -151,6 +151,10 @@ the additions below.
 
 ### Phase 5: notebook
 
+> **Done 2026-11-09.** `MarkCounts` in `:core:data` is the one source of counts. Deletion with Undo hides the mark at
+> once and deletes it when the snackbar goes. Export and share go through the system share sheet as text, so no file
+> sharing was added. Details reads `MarkCounts` from Phase 6. Verified on `fold8_api37` unfolded. CI has not run.
+
 - **One counts query (bug 3):** a `MarkCounts` query in `:core:database`/`:core:data` returns highlights, notes,
   bookmarks, VoiceMarks and words per book, honouring `ReadingViews` (a Dynamic Flow book counts the marks of its
   current view, as the reader shows them). Library card, Notebook, Details and Shelves all read it. The 5-vs-2

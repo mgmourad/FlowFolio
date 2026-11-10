@@ -32,6 +32,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.flowfolio.core.data.MarkKind
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.LocalBookOpener
@@ -56,7 +57,6 @@ import com.flowfolio.feature.library.LibraryFilter
 import com.flowfolio.feature.library.LibraryScreen
 import com.flowfolio.feature.library.LibraryViewModel
 import com.flowfolio.feature.library.LicensesScreen
-import com.flowfolio.feature.library.NotebookScreen
 import com.flowfolio.feature.library.NotebookSection
 import com.flowfolio.feature.library.SettingsScreen
 import com.flowfolio.feature.library.ShelfPageScreen
@@ -103,9 +103,15 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                                 onRead = { book -> nav.navigate(Routes.reader(book.id)) },
                                 onOpenShelf = { id -> nav.navigate(Routes.shelf(id)) },
                                 onOpenFolder = { path -> nav.navigate(Routes.folder(path)) },
-                                onBookmarks = { book -> nav.navigate(Routes.bookBookmarks(book.id)) },
-                                onAnnotations = { book -> nav.navigate(Routes.bookAnnotations(book.id)) },
-                                onDictionary = { book -> nav.navigate(Routes.bookDictionary(book.id)) },
+                                onBookmarks = { book ->
+                                    nav.navigate(Destinations.notebookBook(book.id, MarkKind.BOOKMARK))
+                                },
+                                onAnnotations = { book ->
+                                    nav.navigate(Destinations.notebookBook(book.id, MarkKind.HIGHLIGHT))
+                                },
+                                onDictionary = { book ->
+                                    nav.navigate(Destinations.notebookBook(book.id, MarkKind.WORD))
+                                },
                                 onOpenNotebook = { section ->
                                     nav.navigate(Destinations.notebook(section)) {
                                         popUpTo(nav.graph.findStartDestination().id)
@@ -123,6 +129,7 @@ fun FlowFolioApp(appViewModel: AppViewModel) {
                         ScreenEntrance { ShelvesScreen(onOpenShelf = { id -> nav.navigate(Routes.shelf(id)) }) }
                     }
                     notebookDestination(nav)
+                    notebookBookDestination(nav)
                     retiredDestinations(nav)
                     destination(TopLevel.Settings.route) {
                         ScreenEntrance {
