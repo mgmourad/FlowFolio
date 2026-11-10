@@ -58,3 +58,6 @@ android/spikes/*/results/
 
 # Superpowers plan workspaces (scratch ledgers/briefs/reviews)
 .superpowers/
+
+# UX review working material (owner, 2026-11-09): mocks, captures and before/after shots stay local
+docs/ux-review/
