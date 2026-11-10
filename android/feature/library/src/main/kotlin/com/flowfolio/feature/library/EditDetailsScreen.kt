@@ -87,7 +87,7 @@ fun EditDetailsContent(
         Column(Modifier.widthIn(max = FORM_WIDTH).fillMaxWidth()) {
             // The form settles section by section (ADR-0034).
             Row(Modifier.reveal(0), verticalAlignment = Alignment.CenterVertically) {
-                FlowFolioIconButton(onClick = onCancel, glass = true) {
+                FlowFolioIconButton(onClick = onCancel, glass = true, tooltip = stringResource(R.string.action_back)) {
                     FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = FlowFolio.palette.text)
                 }
                 Text(

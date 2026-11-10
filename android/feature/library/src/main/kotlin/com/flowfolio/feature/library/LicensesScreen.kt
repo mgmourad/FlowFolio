@@ -65,7 +65,12 @@ fun LicensesContent(sections: List<LicenseSection>, onBack: () -> Unit) {
                 slogan = stringResource(R.string.licenses_sub),
                 modifier = Modifier.reveal(0),
                 leading = {
-                    FlowFolioIconButton(onClick = onBack, glass = true, modifier = Modifier.padding(end = 14.dp)) {
+                    FlowFolioIconButton(
+                        onClick = onBack,
+                        glass = true,
+                        modifier = Modifier.padding(end = 14.dp),
+                        tooltip = stringResource(R.string.action_back)
+                    ) {
                         FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = FlowFolio.palette.text)
                     }
                 }

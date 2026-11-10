@@ -151,7 +151,8 @@ fun AnnotationsContent(
                                         searchOpen = !searchOpen
                                         if (!searchOpen) query = ""
                                     },
-                                    modifier = Modifier.testTag(LibraryTestTags.SEARCH)
+                                    modifier = Modifier.testTag(LibraryTestTags.SEARCH),
+                                    tooltip = stringResource(R.string.action_search)
                                 ) {
                                     FlowFolioGlyph(Glyph.Search, stringResource(R.string.action_search))
                                 }

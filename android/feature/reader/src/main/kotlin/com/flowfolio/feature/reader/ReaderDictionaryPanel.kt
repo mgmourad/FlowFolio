@@ -170,7 +170,8 @@ internal fun ReaderDictionaryPanel(
                     if (!searching) viewModel.onQuery("")
                 },
                 glass = true,
-                size = 38.dp
+                size = 38.dp,
+                tooltip = stringResource(R.string.reader_dictionary_search_hint)
             ) {
                 FlowFolioGlyph(
                     Glyph.Search,

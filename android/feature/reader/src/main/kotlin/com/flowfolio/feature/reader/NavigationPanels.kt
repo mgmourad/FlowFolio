@@ -61,7 +61,12 @@ internal fun ContentsList(
             style = MaterialTheme.typography.titleLarge.merge(FlowFolio.title),
             modifier = Modifier.weight(1f).padding(vertical = 6.dp)
         )
-        FlowFolioIconButton(onGoTo, Modifier.testTag(ReaderTestTags.GO_TO), glass = true) {
+        FlowFolioIconButton(
+            onGoTo,
+            Modifier.testTag(ReaderTestTags.GO_TO),
+            glass = true,
+            tooltip = stringResource(R.string.reader_go_to)
+        ) {
             FlowFolioGlyph(Glyph.GoTo, stringResource(R.string.reader_go_to))
         }
     }

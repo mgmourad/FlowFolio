@@ -53,7 +53,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -132,7 +132,7 @@ fun ShelvesScreen(onOpenShelf: (Long) -> Unit, viewModel: ShelvesViewModel = hil
     var confirmBulk by remember { mutableStateOf(false) }
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    val resources = LocalResources.current
     Box(Modifier.fillMaxSize()) {
         ShelvesContent(
             state = state,
@@ -170,9 +170,9 @@ fun ShelvesScreen(onOpenShelf: (Long) -> Unit, viewModel: ShelvesViewModel = hil
         onMade = { shelf ->
             scope.launch {
                 val r = snackbar.showFlowFolio(
-                    context.getString(R.string.shelf_made, shelf.name),
+                    resources.getString(R.string.shelf_made, shelf.name),
                     Glyph.Shelves,
-                    context.getString(R.string.action_add_books)
+                    resources.getString(R.string.action_add_books)
                 )
                 if (r == SnackbarResult.ActionPerformed) edit = ShelfEdit.AddBooks(shelf)
             }
@@ -180,9 +180,9 @@ fun ShelvesScreen(onOpenShelf: (Long) -> Unit, viewModel: ShelvesViewModel = hil
         onDeleted = { name, undo ->
             scope.launch {
                 val r = snackbar.showFlowFolio(
-                    context.getString(R.string.shelf_deleted, name),
+                    resources.getString(R.string.shelf_deleted, name),
                     Glyph.Trash,
-                    context.getString(R.string.action_undo)
+                    resources.getString(R.string.action_undo)
                 )
                 if (r == SnackbarResult.ActionPerformed) undo()
             }

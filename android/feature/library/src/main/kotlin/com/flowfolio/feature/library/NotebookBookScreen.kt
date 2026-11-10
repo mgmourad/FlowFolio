@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -98,6 +99,7 @@ fun NotebookBookScreen(
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    val resources = LocalResources.current
     val insets = WindowInsets.safeDrawing.asPaddingValues()
     val gutter = libraryGutter()
     var playing by remember { mutableStateOf<String?>(null) }
@@ -178,9 +180,9 @@ fun NotebookBookScreen(
                         val (commit, undo) = viewModel.remove(entry)
                         scope.launch {
                             val r = snackbar.showFlowFolio(
-                                context.getString(R.string.notebook_removed, context.getString(entry.kind.single)),
+                                resources.getString(R.string.notebook_removed, resources.getString(entry.kind.single)),
                                 Glyph.Trash,
-                                context.getString(R.string.action_undo)
+                                resources.getString(R.string.action_undo)
                             )
                             if (r == SnackbarResult.ActionPerformed) undo() else commit()
                         }

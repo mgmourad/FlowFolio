@@ -131,7 +131,12 @@ private fun DictionaryHeader(
             slogan = stringResource(R.string.dictionary_slogan),
             leading = onBack?.let { back ->
                 {
-                    FlowFolioIconButton(onClick = back, glass = true, modifier = Modifier.padding(end = 14.dp)) {
+                    FlowFolioIconButton(
+                        onClick = back,
+                        glass = true,
+                        modifier = Modifier.padding(end = 14.dp),
+                        tooltip = stringResource(R.string.action_back)
+                    ) {
                         FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = FlowFolio.palette.text)
                     }
                 }

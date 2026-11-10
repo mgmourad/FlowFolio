@@ -758,7 +758,8 @@
     <string name="details_start">Start reading</string>
     <string name="details_reset">Reset progress</string>
     <string name="details_reset_title">Reset progress?</string>
-    <string name="details_reset_body">The book starts again from its first page. Your highlights, notes and ribbons stay.</string>
+    <string name="details_reset_body">The book starts again from its first page. Your highlights, notes and ribbons stay. Type %1$s to confirm.</string>
+    <string name="details_reset_word" translatable="false">RESET</string>
     <string name="details_export_notes">Export notes</string>
     <string name="details_open_notebook">Open notebook</string>
     <string name="tab_notebook">Notebook</string>

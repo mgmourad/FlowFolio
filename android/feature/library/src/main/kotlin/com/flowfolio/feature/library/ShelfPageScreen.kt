@@ -459,7 +459,11 @@ private fun FavoritesHeader(
 ) {
     Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp)) {
         val searchBtn: @Composable () -> Unit = {
-            FlowFolioIconButton(onClick = onToggleSearch, modifier = Modifier.testTag(LibraryTestTags.SEARCH)) {
+            FlowFolioIconButton(
+                onClick = onToggleSearch,
+                modifier = Modifier.testTag(LibraryTestTags.SEARCH),
+                tooltip = stringResource(R.string.action_search)
+            ) {
                 FlowFolioGlyph(Glyph.Search, stringResource(R.string.action_search))
             }
         }
@@ -468,7 +472,12 @@ private fun FavoritesHeader(
             slogan = stringResource(R.string.favourites_slogan),
             leading = onBack?.let { back ->
                 {
-                    FlowFolioIconButton(onClick = back, glass = true, modifier = Modifier.padding(end = 14.dp)) {
+                    FlowFolioIconButton(
+                        onClick = back,
+                        glass = true,
+                        modifier = Modifier.padding(end = 14.dp),
+                        tooltip = stringResource(R.string.action_back)
+                    ) {
                         FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = FlowFolio.palette.text)
                     }
                 }
@@ -518,7 +527,11 @@ private fun FavoritesHeader(
 /** A shelf's "+" (owner, 2026-10-26): add books from the library to it. */
 @Composable
 private fun AddBooksButton(onClick: () -> Unit) {
-    FlowFolioIconButton(onClick = onClick, modifier = Modifier.testTag(LibraryTestTags.ADD_BOOKS)) {
+    FlowFolioIconButton(
+        onClick = onClick,
+        modifier = Modifier.testTag(LibraryTestTags.ADD_BOOKS),
+        tooltip = stringResource(R.string.action_add_books)
+    ) {
         FlowFolioGlyph(Glyph.Add, contentDescription = stringResource(R.string.action_add_books))
     }
 }

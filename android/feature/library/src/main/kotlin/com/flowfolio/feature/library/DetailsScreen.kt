@@ -80,6 +80,7 @@ import com.flowfolio.core.designsystem.Book3D
 import com.flowfolio.core.designsystem.ButtonStyle
 import com.flowfolio.core.designsystem.CoverSpot
 import com.flowfolio.core.designsystem.DialogAction
+import com.flowfolio.core.designsystem.DialogField
 import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioDialog
 import com.flowfolio.core.designsystem.FlowFolioGhostButton
@@ -497,11 +498,15 @@ private fun TopButtons(state: DetailsUiState, actions: DetailsActions) {
             .reveal(0),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        FlowFolioIconButton(onClick = actions.onBack, glass = true) {
+        FlowFolioIconButton(onClick = actions.onBack, glass = true, tooltip = stringResource(R.string.action_back)) {
             FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = p.text)
         }
         Box {
-            FlowFolioIconButton(onClick = { menu = true }, glass = true) {
+            FlowFolioIconButton(
+                onClick = { menu = true },
+                glass = true,
+                tooltip = stringResource(R.string.action_more)
+            ) {
                 FlowFolioGlyph(Glyph.More, stringResource(R.string.action_more), color = p.text)
             }
             DetailsMenu(state, menu, actions) { menu = false }
@@ -616,15 +621,23 @@ private const val HERO_ANGLE = 15f
 /** Reset progress (ADR-0052): asks first, since it moves the reading position back to the first page. */
 @Composable
 private fun ResetProgressDialog(onDismiss: () -> Unit, onReset: () -> Unit) {
+    // ADR-0052: a reset cannot be undone, so it waits for the word typed out rather than one more tap.
+    var typed by remember { mutableStateOf("") }
+    val word = stringResource(R.string.details_reset_word)
     FlowFolioDialog(
         onDismissRequest = onDismiss,
         title = stringResource(R.string.details_reset_title),
-        body = stringResource(R.string.details_reset_body),
+        body = stringResource(R.string.details_reset_body, word),
         glyph = Glyph.Refresh,
         destructive = true,
+        field = DialogField(typed, { typed = it }, word),
         actions = listOf(
             DialogAction(stringResource(R.string.action_cancel)) { onDismiss() },
-            DialogAction(stringResource(R.string.details_reset), ButtonStyle.DANGER) {
+            DialogAction(
+                stringResource(R.string.details_reset),
+                ButtonStyle.DANGER,
+                enabled = typed.trim().equals(word, ignoreCase = false)
+            ) {
                 onReset()
                 onDismiss()
             }

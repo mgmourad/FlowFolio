@@ -52,7 +52,8 @@ internal fun BookmarkButton(mark: ChromeMark, actions: ChromeActions, size: Dp, 
         glass = true,
         size = size,
         glowing = glowing,
-        modifier = Modifier.testTag(ReaderTestTags.BOOKMARK)
+        modifier = Modifier.testTag(ReaderTestTags.BOOKMARK),
+        tooltip = stringResource(if (mark.color != null) R.string.reader_bookmarked else R.string.reader_bookmark)
     ) {
         FlowFolioGlyph(
             Glyph.Bookmark,

@@ -242,6 +242,15 @@ the additions below.
 
 ### Phase 9: intro, What's new, tooltips, feedback, close-out
 
+> **Done 2026-11-09, in part.**
+> - Built: the typed-RESET confirmation, a tooltip on every icon button, the lint fixes, and the parity checklist
+>   (`ux-overhaul-parity.md`).
+> - Deferred, with the existing versions kept: the 11-slide intro, What's new from the CHANGELOG, the reading-goal
+>   sheet, the palette-alias removal, the tour screenshots, and the cold-start check (bug 4).
+> - The release (0.6.0-canary.2) waits for the owner's go-ahead.
+>
+> CI has not run.
+
 - Intro: 11 slides with the mock's copy and illustrations, tappable dots, Back/Next/Skip/Start reading, vertical
   folded and two-column unfolded; tour screenshots retaken (known issue 43).
 - What's new: sheet folded, centred card unfolded, rendered from `CHANGELOG.md` (copied into the APK's assets by a

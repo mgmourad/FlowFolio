@@ -159,7 +159,12 @@ fun BookAnnotationsContent(
         item {
             Column(Modifier.widthIn(max = LIST_WIDTH).fillMaxWidth().padding(top = 10.dp, bottom = 4.dp).reveal(0)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    FlowFolioIconButton(onClick = onBack, glass = true, modifier = Modifier.padding(end = 14.dp)) {
+                    FlowFolioIconButton(
+                        onClick = onBack,
+                        glass = true,
+                        modifier = Modifier.padding(end = 14.dp),
+                        tooltip = stringResource(R.string.action_back)
+                    ) {
                         FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = FlowFolio.palette.text)
                     }
                     Text(

@@ -151,7 +151,7 @@ private fun GoalHeader(onDismiss: () -> Unit) {
             style = FlowFolioType.sectionTitle.merge(FlowFolio.title),
             modifier = Modifier.weight(1f).padding(start = 10.dp)
         )
-        FlowFolioIconButton(onClick = onDismiss, size = 36.dp) {
+        FlowFolioIconButton(onClick = onDismiss, size = 36.dp, tooltip = stringResource(R.string.action_cancel)) {
             FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_cancel), size = 18.dp, glow = false)
         }
     }

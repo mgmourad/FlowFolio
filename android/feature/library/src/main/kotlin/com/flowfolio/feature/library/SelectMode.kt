@@ -97,7 +97,8 @@ internal fun SelectionRow(
                 onAddToShelf?.let { add ->
                     com.flowfolio.core.designsystem.FlowFolioIconButton(
                         onClick = { if (selection.chosen.isNotEmpty()) add() },
-                        modifier = Modifier.testTag(LibraryTestTags.SELECTION_ADD_TO_SHELF)
+                        modifier = Modifier.testTag(LibraryTestTags.SELECTION_ADD_TO_SHELF),
+                        tooltip = stringResource(R.string.action_add_to_shelf_short)
                     ) {
                         com.flowfolio.core.designsystem.FlowFolioGlyph(
                             com.flowfolio.core.designsystem.Glyph.Shelves,

@@ -19,6 +19,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - Settings → Text holds the defaults, and says so.
 
 ### Changed
+- **Overhaul Phase 9: the sweep and close-out** (2026-11-09).
+  - **Reset progress waits for RESET to be typed.** The button stays greyed until the word matches. `DialogAction`
+    gains `enabled` for this.
+  - **Every icon button has a tooltip:** 25 that had none now show their label on long-press.
+  - **Lint fixes:** the Notebook and Shelves snackbars read their strings through `LocalResources`, which follows
+    configuration changes, not `LocalContext`. `DatabaseModule` is allowed one provider per DAO.
+  - **`docs/plans/ux-overhaul-parity.md`** lists where every existing feature now lives and how it was checked.
+  - **Deferred, with the existing versions kept:** the 11-slide intro, What's new rendered from this file, the new
+    reading-goal sheet, removing the palette aliases, and retaking the tour screenshots (known issue 43).
+
 - **Overhaul Phase 8: the reader's chrome and in-book search** (2026-11-09).
   - **Top bar:** Back, the book's title on a glass chip, the ribbon button (tap toggles, long-press picks a colour)
     and ⋯ (Go to page, Ribbon colour).

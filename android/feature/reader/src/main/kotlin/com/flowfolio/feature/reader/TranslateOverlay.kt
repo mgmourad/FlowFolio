@@ -100,7 +100,7 @@ private fun Header(onClose: () -> Unit) {
             )
             Text(stringResource(R.string.reader_translate_note), style = FlowFolioType.rowDetail.merge(FlowFolio.hint))
         }
-        FlowFolioIconButton(onClick = onClose, glass = true) {
+        FlowFolioIconButton(onClick = onClose, glass = true, tooltip = stringResource(R.string.reader_close)) {
             FlowFolioGlyph(Glyph.Back, stringResource(R.string.reader_close), color = FlowFolio.palette.text)
         }
     }

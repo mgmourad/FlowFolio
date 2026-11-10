@@ -261,7 +261,11 @@ private fun BookmarksHeader(
     val keys = state.items.map { item -> item.bookmark.id.toString() }
     Column(modifier.padding(start = 4.dp, top = 10.dp, bottom = 4.dp)) {
         val searchBtn: @Composable () -> Unit = {
-            FlowFolioIconButton(onClick = onToggleSearch, modifier = Modifier.testTag(LibraryTestTags.SEARCH)) {
+            FlowFolioIconButton(
+                onClick = onToggleSearch,
+                modifier = Modifier.testTag(LibraryTestTags.SEARCH),
+                tooltip = stringResource(R.string.action_search)
+            ) {
                 FlowFolioGlyph(Glyph.Search, stringResource(R.string.action_search))
             }
         }
@@ -270,7 +274,12 @@ private fun BookmarksHeader(
             slogan = stringResource(R.string.bookmarks_slogan),
             leading = actions.onBack?.let { back ->
                 {
-                    FlowFolioIconButton(onClick = back, glass = true, modifier = Modifier.padding(end = 14.dp)) {
+                    FlowFolioIconButton(
+                        onClick = back,
+                        glass = true,
+                        modifier = Modifier.padding(end = 14.dp),
+                        tooltip = stringResource(R.string.action_back)
+                    ) {
                         FlowFolioGlyph(Glyph.Back, stringResource(R.string.action_back), color = FlowFolio.palette.text)
                     }
                 }

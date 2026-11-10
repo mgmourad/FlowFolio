@@ -191,6 +191,10 @@ local.
   above the riffle bar (`ToolDock`) replace the right rail, and panels open above the dock. In-book search waits for
   two letters, groups its results by chapter, and falls back to the PDF while Dynamic Flow prepares. Deferred: the
   riffle restyle, the selection menu, the language chips, Listen's speed segments and coach marks.
+- **Phase 9 (sweep) built 2026-11-09, in part.** Reset progress waits for RESET to be typed, and every icon button
+  has a tooltip. `docs/plans/ux-overhaul-parity.md` maps every feature to its new home. Deferred: the intro, What's
+  new from the CHANGELOG, the goal sheet, and removing the palette aliases. **Nothing is pushed yet**: 0.6.0-canary.2
+  waits for the owner.
 - Handover APKs get a new name every build (`app/build/outputs/apk/debug/handover/`) and are installed on the owner's
   phone as well as the emulator.
 

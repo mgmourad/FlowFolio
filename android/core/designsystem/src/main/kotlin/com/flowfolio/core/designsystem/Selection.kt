@@ -175,7 +175,7 @@ fun SelectionBar(
                 .padding(horizontal = 8.dp, vertical = 12.dp)
         )
         actions()
-        FlowFolioIconButton(onClick = { if (selection.chosen.isNotEmpty()) onDelete() }) {
+        FlowFolioIconButton(onClick = { if (selection.chosen.isNotEmpty()) onDelete() }, tooltip = labels.delete) {
             FlowFolioGlyph(
                 Glyph.Trash,
                 labels.delete,
@@ -207,7 +207,7 @@ data class SelectionLabels(
 /** The header button that starts select mode. */
 @Composable
 fun SelectButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
-    FlowFolioIconButton(onClick = onClick, modifier = modifier) {
+    FlowFolioIconButton(onClick = onClick, modifier = modifier, tooltip = label) {
         FlowFolioGlyph(Glyph.Select, label)
     }
 }

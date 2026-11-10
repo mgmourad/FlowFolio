@@ -143,7 +143,13 @@ class DialogField(val value: String, val onValueChange: (String) -> Unit, val pl
 class DialogSwatches(val colors: List<Color>, val names: List<String>, val selected: Int, val onSelect: (Int) -> Unit)
 
 /** One action button at the foot of a [FlowFolioDialog]. */
-class DialogAction(val text: String, val style: ButtonStyle = ButtonStyle.GHOST, val onClick: () -> Unit)
+class DialogAction(
+    val text: String,
+    val style: ButtonStyle = ButtonStyle.GHOST,
+    /** False greys the button out, e.g. until a typed confirmation matches. */
+    val enabled: Boolean = true,
+    val onClick: () -> Unit
+)
 
 /**
  * A dialog (`.dlg`, ADR-0052): an icon tile, a Fraunces title, a body in the second ink, then an optional
@@ -206,7 +212,9 @@ fun FlowFolioDialog(
                 Modifier.fillMaxWidth().padding(top = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)
             ) {
-                actions.forEach { FlowFolioButton(it.text, it.onClick, style = it.style, small = true) }
+                actions.forEach {
+                    FlowFolioButton(it.text, it.onClick, style = it.style, small = true, enabled = it.enabled)
+                }
             }
         }
     }

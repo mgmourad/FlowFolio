@@ -325,7 +325,7 @@ private fun BookRowCard(item: LibraryItem, actions: BookRowActions) {
                 )
             }
             Box {
-                FlowFolioIconButton(onClick = { menu = true }) {
+                FlowFolioIconButton(onClick = { menu = true }, tooltip = stringResource(R.string.action_more)) {
                     FlowFolioGlyph(Glyph.More, contentDescription = stringResource(R.string.action_more))
                 }
                 BookRowMenu(book, menu, actions) { menu = false }

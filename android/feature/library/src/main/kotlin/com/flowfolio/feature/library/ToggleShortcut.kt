@@ -34,7 +34,7 @@ internal fun ToggleShortcut(
     onClick: () -> Unit
 ) {
     val p = FlowFolio.palette
-    FlowFolioIconButton(onClick = onClick, modifier = modifier, size = size) {
+    FlowFolioIconButton(onClick = onClick, modifier = modifier, size = size, tooltip = stringResource(label)) {
         FlowFolioGlyph(
             if (checked) checkedGlyph else glyph,
             contentDescription = stringResource(label),
