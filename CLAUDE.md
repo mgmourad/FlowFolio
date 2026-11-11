@@ -169,7 +169,9 @@ rules for ML Kit and `sherpa-onnx` JNI callbacks. ADR-0051 is accepted with this
 - Room is at v22 (`book_tags`). Next: Phase 7 (scanned books and OCR).
 
 **Released as FlowFolio 0.6.0-canary.3 (build 600003) on 2026-11-10**, tag `v0.6.0-canary.3`, a fix release (owner:
-"a serious bug"). Dynamic Flow stuck at "Preparing" when Android killed `:convert` mid-book; `FlowWatch` now catches
+"a serious bug"), APK SHA-256 `e352f4c7a5f14de0f910ee8eaac8ef52e905e6f8dca67648c467cbb7088a0878`. Green CI
+on `f18284f`; the minified build was checked on `fold8_api37` (updates canary.2 in place; a crashed `:convert` is
+restarted and finishes) and installed on the owner's phone. Dynamic Flow stuck at "Preparing" when Android killed `:convert` mid-book; `FlowWatch` now catches
 it. Also: the tour's 11 pictures retaken without the status bar, and "Replay the tour" fixed.
 
 **UX overhaul "Quiet Library" (ADR-0052, accepted by the owner 2026-11-09; `docs/plans/ux-overhaul-plan.md`).**
