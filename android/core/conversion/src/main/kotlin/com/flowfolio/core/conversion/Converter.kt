@@ -11,6 +11,7 @@ import com.flowfolio.core.conversion.ir.OutlineEntry
 import com.flowfolio.core.conversion.ir.Page
 import com.flowfolio.core.conversion.ir.PageKind
 import com.flowfolio.core.conversion.ir.Role
+import com.flowfolio.core.conversion.ocr.OcrPages
 import com.flowfolio.core.conversion.pdf.Box
 import com.flowfolio.core.conversion.pdf.Crop
 import com.flowfolio.core.conversion.pdf.EncodedImage
@@ -40,10 +41,14 @@ class Converter(private val settings: Settings = Settings()) {
         /** Pixels per point for figures, tables and equations (3 is 216 dpi, sharp when pinched). */
         val figureScale: Float = 3f,
         /** Pixels per point for whole-page images (2 is 144 dpi). */
-        val pageScale: Float = 2f
+        val pageScale: Float = 2f,
+        /** Reads scanned pages (ADR-0054); null keeps every scanned page a picture, as before. */
+        val ocr: com.flowfolio.core.conversion.ocr.OcrReader? = null,
+        /** Pixels per point a scanned page is drawn at for OCR (3 is 216 dpi; a US Letter page is 1836 px wide). */
+        val ocrScale: Float = 3f
     )
 
-    /** Progress: [stage] (`reading`, `layout`, `images`, `writing`) and how far into it. */
+    /** Progress: [stage] (`reading`, `ocr` for scanned pages, `layout`, `images`, `writing`) and how far into it. */
     data class Progress(val stage: String, val done: Int, val total: Int)
 
     class Result(val document: Document, val sidecar: Sidecar)
@@ -125,7 +130,7 @@ class Converter(private val settings: Settings = Settings()) {
         }
         val pages = (0 until pdf.pageCount).map { i ->
             progress(Progress("reading", i, pdf.pageCount))
-            Extraction.page(pdf.page(i)).also {
+            ocrIfScanned(pdf, i, Extraction.page(pdf.page(i)), progress).also {
                 it.label = pdf.pageLabel(i)
                 // The front and back covers are full-page designs, not reading text: keep each as one image. The
                 // first/last page counts only when it is a design (any image or path) with little text — a title,
@@ -138,6 +143,25 @@ class Converter(private val settings: Settings = Settings()) {
         val title = pdf.metadata("Title") ?: source.fileName.substringBeforeLast('.')
         val outline = pdf.outline().map { OutlineEntry(it.depth, it.title, it.page) }
         return Document(title, pdf.metadata("Author"), pages, outline)
+    }
+
+    /**
+     * A scanned page is read by [Settings.ocr] when there is one: what it trusts becomes the page's characters, so the
+     * usual stages lay it out; what it does not stays a picture, marked so the sidecar says why.
+     */
+    private fun ocrIfScanned(pdf: PdfSource, i: Int, page: Page, progress: (Progress) -> Unit): Page {
+        val reader = settings.ocr?.takeIf { page.kind == PageKind.SCANNED } ?: return page
+        progress(Progress("ocr", i, pdf.pageCount))
+        val image = pdf.renderPixels(i, settings.ocrScale)
+        val read = image?.let { reader.read(it) }?.takeIf { r -> r.lines.sumOf { it.text.length } >= MIN_OCR_CHARS }
+        page.ocrRejected = image != null && read == null
+        return if (image == null || read == null) {
+            page
+        } else {
+            Extraction.page(OcrPages.raw(i, page.width, page.height, read, image.scale)).also {
+                it.ocr = "ocr:${read.engine}@${"%.2f".format(java.util.Locale.ROOT, read.confidence)}"
+            }
+        }
     }
 
     private fun layOut(doc: Document, progress: (Progress) -> Unit) {
@@ -179,6 +203,7 @@ class Converter(private val settings: Settings = Settings()) {
         if (!empty && broken) {
             val text = Blocks.join(page.lines.filter { !it.artifact })
             val method = when {
+                page.kind == PageKind.SCANNED && page.ocrRejected -> "fallback:ocr-low-confidence"
                 page.kind == PageKind.SCANNED -> "fallback:scanned"
                 page.cover -> "fallback:cover"
                 else -> "fallback:coverage"
@@ -265,3 +290,6 @@ private const val BOOK_ID_CHARS = 32
 
 /** A cover is a design: a first/last page with graphics but little text (a title or index page has far more). */
 private const val COVER_MAX_CHARS = 300
+
+/** Fewer characters than this from OCR is not a page of text (a figure, a stamp): it stays a picture. */
+private const val MIN_OCR_CHARS = 40

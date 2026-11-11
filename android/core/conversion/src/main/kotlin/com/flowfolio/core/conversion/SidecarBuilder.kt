@@ -18,7 +18,7 @@ import com.flowfolio.core.conversion.ir.PageKind
 /** `flowfolio.json` for a converted [Document] (`docs/conversion-spec.md` section 3). */
 object SidecarBuilder {
     /** The converter's version, raised whenever its output could change. */
-    const val ENGINE_VERSION = "1.4.0"
+    const val ENGINE_VERSION = "1.5.0"
 
     // One field per section of flowfolio.json, in the spec's order.
     @Suppress("LongMethod")
@@ -37,14 +37,14 @@ object SidecarBuilder {
                 pageLabel = p.label,
                 width = p.width,
                 height = p.height,
-                kind = when (p.kind) {
-                    PageKind.BORN_DIGITAL -> "born-digital"
-                    PageKind.SCANNED -> "scanned"
-                    PageKind.EMPTY -> "empty"
+                kind = when {
+                    p.ocr != null -> "scanned"
+                    else -> kindOf(p.kind)
                 },
                 xhtml = "${fileOf[p.index] ?: doc.chapters.firstOrNull()?.file.orEmpty()}#page-${p.index + 1}"
             )
         }
+        val ocrPage = doc.pages.associate { it.index to it.ocr }
         val blocks = doc.pages.flatMap { it.blocks }.map { b ->
             SidecarBlock(
                 blockId = b.id,
@@ -53,7 +53,8 @@ object SidecarBuilder {
                 bbox = listOf(b.box.left, b.box.top, b.box.right, b.box.bottom).map(::hundredths),
                 xhtml = "${blockFile[b.id].orEmpty()}#${b.id}",
                 confidence = b.confidence,
-                method = b.method,
+                // Text read from a scan says so (spec: `ocr:<engine>`), with the engine's confidence.
+                method = ocrPage[b.page]?.takeIf { b.type != BlockType.FALLBACK } ?: b.method,
                 continuesFrom = b.continuesFrom
             )
         }
@@ -74,7 +75,7 @@ object SidecarBuilder {
             pages = doc.pages.size,
             pagesBelowThreshold = doc.pages.count { it.coverage < threshold },
             fallbackPages = doc.pages.count { it.fallback },
-            scannedPages = doc.pages.count { it.kind == PageKind.SCANNED },
+            scannedPages = doc.pages.count { it.kind == PageKind.SCANNED || it.ocr != null },
             chapters = doc.chapters.size,
             chaptersFrom = when {
                 doc.outline.count { it.depth == 0 && it.page >= 0 } >= 2 -> "outline"
@@ -107,4 +108,10 @@ object SidecarBuilder {
     private fun hundredths(v: Float) = (v * HUNDRED).toInt() / HUNDRED
 
     private const val HUNDRED = 100f
+
+    private fun kindOf(kind: PageKind): String = when (kind) {
+        PageKind.BORN_DIGITAL -> "born-digital"
+        PageKind.SCANNED -> "scanned"
+        PageKind.EMPTY -> "empty"
+    }
 }

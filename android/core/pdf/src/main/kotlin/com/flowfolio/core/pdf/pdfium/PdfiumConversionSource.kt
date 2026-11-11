@@ -89,6 +89,26 @@ class PdfiumConversionSource private constructor(private val handle: Long, overr
         }
     }
 
+    /** The whole page as ARGB pixels at [scale], for OCR of a scanned page (ADR-0054). */
+    override fun renderPixels(index: Int, scale: Float): com.flowfolio.core.conversion.ocr.OcrImage? {
+        val size = call { PdfiumNative.nativePageSize(handle, index) } ?: return null
+        val w = (size[0] * scale).toInt().coerceIn(1, MAX_RENDER_PX)
+        val h = (size[1] * scale).toInt().coerceIn(1, MAX_RENDER_PX)
+        val bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        try {
+            val drawn = call { PdfiumNative.nativeRender(handle, index, bitmap, w, h, 0, 0, 0, 0, 0) } == true
+            return if (drawn) {
+                val pixels = IntArray(w * h)
+                bitmap.getPixels(pixels, 0, w, 0, 0, w, h)
+                com.flowfolio.core.conversion.ocr.OcrImage(w, h, pixels, w / size[0])
+            } else {
+                null
+            }
+        } finally {
+            bitmap.recycle()
+        }
+    }
+
     /** [bitmap] has colour of its own ([Ink.coloured]). */
     private fun coloured(bitmap: Bitmap): Boolean {
         val pixels = IntArray(bitmap.width * bitmap.height)

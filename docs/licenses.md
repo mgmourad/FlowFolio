@@ -14,6 +14,9 @@ Release dates were checked on Maven Central, Google Maven, PyPI, or GitHub Relea
 | Gradle (wrapper) | 9.8.1 | 2026-10-07 | Apache-2.0 | build | Distribution SHA-256 pinned in wrapper properties |
 | KSP | 2.3.12 | 2026-09-09 | Apache-2.0 | build | |
 | Hilt / Dagger | 2.60.1 | 2026-07-06 | Apache-2.0 | app | |
+| ONNX Runtime C API headers | 1.28.2 | 2026 | MIT | build (:core:voice) | Three headers fetched at build time, SHA-256 pinned (`OrtHeaders`), for the OCR bridge to sherpa-onnx's runtime (ADR-0054) |
+| ONNX Runtime Java | 1.28.0 | 2026-07-27 | MIT | tests (:core:conversion) | JVM only, to measure OCR against real scans; not in the app (its Android glue wants `VERS_1.28.0` symbols, sherpa ships 1.28.2) |
+| PaddleOCR PP-OCRv6 det/rec small, PP-OCRv5 Arabic rec | RapidOCR 3.10.0 export | 2026-10-08 | Apache-2.0 | downloaded on request (Settings, Scanned books) | About 39 MB from RapidOCR's ModelScope mirror, SHA-256 pinned (`OcrPack`); to move to FlowFolio's releases |
 | Chaquopy (Gradle plugin + runtime) | 17.2.0 | 2026-09-30 | MIT | app/build | Embeds CPython 3.12 (PSF-2.0) for arm64-v8a and x86_64 only; pip-installs at build time, which F-Droid still has to be checked against (ADR-0047) |
 | CPython (through Chaquopy) | 3.12 | - | PSF-2.0 | app | Shipped as Chaquopy's prebuilt runtime |
 | yt-dlp | 2026.10.26 | 2026-10-26 | Unlicense | app | Source only, via pip. Its *PyInstaller release binaries* are GPLv3+ and are NOT used. No ffmpeg: only an address is extracted, and MediaPlayer plays it (ADR-0047) |

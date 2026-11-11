@@ -15,6 +15,7 @@ import com.flowfolio.core.conversion.ConversionException
 import com.flowfolio.core.conversion.Converter
 import com.flowfolio.core.conversion.epub.SourceInfo
 import com.flowfolio.core.data.R
+import com.flowfolio.core.data.ocr.OcrPack
 import com.flowfolio.core.model.FlowFailure
 import com.flowfolio.core.model.FlowPause
 import com.flowfolio.core.pdf.PdfException
@@ -143,13 +144,20 @@ class FlowService : Service() {
         }
     }
 
+    /** Scanned pages are read when the scanned-books pack is installed (ADR-0054); loaded once per service. */
+    private val ocr by lazy {
+        runCatching {
+            OcrPack.readerIn(filesDir, Runtime.getRuntime().availableProcessors().coerceIn(2, OCR_THREADS))
+        }.onFailure { Log.w(TAG, "OCR pack could not load", it) }.getOrNull()
+    }
+
     private fun convert(job: Job) {
         val fd = open(job) ?: throw FileNotFoundException("no file for ${job.bookId}")
         files.dir(job.bookId).mkdirs()
         val progress = Progress(job)
         val result = fd.use { pfd ->
             PdfiumConversionSource.open(pfd).use { pdf ->
-                Converter().convertProgressively(
+                Converter(Converter.Settings(ocr = ocr)).convertProgressively(
                     pdf,
                     SourceInfo(job.title.ifBlank { job.bookId }, job.bookId, pdf.pageCount, pdf.metadata("Title")),
                     Instant.now().truncatedTo(ChronoUnit.SECONDS).toString(),
@@ -263,6 +271,7 @@ class FlowService : Service() {
         private const val REPORT_MS = 400L
         private const val PAUSE_CHECK_MS = 5_000L
         private const val LOW_BATTERY = 15
+        private const val OCR_THREADS = 4
         private const val PERCENT = 100
         private val JSON = Json { prettyPrint = false }
 
@@ -273,9 +282,13 @@ class FlowService : Service() {
         private val STAGE_END = mapOf("reading" to 0.41f, "layout" to 0.46f, "images" to 0.98f, "writing" to 1f)
         private val STAGE_START = mapOf("reading" to 0f, "layout" to 0.41f, "images" to 0.46f, "writing" to 0.98f)
 
+        /** Reading scanned pages (ADR-0054) happens inside the reading stage, page by page. */
+        private val STAGE_ALIAS = mapOf("ocr" to "reading")
+
         internal fun fraction(p: Converter.Progress): Float {
-            val start = STAGE_START[p.stage] ?: 0f
-            val end = STAGE_END[p.stage] ?: 1f
+            val stage = STAGE_ALIAS[p.stage] ?: p.stage
+            val start = STAGE_START[stage] ?: 0f
+            val end = STAGE_END[stage] ?: 1f
             val within = if (p.total > 0) p.done.toFloat() / p.total else 0f
             return (start + (end - start) * within).coerceIn(0f, 1f)
         }

@@ -23,6 +23,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.mlkit.translate)
     implementation(libs.mlkit.language.id)
+    // OCR of scanned pages (ADR-0054) runs on the ONNX Runtime sherpa-onnx ships, through :core:voice's own bridge.
+    implementation(projects.core.voice)
 
     testImplementation(libs.junit4)
     testImplementation(libs.robolectric)

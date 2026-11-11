@@ -57,6 +57,12 @@ class Page(
     /** The whole page went out as an image: its text could not be accounted for, or it is scanned. */
     var fallback: Boolean = false
 
+    /** A scanned page read by OCR: the engine and its confidence (ADR-0054); null when not read. */
+    var ocr: String? = null
+
+    /** A scanned page OCR read but did not trust, so it stays a picture. */
+    var ocrRejected: Boolean = false
+
     /** A cover: a full-page picture with a little text on it, kept as one image rather than converted (Phase 4 M3). */
     var cover: Boolean = false
 

@@ -43,6 +43,8 @@ data class SettingsActions(
     /** The library's stats band: collapsed, expanded or hidden (ADR-0052). */
     val onStatsBand: (StatsBand) -> Unit = {},
     val onNarratorSkip: (NarratorSkip) -> Unit = {},
+    val onOcrDownload: () -> Unit = {},
+    val onOcrRemove: () -> Unit = {},
     val onPageTurn: (PageTurn) -> Unit = {},
     val onSpreads: (Boolean) -> Unit = {},
     val onCoverAlone: (Boolean) -> Unit = {},
@@ -99,8 +101,25 @@ class SettingsViewModel @Inject constructor(
     private val repo: SettingsRepository,
     private val ambience: Ambience,
     private val maintenance: Maintenance,
-    private val updates: Updates
+    private val updates: Updates,
+    private val ocrPack: com.flowfolio.core.data.ocr.OcrPack
 ) : ViewModel() {
+    // ---- Scanned books (Phase 7, ADR-0054) ----
+
+    /** Whether the scanned-books pack is installed, downloading or missing. */
+    val ocrPackState: StateFlow<com.flowfolio.core.data.ocr.OcrPackState> = ocrPack.state
+
+    /** The pack's download size, for its row. */
+    val ocrPackBytes: Long = ocrPack.sizeBytes
+
+    fun downloadOcrPack() {
+        viewModelScope.launch { ocrPack.download() }
+    }
+
+    fun removeOcrPack() {
+        viewModelScope.launch { ocrPack.remove() }
+    }
+
     // ---- Housekeeping and updates (owner, M5 round 4) ----
 
     private val _cacheBytes = MutableStateFlow(0L)

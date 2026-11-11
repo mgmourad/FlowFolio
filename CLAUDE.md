@@ -179,8 +179,16 @@ it. Also: the tour's 11 pictures retaken without the status bar, and "Replay the
 - English: PaddleOCR PP-OCRv6 on the bundled ONNX Runtime 1.28.2, with a 0.85 page-confidence gate.
 - Arabic: PaddleOCR and Tesseract together. A page becomes text only when the two engines' words agree at least 40%,
   and Tesseract's text is used.
-- Next is M2. Each dependency is confirmed as it is added. Arabic printed before about 1950 will mostly stay
-  pictures.
+- Arabic printed before about 1950 will mostly stay pictures.
+- **M2 built 2026-11-11 for English** (CHANGELOG, Unreleased; plan status in `docs/plans/phase7-plan.md`).
+  - Code: `:core:conversion/ocr` (PaddleOCR in Kotlin, `ScannedPageReader`, `OcrGate`, `Script`, `OcrPages`,
+    `OnnxMetadata`), `Converter.Settings.ocr`, `PdfSource.renderPixels`.
+  - Phone side: `:core:voice` `OrtBridge` (C API bridge to sherpa's ORT; headers fetched by `SherpaOnnxConventionPlugin`)
+    and `:core:data/ocr` (`AndroidOnnxModel`, `OcrPack`, wired into `FlowService`); Settings → Dynamic Flow → Scanned
+    books.
+  - Left for M3's session: Tesseract for Arabic, speed on the Fold, mirroring the models
+    (`docs/plans/phase7-handoff-m3.md`).
+  - CI has not run on M2.
 Also 2026-11-11: "Install updates automatically" (`UpdateInstaller`, a `PackageInstaller` self-update; known
 issue 52).
 
@@ -655,6 +663,14 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     `UpdateInstallReceiver` opens the prompt when Android asks for one. The launch check runs on every
     `onStart`, at most once a minute (`AppViewModel.CHECK_INTERVAL_MS`). To test, build an older release with
     `-Pflowfolio.versionCode=...` and let it find the published one.
+53. **OCR on the phone goes through `OrtBridge`, never ONNX Runtime's Java API** (2026-11-11). sherpa-onnx's
+    `libonnxruntime.so` exports `OrtGetApiBase@@VERS_1.28.2`; `onnxruntime-android`'s Java glue (only 1.28.0 is
+    published) asks for `@VERS_1.28.0`, so Android refuses to load it. Two copies of the runtime cannot share one
+    name either. When sherpa-onnx updates ORT, bump `OrtHeaders` to match and re-run `PaddleOcrScansTest`
+    (`FLOWFOLIO_OCR_PAGES` and `FLOWFOLIO_OCR_MODELS`; the spike's pages and RapidOCR's model files).
+    - Never read a model's metadata through ORT's Java API: `OnnxMetadata` reads it from the file, because JNI
+      mangles 4-byte characters.
+    - On the JVM, load grayscale test scans from their raster: `ImageIO.getRGB` changes their gamma.
 
 ## The repository is public (2026-11-03)
 

@@ -27,6 +27,12 @@ interface PdfSource : AutoCloseable {
      * writes WebP (lossy for photos, lossless for line art), the desktop PNG; an empty image when one can't be drawn.
      */
     fun renderImages(index: Int, crops: List<Crop>, scale: Float): List<EncodedImage>
+
+    /**
+     * Page [index] drawn whole at [scale] pixels per point, as ARGB pixels, for OCR (ADR-0054); null when this source
+     * cannot draw pages that way (then scanned pages stay pictures).
+     */
+    fun renderPixels(index: Int, scale: Float): com.flowfolio.core.conversion.ocr.OcrImage? = null
 }
 
 /** A region of a page to draw: [photo] allows lossy encoding (pictures, whole pages); line art stays lossless. */

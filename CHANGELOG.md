@@ -5,6 +5,37 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+### Phase 7 M2: scanned books read by OCR (2026-11-11, English; Arabic pending)
+- **Dynamic Flow reads scanned pages.** Settings → Dynamic Flow → **Scanned books** downloads a 38 MB pack (PaddleOCR
+  PP-OCRv6 detection and recognition, plus PP-OCRv5 Arabic recognition), checked against pinned SHA-256s.
+  - With the pack installed, each scanned page goes through PaddleOCR. A page it reads with a mean line confidence of
+    at least 0.85 becomes text, laid out by the converter's usual stages: reading order, paragraphs, headings, and
+    hyphens joined.
+  - Any other page stays a picture, marked `fallback:ocr-low-confidence`.
+  - The sidecar marks read blocks `ocr:<engine>@<confidence>` and counts the pages as scanned.
+  - Engine **1.5.0**, so books convert again on their next opening.
+- **Arabic pages stay pictures for now.** The English model was 99.8% sure of nonsense on a clean Arabic page, so a
+  script check (both PaddleOCR recognisers read a few lines, and the surer one names the script) keeps Arabic away
+  from it. ADR-0054's Arabic reading (Tesseract with PaddleOCR checking it) arrives with Tesseract.
+- **Built in Kotlin** in `:core:conversion/ocr`, the way RapidOCR runs the models:
+  - minimum-area rotated rectangles, so tilted scan lines come out straight;
+  - CTC decoding;
+  - the bidi reordering for Arabic.
+- **Measured against the spike's 20 proofread English scans** (`PaddleOcrScansTest`, run when pointed at the pages):
+  98.9% median word recall, at least 86% on every page. RapidOCR scored 98.7%.
+- **Three traps found and handled:**
+  - ONNX Runtime's Java API mangles the models' alphabets through JNI "modified UTF-8", so `OnnxMetadata` reads them
+    from the file's bytes.
+  - Its Android glue cannot load against sherpa-onnx's versioned runtime symbols (`VERS_1.28.2` against
+    `1.28.0`), so `:core:voice` gained its own small C API bridge (`OrtBridge`, `ort_bridge.cpp`). The app still
+    carries one runtime.
+  - On the JVM, `ImageIO.getRGB` changes the gamma of grayscale scans.
+- Verified on `fold8_api37`: the pack downloads, and an 8-page scanned sample (7 English pages from different books,
+  1 Arabic) converts. The English pages became reflowed text at confidence 0.94–0.99, and the Arabic page stayed a
+  picture.
+  - Not yet good enough: about 25–35 s a page on the emulator's debug build. The Fold, in a release build, is the
+    measurement that counts, and it has not been taken.
+
 ### Phase 7 M1: the OCR spike (2026-11-11)
 - `docs/spikes/2026-11-ocr/` measures PaddleOCR's models (through RapidOCR) and Tesseract on 20 proofread English
   and 20 Arabic Wikisource scans. **ADR-0054 is proposed:** PaddleOCR models on the ONNX Runtime the app already
