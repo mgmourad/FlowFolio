@@ -93,6 +93,8 @@ class MainActivity : ComponentActivity() {
                                 onDismiss = appViewModel::dismissUpdate
                             )
                         }
+                        val updatedTo by appViewModel.updatedTo.collectAsStateWithLifecycle()
+                        updatedTo?.let { UpdatedBanner(it, onDismiss = appViewModel::dismissUpdated) }
                         val whatsNew by appViewModel.whatsNew.collectAsStateWithLifecycle()
                         val tutorialSeen by appViewModel.tutorialSeen.collectAsStateWithLifecycle()
                         // A first install shows the tour first, then this; an update shows it straight away.

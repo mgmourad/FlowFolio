@@ -40,7 +40,24 @@ import com.flowfolio.core.designsystem.glass
  * check finds a build again.
  */
 @Composable
-internal fun UpdateBanner(release: Release, onOpen: () -> Unit, onDismiss: () -> Unit) {
+internal fun UpdateBanner(release: Release, onOpen: () -> Unit, onDismiss: () -> Unit) = UpdateBanner(
+    stringResource(R.string.update_banner_title),
+    stringResource(R.string.update_banner_text, release.versionName),
+    onOpen,
+    onDismiss
+)
+
+/** The app updated itself (owner, 2026-11-11): the same banner, saying so; a tap just puts it away. */
+@Composable
+internal fun UpdatedBanner(versionName: String, onDismiss: () -> Unit) = UpdateBanner(
+    stringResource(R.string.updated_banner_title),
+    stringResource(R.string.updated_banner_text, versionName),
+    onDismiss,
+    onDismiss
+)
+
+@Composable
+private fun UpdateBanner(title: String, text: String, onOpen: () -> Unit, onDismiss: () -> Unit) {
     var visible by remember { mutableStateOf(true) }
     Box(Modifier.fillMaxWidth().statusBarsPadding().padding(top = 10.dp), contentAlignment = Alignment.TopCenter) {
         AnimatedVisibility(
@@ -67,12 +84,12 @@ internal fun UpdateBanner(release: Release, onOpen: () -> Unit, onDismiss: () ->
                 FlowFolioGlyph(Glyph.Settings, contentDescription = null, size = 24.dp)
                 Column(Modifier.weight(1f).padding(start = 12.dp)) {
                     Text(
-                        stringResource(R.string.update_banner_title),
+                        title,
                         style = FlowFolioType.rowLabel.merge(FlowFolio.title),
                         maxLines = 1
                     )
                     Text(
-                        stringResource(R.string.update_banner_text, release.versionName),
+                        text,
                         style = FlowFolioType.rowDetail.merge(FlowFolio.item),
                         maxLines = 1
                     )

@@ -5,6 +5,39 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+### Phase 7 M1: the OCR spike (2026-11-11)
+- `docs/spikes/2026-11-ocr/` measures PaddleOCR's models (through RapidOCR) and Tesseract on 20 proofread English
+  and 20 Arabic Wikisource scans. **ADR-0054 is proposed:** PaddleOCR models on the ONNX Runtime the app already
+  ships.
+  - English: PP-OCRv6 small reads 98.7% of words (median), with 86% on its worst page.
+  - Arabic: PP-OCRv5 reads 74–91% on modern print, and fails on type from before about 1950, as does Tesseract.
+  - A page-confidence gate of 0.85 kept every good page and dropped every bad page and manuscript, so those stay
+    pictures.
+  - **ADR-0054 accepted by the owner (2026-11-11), with Arabic read by both engines.** They check each other:
+    a page becomes text only when their words agree (at least 40%), and Tesseract's text is used. Choosing by
+    each engine's own confidence was simulated and rejected: it showed a manuscript as text.
+  - Nothing in the app changed yet. Each dependency is confirmed when M2 adds it.
+
+### Changed
+- **"Install updates automatically"** replaces "Fetch updates automatically" (owner, 2026-11-11).
+  - The app checks for a new build **every time it is opened or returned to**, at most once a minute. GitHub
+    allows 60 unauthenticated checks an hour.
+  - **Off (the default):** an in-app banner says a new build is available. Tapping it opens Settings → Updates,
+    where **Install** and **What's new** sit side by side. Install fetches the build and hands it to Android.
+  - **On:** the app fetches the build and installs it through a `PackageInstaller` session
+    (`UpdateInstaller`). It asks Android to skip the confirmation, which Android 12+ allows when FlowFolio updates
+    itself. The first time (a copy installed by a browser or adb), Android still asks once. After that, FlowFolio
+    is its own installer and updates without asking.
+  - After an update, the next opening shows a **"FlowFolio was updated"** banner together with the What's new popup.
+  - Before this, the setting only downloaded the build, and Settings checked only while it was on. Installing
+    always went through Android's prompt. The installs the owner saw on 2026-11-10 were made over adb during
+    development, not by the app.
+  - Verified on `fold8_api37` with a release build numbered 600003 against the published canary.4. Off: the
+    banner, then Install and What's new in Settings, and nothing installed. On: the app fetched and installed
+    canary.4 after Android's one-time prompt, and became its own installer of record. The banner and What's new
+    were checked together with two debug builds. A fully silent second update needs a newer published release to
+    observe.
+
 ## [0.6.0-canary.4] - 2026-11-10
 
 > Narrator Mode grows up: it keeps reading in the background and with the phone locked, with the phone's own player

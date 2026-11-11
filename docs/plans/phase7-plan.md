@@ -55,7 +55,7 @@ record:
   Java API, which must be the *same* runtime version as sherpa's (two copies of `libonnxruntime.so` cannot coexist),
   or a small JNI over its C API, like our PDFium bridge. The spike settles which. **Any new dependency is brought to
   you first**, with licence, last release date and alternatives.
-- **Output:** ADR-0054 (OCR engine) for your acceptance (ADR-0053 went to background narration, 2026-11-10).
+- **Output:** ADR-0054 (OCR engine): **accepted 2026-11-11**, PaddleOCR for English, PaddleOCR and Tesseract checking each other for Arabic (ADR-0053 went to background narration, 2026-11-10).
 
 ## M2: OCR in the pipeline
 

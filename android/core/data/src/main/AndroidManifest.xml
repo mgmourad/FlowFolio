@@ -7,6 +7,10 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application>
+        <!-- Android's answer to an update install session (UpdateInstaller). -->
+        <receiver
+            android:name=".UpdateInstallReceiver"
+            android:exported="false" />
         <!-- Its own process, so PDFium parsing an untrusted PDF can't take the app down. -->
         <service
             android:name=".flow.FlowService"

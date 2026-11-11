@@ -174,6 +174,16 @@ on `f18284f`; the minified build was checked on `fold8_api37` (updates canary.2 
 restarted and finishes) and installed on the owner's phone. Dynamic Flow stuck at "Preparing" when Android killed `:convert` mid-book; `FlowWatch` now catches
 it. Also: the tour's 11 pictures retaken without the status bar, and "Replay the tour" fixed.
 
+**Phase 7 (scanned books, English and Arabic; `docs/plans/phase7-plan.md`) started 2026-11-11.** M1 spike done
+(`docs/spikes/2026-11-ocr/`): **ADR-0054 accepted** (owner, 2026-11-11).
+- English: PaddleOCR PP-OCRv6 on the bundled ONNX Runtime 1.28.2, with a 0.85 page-confidence gate.
+- Arabic: PaddleOCR and Tesseract together. A page becomes text only when the two engines' words agree at least 40%,
+  and Tesseract's text is used.
+- Next is M2. Each dependency is confirmed as it is added. Arabic printed before about 1950 will mostly stay
+  pictures.
+Also 2026-11-11: "Install updates automatically" (`UpdateInstaller`, a `PackageInstaller` self-update; known
+issue 52).
+
 **Released as FlowFolio 0.6.0-canary.4 (build 600004) on 2026-11-10**, tag `v0.6.0-canary.4`: Narrator Mode.
 APK SHA-256 `a8bf5dd5f91a54b9af59cf1b90116c22e9ff3422dde9586216b72f9a1b9a72fa`, green CI on `12de823`; the
 minified build was checked on `fold8_api37` (both players, the album art, a minute's play with the screen off).
@@ -638,6 +648,13 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     Packer CL"), with empty bullet paragraphs between them, and words split before a "y" ("carr y out", "encr ypt").
     This is converter output (spec 1.2 engine), so it shows on screen and in Narrator Mode alike. Not yet
     diagnosed; the fix needs the corpus baselines (`CorpusTest`, CI).
+52. **Updates install through a `PackageInstaller` session** (`core/data/UpdateInstaller.kt`, 2026-11-11). With
+    "Install updates automatically" on, the session asks for `USER_ACTION_NOT_REQUIRED`. Android honours that only
+    when FlowFolio is the installer of record of itself. A copy installed by adb or a browser therefore shows
+    Android's prompt once, then updates silently (checked: `installerPackageName=com.flowfolio` afterwards).
+    `UpdateInstallReceiver` opens the prompt when Android asks for one. The launch check runs on every
+    `onStart`, at most once a minute (`AppViewModel.CHECK_INTERVAL_MS`). To test, build an older release with
+    `-Pflowfolio.versionCode=...` and let it find the published one.
 
 ## The repository is public (2026-11-03)
 

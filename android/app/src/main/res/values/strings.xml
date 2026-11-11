@@ -10,6 +10,8 @@
     <string name="update_banner_title">Update available</string>
     <string name="update_banner_text">%1$s · tap to open Settings</string>
     <string name="update_banner_dismiss">Dismiss</string>
+    <string name="updated_banner_title">FlowFolio was updated</string>
+    <string name="updated_banner_text">You are now on %1$s</string>
     <!-- The "what's new" window shown once after an update. -->
     <string name="whats_new_title">What\'s new</string>
     <string name="whats_new_version">Version %1$s</string>

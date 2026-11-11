@@ -37,9 +37,9 @@ import com.flowfolio.core.model.UserSettings
 /**
  * Keeping FlowFolio current (owner, M5 round 4; ADR-0048).
  *
- * The app is not on a store, so nothing else would ever tell a reader a new build exists. The switch makes the
- * checking and the fetching happen on their own -- but never the installing, which is Android's own dialog and
- * always the reader's decision. The wording says so rather than implying a silent update.
+ * The app is not on a store, so nothing else would ever tell a reader a new build exists. It checks on every opening
+ * and return (AppViewModel). "Install updates automatically" (owner, 2026-11-11) then installs on its own, through
+ * Android's self-update, which may still ask the first time; off, the reader is told and installs from here.
  */
 @Composable
 internal fun UpdatesGroup(settings: UserSettings, version: String, state: UpdateState, actions: SettingsActions) {
@@ -77,13 +77,7 @@ private fun UpdateRow(state: UpdateState, actions: SettingsActions) {
                 modifier = Modifier.fillMaxWidth()
             )
         }
-        UpdateButtons(state, actions)
-        if (state is UpdateState.Available) {
-            FlowFolioGhostButton(
-                text = stringResource(R.string.settings_update_whats_new),
-                onClick = { showingNotes = true }
-            )
-        }
+        UpdateButtons(state, actions) { showingNotes = true }
     }
     if (showingNotes && state is UpdateState.Available) {
         ReleaseNotes(state.release.notes, onDismiss = { showingNotes = false })
@@ -152,14 +146,17 @@ private fun failureSaid(reason: UpdateFailure): Int = when (reason) {
     UpdateFailure.DOWNLOAD -> R.string.settings_update_broken
 }
 
-/** Check, then download, then install: one button at a time, and a way out of each. */
+/** Check, or Install and What's new when a build is found; a way out while it downloads. */
 @Composable
-private fun UpdateButtons(state: UpdateState, actions: SettingsActions) {
+private fun UpdateButtons(state: UpdateState, actions: SettingsActions, onWhatsNew: () -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
         val tag = Modifier.testTag(LibraryTestTags.UPDATE_ACTION)
         when (state) {
-            is UpdateState.Available ->
-                FlowFolioPrimaryButton(stringResource(R.string.settings_update_download), actions.onDownloadUpdate, tag)
+            // Install and What's new side by side (owner, 2026-11-11); Install fetches the build, then installs it.
+            is UpdateState.Available -> {
+                FlowFolioPrimaryButton(stringResource(R.string.settings_update_install), actions.onDownloadUpdate, tag)
+                FlowFolioGhostButton(stringResource(R.string.settings_update_whats_new), onWhatsNew)
+            }
 
             is UpdateState.Ready ->
                 FlowFolioPrimaryButton(stringResource(R.string.settings_update_install), actions.onInstallUpdate, tag)
@@ -167,7 +164,7 @@ private fun UpdateButtons(state: UpdateState, actions: SettingsActions) {
             else ->
                 FlowFolioGhostButton(stringResource(R.string.settings_update_check), actions.onCheckUpdates, tag)
         }
-        val busy = state is UpdateState.Available || state is UpdateState.Ready || state is UpdateState.Downloading
+        val busy = state is UpdateState.Ready || state is UpdateState.Downloading
         if (busy) {
             FlowFolioGhostButton(text = stringResource(R.string.action_cancel), onClick = actions.onDismissUpdate)
         }

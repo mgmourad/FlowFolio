@@ -65,11 +65,31 @@ class AppViewModel @Inject constructor(
      */
     fun checkForUpdates() {
         val now = System.currentTimeMillis()
-        if (now - lastCheck < CHECK_INTERVAL_MS) return
+        if (now - lastCheck < CHECK_INTERVAL_MS || installing?.isActive == true) return
         lastCheck = now
-        viewModelScope.launch {
-            runCatching { updates.latest() }.getOrNull()?.let { _updateAvailable.value = it }
+        installing = viewModelScope.launch {
+            val release = runCatching { updates.latest() }.getOrNull() ?: return@launch
+            if (!settings.settings.first().autoUpdate) {
+                // Off: say so, and leave Install and What's new to Settings.
+                _updateAvailable.value = release
+                return@launch
+            }
+            // On: fetch it and install it. Android installs a self-update without asking when it allows that, and
+            // otherwise shows its own prompt. The new build greets the reader with "what's new" and a banner.
+            val apk = runCatching { updates.download(release) { } }.getOrNull()
+            if (apk == null || !updates.installSession(apk, silent = true)) _updateAvailable.value = release
         }
+    }
+
+    /** The automatic check's fetch and install, so returning to the app mid-download does not start another. */
+    private var installing: kotlinx.coroutines.Job? = null
+
+    /** The build the app was just updated to, for the "updated" banner; null otherwise or once dismissed. */
+    private val _updatedTo = MutableStateFlow<String?>(null)
+    val updatedTo: StateFlow<String?> = _updatedTo.asStateFlow()
+
+    fun dismissUpdated() {
+        _updatedTo.value = null
     }
 
     /** The reader dismissed the banner; it stays down until the next check finds a build again. */
@@ -92,7 +112,10 @@ class AppViewModel @Inject constructor(
                 _whatsNew.value = updates.latestRelease()
                 return@launch
             }
-            if (current > seen) updates.latestRelease()?.let { _whatsNew.value = it }
+            if (current > seen) {
+                _updatedTo.value = updates.installedName()
+                updates.latestRelease()?.let { _whatsNew.value = it }
+            }
         }
     }
 
@@ -156,7 +179,10 @@ class AppViewModel @Inject constructor(
     }
 
     private companion object {
-        /** How often the automatic update check may reach the releases API (ten minutes). */
-        const val CHECK_INTERVAL_MS = 10 * 60 * 1000L
+        /**
+         * At most one check a minute (owner, 2026-11-11: check on every opening and every return). GitHub allows 60
+         * unauthenticated requests an hour, which this stays under.
+         */
+        const val CHECK_INTERVAL_MS = 60 * 1000L
     }
 }

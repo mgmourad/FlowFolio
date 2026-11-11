@@ -174,6 +174,13 @@ class Updates @Inject constructor(
         true
     }.getOrDefault(false)
 
+    /**
+     * Installs [file] through Android's package installer: silently when [silent] and Android allows FlowFolio to
+     * update itself, else with Android's prompt. Falls back to [install] when no session can be made.
+     */
+    fun installSession(file: File, silent: Boolean): Boolean =
+        UpdateInstaller.install(context, file, silent) || install(file)
+
     /** Opens the releases page, for a reader whose phone will not let the app install anything. */
     fun openReleasesPage(): Boolean = runCatching {
         context.startActivity(

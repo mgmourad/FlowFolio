@@ -592,8 +592,8 @@
     <string name="tour_yours_body">Four themes including a true black one, seven reading fonts or the book\u2019s own, page colours, margins, page-turn styles and sounds. Settings has all of it.</string>
     <string name="settings_updates">Updates</string>
     <string name="settings_version">This build</string>
-    <string name="settings_auto_update">Fetch updates automatically</string>
-    <string name="settings_auto_update_detail">Checks the releases page and downloads a newer build on its own. Android always asks before it installs anything, so the last step stays yours.</string>
+    <string name="settings_auto_update">Install updates automatically</string>
+    <string name="settings_auto_update_detail">FlowFolio looks for a new build every time you open it or come back to it. With this on, it installs the update itself; Android may ask the first time. With it off, you are told, and Install is here.</string>
     <string name="settings_update_check">Check for updates</string>
     <string name="settings_update_checking">Looking\u2026</string>
     <string name="settings_update_current">You are on the newest build.</string>

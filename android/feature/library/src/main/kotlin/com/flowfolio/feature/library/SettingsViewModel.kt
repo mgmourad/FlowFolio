@@ -120,10 +120,8 @@ class SettingsViewModel @Inject constructor(
 
     init {
         measureCache()
-        // Checking on its own is the point of the setting; downloading follows only when it is on.
-        viewModelScope.launch {
-            if (repo.settings.first().autoUpdate) check(download = true)
-        }
+        // Opening Settings shows where things stand (the app checks on every opening; installing is the app's).
+        check(download = false)
     }
 
     fun measureCache() {
@@ -146,16 +144,13 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setAutoUpdate(on: Boolean) {
-        viewModelScope.launch {
-            repo.setAutoUpdate(on)
-            if (on) check(download = true)
-        }
+        viewModelScope.launch { repo.setAutoUpdate(on) }
     }
 
     /** Asks the releases page whether anything newer is published. */
     fun checkForUpdates() = check(download = false)
 
-    /** Fetches the APK of whatever the last check found. */
+    /** Install: fetches the APK the last check found and hands it to Android, which asks before installing. */
     fun downloadUpdate() {
         val release = (_update.value as? UpdateState.Available)?.release ?: return
         updating?.cancel()
@@ -167,13 +162,14 @@ class SettingsViewModel @Inject constructor(
             _update.value = file.getOrNull()
                 ?.let { UpdateState.Ready(release, it) }
                 ?: UpdateState.Failed(UpdateFailure.DOWNLOAD)
+            installUpdate()
         }
     }
 
     /** Hands the downloaded build to Android, which asks before installing it. */
     fun installUpdate() {
         val ready = _update.value as? UpdateState.Ready ?: return
-        if (!updates.install(ready.file)) updates.openReleasesPage()
+        if (!updates.installSession(ready.file, silent = false)) updates.openReleasesPage()
     }
 
     fun dismissUpdate() {
