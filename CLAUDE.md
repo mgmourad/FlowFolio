@@ -175,6 +175,8 @@ restarted and finishes) and installed on the owner's phone. Dynamic Flow stuck a
 it. Also: the tour's 11 pictures retaken without the status bar, and "Replay the tour" fixed.
 
 **Released as FlowFolio 0.6.0-canary.4 (build 600004) on 2026-11-10**, tag `v0.6.0-canary.4`: Narrator Mode.
+APK SHA-256 `a8bf5dd5f91a54b9af59cf1b90116c22e9ff3422dde9586216b72f9a1b9a72fa`, green CI on `12de823`; the
+minified build was checked on `fold8_api37` (both players, the album art, a minute's play with the screen off).
 - **No more skipped words** (known issue 50): `SpeechWords`, `SpeechNumbers`, `FlowFolioLexicon`.
 - **Background playback** (ADR-0053): `NarratorService` (`:feature:reader`, a `mediaPlayback` foreground service with
   a `MediaSession`) shows the phone's player and FlowFolio's own notification player, with speed and close.
