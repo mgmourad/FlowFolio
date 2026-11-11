@@ -244,8 +244,11 @@ private val BODY_WIDTH = 440.dp
 private val TWO_COLUMNS = 600.dp
 private val SKIP_HEIGHT = 42.dp
 
-/** The reference device's unfolded screen, which every tour picture was taken on. */
-private const val SHOT_ASPECT = 2256f / 2504f
+/**
+ * The reference device's unfolded screen, which every tour picture was taken on, less the status bar and the gesture
+ * bar (72 px each), which the pictures leave out (owner, 2026-11-10).
+ */
+private const val SHOT_ASPECT = 2256f / 2360f
 
 private const val SHOT_GLOW = 0.22f
 private const val DOT = 8f

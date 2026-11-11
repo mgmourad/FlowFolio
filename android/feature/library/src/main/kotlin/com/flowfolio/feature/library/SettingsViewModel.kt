@@ -75,7 +75,8 @@ data class SettingsActions(
     val onAuditionStop: () -> Unit = {},
     /** The tutorial, first-run windows and tips (owner, M5). */
     val onGuideSeen: (String) -> Unit = {},
-    val onGuidesReset: () -> Unit = {}
+    val onGuidesReset: () -> Unit = {},
+    val onReplayTour: () -> Unit = {}
 )
 
 /** How trying a stream address went: nothing yet, fetching, playing, or it could not be played. */
@@ -224,6 +225,11 @@ class SettingsViewModel @Inject constructor(
     /** Remembers that a first-run window or tip has been seen. */
     fun markGuideSeen(id: String) {
         viewModelScope.launch { repo.markGuideSeen(id) }
+    }
+
+    /** Shows the 11-slide tour again: the app shell's [OnboardingHost] draws it once the tour is forgotten. */
+    fun replayTour() {
+        viewModelScope.launch { repo.forgetGuide(TOUR_SEEN) }
     }
 
     /** Lets every feature introduce itself again, and turns tips back on after "never show tips again". */

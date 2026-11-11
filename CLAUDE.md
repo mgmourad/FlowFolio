@@ -168,6 +168,10 @@ rules for ML Kit and `sherpa-onnx` JNI callbacks. ADR-0051 is accepted with this
   ribbon, built as vector layers by `make_vector.py`.
 - Room is at v22 (`book_tags`). Next: Phase 7 (scanned books and OCR).
 
+**Released as FlowFolio 0.6.0-canary.3 (build 600003) on 2026-11-10**, tag `v0.6.0-canary.3`, a fix release (owner:
+"a serious bug"). Dynamic Flow stuck at "Preparing" when Android killed `:convert` mid-book; `FlowWatch` now catches
+it. Also: the tour's 11 pictures retaken without the status bar, and "Replay the tour" fixed.
+
 **UX overhaul "Quiet Library" (ADR-0052, accepted by the owner 2026-11-09; `docs/plans/ux-overhaul-plan.md`).**
 This runs between Phase 6 and Phase 7 in nine phases, one at a time. Stop and report after each. Commits stay local
 until the end, which ships as 0.6.0-canary.2. `docs/ux-review/` (the mock, the review, captures) is gitignored and stays
@@ -267,7 +271,8 @@ leave the repository able to explain itself: what is in flight, what was verifie
   private-use characters (`Line.marked`, `SUP_OPEN`...) and written as `<sup>`/`<sub>`; `plain()` strips them.
 - Dynamic Flow (ADR-0045): `core/data/flow/` holds the bundle (`FlowFiles`, `files/flow/<book>/book.epub`), the
   service (`FlowService`, process `:convert`, broadcasts in `FlowProtocol`), `DynamicFlow` (statuses and notices for
-  the app) and `ReadingViews` (each book shows only its current view's highlights and ribbons: locator != null is the
+  the app; `FlowWatch` catches a book lost when Android kills `:convert` mid-book, converts it again once, then
+  reports `FlowFailure.INTERRUPTED`) and `ReadingViews` (each book shows only its current view's highlights and ribbons: locator != null is the
   reflowed view). The reader: `ReaderViewModel.FlowState`, `DynamicFlowSwitch.kt`, `FlowCarrier` ("convert the
   changes"); the converter's `#page-N` page-list markers map PDF pages to places (`ReflowBook.sourcePages`).
 - Android: Kotlin 2.4, AGP 9 (built-in Kotlin), Compose + Material 3, single activity, MVVM +
@@ -586,6 +591,13 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     screenshots of an actual build at 900 px wide (about 1 MB in all), with larger copies in `docs/screenshots/`
     for the README. Retake both whenever the screens they show change; a tour that shows something the app no
     longer looks like is worse than none.
+    Since 2026-11-10 (owner) they never show the phone's status bar: every picture is the unfolded `fold8_api37`
+    less 72 px top and bottom (status and gesture bars), 2256x2360, which is `SHOT_ASPECT` in `Onboarding.kt`.
+    Where the reader hides the system bars, crop between the running head and the page number at that aspect
+    instead, so neither is cut in half. Panels and the riffle need their taps and the capture in one
+    `adb shell "..."` command, or the chrome hides in between. Start a riffle drag on the ribbon, not the
+    strip. The VoiceMark picture needs a stand-in `VoiceRecorder` bound for the capture only (known issue 40);
+    never commit it.
 
 44. **The converter overflows a full-page cover image** (2026-11-03). On the reflowed title page of
     *Introduction to Python Programming* (OpenStax) the cover artwork is laid out wider than the column and is

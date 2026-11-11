@@ -5,6 +5,44 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [0.6.0-canary.3] - 2026-11-10
+
+> A fix release for a serious bug: Dynamic Flow could stay at "Preparing" for good when Android stopped the
+> conversion process part-way. Also the tour's pictures retaken in the new design, and "Replay the tour" fixed.
+> Verified locally and on `fold8_api37`; gated on green CI.
+
+### Fixed
+- **Dynamic Flow no longer sticks at "Preparing"** (owner's report, 2026-11-10).
+  - The cause: Android can stop the conversion process (`:convert`) part-way, most often for memory. The owner's Fold
+    records a LOW_MEMORY kill of it. When that happened, nothing told the app. The book stayed "Converting" in
+    memory, and choosing Dynamic Flow again did nothing, because the book still read as converting.
+  - The app now notices. `FlowWatch` gives up on a book only when it has heard nothing for 15 s *and* the conversion
+    process is not running, so a queued book or an app waking from the background is never misjudged.
+  - A lost book converts again by itself once. If it is lost a second time, the reader says "Stopped. Tap Dynamic
+    Flow to retry." (the new `FlowFailure.INTERRUPTED`), and tapping does retry.
+  - `FlowService` closes three smaller holes:
+    - A stack overflow now reports like out-of-memory does.
+    - Stopping after the last book can no longer cut off a book sent a moment later (`stopSelf(startId)`).
+    - Android 15's time limit on data-sync services, or any other shutdown, reports every unfinished book.
+  - Verified on `fold8_api37`. Killing `:convert` mid-book restarted the conversion within 10 s; killing it again
+    showed the new message; tapping Dynamic Flow converted again. A 939-page textbook then converted
+    in full (10 min) with the watch running and no false loss. The 0.6.0-canary.2 release build converted a book
+    end to end in 38 s, and so did the phone, so R8 was never the problem.
+- **Settings → Help & about → "Replay the tour" plays the tour again.** Since the overhaul's Settings hub
+  (Phase 7) it had opened the "Show me around" list instead, so the tour could not be seen after the first launch.
+  It now forgets only the tour's own flag (`SettingsRepository.forgetGuide`), and the app shell draws the tour.
+  "Show me around" has its own row again. Checked on `fold8_api37`, unfolded and folded.
+
+### Changed
+- **The tour's eleven pictures were retaken in the new design** (owner, 2026-11-10). None shows the phone's status
+  bar or gesture bar any more, at the owner's request: they are 2256x2360, and the tour's frame
+  (`SHOT_ASPECT`) follows.
+  - The reader pictures show what the overhaul built: the dock and the riffle mid-drag with its page preview, the
+    selection menu's nine colours, the Words panel, Narrator Mode above the dock, and Aa's View row on a book in
+    Dynamic Flow.
+  - The others: a page caught mid-curl, the atmosphere moods, the goal sheet, and Appearance.
+  - The README's copies in `docs/screenshots/` match.
+
 ## [0.6.0-canary.2] - 2026-11-10
 
 > **The UX overhaul ("Quiet Library", ADR-0052, `docs/plans/ux-overhaul-plan.md`) is closed: Phase 6.5.**

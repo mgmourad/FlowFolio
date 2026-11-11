@@ -52,6 +52,8 @@ interface SettingsRepository {
     /** First-run splashes and tips (owner, M5). */
     suspend fun markGuideSeen(id: String) = Unit
 
+    suspend fun forgetGuide(id: String) = Unit
+
     suspend fun clearGuidesSeen() = Unit
 
     /** Remembers the build whose "what's new" was shown, so the popup comes once per update. */
@@ -160,6 +162,10 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun markGuideSeen(id: String) {
         source.markGuideSeen(id)
+    }
+
+    override suspend fun forgetGuide(id: String) {
+        source.forgetGuide(id)
     }
 
     override suspend fun clearGuidesSeen() {

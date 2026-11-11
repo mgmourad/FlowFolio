@@ -43,6 +43,9 @@ class FlowService : Service() {
     private lateinit var notifications: FlowNotifications
     private lateinit var files: FlowFiles
 
+    /** The newest start request: stopping by it never stops a service a later book has just been sent to. */
+    @Volatile private var lastStartId = 0
+
     override fun onCreate() {
         super.onCreate()
         notifications = FlowNotifications(this)
@@ -58,6 +61,7 @@ class FlowService : Service() {
             return START_NOT_STICKY
         }
         val title = intent.getStringExtra(FlowProtocol.EXTRA_TITLE).orEmpty()
+        lastStartId = startId
         // Foreground straight away (Android requires it within seconds of starting), on the first book's notification.
         startForeground(
             notifications.idOf(bookId),
@@ -96,9 +100,13 @@ class FlowService : Service() {
             if (e.reason == ConversionException.Reason.NO_PAGES) FlowFailure.NO_PAGES else FlowFailure.OTHER
         } catch (_: PdfException) {
             FlowFailure.DAMAGED
-        } catch (e: OutOfMemoryError) {
-            Log.w(TAG, "out of memory converting ${job.bookId}", e)
+        } catch (e: VirtualMachineError) {
+            // Out of memory, or a stack overflow on a deeply nested PDF: either way the thread must still report.
+            Log.w(TAG, "${e.javaClass.simpleName} converting ${job.bookId}", e)
             FlowFailure.OTHER
+        } catch (_: InterruptedException) {
+            // The service is going away (onDestroy reports every unfinished book).
+            return
         } catch (e: RuntimeException) {
             Log.w(TAG, "failed to convert ${job.bookId}", e)
             FlowFailure.OTHER
@@ -123,7 +131,7 @@ class FlowService : Service() {
         }
         if (empty) {
             stopForeground(STOP_FOREGROUND_REMOVE)
-            stopSelf()
+            stopSelf(lastStartId)
         } else {
             // The next book's progress takes over the foreground notification.
             val (next, nextTitle) = synchronized(queued) { queued.entries.first().toPair() }
@@ -235,8 +243,18 @@ class FlowService : Service() {
 
     private fun send(intent: Intent) = sendBroadcast(intent)
 
+    /** Android 15's limit on data-sync foreground services ran out: stop now, as it asks (onDestroy reports). */
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        Log.w(TAG, "FF_FLOW foreground time ran out")
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
     override fun onDestroy() {
         worker.shutdownNow()
+        // Books still waiting or converting will not finish here: the app hears so and can ask again.
+        val unfinished = synchronized(queued) { queued.keys.toList().also { queued.clear() } }
+        unfinished.forEach { send(FlowProtocol.done(packageName, it, FlowFailure.INTERRUPTED)) }
         super.onDestroy()
     }
 

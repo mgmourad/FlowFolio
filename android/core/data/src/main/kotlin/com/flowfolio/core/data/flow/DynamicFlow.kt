@@ -1,10 +1,14 @@
 package com.flowfolio.core.data.flow
 
+import android.app.ActivityManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.os.SystemClock
+import android.util.Log
 import com.flowfolio.core.data.IoDispatcher
+import com.flowfolio.core.data.flow.FlowWatch.waiting
 import com.flowfolio.core.data.toBook
 import com.flowfolio.core.database.AnnotationDao
 import com.flowfolio.core.database.BookDao
@@ -23,7 +27,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -124,8 +130,8 @@ interface DynamicFlow {
 }
 
 @Singleton
-// Hilt injects one dependency per parameter.
-@Suppress("LongParameterList")
+// Hilt injects one dependency per parameter; one function per thing the app asks, plus the watch (FlowWatch).
+@Suppress("LongParameterList", "TooManyFunctions")
 class DefaultDynamicFlow @Inject constructor(
     @ApplicationContext private val context: Context,
     private val books: BookDao,
@@ -152,9 +158,17 @@ class DefaultDynamicFlow @Inject constructor(
     /** Books converted again over an older bundle: their Dynamic Flow highlights are found again once it is done. */
     private val reanchorWhenReady = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
+    /** When each converting or queued book was last heard from ([SystemClock.elapsedRealtime]), for [FlowWatch]. */
+    private val lastHeard = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    /** How many times each book was lost with the conversion process this run. */
+    private val losses = java.util.concurrent.ConcurrentHashMap<String, Int>()
+    private var watch: Job? = null
+
     private val receiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
             val bookId = intent.getStringExtra(FlowProtocol.EXTRA_BOOK_ID) ?: return
+            lastHeard[bookId] = SystemClock.elapsedRealtime()
             when (intent.action) {
                 FlowProtocol.ACTION_PROGRESS -> {
                     val fraction = intent.getFloatExtra(FlowProtocol.EXTRA_FRACTION, 0f)
@@ -180,7 +194,9 @@ class DefaultDynamicFlow @Inject constructor(
                     val failure = intent.getStringExtra(FlowProtocol.EXTRA_FAILURE)
                         ?.let { f -> FlowFailure.entries.firstOrNull { it.name == f } ?: FlowFailure.OTHER }
                     val title = titles[bookId].orEmpty()
+                    lastHeard -= bookId
                     if (failure == null) {
+                        losses -= bookId
                         set(bookId, FlowStatus.Ready)
                         _notices.tryEmit(FlowNotice.Done(bookId, title))
                         if (reanchorWhenReady.remove(bookId)) carrier.get().reanchor(bookId)
@@ -210,6 +226,50 @@ class DefaultDynamicFlow @Inject constructor(
 
     private fun set(bookId: String, status: FlowStatus) = _statuses.update { it + (bookId to status) }
 
+    private fun fail(bookId: String, failure: FlowFailure) {
+        lastHeard -= bookId
+        set(bookId, FlowStatus.Failed(failure))
+        _notices.tryEmit(FlowNotice.Failed(bookId, titles[bookId].orEmpty(), failure))
+    }
+
+    /** Looks for books lost with the conversion process while any book is converting or queued (see [FlowWatch]). */
+    @Synchronized
+    private fun watch() {
+        if (watch?.isActive == true) return
+        watch = scope.launch {
+            while (_statuses.value.values.any { it.waiting() }) {
+                delay(FlowWatch.CHECK_MS)
+                val lost = FlowWatch.lost(
+                    _statuses.value,
+                    lastHeard,
+                    SystemClock.elapsedRealtime(),
+                    converterAlive()
+                )
+                lost.forEach { lose(it) }
+            }
+        }
+    }
+
+    /** The conversion process died with [bookId] unfinished: convert it again once, then report it stopped. */
+    private suspend fun lose(bookId: String) {
+        val previous = losses[bookId] ?: 0
+        losses[bookId] = previous + 1
+        Log.w(TAG, "FF_FLOW $bookId lost with the conversion process (${previous + 1})")
+        withContext(io) { files.partial(bookId).delete() }
+        if (FlowWatch.restarts(previous)) {
+            set(bookId, FlowStatus.None)
+            convert(bookId)
+        } else {
+            fail(bookId, FlowFailure.INTERRUPTED)
+        }
+    }
+
+    /** Whether the app's conversion process (`:convert`, [FlowService]) is running: an app may list its own. */
+    private fun converterAlive(): Boolean {
+        val processes = context.getSystemService(ActivityManager::class.java)?.runningAppProcesses.orEmpty()
+        return processes.any { it.processName == context.packageName + CONVERT_PROCESS }
+    }
+
     override fun status(bookId: String): Flow<FlowStatus> = statuses
         .map { it[bookId] ?: if (files.ready(bookId)) FlowStatus.Ready else FlowStatus.None }
         .distinctUntilChanged()
@@ -229,12 +289,20 @@ class DefaultDynamicFlow @Inject constructor(
         titles[bookId] = book.title
         if (files.outdated(bookId)) reanchorWhenReady += bookId
         set(bookId, FlowStatus.Converting(0f))
+        lastHeard[bookId] = SystemClock.elapsedRealtime()
         val (file, uri) = when (val s = book.storage) {
             is BookStorage.Copied -> s.path to null
             is BookStorage.Linked -> null to s.uri
         }
-        FlowService.start(context, bookId, book.title, file, uri)
+        // Android refuses a foreground service to an app in the background (a restart by the watch, say): say so.
+        val launched = runCatching { FlowService.start(context, bookId, book.title, file, uri) }
+        if (launched.isFailure) {
+            Log.w(TAG, "could not start converting $bookId", launched.exceptionOrNull())
+            fail(bookId, FlowFailure.INTERRUPTED)
+            return
+        }
         _notices.tryEmit(FlowNotice.Started(bookId, book.title))
+        watch()
         // Android 13 and later ask before an app may post notifications: asked at the first conversion.
         _wantsNotificationPermission.value = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
     }
@@ -278,5 +346,9 @@ class DefaultDynamicFlow @Inject constructor(
 
     private companion object {
         const val NOTICE_BUFFER = 8
+        const val TAG = "FlowFolioFlow"
+
+        /** The conversion process's suffix, as `android:process` names it in the manifest. */
+        const val CONVERT_PROCESS = ":convert"
     }
 }

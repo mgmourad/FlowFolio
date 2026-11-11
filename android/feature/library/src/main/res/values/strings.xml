@@ -619,7 +619,7 @@
     <string name="settings_reset_safe">Files on your phone are never touched \u2014 a book read from its own location stays exactly where it is. Only FlowFolio\u2019s own copies are deleted. Your settings are kept.</string>
     <string name="settings_reset_yes">Reset</string>
     <string name="settings_tutorial">Show me around</string>
-    <string name="settings_tutorial_detail">The tour of what FlowFolio can do</string>
+    <string name="settings_tutorial_detail">A short note on each feature, in one list</string>
     <string name="settings_guides_reset">Introduce features again</string>
     <string name="settings_guides_reset_detail">Show every first-run window and tip once more</string>
     <string name="action_help">Help</string>

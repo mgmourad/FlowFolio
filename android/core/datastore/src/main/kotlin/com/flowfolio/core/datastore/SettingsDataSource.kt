@@ -239,6 +239,11 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         store.edit { it[SEEN_GUIDES] = it[SEEN_GUIDES].orEmpty() + id }
     }
 
+    /** Forgets one guide, so it shows again (the tour, replayed from Settings). */
+    suspend fun forgetGuide(id: String) {
+        store.edit { it[SEEN_GUIDES] = it[SEEN_GUIDES].orEmpty() - id }
+    }
+
     /** Forgets every guide, so the app introduces itself again. */
     suspend fun clearGuidesSeen() {
         store.edit { it.remove(SEEN_GUIDES) }

@@ -45,6 +45,7 @@ import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.softShadow
 import com.flowfolio.core.model.BookHealth
 import com.flowfolio.core.model.FlowCarry
+import com.flowfolio.core.model.FlowFailure
 import com.flowfolio.core.model.FlowPause
 import com.flowfolio.core.model.FlowStatus
 import com.flowfolio.core.model.HealthGrade
@@ -161,7 +162,9 @@ private fun statusLine(flow: FlowState): String = when (val s = flow.status) {
 
     FlowStatus.Queued -> stringResource(R.string.flow_status_queued)
 
-    is FlowStatus.Failed -> stringResource(R.string.flow_status_failed)
+    is FlowStatus.Failed -> stringResource(
+        if (s.reason == FlowFailure.INTERRUPTED) R.string.flow_status_interrupted else R.string.flow_status_failed
+    )
 
     FlowStatus.Ready -> stringResource(if (flow.reading) R.string.flow_status_on else R.string.flow_status_ready)
 

@@ -34,6 +34,7 @@ import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.glass
+import com.flowfolio.core.model.FlowFailure
 import com.flowfolio.core.model.FlowNotice
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -112,9 +113,20 @@ private fun titleOf(notice: FlowNotice): Int = when (notice) {
 @Composable
 private fun textOf(notice: FlowNotice): String = when (notice) {
     is FlowNotice.Started -> stringResource(R.string.flow_notice_started_text, notice.title)
+
     is FlowNotice.Done -> stringResource(R.string.flow_notice_done_text, notice.title)
-    is FlowNotice.Failed -> stringResource(R.string.flow_notice_failed_text, notice.title)
+
+    is FlowNotice.Failed -> stringResource(
+        if (notice.reason == FlowFailure.INTERRUPTED) {
+            R.string.flow_notice_interrupted_text
+        } else {
+            R.string.flow_notice_failed_text
+        },
+        notice.title
+    )
+
     is FlowNotice.CarryStarted -> stringResource(R.string.flow_notice_carrying_text, notice.title)
+
     is FlowNotice.Carried -> stringResource(R.string.flow_notice_carried_text, notice.carried, notice.total)
 }
 

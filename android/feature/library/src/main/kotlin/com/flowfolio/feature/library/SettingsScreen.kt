@@ -135,6 +135,7 @@ fun SettingsScreen(
             onAuditionStop = viewModel::stopAudition,
             onGuideSeen = viewModel::markGuideSeen,
             onGuidesReset = viewModel::resetGuides,
+            onReplayTour = viewModel::replayTour,
             onClearCache = viewModel::clearCache,
             onResetApp = viewModel::resetApp,
             onCheckUpdates = viewModel::checkForUpdates,
@@ -659,7 +660,9 @@ private fun HelpGroup(settings: UserSettings, version: String, actions: Settings
         }
     }
     Group(R.string.settings_help, 6) {
-        ActionRow(R.string.settings_tour_again, R.string.settings_tour_again_detail) { tutorial = true }
+        ActionRow(R.string.settings_tour_again, R.string.settings_tour_again_detail, actions.onReplayTour)
+        Divider()
+        ActionRow(R.string.settings_tutorial, R.string.settings_tutorial_detail) { tutorial = true }
         Divider()
         ActionRow(R.string.settings_update_whats_new, R.string.settings_whats_new_detail) { notes = true }
         Divider()

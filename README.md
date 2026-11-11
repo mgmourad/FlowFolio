@@ -20,8 +20,8 @@ Built foldable-first: one page folded, a two-page spread unfolded.
 <br><br>
 
 <img src="docs/screenshots/library.webp" width="30%" alt="The library" />
-<img src="docs/screenshots/reading.webp" width="30%" alt="A two-page spread" />
-<img src="docs/screenshots/atmosphere.webp" width="30%" alt="Making a reading atmosphere" />
+<img src="docs/screenshots/reading.webp" width="30%" alt="A page turning in a two-page spread" />
+<img src="docs/screenshots/atmosphere.webp" width="30%" alt="Choosing a reading atmosphere" />
 
 </div>
 

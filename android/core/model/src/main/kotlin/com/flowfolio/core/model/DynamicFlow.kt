@@ -29,7 +29,11 @@ sealed interface FlowStatus {
 
 enum class FlowPause { HOT, BATTERY }
 
-enum class FlowFailure { PASSWORD, DAMAGED, NO_PAGES, MISSING, OTHER }
+/**
+ * Why a conversion ended without a book: [INTERRUPTED] means it was stopped part-way (Android ended the conversion
+ * process or its time ran out), not that the PDF cannot be reflowed; opening the book again tries again.
+ */
+enum class FlowFailure { PASSWORD, DAMAGED, NO_PAGES, MISSING, INTERRUPTED, OTHER }
 
 /** Something about Dynamic Flow to tell the reader in the app (the phone gets its own notification). */
 sealed interface FlowNotice {
