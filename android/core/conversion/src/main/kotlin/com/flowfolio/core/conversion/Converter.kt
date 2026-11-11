@@ -12,6 +12,7 @@ import com.flowfolio.core.conversion.ir.Page
 import com.flowfolio.core.conversion.ir.PageKind
 import com.flowfolio.core.conversion.ir.Role
 import com.flowfolio.core.conversion.ocr.OcrPages
+import com.flowfolio.core.conversion.ocr.OcrReader
 import com.flowfolio.core.conversion.pdf.Box
 import com.flowfolio.core.conversion.pdf.Crop
 import com.flowfolio.core.conversion.pdf.EncodedImage
@@ -25,7 +26,6 @@ import com.flowfolio.core.conversion.stage.Linking
 import com.flowfolio.core.conversion.stage.ReadingOrder
 import com.flowfolio.core.conversion.stage.Regions
 import com.flowfolio.core.conversion.stage.Shapes
-import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 
 /**
@@ -73,17 +73,21 @@ class Converter(private val settings: Settings = Settings()) {
     }
 
     /**
-     * Converts [pdf] progressively (spec 6): [emit] is called after each chapter's images are rendered, with the EPUB
-     * bytes for the chapters finished so far (a valid EPUB of only those chapters), its sidecar (`complete: false` and
-     * [Sidecar.finishedSpineItems] until the last), and [finished] of [total] chapters done. The final emit is the
-     * complete bundle, byte-identical to [convert]'s.
+     * Converts [pdf] progressively (spec 6): [emit] is called after each chapter's images are rendered, with a writer
+     * of the EPUB for the chapters finished so far (a valid EPUB of only those chapters), its sidecar (`complete:
+     * false` and [Sidecar.finishedSpineItems] until the last), and [finished] of [total] chapters done. The final emit
+     * is the complete bundle, byte-identical to [convert]'s.
+     *
+     * The EPUB is written to whatever stream the caller gives, never held as bytes here: a scanned book of pictures
+     * makes a 67 MB EPUB, and building it in memory and copying it out ran the conversion process out of memory
+     * (the owner's Arabic book on `fold8_api37`, 2026-11-11).
      */
     fun convertProgressively(
         pdf: PdfSource,
         source: SourceInfo,
         modified: String,
         progress: (Progress) -> Unit = {},
-        emit: (epub: ByteArray, sidecar: Sidecar, finished: Int, total: Int) -> Unit
+        emit: (writeEpub: (OutputStream) -> Unit, sidecar: Sidecar, finished: Int, total: Int) -> Unit
     ): Result {
         val doc = analyse(pdf, source, progress)
         val images = LinkedHashMap<String, ByteArray>()
@@ -92,12 +96,9 @@ class Converter(private val settings: Settings = Settings()) {
             renderChapter(pdf, doc, chapter, images) { page -> progress(Progress("images", page, doc.pages.size)) }
             val finished = i + 1
             val complete = finished == total
-            val epub = ByteArrayOutputStream().use { out ->
-                EpubWriter(doc, source.bookId(), modified).write(out, images, doc.chapters.subList(0, finished))
-                out.toByteArray()
-            }
+            val chapters = doc.chapters.subList(0, finished)
             emit(
-                epub,
+                { out -> EpubWriter(doc, source.bookId(), modified).write(out, images, chapters) },
                 SidecarBuilder.build(
                     doc,
                     source,
@@ -128,9 +129,10 @@ class Converter(private val settings: Settings = Settings()) {
         ) {
             throw ConversionException(ConversionException.Reason.NO_PAGES, "${source.fileName} has no pages")
         }
+        val ocr = settings.ocr?.forBook()
         val pages = (0 until pdf.pageCount).map { i ->
             progress(Progress("reading", i, pdf.pageCount))
-            ocrIfScanned(pdf, i, Extraction.page(pdf.page(i)), progress).also {
+            ocrIfScanned(pdf, i, Extraction.page(pdf.page(i)), ocr, progress).also {
                 it.label = pdf.pageLabel(i)
                 // The front and back covers are full-page designs, not reading text: keep each as one image. The
                 // first/last page counts only when it is a design (any image or path) with little text — a title,
@@ -149,8 +151,8 @@ class Converter(private val settings: Settings = Settings()) {
      * A scanned page is read by [Settings.ocr] when there is one: what it trusts becomes the page's characters, so the
      * usual stages lay it out; what it does not stays a picture, marked so the sidecar says why.
      */
-    private fun ocrIfScanned(pdf: PdfSource, i: Int, page: Page, progress: (Progress) -> Unit): Page {
-        val reader = settings.ocr?.takeIf { page.kind == PageKind.SCANNED } ?: return page
+    private fun ocrIfScanned(pdf: PdfSource, i: Int, page: Page, ocr: OcrReader?, progress: (Progress) -> Unit): Page {
+        val reader = ocr?.takeIf { page.kind == PageKind.SCANNED } ?: return page
         progress(Progress("ocr", i, pdf.pageCount))
         val image = pdf.renderPixels(i, settings.ocrScale)
         val read = image?.let { reader.read(it) }?.takeIf { r -> r.lines.sumOf { it.text.length } >= MIN_OCR_CHARS }

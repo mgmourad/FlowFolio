@@ -21,10 +21,13 @@ sealed interface Item {
  * Stage D, part two: reading order. A page in two columns has a gutter, an empty vertical band near the middle that
  * narrow items keep clear of. Items crossing it (a title, a wide figure) cut the page into bands; each band reads its
  * left column, then its right. A page in one column reads top to bottom, and items side by side left to right.
+ * A page written mostly right to left (Arabic, Hebrew) mirrors both: its right column first, and items side by side
+ * right to left.
  */
 object ReadingOrder {
     fun order(page: Page, items: List<Item>): List<Item> {
-        val gutter = gutter(page, items) ?: return byRows(items)
+        val rtl = rightToLeft(items)
+        val gutter = gutter(page, items) ?: return byRows(items, rtl)
         val wide = items.filter { it.box.left < gutter && it.box.right > gutter }.sortedBy { it.box.top }
         val narrow = items - wide.toSet()
         val out = ArrayList<Item>()
@@ -32,8 +35,9 @@ object ReadingOrder {
         for (cut in wide + listOf(null)) {
             val bottom = cut?.box?.top ?: Float.POSITIVE_INFINITY
             val band = narrow.filter { centreY(it) >= top && centreY(it) < bottom }
-            out += byRows(band.filter { it.box.right <= gutter })
-            out += byRows(band.filter { it.box.left >= gutter })
+            val left = byRows(band.filter { it.box.right <= gutter }, rtl)
+            val right = byRows(band.filter { it.box.left >= gutter }, rtl)
+            out += if (rtl) right + left else left + right
             if (cut != null) out += cut
             top = cut?.box?.bottom ?: top
         }
@@ -73,8 +77,25 @@ object ReadingOrder {
         return mid.takeIf { left >= MIN_COLUMN_ITEMS && right >= MIN_COLUMN_ITEMS }
     }
 
-    /** Top to bottom; items on the same row left to right. */
-    private fun byRows(items: List<Item>): List<Item> {
+    /** Most of the page's strongly directional letters read right to left. */
+    private fun rightToLeft(items: List<Item>): Boolean {
+        var rtl = 0
+        var ltr = 0
+        for (item in items) {
+            if (item !is Item.Text) continue
+            for (c in item.line.text) {
+                when (TextDirection.direction(c)) {
+                    true -> rtl++
+                    false -> ltr++
+                    null -> Unit
+                }
+            }
+        }
+        return rtl > ltr
+    }
+
+    /** Top to bottom; items on the same row left to right, or right to left when [rtl]. */
+    private fun byRows(items: List<Item>, rtl: Boolean): List<Item> {
         val rows = ArrayList<MutableList<Item>>()
         for (item in items.sortedBy { it.box.top }) {
             val row = rows.lastOrNull()
@@ -86,7 +107,9 @@ object ReadingOrder {
                 rows += mutableListOf(item)
             }
         }
-        return rows.flatMap { row -> row.sortedBy { it.box.left } }
+        return rows.flatMap { row ->
+            if (rtl) row.sortedByDescending { it.box.right } else row.sortedBy { it.box.left }
+        }
     }
 
     private fun centreY(i: Item) = (i.box.top + i.box.bottom) / 2

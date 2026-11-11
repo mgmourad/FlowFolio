@@ -189,6 +189,11 @@ it. Also: the tour's 11 pictures retaken without the status bar, and "Replay the
   - Left for M3's session: Tesseract for Arabic, speed on the Fold, mirroring the models
     (`docs/plans/phase7-handoff-m3.md`).
   - CI has not run on M2.
+- **The owner's Arabic book, 2026-11-11** (CHANGELOG, Unreleased, "Arabic books"): typed Arabic pages had their
+  words reversed (flat-box spaces cut every line; fixed in `Extraction`); right-to-left pages now read their right
+  column first (`ReadingOrder`); and an Arabic scanned book skips OCR once its pages vote it Arabic while no Arabic
+  reader is installed (`BookScript`). Engine 1.5.1. The book itself stays out of the repository (the owner's copy,
+  for local testing only).
 Also 2026-11-11: "Install updates automatically" (`UpdateInstaller`, a `PackageInstaller` self-update; known
 issue 52).
 
@@ -561,10 +566,11 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
 25. The reader's panels (Contents, Go to page, ribbon colours, "Aa") are drawn in the reader's window (`ReaderPanels`),
     not as sheets or dialogs, so glass can blur the page; their tags are resource ids. The bars and panels use
     `FlowFolioPalette(dark = tone.dark)`, not the app theme.
-37. **This Mac cannot run the converter's JVM tests.** `android/tools/convert/build/pdfium/libpdfium.so` is an x86-64
-    **Linux** ELF (fetched for CI); JNA on Darwin arm64 needs a `.dylib`, so `:tools:convert:test` fails three tests
-    (`CorpusTest`, `TechnicalBookTest`, `ConversionTest`) with `ExceptionInInitializerError` in `NativeLibrary`
-    whatever the app code says. Run the other checks with `-x :tools:convert:test` and say that is what was run.
+37. ~~This Mac cannot run the converter's JVM tests.~~ Resolved 2026-11-11: `FetchHostPdfiumTask` fetches
+    `pdfium-mac-arm64` (same release, pinned SHA-256) on a Mac, so `:tools:convert:test`, the corpus and the
+    desktop converter run here. `convert chars <pdf> <index>` lists PDFium's characters with their boxes, which is
+    how the flat-space Arabic bug was found.
+
 38. **The `fold8_api37` emulator keeps both panels alive at once**, so the app can be on the cover panel while the
     launcher is on the inner one. SurfaceFlinger's ids (`dumpsys SurfaceFlinger --display-id`) are what `screencap -d`
     wants; the *logical* ids (`dumpsys display | grep mDisplayId`) are what `input -d` wants, and they differ -- the
@@ -663,6 +669,12 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     `UpdateInstallReceiver` opens the prompt when Android asks for one. The launch check runs on every
     `onStart`, at most once a minute (`AppViewModel.CHECK_INTERVAL_MS`). To test, build an older release with
     `-Pflowfolio.versionCode=...` and let it find the published one.
+54. **Dynamic Flow outlives the book and the app** (checked 2026-11-11). On the owner's phone a 663-page conversion
+    ran from 12:59 to 13:49 with the app in the background from 13:20 (`dumpsys usagestats`); on `fold8_api37` a
+    995-page conversion kept going after the book was closed *and* the app was swiped out of Recents. Not checked:
+    swiping it out of Recents on the owner's Samsung (One UI can be harsher than stock Android). Android 15+ allows a
+    `dataSync` foreground service about 6 hours a day (`onTimeout`); a scanned book at debug-build OCR speed could
+    reach that, and the conversion does not yet resume where it stopped.
 53. **OCR on the phone goes through `OrtBridge`, never ONNX Runtime's Java API** (2026-11-11). sherpa-onnx's
     `libonnxruntime.so` exports `OrtGetApiBase@@VERS_1.28.2`; `onnxruntime-android`'s Java glue (only 1.28.0 is
     published) asks for `@VERS_1.28.0`, so Android refuses to load it. Two copies of the runtime cannot share one

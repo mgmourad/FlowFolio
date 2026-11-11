@@ -108,4 +108,25 @@ class OcrPiecesTest {
         out.write(value)
         return out.toByteArray()
     }
+
+    @Test
+    fun bookScriptSettlesOnItsMainScript() {
+        val book = BookScript()
+        repeat(BookScript.SETTLE_AFTER - 1) { book.add(Script.ARABIC) }
+        assertNull(book.settled)
+        book.add(Script.LATIN) // an English clipping among Arabic pages: 5 of 6 is still Arabic
+        assertEquals(Script.ARABIC, book.settled)
+        book.add(Script.LATIN)
+        assertEquals(Script.ARABIC, book.settled)
+    }
+
+    @Test
+    fun anEvenMixSettlesOnNothing() {
+        val book = BookScript()
+        repeat(BookScript.SETTLE_AFTER / 2) {
+            book.add(Script.ARABIC)
+            book.add(Script.LATIN)
+        }
+        assertNull(book.settled)
+    }
 }

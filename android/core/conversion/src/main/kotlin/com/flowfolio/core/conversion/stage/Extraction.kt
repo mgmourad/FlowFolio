@@ -53,7 +53,12 @@ object Extraction {
                 if (raw.generated[i] && c == ' ' && current.isNotEmpty()) current += i
                 continue
             }
-            if (current.isNotEmpty() && breaksLine(raw, current, i)) flush()
+            // A space the PDF wrote never starts a line by itself: some PDFs give them a flat box on the baseline,
+            // which overlaps no letter's band (the owner's Arabic book, 2026-11-11); the next letter decides. Spaces
+            // PDFium makes up keep cutting the line, then [joinFragments] puts close pieces back: across the wide gap
+            // between an unruled table's columns they must stay apart (`technical.pdf`).
+            val ownSpace = c.isWhitespace() && !raw.generated[i]
+            if (current.isNotEmpty() && !ownSpace && breaksLine(raw, current, i)) flush()
             current += i
         }
         flush()
@@ -63,7 +68,12 @@ object Extraction {
     /** [line] carries on [prev] on its row: it starts where [prev] ends, give or take an em or two. */
     private fun continues(prev: Line, line: Line): Boolean {
         val em = line.style.size.coerceAtLeast(1f)
-        val gap = line.box.left - prev.box.right
+        val gap = if (TextDirection.rightToLeft(prev.text)) {
+            prev.box.left - line.box.right
+        } else {
+            line.box.left -
+                prev.box.right
+        }
         return sameRow(prev.box, line.box) && gap > -em && gap < em * JOIN_GAP_EMS
     }
 
@@ -82,9 +92,14 @@ object Extraction {
                     listOf(
                         Span(
                             " ",
-                            Box(prev.box.right, prev.box.top, line.box.left, prev.box.bottom),
+                            Box(
+                                minOf(prev.box.right, line.box.right),
+                                prev.box.top,
+                                maxOf(prev.box.left, line.box.left),
+                                prev.box.bottom
+                            ),
                             prev.style,
-                            floatArrayOf(prev.box.right)
+                            floatArrayOf(minOf(prev.box.right, line.box.right))
                         )
                     )
                 }
@@ -96,14 +111,26 @@ object Extraction {
         return out
     }
 
-    /** Character [i] starts a new line: it sits beside the line's band, or the text jumps back to the left. */
+    /**
+     * Character [i] starts a new line: it sits beside the line's band, or the text jumps back to where lines start --
+     * the left for a line that reads left to right, the right for Arabic or Hebrew. PDFium gives right-to-left text in
+     * reading order, so each word of an Arabic line lies to the *left* of the one before; read as a jump back, that cut
+     * every word into a line of its own and the words came out reversed (the owner's Arabic book, 2026-11-11).
+     */
     private fun breaksLine(raw: RawPage, line: List<Int>, i: Int): Boolean {
-        val last = line.lastOrNull { raw.hasBox(it) } ?: return false
+        // Measured against the last letter, not a space, for the same reason.
+        val last = line.lastOrNull { raw.hasBox(it) && !raw.text[it].isWhitespace() }
+            ?: line.lastOrNull { raw.hasBox(it) } ?: return false
         val a = raw.box(last)
         val b = raw.box(i)
         val overlap = minOf(a.bottom, b.bottom) - maxOf(a.top, b.top)
         val height = minOf(a.height, b.height).coerceAtLeast(1f)
-        val backward = b.right < a.left - height
+        val backward = if (TextDirection.rightToLeft(raw, line)) {
+            b.left > a.right + height
+        } else {
+            b.right <
+                a.left - height
+        }
         return overlap < height * MIN_LINE_OVERLAP || backward
     }
 
@@ -118,6 +145,7 @@ object Extraction {
         var box: Box? = null
         var style: StyleKey? = null
         var lastRight = Float.NaN
+        var lastLeft = Float.NaN
         val lefts = ArrayList<Float>()
         fun close() {
             val b = box
@@ -142,9 +170,9 @@ object Extraction {
             if (!raw.text[i].isWhitespace()) style = key
             // A quarter em *more than this line's usual gap* is a word space the PDF left out. On ordinary text
             // the usual gap is nil and this is the plain quarter-em rule; [typicalGap] explains the rest.
-            val gap = b.left - lastRight
+            val gap = TextDirection.gapBetween(lastLeft, lastRight, b)
             if (!lastRight.isNaN() && gap > typicalGap + raw.fontSizes[i] * WORD_GAP_EMS && text.isNotEmpty() &&
-                text.last() != ' '
+                text.last() != ' ' && !raw.text[i].isWhitespace()
             ) {
                 space()
             }
@@ -154,6 +182,7 @@ object Extraction {
             lefts += b.left
             box = box?.union(b) ?: b
             lastRight = b.right
+            lastLeft = b.left
         }
         close()
         if (spans.isEmpty()) return null
@@ -183,14 +212,20 @@ object Extraction {
     private fun typicalGap(raw: RawPage, chars: List<Int>): Float {
         val gaps = ArrayList<Float>()
         var lastRight = Float.NaN
+        var lastLeft = Float.NaN
         for (i in chars) {
             if (!raw.hasBox(i)) {
                 lastRight = Float.NaN
                 continue
             }
             val b = raw.box(i)
-            if (!lastRight.isNaN() && !raw.text[i].isWhitespace()) gaps += b.left - lastRight
+            if (!lastRight.isNaN() &&
+                !raw.text[i].isWhitespace()
+            ) {
+                gaps += TextDirection.gapBetween(lastLeft, lastRight, b)
+            }
             lastRight = b.right
+            lastLeft = b.left
         }
         // Too few gaps to tell a habit from an accident; fall back to the plain rule.
         if (gaps.size < MIN_GAPS_FOR_QUARTILE) return 0f

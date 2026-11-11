@@ -81,6 +81,13 @@ Follow the plan's M3:
 
 ## Known rough edges to look at
 
+- **Done since this was written (2026-11-11, the owner's Arabic book):** typed Arabic lines come out in reading
+  order, right-to-left pages read right column first, and an Arabic scanned book skips OCR once its pages vote it
+  Arabic while Tesseract is missing (`BookScript`). See the CHANGELOG's "Arabic books" entry. Still open from that
+  book: the package's `page-progression-direction="rtl"` and `dir`/`lang` on chapters; an English run inside an
+  Arabic line can come out reversed ("marks book"); a lone Arabic word at a line start can be taken for a list
+  bullet; and an OCR page in two columns reads across them (that book's 1883 newspaper clipping).
+
 - A tall first line (a drop cap) used to make a paragraph a heading. `OcrPages` now treats tall *and* long lines as
   body text; check this on real books. Mixed-book samples exaggerate it, so test with whole books.
 - Pictures on a scanned page (figures) are dropped when the page becomes text: `OcrPages` leaves the scan out of

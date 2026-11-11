@@ -103,7 +103,7 @@ abstract class FetchHostPdfiumTask : DefaultTask() {
         val actual = MessageDigest.getInstance("SHA-256").digest(tgz.readBytes()).joinToString("") { "%02x".format(it) }
         check(actual == sha) { "SHA-256 mismatch for $name: expected $sha, got $actual" }
         fs.sync {
-            from(archives.tarTree(archives.gzip(tgz))) { include("bin/*.dll", "lib/*.so") }
+            from(archives.tarTree(archives.gzip(tgz))) { include("bin/*.dll", "lib/*.so", "lib/*.dylib") }
             into(outputDir)
             eachFile { path = this.name }
             includeEmptyDirs = false
@@ -111,14 +111,23 @@ abstract class FetchHostPdfiumTask : DefaultTask() {
     }
 
     companion object {
-        /** Desktop builds of [Pdfium.RELEASE]: Windows (development) and Linux (CI). */
+        /** Desktop builds of [Pdfium.RELEASE]: Windows and Apple Silicon Macs (development) and Linux (CI). */
         val HOST_ASSETS = mapOf(
             "windows" to "pdfium-win-x64.tgz|51621bcc1d9be9ea448f4b84b0516862b928e3968d3fca899af1a6d6e2848d6d",
+            "mac" to "pdfium-mac-arm64.tgz|7ea647c7a7a9c1169be3f947000bc071ece2fade2cd6bd7e401e3675c6560cce",
             "linux" to "pdfium-linux-x64.tgz|1c1894a12d4d96ee01400c3874444126254180c5c7d2ab628576b67f8120320a",
         )
 
-        fun hostAsset(): String =
-            HOST_ASSETS.getValue(if (System.getProperty("os.name").startsWith("Windows")) "windows" else "linux")
+        fun hostAsset(): String {
+            val os = System.getProperty("os.name")
+            return HOST_ASSETS.getValue(
+                when {
+                    os.startsWith("Windows") -> "windows"
+                    os.startsWith("Mac") -> "mac"
+                    else -> "linux"
+                }
+            )
+        }
     }
 }
 

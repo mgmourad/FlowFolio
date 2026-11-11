@@ -59,8 +59,9 @@ class ConverterProgressiveTest {
             Source("book.pdf"),
             SourceInfo("book.pdf", "0".repeat(64), 2, "Book"),
             modified,
-            emit = { epub, sidecar, finished, totalChapters ->
+            emit = { writeEpub, sidecar, finished, totalChapters ->
                 total = totalChapters
+                val epub = java.io.ByteArrayOutputStream().also(writeEpub).toByteArray()
                 emit(epub, sidecar, finished, totalChapters)
             }
         )

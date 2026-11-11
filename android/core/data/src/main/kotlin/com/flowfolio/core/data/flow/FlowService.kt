@@ -22,6 +22,7 @@ import com.flowfolio.core.pdf.PdfException
 import com.flowfolio.core.pdf.pdfium.PdfiumConversionSource
 import java.io.File
 import java.io.FileNotFoundException
+import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.time.Instant
@@ -162,9 +163,9 @@ class FlowService : Service() {
                     SourceInfo(job.title.ifBlank { job.bookId }, job.bookId, pdf.pageCount, pdf.metadata("Title")),
                     Instant.now().truncatedTo(ChronoUnit.SECONDS).toString(),
                     progress::on
-                ) { epub, _, finished, total ->
+                ) { writeEpub, _, finished, total ->
                     progress.chapter(finished, total)
-                    writeAtomically(files.partial(job.bookId), epub)
+                    writeAtomically(files.partial(job.bookId), writeEpub)
                 }
             }
         }
@@ -173,13 +174,14 @@ class FlowService : Service() {
         if (!files.partial(job.bookId).renameTo(files.epub(job.bookId))) {
             throw FileNotFoundException("could not finish ${job.bookId}")
         }
-        writeAtomically(files.sidecar(job.bookId), JSON.encodeToString(result.sidecar).toByteArray())
+        val sidecar = JSON.encodeToString(result.sidecar).toByteArray()
+        writeAtomically(files.sidecar(job.bookId)) { it.write(sidecar) }
     }
 
     /** Writes [bytes] to [target] without leaving it half-written: a sibling temp, then an atomic rename over it. */
-    private fun writeAtomically(target: File, bytes: ByteArray) {
+    private fun writeAtomically(target: File, write: (OutputStream) -> Unit) {
         val tmp = File(target.path + ".tmp")
-        tmp.writeBytes(bytes)
+        tmp.outputStream().buffered().use(write)
         Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
     }
 

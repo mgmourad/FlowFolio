@@ -5,6 +5,29 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+### Arabic books, from the owner's own (2026-11-11)
+- **Typed Arabic text reads in order.** The words of a born-digital Arabic page came out reversed. The cause was a
+  PDF that gives its spaces a flat box on the baseline: the converter's same-line test saw no overlap at each space
+  and cut the line there, and the cut words were then sorted left to right.
+  - Now a space never starts a line by itself, and the test measures against the last letter.
+  - A line whose first strong letter is Arabic or Hebrew treats only a jump to the *right* as the start of a new
+    line.
+  - Word spacing is measured on whichever side the next letter lies.
+- **Right-to-left pages read right to left.** A page whose letters are mostly right to left reads its right column
+  first, and items on one row right to left (`ReadingOrder`).
+- **An Arabic scanned book no longer spends its time on pages that can only stay pictures.** Each book's scanned
+  pages vote on its script (`BookScript`: 6 pages, 80% agreeing). Once a book is Arabic and no Arabic reader is
+  installed, its remaining pages are kept as pictures without OCR. The owner's 663-page Arabic book took about 50
+  minutes to come out almost all pictures. A page in the other script before the vote settles is still read: that
+  book's English newspaper clipping on page 160 was read as English, which it is.
+- **Big picture-heavy books no longer run the conversion out of memory.** Each progressive EPUB is now written
+  straight to its file instead of being built as bytes and copied (`Converter.convertProgressively` hands over a
+  writer). Before this, the Arabic book (a 67 MB EPUB, almost all pictures) failed on `fold8_api37` with
+  `OutOfMemoryError` at 87%; the phone's larger heap had got it through.
+- **The desktop converter runs on Apple Silicon Macs.** The host PDFium fetch knows `pdfium-mac-arm64` from the same
+  release, so `:tools:convert:test` and the corpus run here (known issue 37). There is a new debug command, `convert
+  chars <pdf> <index>`, which lists PDFium's characters with their boxes.
+
 ### Phase 7 M2: scanned books read by OCR (2026-11-11, English; Arabic pending)
 - **Dynamic Flow reads scanned pages.** Settings → Dynamic Flow → **Scanned books** downloads a 38 MB pack (PaddleOCR
   PP-OCRv6 detection and recognition, plus PP-OCRv5 Arabic recognition), checked against pinned SHA-256s.

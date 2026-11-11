@@ -5,6 +5,7 @@ import com.flowfolio.core.conversion.epub.SourceInfo
 import com.flowfolio.core.conversion.ir.BlockType
 import com.flowfolio.core.conversion.pdf.Box
 import com.flowfolio.core.conversion.pdf.Crop
+import com.flowfolio.core.conversion.pdf.RawPage
 import java.io.File
 import java.security.MessageDigest
 import java.time.Instant
@@ -16,6 +17,7 @@ import kotlinx.serialization.json.Json
  * - `probe <file.pdf> [page]` prints what PDFium reads from a page;
  * - `convert <file.pdf> <outDir>` writes `book.epub` and `flowfolio.json` to [outDir], as the app will;
  * - `page <file.pdf> <index>` prints a page's lines and blocks after layout;
+ * - `chars <file.pdf> <index> [count]` prints PDFium's characters in order, with their boxes (right-to-left text);
  * - `render <file.pdf> <page,page,...> <outDir>` draws whole pages (1-based) as PNGs, for checking hand labels.
  */
 fun main(args: Array<String>) {
@@ -25,6 +27,8 @@ fun main(args: Array<String>) {
         "convert" -> convert(File(args[1]), File(args[2]))
 
         "page" -> page(File(args[1]), args[2].toInt())
+
+        "chars" -> chars(File(args[1]), args[2].toInt(), args.getOrNull(OUT_ARG)?.toInt() ?: PROBE_CHARS)
 
         "unmatched" -> unmatched(File(args[1]))
 
@@ -159,7 +163,27 @@ private fun probe(file: File, index: Int) {
     }
 }
 
+/** Each character PDFium reads, in its order: code point, box, and whether PDFium made it up (a space, a break). */
+private fun chars(file: File, index: Int, count: Int) {
+    JnaPdfSource.open(file).use { pdf ->
+        val page = pdf.page(index)
+        for (i in 0 until minOf(count, page.length)) println(charLine(page, i))
+    }
+}
+
+private fun charLine(page: RawPage, i: Int): String {
+    val c = page.text[i]
+    val where = if (page.hasBox(i)) {
+        page.box(i).let { "%.1f,%.1f-%.1f,%.1f".format(it.left, it.top, it.right, it.bottom) }
+    } else {
+        "-"
+    }
+    val shown = if (c.isWhitespace()) "\\s" else c.toString()
+    return "%4d U+%04X %s %s%s".format(i, c.code, shown, where, if (page.generated[i]) " gen" else "")
+}
+
 private const val PROBE_TEXT = 400
+private const val PROBE_CHARS = 80
 private const val RENDER_SCALE = 1.1f
 private const val OUT_ARG = 3
 private const val NANOS_PER_SECOND = 1e9f

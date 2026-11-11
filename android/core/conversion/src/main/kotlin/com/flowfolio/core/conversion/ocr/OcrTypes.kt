@@ -37,4 +37,7 @@ class Tensor(val data: FloatArray, val shape: LongArray)
 /** Reads the text on a scanned page; null when it reads nothing it trusts. */
 fun interface OcrReader {
     fun read(image: OcrImage): OcrPage?
+
+    /** A reader for one book's pages, in order, which may learn from the pages before (the book's script). */
+    fun forBook(): OcrReader = this
 }
