@@ -86,6 +86,7 @@ import com.flowfolio.core.designsystem.softShadow
 import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.FlowCarry
+import com.flowfolio.core.model.NarratorSkip
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.StatsBand
 import com.flowfolio.core.model.StorageMode
@@ -123,6 +124,7 @@ fun SettingsScreen(
             onRiffleSound = viewModel::setRiffleSound,
             onRiffleVolume = viewModel::setRiffleVolume,
             onScrubHaptics = viewModel::setScrubHaptics,
+            onNarratorSkip = viewModel::setNarratorSkip,
             onReaderText = viewModel::setReaderText,
             onFlowOnOpen = viewModel::setFlowOnOpen,
             onFlowAsk = viewModel::setFlowAsk,
@@ -634,6 +636,19 @@ private fun SoundGroup(settings: UserSettings, actions: SettingsActions) {
             settings.scrubHaptics,
             actions.onScrubHaptics
         )
+        Divider()
+        ChoiceRow(
+            R.string.settings_narrator_skip,
+            R.string.settings_narrator_skip_detail,
+            listOf(
+                R.string.narrator_skip_paragraph,
+                R.string.narrator_skip_page,
+                R.string.narrator_skip_chapter,
+                R.string.narrator_skip_subchapter
+            ),
+            NarratorSkip.entries.indexOf(settings.narratorSkip),
+            stacked = true
+        ) { actions.onNarratorSkip(NarratorSkip.entries[it]) }
     }
     Text(
         stringResource(R.string.settings_voice_note),

@@ -174,6 +174,14 @@ on `f18284f`; the minified build was checked on `fold8_api37` (updates canary.2 
 restarted and finishes) and installed on the owner's phone. Dynamic Flow stuck at "Preparing" when Android killed `:convert` mid-book; `FlowWatch` now catches
 it. Also: the tour's 11 pictures retaken without the status bar, and "Replay the tour" fixed.
 
+**Released as FlowFolio 0.6.0-canary.4 (build 600004) on 2026-11-10**, tag `v0.6.0-canary.4`: Narrator Mode.
+- **No more skipped words** (known issue 50): `SpeechWords`, `SpeechNumbers`, `FlowFolioLexicon`.
+- **Background playback** (ADR-0053): `NarratorService` (`:feature:reader`, a `mediaPlayback` foreground service with
+  a `MediaSession`) shows the phone's player and FlowFolio's own notification player, with speed and close.
+  `NarrationHub` bridges it to the reader's view model, which still does the narrating.
+- **Skip/Reverse behavior** in Settings → Sound & voice (`UserSettings.narratorSkip`, `NarratorSkips`).
+- Audio focus, and a word hyphenated across a page break said once.
+
 **UX overhaul "Quiet Library" (ADR-0052, accepted by the owner 2026-11-09; `docs/plans/ux-overhaul-plan.md`).**
 This runs between Phase 6 and Phase 7 in nine phases, one at a time. Stop and report after each. Commits stay local
 until the end, which ships as 0.6.0-canary.2. `docs/ux-review/` (the mock, the review, captures) is gitignored and stays
@@ -609,6 +617,25 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     did nothing, while a drag turned the page every time. Known issue 16 says a single tap turns a page, so
     either that is wrong for Dynamic Flow books or the turn style defaults to one that needs a drag.
     **Observed, not diagnosed** -- check before trusting either reading.
+50. **Narrator Mode can only say words in the voice's lexicon** (2026-11-10). sherpa-onnx 2.0.1's multi-language
+    Kokoro (and Piper with a lexicon) drops any other word silently: `debug=true` logs `OOV word skipped`. Passing
+    `espeak-ng-data` or `lang` changes nothing, and 2.0.1 is the newest release. So every utterance goes through
+    `SpeechWords.expand` with the voice's `Vocabulary` first: a word reaches the engine only in a form it knows.
+    - Pronunciation fixes go in `FlowFolioLexicon`, which is loaded **last** because the last lexicon wins. Its
+      phonemes must be Kokoro tokens (`FlowFolioLexiconTest`): the "g" is `ɡ` (U+0261), never ASCII `g`.
+    - Bump `lexicon-us-en-inflected-vN` whenever its generator changes; it is written once per device.
+    - Every lexicon entry costs about 500 bytes of native memory in sherpa-onnx.
+    - `SpeechCoverageTest` measures a real book (env `FLOWFOLIO_SPEECH_BOOK` and `FLOWFOLIO_KOKORO_DIR`; skipped
+      otherwise) and lists what is rephrased and anything still skipped.
+    - Background playback, the phone's player and FlowFolio's notification player are ADR-0053 (0.6.0-canary.4).
+      Leaving the book still stops narration, by design for now.
+    - `ReaderViewModel` launches collectors in `init` on `Main.immediate`, so an `init` block must come **after**
+      every property it reads: one placed above `_narratorRate` crashed the reader on open (2026-11-10).
+51. **The converter drops or detaches a "y" in *Learning DevOps*** (found 2026-11-10 while measuring Narrator
+    Mode). List items lose their last letter and full stop ("Adds the apt HashiCorp repositor", "Downloads the
+    Packer CL"), with empty bullet paragraphs between them, and words split before a "y" ("carr y out", "encr ypt").
+    This is converter output (spec 1.2 engine), so it shows on screen and in Narrator Mode alike. Not yet
+    diagnosed; the fix needs the corpus baselines (`CorpusTest`, CI).
 
 ## The repository is public (2026-11-03)
 
@@ -653,5 +680,6 @@ Translate part of 0017), EPUB pagination engine (0019), EPUB parsing (0020), isl
 audio extraction with yt-dlp embedded (0047, accepted 2026-11-03: Unlicense source on MIT Chaquopy and PSF CPython,
 no ffmpeg because only an address is extracted), updating from the releases page (0048, accepted), re-keying the
 release identity after the signing key was lost (0049, accepted; supersedes the key-custody part of 0042), release-channel
-renumbering (0050, accepted 2026-11-07: 3–4 alpha, 5–6 canary, 7 beta), and offline neural TTS via `sherpa-onnx` with
-Kokoro and Piper voice packs (0051, accepted 2026-11-08).
+renumbering (0050, accepted 2026-11-07: 3–4 alpha, 5–6 canary, 7 beta), offline neural TTS via `sherpa-onnx` with
+Kokoro and Piper voice packs (0051, accepted 2026-11-08), the Quiet Library design overhaul (0052), and Narrator Mode
+in the background with a media session and two players (0053, 2026-11-10). The OCR engine is ADR-0054 (Phase 7 M1).

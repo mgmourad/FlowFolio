@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Narrator Mode's own player, collapsed (owner, 2026-11-10): the title, then the controls with the speed. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal">
+
+    <TextView
+        android:id="@+id/narrator_title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="2"
+        android:textAppearance="@android:style/TextAppearance.Material.Notification.Title" />
+
+    <ImageButton
+        android:id="@+id/narrator_previous"
+        style="@style/NarratorButton"
+        android:contentDescription="@string/narrator_previous"
+        android:src="@drawable/ic_narrator_previous" />
+
+    <ImageButton
+        android:id="@+id/narrator_play"
+        style="@style/NarratorButton"
+        android:contentDescription="@string/narrator_play"
+        android:src="@drawable/ic_narrator_play" />
+
+    <ImageButton
+        android:id="@+id/narrator_next"
+        style="@style/NarratorButton"
+        android:contentDescription="@string/narrator_next"
+        android:src="@drawable/ic_narrator_next" />
+
+    <TextView
+        android:id="@+id/narrator_speed"
+        style="@style/NarratorSpeed" />
+</LinearLayout>

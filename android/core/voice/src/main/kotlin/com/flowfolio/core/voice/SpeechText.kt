@@ -73,6 +73,24 @@ object SpeechText {
         return updatedCur.joinToString("\n") to updatedNext.joinToString("\n")
     }
 
+    /**
+     * [pageRaw] as it is read when narration *starts* on it: a word the previous page began ("informa-" / "tion")
+     * is said whole at the top ("information"), not as a fragment.
+     */
+    fun startingOn(pageRaw: String, previousPageRaw: String?): String {
+        val (previous, page) = stitchCrossPage(previousPageRaw.orEmpty(), pageRaw)
+        if (page == null || page == pageRaw) return pageRaw
+        val word = previous.trimEnd().split(' ', '\n').last()
+        return "$word $page"
+    }
+
+    /**
+     * [pageRaw] as it is read when narration *continues* onto it from the previous page, which already said the
+     * word hyphenated across the break: the fragment at the top is left out, not said a second time.
+     */
+    fun continuingOnto(pageRaw: String, previousPageRaw: String?): String =
+        stitchCrossPage(previousPageRaw.orEmpty(), pageRaw).second ?: pageRaw
+
     private fun cleanQuotesAndDashes(text: String): String = text
         .replace("\r\n", "\n")
         .replace('\r', '\n')
@@ -225,7 +243,7 @@ object SpeechText {
             }
             return
         }
-        val rawSentences = splitSentences(block.text)
+        val rawSentences = splitSentences(expandAbbreviations(block.text))
         for ((sIdx, sentence) in rawSentences.withIndex()) {
             val isLastSentenceInBlock = sIdx == rawSentences.lastIndex
             val sentenceEndPause = when {
@@ -263,6 +281,10 @@ object SpeechText {
             }
         }
     }
+
+    /** "e.g." is "for example", "Dr." is "Doctor": said in full, and never taken for the end of a sentence. */
+    internal fun expandAbbreviations(text: String): String =
+        ABBREVIATIONS.fold(text) { acc, (pattern, words) -> pattern.replace(acc, words) }
 
     private fun splitSentences(text: String): List<String> =
         SENTENCE_SPLIT.split(text).map { it.trim() }.filter { it.isNotEmpty() }
@@ -308,40 +330,13 @@ object SpeechText {
         return result
     }
 
-    internal fun cleanForLexicon(text: String): String = text
-        .replace(REPLACEMENT_BETWEEN_LETTERS, "$1 $2")
-        .replace(CYBER_COMPOUND, "$1 $2")
+    internal fun cleanForLexicon(text: String): String = SpeechNumbers.words(
+        text.replace(REPLACEMENT_BETWEEN_LETTERS, "$1 $2")
+    )
         .replace(NON_LEXICON_PUNCT, " ")
         .replace(STRAY_APOSTROPHE, " ")
-        .replace(NUMBER_TOKEN) { match ->
-            val value = match.value.toIntOrNull()
-            if (value != null && value in 0..MAX_SPOKEN_NUMBER) numberToWords(value) else match.value
-        }
         .replace(WHITESPACE, " ")
         .trim()
-
-    private fun numberToWords(n: Int): String = when {
-        n == 0 -> "zero"
-
-        n < TWENTY -> ONES[n]
-
-        n < HUNDRED -> {
-            val rem = n % TEN
-            if (rem == 0) TENS[n / TEN] else "${TENS[n / TEN]} ${ONES[rem]}"
-        }
-
-        n < THOUSAND -> {
-            val rem = n % HUNDRED
-            val head = "${ONES[n / HUNDRED]} hundred"
-            if (rem == 0) head else "$head ${numberToWords(rem)}"
-        }
-
-        else -> {
-            val rem = n % THOUSAND
-            val head = "${ONES[n / THOUSAND]} thousand"
-            if (rem == 0) head else "$head ${numberToWords(rem)}"
-        }
-    }
 
     private const val MAX_SEGMENT_CHARS = 150
     private const val TARGET_PHRASE_CHARS = 95
@@ -356,11 +351,6 @@ object SpeechText {
     private const val EPUB_PARAGRAPH_MIN_CHARS = 95
     private const val MIN_PDF_LINE_CHARS = 48
     private const val SHORT_TAIL_RATIO = 0.84
-    private const val TEN = 10
-    private const val TWENTY = 20
-    private const val HUNDRED = 100
-    private const val THOUSAND = 1000
-    private const val MAX_SPOKEN_NUMBER = 9999
 
     private val PHRASE_BREAK_WORDS = setOf(
         "and", "or", "but", "because", "which", "that", "while", "when", "where",
@@ -371,15 +361,6 @@ object SpeechText {
         "the", "a", "an", "to", "of", "in", "on", "for", "with", "and", "or", "but",
         "that", "by", "from", "as", "at", "into", "is", "was", "are", "were", "be",
         "been", "have", "has", "had", "can", "will", "would", "should", "could", "not"
-    )
-
-    private val ONES = arrayOf(
-        "", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine",
-        "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen",
-        "seventeen", "eighteen", "nineteen"
-    )
-    private val TENS = arrayOf(
-        "", "", "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety"
     )
 
     private val SOFT_OR_PDF_HYPHEN_BREAK = Regex("(\\p{L})\\s*[\\u0002\\u00AD]\\s*(?:\\n\\s*)?(\\p{L})")
@@ -400,14 +381,31 @@ object SpeechText {
     private val CONTINUATION_END = Regex("[,;:\\-]$")
     private val INLINE_SPACES = Regex("[ \\t]+")
     private val WHITESPACE = Regex("\\s+")
-    private val SENTENCE_SPLIT = Regex("(?<=[.!?])\\s+|\\s*[;:]\\s+")
+    private val SENTENCE_SPLIT = Regex("(?<=[.!?])(?<!(?:^|\\s)\\p{Lu}\\.)\\s+|\\s*[;:]\\s+")
+
+    private val ABBREVIATIONS: List<Pair<Regex, String>> = listOf(
+        Regex("\\be\\.\\s?g\\.", RegexOption.IGNORE_CASE) to "for example",
+        Regex("\\bi\\.\\s?e\\.", RegexOption.IGNORE_CASE) to "that is",
+        Regex("\\betc\\.(?=\\s+\\p{Lu}|\\s*$)") to "et cetera.",
+        Regex("\\betc\\.") to "et cetera",
+        Regex("\\bvs\\.") to "versus",
+        Regex("\\bDr\\.(?=\\s)") to "Doctor",
+        Regex("\\bMrs\\.(?=\\s)") to "Missus",
+        Regex("\\bMr\\.(?=\\s)") to "Mister",
+        Regex("\\bMs\\.(?=\\s)") to "Miz",
+        Regex("\\bProf\\.(?=\\s)") to "Professor",
+        Regex("\\bJr\\.") to "Junior",
+        Regex("\\bapprox\\.", RegexOption.IGNORE_CASE) to "approximately",
+        Regex("\\bcf\\.") to "compare",
+        Regex("\\bFig\\.(?=\\s*\\d)") to "Figure",
+        Regex("\\bNo\\.(?=\\s*\\d)") to "Number",
+        Regex("\\bpp\\.(?=\\s*\\d)") to "pages",
+        Regex("\\bp\\.(?=\\s*\\d)") to "page",
+        Regex("\\bch\\.(?=\\s*\\d)", RegexOption.IGNORE_CASE) to "chapter",
+        Regex("\\bvol\\.(?=\\s*\\d)", RegexOption.IGNORE_CASE) to "volume"
+    )
     private val CLAUSE_SPLIT = Regex(",\\s+")
     private val REPLACEMENT_BETWEEN_LETTERS = Regex("(\\p{L})\uFFFD(\\p{L})")
-    private val CYBER_COMPOUND = Regex(
-        "\\b(cyber)(crime|crimes|criminal|criminals|security|space|attack|attacks|warfare|bullying|terrorism)\\b",
-        RegexOption.IGNORE_CASE
-    )
     private val NON_LEXICON_PUNCT = Regex("[^\\p{L}\\p{N}'.,!?;:\\s]+")
     private val STRAY_APOSTROPHE = Regex("(?<!\\p{L})'|'(?!\\p{L})")
-    private val NUMBER_TOKEN = Regex("\\b\\d{1,4}\\b")
 }

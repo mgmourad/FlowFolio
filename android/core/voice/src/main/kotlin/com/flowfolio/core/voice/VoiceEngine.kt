@@ -24,14 +24,18 @@ internal class ChunkCallback(private val onChunk: (FloatArray) -> Boolean) : Fun
  * they can be downloaded to app storage at runtime rather than bundled. Not thread-safe: one engine per
  * reader visit, used from a single worker.
  */
-class VoiceEngine private constructor(private val tts: com.k2fsa.sherpa.onnx.OfflineTts) {
+class VoiceEngine private constructor(
+    private val tts: com.k2fsa.sherpa.onnx.OfflineTts,
+    /** The words this voice can say; every other word is rephrased by [SpeechWords] so none is skipped. */
+    private val vocabulary: Vocabulary
+) {
     val sampleRate: Int get() = tts.sampleRate()
 
     val numSpeakers: Int get() = tts.numSpeakers()
 
     /** Synthesizes [text] in the given speaker, at [speed] (1.0 = natural). */
     fun generate(text: String, speakerId: Int, speed: Float): VoiceAudio {
-        val audio = tts.generate(text, sid = speakerId, speed = speed)
+        val audio = tts.generate(speakable(text), sid = speakerId, speed = speed)
         return VoiceAudio(audio.samples, audio.sampleRate)
     }
 
@@ -43,8 +47,11 @@ class VoiceEngine private constructor(private val tts: com.k2fsa.sherpa.onnx.Off
     @Suppress("UNCHECKED_CAST")
     fun stream(text: String, speakerId: Int, speed: Float, onChunk: (FloatArray) -> Boolean) {
         val callback = ChunkCallback(onChunk) as (FloatArray) -> Int
-        tts.generateWithCallback(text, sid = speakerId, speed = speed, callback = callback)
+        tts.generateWithCallback(speakable(text), sid = speakerId, speed = speed, callback = callback)
     }
+
+    /** [text] with every word in a form this voice can say (sherpa-onnx skips words its lexicon lacks). */
+    fun speakable(text: String): String = SpeechWords.expand(text, vocabulary)
 
     fun release() = tts.release()
 
@@ -65,11 +72,16 @@ class VoiceEngine private constructor(private val tts: com.k2fsa.sherpa.onnx.Off
          * lexicons, so they are passed by their absolute paths (the helper leaves comma lists untouched).
          */
         fun load(modelDir: String): VoiceEngine {
-            val inflected = ensureInflectedLexicon(File(modelDir))
+            val dir = File(modelDir)
+            val inflected = ensureInflectedLexicon(dir)
+            // FlowFolio's own entries come last: sherpa-onnx keeps the last lexicon's entry for a word.
+            val own = runCatching { FlowFolioLexicon.write(dir) }.getOrNull()
+            val english = listOfNotNull(File(dir, "lexicon-us-en.txt"), inflected, own)
             val lexicons = buildString {
                 append("$modelDir/lexicon-us-en.txt")
                 if (inflected != null) append(",${inflected.absolutePath}")
                 append(",$modelDir/lexicon-zh.txt")
+                if (own != null) append(",${own.absolutePath}")
             }
             val config = com.k2fsa.sherpa.onnx.getOfflineTtsConfig(
                 modelDir = modelDir,
@@ -79,7 +91,8 @@ class VoiceEngine private constructor(private val tts: com.k2fsa.sherpa.onnx.Off
                 lexicon = lexicons
             )
             config.silenceScale = SILENCE_SCALE
-            return VoiceEngine(com.k2fsa.sherpa.onnx.OfflineTts(assetManager = null, config = config))
+            val tts = com.k2fsa.sherpa.onnx.OfflineTts(assetManager = null, config = config)
+            return VoiceEngine(tts, Vocabulary.read(english))
         }
 
         /** Loads a Piper (VITS) voice: a per-voice model + tokens + the shared English lexicon, all in [modelDir]. */
@@ -94,7 +107,9 @@ class VoiceEngine private constructor(private val tts: com.k2fsa.sherpa.onnx.Off
             config.model.vits.noiseScale = PIPER_NOISE_SCALE
             config.model.vits.noiseScaleW = PIPER_NOISE_SCALE_W
             config.silenceScale = SILENCE_SCALE
-            return VoiceEngine(com.k2fsa.sherpa.onnx.OfflineTts(assetManager = null, config = config))
+            // Piper's phonemes are not Kokoro's, so FlowFolio's own lexicon is Kokoro's alone; the rules still apply.
+            val tts = com.k2fsa.sherpa.onnx.OfflineTts(assetManager = null, config = config)
+            return VoiceEngine(tts, Vocabulary.read(listOf(File(modelDir, lexiconName))))
         }
 
         private fun ensurePiperCompleteLexicon(dir: File): String = runCatching {
@@ -114,14 +129,19 @@ class VoiceEngine private constructor(private val tts: com.k2fsa.sherpa.onnx.Off
          * `kokoro-int8-multi-lang-v1_0`'s `lexicon-us-en.txt` omits regular `-s`/`-es` inflections for many
          * base nouns and verbs (`devices`, `benefits`, `individuals`, `passwords`, `reasons`, `elements`, etc.).
          * Generates a supplemental lexicon once on disk from `lexicon-us-en.txt` for any word whose plural is missing.
+         *
+         * v4 (2026-11-10): stems ending in `-ss` and `-us` are inflected too (`processes`, `discussed`, `focuses`,
+         * which v2 left out, so the voice skipped them), and verbs (stems whose `-ed` form the lexicon has) get their
+         * `-ing` form (`automating`).
          */
         internal fun ensureInflectedLexicon(dir: File): File? = runCatching {
             val baseFile = File(dir, "lexicon-us-en.txt")
             if (!baseFile.isFile) return null
-            val outFile = File(dir, "lexicon-us-en-inflected-v2.txt")
+            val outFile = File(dir, "lexicon-us-en-inflected-v4.txt")
             if (outFile.isFile && outFile.length() > 0L) return outFile
             val entries = readBaseLexicon(baseFile)
-            val tmpFile = File(dir, "lexicon-us-en-inflected-v2.tmp")
+            listOf("v2", "v3").forEach { File(dir, "lexicon-us-en-inflected-$it.txt").delete() }
+            val tmpFile = File(dir, "lexicon-us-en-inflected-v4.tmp")
             tmpFile.bufferedWriter().use { writer ->
                 writeInflectedEntries(entries, writer)
             }
@@ -168,14 +188,42 @@ class VoiceEngine private constructor(private val tts: com.k2fsa.sherpa.onnx.Off
                         writer.write("$past $phonemes $pastSuffix\n")
                     }
                 }
+                writeIngEntry(word, phonemes, entries, writer)
             }
         }
 
+        /** A verb (the lexicon has its past) gets its -ing form: "automate", "automated", so "automating". */
+        private fun writeIngEntry(
+            word: String,
+            phonemes: String,
+            entries: Map<String, String>,
+            writer: java.io.Writer
+        ) {
+            val isVerb = pastCandidates(word).any { it in entries }
+            val ing = when {
+                word.endsWith("ie") -> "${word.dropLast(2)}ying"
+
+                word.endsWith('e') && !word.endsWith("ee") && !word.endsWith("ye") && !word.endsWith("oe") ->
+                    "${word.dropLast(1)}ing"
+
+                else -> "${word}ing"
+            }
+            if (isVerb && ing !in entries) writer.write("$ing $phonemes ɪ ŋ\n")
+        }
+
+        /**
+         * A stem worth inflecting. Of the words ending in `s`, only `-ss` and `-us` ones (`process`, `focus`): the
+         * rest are mostly plurals already (`dogs`), and sherpa-onnx holds every entry in native memory, about
+         * 500 bytes each (all 60,000 `s` stems cost 32 MB; these cost a fraction).
+         */
         private fun isInflectableStem(word: String): Boolean =
-            word.length >= MIN_STEM_LENGTH && word.all { it in 'a'..'z' } && !word.endsWith('s')
+            word.length >= MIN_STEM_LENGTH && word.all { it in 'a'..'z' } &&
+                (!word.endsWith('s') || word.endsWith("ss") || word.endsWith("us"))
 
         private fun pluralCandidates(word: String): List<String> = when {
             word.endsWith('e') -> listOf("${word}s")
+
+            word.endsWith('s') -> listOf("${word}es")
 
             word.endsWith("ch") || word.endsWith("sh") || word.endsWith('x') || word.endsWith('z') ->
                 listOf("${word}es")

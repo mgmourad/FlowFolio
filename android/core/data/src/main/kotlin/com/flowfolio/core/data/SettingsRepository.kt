@@ -8,6 +8,7 @@ import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.LibraryView
 import com.flowfolio.core.model.MaterialSeed
+import com.flowfolio.core.model.NarratorSkip
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.ReaderText
@@ -38,6 +39,8 @@ interface SettingsRepository {
 
     /** The library's stats band: collapsed, expanded or hidden (ADR-0052). */
     suspend fun setStatsBand(band: StatsBand) = Unit
+
+    suspend fun setNarratorSkip(skip: NarratorSkip) = Unit
 
     /** How the Shelves tab orders its shelves (ADR-0052). */
     suspend fun setShelvesOrder(order: ShelvesOrder) = Unit
@@ -142,6 +145,10 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setStatsBand(band: StatsBand) {
         source.setStatsBand(band)
+    }
+
+    override suspend fun setNarratorSkip(skip: NarratorSkip) {
+        source.setNarratorSkip(skip)
     }
 
     override suspend fun setShelvesOrder(order: ShelvesOrder) {

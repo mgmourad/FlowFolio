@@ -82,6 +82,7 @@ fun ReaderScreen(
     val navigation by viewModel.navigation.collectAsStateWithLifecycle()
     ReaderDisplayEffects(userSettings.keepScreenOn, userSettings.readerBrightness)
     TrimMemoryEffect(viewModel::onTrimMemory)
+    NarratorNotificationPermission(viewModel)
     // System Back closes the book the same way as the Back button (open panels catch it first).
     BackHandler(onBack = onBack)
     // Time read (slice 6): a session runs while the reader is in front, and page turns keep it going.
@@ -130,6 +131,31 @@ private fun placedRibbons(viewModel: ReaderViewModel, bookmarks: ReaderBookmarks
         if (viewModel.pagesFinal) bookmarks.syncPages(stored, placed)
     }
     return placed
+}
+
+/**
+ * Narrator Mode's own notification player needs Android 13's notification permission (the phone's media player does
+ * not): asked the first time narration starts, and not again in this visit if the reader says no.
+ */
+@Composable
+private fun NarratorNotificationPermission(viewModel: ReaderViewModel) {
+    if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU) return
+    val context = LocalContext.current
+    val narrating by viewModel.narrating.collectAsStateWithLifecycle()
+    var asked by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+    // Granted: post FlowFolio's own player, which Android dropped while the permission was missing.
+    val ask = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { granted -> if (granted) NarrationHub.refresh() }
+    LaunchedEffect(narrating) {
+        val permission = android.Manifest.permission.POST_NOTIFICATIONS
+        val granted = androidx.core.content.ContextCompat.checkSelfPermission(context, permission) ==
+            android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (narrating && !granted && !asked) {
+            asked = true
+            ask.launch(permission)
+        }
+    }
 }
 
 @Composable

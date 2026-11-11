@@ -14,6 +14,7 @@ import com.flowfolio.core.model.Atmosphere
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.MaterialSeed
+import com.flowfolio.core.model.NarratorSkip
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.ReaderText
 import com.flowfolio.core.model.StatsBand
@@ -41,6 +42,7 @@ data class SettingsActions(
     val onGlow: (Boolean) -> Unit = {},
     /** The library's stats band: collapsed, expanded or hidden (ADR-0052). */
     val onStatsBand: (StatsBand) -> Unit = {},
+    val onNarratorSkip: (NarratorSkip) -> Unit = {},
     val onPageTurn: (PageTurn) -> Unit = {},
     val onSpreads: (Boolean) -> Unit = {},
     val onCoverAlone: (Boolean) -> Unit = {},
@@ -355,6 +357,8 @@ class SettingsViewModel @Inject constructor(
     fun setRiffleVolume(volume: Float) = viewModelScope.launch { repo.setRiffleVolume(volume) }
 
     fun setScrubHaptics(on: Boolean) = viewModelScope.launch { repo.setScrubHaptics(on) }
+
+    fun setNarratorSkip(skip: NarratorSkip) = viewModelScope.launch { repo.setNarratorSkip(skip) }
 
     fun setReaderText(text: ReaderText) = viewModelScope.launch { repo.setReaderText(text) }
 

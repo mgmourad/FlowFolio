@@ -25,6 +25,7 @@ import com.flowfolio.core.model.BookHealth
 import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.model.FlowStatus
 import com.flowfolio.core.model.HighlightColor
+import com.flowfolio.core.model.NarratorSkip
 import com.flowfolio.core.model.OutlineEntry
 import com.flowfolio.core.model.PageLabels
 import com.flowfolio.core.model.PageRect
@@ -39,6 +40,7 @@ import com.flowfolio.core.pdf.PdfDocument
 import com.flowfolio.core.pdf.PdfException
 import com.flowfolio.core.reflow.CodeFace
 import com.flowfolio.core.reflow.Locator
+import com.flowfolio.core.voice.SpeechSegment
 import com.flowfolio.core.voice.SpeechText
 import com.flowfolio.core.voice.Voice
 import com.flowfolio.core.voice.VoiceEngine
@@ -833,6 +835,11 @@ class ReaderViewModel @Inject constructor(
     private var narrator: Narrator? = null
 
     private val narratorMutex = kotlinx.coroutines.sync.Mutex()
+
+    /** Audio focus and the headphones: losing either stops the narrator (it never talks over a call). */
+    private val narratorFocus = NarratorAudioFocus(context) {
+        if (_narrating.value) stopNarration()
+    }
     private var voiceLoadJob: Job? = null
     private var pageReadJob: Job? = null
     private var nextPrefetchJob: Job? = null
@@ -846,6 +853,98 @@ class ReaderViewModel @Inject constructor(
 
     private val _narrating = MutableStateFlow(false)
     internal val narrating: StateFlow<Boolean> = _narrating.asStateFlow()
+
+    init {
+        // Every way narration ends (stopped, the book's end, a failure) gives the audio focus back.
+        viewModelScope.launch { _narrating.collect { on -> if (!on) narratorFocus.release() } }
+    }
+
+    /** Each page's speech as it was prepared for reading, for the previous and next buttons. */
+    private val narratorSegments = java.util.concurrent.ConcurrentHashMap<Int, List<SpeechSegment>>()
+
+    /** What the lock screen, the notifications and a headset ask of this reader's narrator ([NarrationHub]). */
+    private val narrationCommands = object : NarrationCommands {
+        override fun play() {
+            if (!_narrating.value) startNarration()
+        }
+
+        override fun pause() {
+            if (_narrating.value) stopNarration()
+        }
+
+        override fun next() = skipNarration(forward = true)
+
+        override fun previous() = skipNarration(forward = false)
+
+        override fun cycleSpeed() {
+            val current = SPEEDS.indices.minBy { kotlin.math.abs(SPEEDS[it] - _narratorRate.value) }
+            setNarratorRate(SPEEDS[(current + 1) % SPEEDS.size])
+        }
+
+        override fun close() {
+            stopNarration()
+            NarrationHub.detach(this)
+        }
+    }
+
+    private fun currentBook() = opened?.book ?: epub?.opened?.book ?: fixedBook
+
+    private fun nowPlaying(): NowPlaying? {
+        val book = currentBook() ?: return null
+        val outline = _navigation.value.outline
+        val chapter = PageLookup.chapterTitleAt(outline, anchorPage) ?: PageLookup.subtitleAt(outline, anchorPage)
+        return NowPlaying(
+            bookId = bookId,
+            title = book.title,
+            author = book.author,
+            chapter = chapter,
+            coverPath = book.coverPath,
+            playing = _narrating.value,
+            rate = _narratorRate.value
+        )
+    }
+
+    private fun publishNowPlaying() {
+        nowPlaying()?.let { NarrationHub.update(narrationCommands, it) }
+    }
+
+    /** The narrator's previous or next button: by paragraph, page, chapter or subchapter (Settings, Sound & voice). */
+    private fun skipNarration(forward: Boolean) {
+        val ready = _state.value as? ReaderState.Ready ?: return
+        viewModelScope.launch {
+            val page = if (currentSegmentPage >= 0) currentSegmentPage else anchorPage
+            val at = NarratorSkips.Place(page, if (currentSegmentPage == page) currentSegmentIndex else 0)
+            val starts = NarratorSkips.paragraphStarts(segmentsFor(page))
+            val how = settings.narratorSkip
+            val outline = _navigation.value.outline
+            val target = if (forward) {
+                NarratorSkips.next(how, at, starts, outline, ready.pageCount)
+            } else {
+                val before = if (how == NarratorSkip.PARAGRAPH && page > 0) segmentsFor(page - 1) else emptyList()
+                NarratorSkips.previous(how, at, starts, outline) { NarratorSkips.paragraphStarts(before) }
+            }
+            if (target != null) jumpNarration(target, ready.pageCount)
+        }
+    }
+
+    private suspend fun segmentsFor(page: Int): List<SpeechSegment> =
+        narratorSegments[page] ?: SpeechText.segments(pageText(page)?.text.orEmpty())
+
+    /** Moves the narrator to [target], turning to its page; it reads on from there if it was reading. */
+    private fun jumpNarration(target: NarratorSkips.Place, pageCount: Int) {
+        val page = target.page.coerceIn(0, (pageCount - 1).coerceAtLeast(0))
+        currentSegmentPage = page
+        currentSegmentIndex = target.segment
+        if (page != anchorPage) {
+            lastTurnAt = android.os.SystemClock.uptimeMillis()
+            anchorPage = page
+            publishReady()
+            replan()
+            saveProgress()
+        }
+        publishNowPlaying()
+        if (_narrating.value) readPage(page, resumeSegment = true)
+    }
 
     private val _narratorRate = MutableStateFlow(1f)
     internal val narratorRate: StateFlow<Float> = _narratorRate.asStateFlow()
@@ -923,7 +1022,14 @@ class ReaderViewModel @Inject constructor(
 
     private fun startNarration() {
         _narratorError.value = null
+        if (!narratorFocus.acquire()) {
+            _narratorError.value = context.getString(R.string.reader_narrator_no_focus)
+            return
+        }
         _narrating.value = true
+        // Keeps narration going with the app in the background or the phone locked, and shows its players.
+        nowPlaying()?.let { NarrationHub.attach(narrationCommands, it) }
+        NarratorService.start(context)
         voiceLoadJob?.cancel()
         val current = narrator
         val voice = VoiceSpeakers.voiceOf(_narratorVoice.value.orEmpty()) ?: VoiceSpeakers.defaults.first()
@@ -1024,15 +1130,26 @@ class ReaderViewModel @Inject constructor(
         narrator?.stop()
     }
 
-    private fun readPage(page: Int, resumeSegment: Boolean = false) {
+    /**
+     * Reads [page] aloud. [continuing] when narration ran on from the page before, which already said a word
+     * hyphenated across the break; otherwise that word is said whole at the top of [page].
+     */
+    private fun readPage(page: Int, resumeSegment: Boolean = false, continuing: Boolean = false) {
         pageReadJob?.cancel()
         nextPrefetchJob?.cancel()
         pageReadJob = viewModelScope.launch {
-            val rawCurrent = pageText(page)?.text.orEmpty()
+            val previousRaw = if (page > 0) pageText(page - 1)?.text else null
+            val ownRaw = pageText(page)?.text.orEmpty()
+            val rawCurrent = if (continuing) {
+                SpeechText.continuingOnto(ownRaw, previousRaw)
+            } else {
+                SpeechText.startingOn(ownRaw, previousRaw)
+            }
             val nextPage = if (_narratorContinuous.value) findNextReadablePage(page + 1) else null
             val rawNext = nextPage?.let { pageText(it)?.text.orEmpty() }
             val (stitchedCurrent, stitchedNext) = SpeechText.stitchCrossPage(rawCurrent, rawNext)
             val segments = SpeechText.segments(stitchedCurrent)
+            narratorSegments[page] = segments
             if (segments.isEmpty()) {
                 handleBlankNarratorPage(page)
                 return@launch
@@ -1077,6 +1194,7 @@ class ReaderViewModel @Inject constructor(
         publishReady()
         replan()
         saveProgress()
+        publishNowPlaying()
         if (_narratorContinuous.value) {
             prefetchNextNarratorPage(anchorPage)
         }
@@ -1090,8 +1208,15 @@ class ReaderViewModel @Inject constructor(
                 narrator?.setNextPage(null)
                 return@launch
             }
-            val rawNext = pageText(nextPage)?.text.orEmpty()
+            val ownNext = pageText(nextPage)?.text.orEmpty()
+            // The page being read already said a word hyphenated across the break: leave its fragment out here.
+            val rawNext = if (nextPage == currentPage + 1) {
+                SpeechText.continuingOnto(ownNext, pageText(currentPage)?.text)
+            } else {
+                ownNext
+            }
             val segments = prepareStitchedSegments(nextPage, rawNext)
+            narratorSegments[nextPage] = segments
             if (_narrating.value && _narratorContinuous.value) {
                 narrator?.setNextPage(nextPage, segments)
             }
@@ -1156,7 +1281,8 @@ class ReaderViewModel @Inject constructor(
         publishReady()
         replan()
         saveProgress()
-        readPage(anchorPage)
+        publishNowPlaying()
+        readPage(anchorPage, continuing = true)
     }
 
     /** The reader's root layout reports the window size whenever it changes (fold, unfold, rotation, resize). */
@@ -1486,6 +1612,12 @@ class ReaderViewModel @Inject constructor(
         sound = viewModelScope.launch { ambience.play(chosen.ambient, chosen.volume, chosen.soundUri) }
     }
 
+    init {
+        // The lock screen and the notifications follow playing, paused and the speed. Kept after every property
+        // (Kotlin runs initialisers in order, and viewModelScope starts this at once): the flows must exist.
+        viewModelScope.launch { combine(_narrating, _narratorRate) { _, _ -> }.collect { publishNowPlaying() } }
+    }
+
     override fun onCleared() {
         ambience.stop()
         thumbnails?.clear()
@@ -1496,6 +1628,8 @@ class ReaderViewModel @Inject constructor(
         epub?.close()
         fixed?.close()
         narrator?.release()
+        narratorFocus.release()
+        NarrationHub.detach(narrationCommands)
     }
 
     companion object {

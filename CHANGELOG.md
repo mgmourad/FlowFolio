@@ -5,6 +5,82 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [0.6.0-canary.4] - 2026-11-10
+
+> Narrator Mode grows up: it keeps reading in the background and with the phone locked, with the phone's own player
+> and one of FlowFolio's own, and it no longer skips words it doesn't know. Verified locally and on `fold8_api37`;
+> gated on green CI.
+
+### Added
+- **Narrator Mode keeps reading in the background and with the screen off** (owner, 2026-11-10; ADR-0053).
+  `NarratorService` is a foreground service of type media playback, with a `MediaSession` and a wake lock held while
+  the voice speaks.
+  - **The phone's own player** (lock screen, quick settings, headsets, Bluetooth): previous, play or pause, next, and
+    a speed button.
+  - **FlowFolio's own persistent player** in the notifications: the title, previous, play or pause, next, a **speed
+    chip** that steps through 0.8×, 1×, 1.25×, 1.5× and 2× and shows the rate, and close. Expanded, it shows the
+    album art.
+  - **The title is "FlowFolio: <Book Title> - <Author> - <Chapter>"**, following the chapter as the narrator reads.
+  - **Album art:** the book's cover **fitted** inside a square, never stretched, on a softened copy of itself, with
+    the app icon as a badge on its bottom right (`NarratorArt`). A book without a cover gets its title on paper.
+  - **No seekbar**: the session never publishes a duration.
+  - FlowFolio's player asks for Android 13's notification permission the first time narration starts, and appears as
+    soon as it is granted.
+- **Settings → Sound & voice → Skip/Reverse behavior**: Paragraph (the default), Page, Chapter or Subchapter. It
+  sets how far previous and next move, in both players and on headsets (`NarratorSkips`).
+  - Previous works like a music player's: partway into a paragraph, chapter or section it restarts that one, and
+    from its start it goes to the one before.
+  - Chapters are the outline's top level, subchapters any level. A book without an outline skips by page.
+- Verified on `fold8_api37`:
+  - both players appear, with the title, the art and its badge, the speed (1× to 1.25× from the chip, with the
+    session's own speed following) and no seekbar;
+  - skipping by paragraph and by chapter lands where the tests say, from FlowFolio's player and from the phone's
+    media controls;
+  - narration kept playing for 80 s with the screen off and the app in the background, wake lock held;
+  - leaving the book stops the voice, the service and both notifications.
+  - The emulator has no screen lock set, so the lock-screen player itself was not seen. It is drawn from the same
+    session.
+
+### Fixed
+- **Narrator Mode no longer skips words it doesn't know** (owner's report, 2026-11-10: "Kubernetes", "Cybercrime",
+  "CSA", "NIST").
+  - The cause: sherpa-onnx 2.0.1's multi-language Kokoro looks every word up in its lexicon and **silently drops**
+    any it cannot find (`OOV word skipped`). That happens even though the voice pack ships espeak-ng, and no setting
+    or newer release changes it. In *Learning DevOps* that was 4.5% of all words, about one in 22.
+  - `SpeechWords` (`:core:voice`) now rephrases every word the voice doesn't know into words it does, using the
+    voice's own vocabulary (`Vocabulary`, packed into one string to keep memory low):
+    - CamelCase is split ("GitHub", "PowerShell").
+    - Acronyms are spelled ("CSA", "VMs", "APIs"); known ones of four letters or more are said as words ("NIST").
+    - Possessives and contractions are read properly ("Docker's", "that's").
+    - Compounds become known words ("Dockerfile", "webhook").
+    - Letters and digits are said apart ("IPv6").
+    - Anything left is sounded out from known pieces.
+    - Headings in capitals are still read as words.
+  - FlowFolio's own lexicon (`FlowFolioLexicon`), loaded last so it wins: about 50 technical names (Kubernetes,
+    Ansible, Jenkins, YAML, JSON, nginx, kubectl…), plus the article "a" as /ə/. The pack lists only the letter
+    name, so **every "a" was read as "ay"**.
+  - Numbers, symbols and abbreviations are read for their meaning (`SpeechNumbers`):
+    - years ("twenty twenty three"), thousands, decimals, versions ("two point zero point one"), ordinals;
+    - $, %, & and + ("C plus plus"), ranges ("1990 to 2000"), and links as their address;
+    - e.g., i.e., etc., Dr., Mr., Fig. and No. are expanded and no longer treated as the end of a sentence, and
+      neither are initials ("J. R. R. Tolkien").
+    - Before this, "$10,000" was read "ten, zero", and "2023", "1st" and "45%" were skipped.
+  - The extra forms list (`lexicon-us-en-inflected-v4`) now covers stems in -ss and -us ("processes", "discussed",
+    "focuses") and verbs' -ing forms ("automating"). It holds to those stems because sherpa-onnx keeps about
+    500 bytes of native memory per entry. That adds 13 MB while narrating, against 32 MB for every stem ending in s.
+  - Measured on *Learning DevOps* (103,000 words): **4,555 words skipped before, 0 now**. The real engine, fed
+    the rephrased text, reported no skipped word across 34 sample sentences.
+- **Narrator Mode takes audio focus** (`NarratorAudioFocus`). It used to talk over music, carry on through a phone
+  call, and keep speaking aloud through the speaker when headphones were unplugged. Now music pauses for it, and
+  it stops on a call, when another app starts playing, or when the headphones come out. Every way narration ends
+  gives the focus back.
+- **A word hyphenated across a page break is said once.** Continuous reading prepared each following page with the
+  fragment the previous page had already finished ("informa-" / "tion"), so the fragment was said again or
+  skipped. Starting on such a page now says the whole word (`SpeechText.startingOn`, `continuingOnto`).
+- Verified on `fold8_api37`: the voice pack downloaded and installed in the app, the Kubernetes chapter of
+  *Learning DevOps* was read with Kubernetes and links spoken, and audio focus was held while speaking and
+  released on Pause.
+
 ## [0.6.0-canary.3] - 2026-11-10
 
 > A fix release for a serious bug: Dynamic Flow could stay at "Preparing" for good when Android stopped the

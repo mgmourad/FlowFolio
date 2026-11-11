@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Narrator Mode's own player, expanded (owner, 2026-11-10): the cover and title, then the controls, speed, close. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/narrator_art"
+            android:layout_width="72dp"
+            android:layout_height="72dp"
+            android:contentDescription="@null"
+            android:scaleType="fitCenter" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/narrator_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="3"
+                android:textAppearance="@android:style/TextAppearance.Material.Notification.Title" />
+
+            <TextView
+                android:id="@+id/narrator_status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:maxLines="1"
+                android:textAppearance="@android:style/TextAppearance.Material.Notification" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/narrator_previous"
+            style="@style/NarratorButton"
+            android:contentDescription="@string/narrator_previous"
+            android:src="@drawable/ic_narrator_previous" />
+
+        <ImageButton
+            android:id="@+id/narrator_play"
+            style="@style/NarratorButton"
+            android:contentDescription="@string/narrator_play"
+            android:src="@drawable/ic_narrator_play" />
+
+        <ImageButton
+            android:id="@+id/narrator_next"
+            style="@style/NarratorButton"
+            android:contentDescription="@string/narrator_next"
+            android:src="@drawable/ic_narrator_next" />
+
+        <TextView
+            android:id="@+id/narrator_speed"
+            style="@style/NarratorSpeed" />
+
+        <!-- A spacer: RemoteViews accept only certain classes, and a plain View is not one. -->
+        <FrameLayout
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/narrator_close"
+            style="@style/NarratorButton"
+            android:contentDescription="@string/narrator_close"
+            android:src="@drawable/ic_narrator_close" />
+    </LinearLayout>
+</LinearLayout>

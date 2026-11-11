@@ -818,4 +818,10 @@
     <string name="details_flow_off_body">Reflow this PDF to fit your screen. It is prepared on your phone, about a minute the first time, and the original stays as it is.</string>
     <string name="details_flow_on_title">Dynamic Flow is on.</string>
     <string name="details_flow_on_body">This PDF opens reflowed to your font and size. The original is untouched; switch views from Aa.</string>
+    <string name="settings_narrator_skip">Skip/Reverse behavior</string>
+    <string name="settings_narrator_skip_detail">What the narrator\'s previous and next buttons move by, on the lock screen, in the notifications and on headphones</string>
+    <string name="narrator_skip_paragraph">Paragraph</string>
+    <string name="narrator_skip_page">Page</string>
+    <string name="narrator_skip_chapter">Chapter</string>
+    <string name="narrator_skip_subchapter">Subchapter</string>
 </resources>

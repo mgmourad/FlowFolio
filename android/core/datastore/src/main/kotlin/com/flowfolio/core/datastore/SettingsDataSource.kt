@@ -19,6 +19,7 @@ import com.flowfolio.core.model.FlowCarry
 import com.flowfolio.core.model.LibrarySort
 import com.flowfolio.core.model.LibraryView
 import com.flowfolio.core.model.MaterialSeed
+import com.flowfolio.core.model.NarratorSkip
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
 import com.flowfolio.core.model.ReaderText
@@ -51,6 +52,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             librarySort = p[SORT].toEnum(defaults.librarySort),
             libraryView = p[LIBRARY_VIEW].toEnum(defaults.libraryView),
             statsBand = p[STATS_BAND].toEnum(defaults.statsBand),
+            narratorSkip = p[NARRATOR_SKIP].toEnum(defaults.narratorSkip),
             shelvesOrder = p[SHELVES_ORDER].toEnum(defaults.shelvesOrder),
             readerSpreads = p[READER_SPREADS] ?: defaults.readerSpreads,
             spreadCoverAlone = p[COVER_ALONE] ?: defaults.spreadCoverAlone,
@@ -143,6 +145,10 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
 
     suspend fun setStatsBand(band: StatsBand) {
         store.edit { it[STATS_BAND] = band.name }
+    }
+
+    suspend fun setNarratorSkip(skip: NarratorSkip) {
+        store.edit { it[NARRATOR_SKIP] = skip.name }
     }
 
     suspend fun setShelvesOrder(order: ShelvesOrder) {
@@ -282,6 +288,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val SORT = stringPreferencesKey("library_sort")
         val LIBRARY_VIEW = stringPreferencesKey("library_view")
         val STATS_BAND = stringPreferencesKey("library_stats_band")
+        val NARRATOR_SKIP = stringPreferencesKey("narrator_skip")
         val SHELVES_ORDER = stringPreferencesKey("shelves_order")
         val READER_SPREADS = booleanPreferencesKey("reader_spreads")
         val COVER_ALONE = booleanPreferencesKey("spread_cover_alone")

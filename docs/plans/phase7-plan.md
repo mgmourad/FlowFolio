@@ -25,7 +25,7 @@ its picture rather than inventing text.
 - The converter is a plain JVM module (ADR-0044), and CI's corpus gate runs it on Linux. Whatever reads text must run
   there too, or scanned books can't be gated.
 
-## M1: OCR spike and ADR-0053 (decide before building)
+## M1: OCR spike and ADR-0054 (decide before building)
 
 Three candidates. A and C are measured on the same ~20 English and ~20 Arabic scanned pages; B is listed for the
 record:
@@ -55,7 +55,7 @@ record:
   Java API, which must be the *same* runtime version as sherpa's (two copies of `libonnxruntime.so` cannot coexist),
   or a small JNI over its C API, like our PDFium bridge. The spike settles which. **Any new dependency is brought to
   you first**, with licence, last release date and alternatives.
-- **Output:** ADR-0053 (OCR engine) for your acceptance.
+- **Output:** ADR-0054 (OCR engine) for your acceptance (ADR-0053 went to background narration, 2026-11-10).
 
 ## M2: OCR in the pipeline
 

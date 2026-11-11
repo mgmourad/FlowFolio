@@ -35,7 +35,7 @@ class SpeechTextTest {
     @Test
     fun `cleans PDF replacement chars, parentheses, bullets and numbers for lexicon`() {
         val cleaned = SpeechText.cleanForLexicon("● (by pass\uFFFDphrase 149 - cybercrime)")
-        assertEquals("by pass phrase one hundred forty nine cyber crime", cleaned)
+        assertEquals("by pass phrase one hundred forty nine cybercrime", cleaned)
     }
 
     @Test
@@ -72,5 +72,21 @@ class SpeechTextTest {
         )
         assertEquals("They bypassed the password", cur.trim())
         assertEquals("protections easily.", next?.trim())
+    }
+
+    @Test
+    fun aWordHyphenatedAcrossPagesIsSaidOnceWhole() {
+        val first = "The system keeps the infor-"
+        val second = "mation it needs.\nNext line here."
+        // Reading on from the first page, which already said "information": no fragment at the top.
+        assertEquals("it needs. Next line here.", SpeechText.normalize(SpeechText.continuingOnto(second, first)))
+        // Starting on the second page: the word is said whole.
+        assertEquals(
+            "information it needs. Next line here.",
+            SpeechText.normalize(SpeechText.startingOn(second, first))
+        )
+        // A page that does not continue a word is unchanged either way.
+        assertEquals("Fresh start.", SpeechText.startingOn("Fresh start.", "The end."))
+        assertEquals("Fresh start.", SpeechText.continuingOnto("Fresh start.", "The end."))
     }
 }

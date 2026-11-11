@@ -93,6 +93,9 @@ enum class ShelvesOrder { CUSTOM, NAME, MOST_BOOKS, MOST_READ, MOST_MARKS }
 /** The library's stats band (ADR-0052): one summary line that opens, open at once, or not shown. */
 enum class StatsBand { COLLAPSED, EXPANDED, HIDDEN }
 
+/** How far the narrator's previous and next buttons move: the lock screen, the notifications and headsets. */
+enum class NarratorSkip { PARAGRAPH, PAGE, CHAPTER, SUBCHAPTER }
+
 enum class ThemePreference { SYSTEM, LIGHT, DARK }
 
 data class UserSettings(
@@ -103,6 +106,8 @@ data class UserSettings(
     val librarySort: LibrarySort = LibrarySort.RECENT,
     /** How the library shows its books, remembered (ADR-0052). */
     val libraryView: LibraryView = LibraryView.SHELF,
+    /** What Narrator Mode's previous and next buttons skip by (owner, 2026-11-10). */
+    val narratorSkip: NarratorSkip = NarratorSkip.PARAGRAPH,
     /** The library's stats band: its state, remembered, and Settings' choice of Hidden (ADR-0052). */
     val statsBand: StatsBand = StatsBand.COLLAPSED,
     /** How the Shelves tab orders its shelves, remembered (ADR-0052). */

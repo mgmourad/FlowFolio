@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Narrator Mode's notification player (owner, 2026-11-10). -->
+    <style name="NarratorButton">
+        <item name="android:layout_width">44dp</item>
+        <item name="android:layout_height">44dp</item>
+        <item name="android:background">@android:color/transparent</item>
+        <item name="android:scaleType">center</item>
+    </style>
+
+    <style name="NarratorSpeed">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">30dp</item>
+        <item name="android:layout_marginStart">6dp</item>
+        <item name="android:minWidth">52dp</item>
+        <item name="android:gravity">center</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:background">@drawable/narrator_speed_chip</item>
+        <item name="android:textAppearance">@android:style/TextAppearance.Material.Notification.Title</item>
+    </style>
+
+    <string name="narrator_channel">Narrator</string>
+    <string name="narrator_channel_detail">Narrator Mode\'s player while it reads a book aloud</string>
+    <string name="narrator_previous">Previous</string>
+    <string name="narrator_next">Next</string>
+    <string name="narrator_play">Play</string>
+    <string name="narrator_pause">Pause</string>
+    <string name="narrator_close">Close</string>
+    <string name="narrator_speed_action">Speed %1$s</string>
+    <string name="narrator_status">Narrator Mode · %1$s</string>
+    <string name="narrator_status_paused">Narrator Mode · paused · %1$s</string>
+</resources>
