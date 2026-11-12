@@ -5,6 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [0.7.0-beta.1] - 2026-11-12
+
+### Phase 7 M3: the scanned-books quality gate (2026-11-12)
+- **A scanned corpus with proofread ground truth.** 41 public-domain pages (21 English, 20 Arabic) from Wikisource's
+  proofread `Page:` namespace; the ground-truth text and the manifest (id, source, scan sha256) are committed to
+  `samples/golden/ocr/`, the scans stay fetched (`tools/corpus/fetch_ocr_corpus.py`), never committed.
+- **`OcrCorpusTest`** (in `:tools:convert`, the corpus harness) measures, per page, word recall and CER, the share of
+  pages kept as text, and that the manuscripts and a blurred page stay pictures. It runs in the `corpus` CI job
+  (which installs `libtesseract` and fetches the pages and models), checked against the committed baselines.
+- **The gates hold as ADR-0054 set them.** English 98.9% recall / 3.0% CER, all 21 pages kept at the 0.85 confidence
+  gate; Arabic printed 93.0% recall / 16.0% CER on the pages the two engines agreed on (4 of 10 kept at the 40% bar —
+  the pre-1950 metal type stays pictures, the 9 manuscripts do too).
+- **OCR is fast enough.** English recognition is about 0.35 s a page compiled (the debug build's 25–35 s was
+  interpreted Kotlin); on the Fold that is about 0.7–1.4 s a page, inside the 2 s target.
+
 ### Phase 7 M2: Arabic scanned books read by Tesseract (2026-11-11)
 - **Tesseract reads Arabic scans.** Tesseract 5.5.4 and Leptonica 1.87.0 are built from source with the NDK for
   arm64-v8a, armeabi-v7a and x86_64 (pinned tarballs, SHA-256-checked, as PDFium and sherpa-onnx are). Google's
