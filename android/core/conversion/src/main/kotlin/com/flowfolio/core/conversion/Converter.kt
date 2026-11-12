@@ -26,6 +26,7 @@ import com.flowfolio.core.conversion.stage.Linking
 import com.flowfolio.core.conversion.stage.ReadingOrder
 import com.flowfolio.core.conversion.stage.Regions
 import com.flowfolio.core.conversion.stage.Shapes
+import com.flowfolio.core.conversion.stage.TextDirection
 import java.io.OutputStream
 
 /**
@@ -144,7 +145,12 @@ class Converter(private val settings: Settings = Settings()) {
         }
         val title = pdf.metadata("Title") ?: source.fileName.substringBeforeLast('.')
         val outline = pdf.outline().map { OutlineEntry(it.depth, it.title, it.page) }
-        return Document(title, pdf.metadata("Author"), pages, outline)
+        return Document(title, pdf.metadata("Author"), pages, outline).also { doc ->
+            // The book's script: a book whose strong letters read mostly right to left is Arabic, and its EPUB turns
+            // right to left (dir="rtl", lang="ar", page-progression-direction="rtl").
+            val text = pages.joinToString("") { p -> p.lines.joinToString("") { it.text } }
+            doc.language = if (TextDirection.mostlyRightToLeft(text)) "ar" else "en"
+        }
     }
 
     /**

@@ -33,13 +33,16 @@ internal class ChapterXhtml(
     private val sb = StringBuilder()
     private val marked = HashSet<Int>()
 
+    /** "rtl" for an Arabic chapter, else "ltr". */
+    private val dir = if (language == "ar") "rtl" else "ltr"
+
     // One case per way a block follows the one before it (continued, captioned, a listing over a page turn).
     @Suppress("CyclomaticComplexMethod")
     fun write(): String {
         sb.append("""<?xml version="1.0" encoding="UTF-8"?>""").append('\n')
         sb.append("<!DOCTYPE html>\n")
         sb.append("""<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" """)
-        sb.append("""lang="${esc(language)}" xml:lang="${esc(language)}">""").append('\n')
+        sb.append("""lang="${esc(language)}" xml:lang="${esc(language)}" dir="${esc(dir)}">""").append('\n')
         sb.append("<head><meta charset=\"UTF-8\"/><title>${esc(chapter.title)}</title>")
         sb.append("""<link rel="stylesheet" type="text/css" href="book.css"/></head>""").append('\n')
         sb.append("""<body><section epub:type="chapter" role="doc-chapter">""").append('\n')

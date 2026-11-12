@@ -46,6 +46,28 @@ class EpubWriterTest {
         assertArrayEquals(defaultWrite(), explicitWrite())
     }
 
+    @Test
+    fun anArabicBookWritesRightToLeft() {
+        val doc = threeChapterDoc().also { it.language = "ar" }
+        val entries = zipEntries(write(doc, doc.chapters))
+        val opf = entries.getValue("OEBPS/content.opf")
+        assertTrue(opf.contains("""xml:lang="ar" dir="rtl""""))
+        assertTrue(opf.contains("<dc:language>ar</dc:language>"))
+        assertTrue(opf.contains("""page-progression-direction="rtl""""))
+        assertTrue(entries.getValue("OEBPS/ch001.xhtml").contains("""lang="ar" xml:lang="ar" dir="rtl""""))
+        assertTrue(entries.getValue("OEBPS/nav.xhtml").contains("""lang="ar" xml:lang="ar" dir="rtl""""))
+    }
+
+    @Test
+    fun anEnglishBookWritesLeftToRight() {
+        val doc = threeChapterDoc()
+        val entries = zipEntries(write(doc, doc.chapters))
+        val opf = entries.getValue("OEBPS/content.opf")
+        assertTrue(opf.contains("""xml:lang="en" dir="ltr""""))
+        assertFalse(opf.contains("""page-progression-direction="rtl""""))
+        assertTrue(entries.getValue("OEBPS/ch001.xhtml").contains("""lang="en" xml:lang="en" dir="ltr""""))
+    }
+
     private fun write(doc: Document, chapters: List<Chapter>): ByteArray = ByteArrayOutputStream().use { out ->
         EpubWriter(doc, "0123456789abcdef0123456789abcdef", modified).write(out, emptyMap(), chapters)
         out.toByteArray()

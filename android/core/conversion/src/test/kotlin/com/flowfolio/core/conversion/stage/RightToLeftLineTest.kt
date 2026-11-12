@@ -3,6 +3,8 @@ package com.flowfolio.core.conversion.stage
 import com.flowfolio.core.conversion.pdf.FontInfo
 import com.flowfolio.core.conversion.pdf.RawPage
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -67,5 +69,13 @@ class RightToLeftLineTest {
     fun `the next Arabic line still starts a new line`() {
         val lines = page(arabicLine("نعتذر", "عن"), arabicLine("الكتب", "السابقة", top = 120f))
         assertEquals(listOf("نعتذر عن", "الكتب السابقة"), lines)
+    }
+
+    @Test
+    fun aBookOfMostlyArabicLettersIsRightToLeft() {
+        assertTrue(TextDirection.mostlyRightToLeft("نعتذر عن أدراج كل الكتب السابقة".repeat(10)))
+        assertFalse(TextDirection.mostlyRightToLeft("The quick brown fox jumps over the lazy dog."))
+        // More Arabic than Latin still reads right to left, an English word inside it included.
+        assertTrue(TextDirection.mostlyRightToLeft("هذا نص عربي طويل يقرأ من اليمين مع كلمة English واحدة فيه"))
     }
 }

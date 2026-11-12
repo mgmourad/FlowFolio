@@ -28,4 +28,18 @@ object TextDirection {
      * lies on: text reading right to left steps leftwards, and a Latin word inside an Arabic line steps rightwards.
      */
     fun gapBetween(lastLeft: Float, lastRight: Float, b: Box): Float = maxOf(b.left - lastRight, lastLeft - b.right)
+
+    /** Whether most of [text]'s strongly directional characters read right to left (a whole book's script). */
+    fun mostlyRightToLeft(text: CharSequence): Boolean {
+        var rtl = 0
+        var ltr = 0
+        for (c in text) {
+            when (direction(c)) {
+                true -> rtl++
+                false -> ltr++
+                null -> Unit
+            }
+        }
+        return rtl > ltr
+    }
 }

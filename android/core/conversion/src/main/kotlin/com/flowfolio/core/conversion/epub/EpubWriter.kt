@@ -17,7 +17,10 @@ import java.util.zip.ZipOutputStream
  * chapter, `book.css` and the images.
  */
 class EpubWriter(private val doc: Document, private val bookId: String, private val modified: String) {
-    private val language = "en"
+    private val language = doc.language
+
+    /** "rtl" for an Arabic book, else "ltr": the pages' direction and the package's page-progression-direction. */
+    private val dir = if (doc.rightToLeft) "rtl" else "ltr"
 
     fun write(out: OutputStream, images: Map<String, ByteArray>, chapters: List<Chapter> = doc.chapters) {
         ZipOutputStream(out).use { zip ->
@@ -35,7 +38,7 @@ class EpubWriter(private val doc: Document, private val bookId: String, private 
     private fun opf(images: Set<String>, chapters: List<Chapter>): String = buildString {
         append("""<?xml version="1.0" encoding="UTF-8"?>""").append('\n')
         append("""<package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" """)
-        append("""xml:lang="$language" """)
+        append("""xml:lang="$language" dir="$dir" """)
         append("""prefix="flowfolio: https://flowfolio.app/ns#">""").append('\n')
         append("""<metadata xmlns:dc="http://purl.org/dc/elements/1.1/">""").append('\n')
         append("""<dc:identifier id="bookid">urn:flowfolio:$bookId</dc:identifier>""").append('\n')
@@ -63,7 +66,9 @@ class EpubWriter(private val doc: Document, private val bookId: String, private 
             val type = if (name.endsWith(".webp")) "image/webp" else "image/png"
             append("""<item id="i${n + 1}" href="$name" media-type="$type"/>""").append('\n')
         }
-        append("</manifest>\n<spine>\n")
+        append("</manifest>\n<spine")
+        if (doc.rightToLeft) append(""" page-progression-direction="rtl"""")
+        append(">\n")
         chapters.indices.forEach { append("""<itemref idref="c${it + 1}"/>""").append('\n') }
         append("</spine>\n</package>\n")
     }
@@ -73,7 +78,7 @@ class EpubWriter(private val doc: Document, private val bookId: String, private 
         append("<!DOCTYPE html>\n")
         append(
             """<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" """ +
-                """lang="$language" xml:lang="$language">"""
+                """lang="$language" xml:lang="$language" dir="$dir">"""
         )
         append("<head><meta charset=\"UTF-8\"/><title>${esc(doc.title)}</title></head><body>\n")
         append("""<nav epub:type="toc" id="toc" role="doc-toc"><h1>Contents</h1>""").append('\n')

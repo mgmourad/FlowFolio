@@ -20,6 +20,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   installs `libtesseract` and `tesseract-ocr-ara`.
 - Verified on `fold8_api37`: a two-page Arabic scan converts with both pages read as `ocr:tesseract-ara` (word
   agreement 58% and 80%).
+- **Arabic books open turning right to left.** A book whose strong letters read mostly right to left is written with
+  `dir="rtl"` and `lang="ar"` on its chapters and package, and `page-progression-direction="rtl"` on its spine (the
+  reader already turns right to left). Engine **1.5.2**, so books convert again.
 
 ### Arabic books, from the owner's own (2026-11-11)
 - **Typed Arabic text reads in order.** The words of a born-digital Arabic page came out reversed. The cause was a

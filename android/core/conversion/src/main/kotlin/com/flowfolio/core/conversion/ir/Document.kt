@@ -13,6 +13,12 @@ class Document(val title: String, val author: String?, val pages: List<Page>, va
 
     /** Chapters in reading order (Stage F). */
     var chapters: List<Chapter> = emptyList()
+
+    /** The book's language, set by the converter from its script: "ar" for Arabic, "en" otherwise. */
+    var language: String = "en"
+
+    /** Whether the book reads right to left (its [language] is Arabic). */
+    val rightToLeft: Boolean get() = language == "ar"
 }
 
 /** An outline entry: [depth] from 0, its [title], and the 0-based [page] it points at (-1 when it points nowhere). */
