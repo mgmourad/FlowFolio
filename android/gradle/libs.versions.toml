@@ -41,6 +41,8 @@ detekt = "1.23.8"
 serialization = "1.12.0"
 jna = "5.19.1"
 epubcheck = "5.4.0"
+# OCR tests on the desktop JVM (ADR-0054): Tesseract through JNA, :tools:convert tests only, never in the app.
+tess4j = "5.21.0"
 # Voice-pack download (Phase 6 M3): tar.bz2 extraction of the Kokoro model (sherpa-onnx's release format).
 commonsCompress = "1.27.1"
 
@@ -98,6 +100,7 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 epubcheck = { module = "org.w3c:epubcheck", version.ref = "epubcheck" }
+tess4j = { module = "net.sourceforge.tess4j:tess4j", version.ref = "tess4j" }
 commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commonsCompress" }
 
 
@@ -133,5 +136,6 @@ flowfolio-android-library = { id = "flowfolio.android.library" }
 flowfolio-jvm-library = { id = "flowfolio.jvm.library" }
 flowfolio-pdfium = { id = "flowfolio.pdfium" }
 flowfolio-sherpa-onnx = { id = "flowfolio.sherpa-onnx" }
+flowfolio-tesseract = { id = "flowfolio.tesseract" }
 flowfolio-hilt = { id = "flowfolio.hilt" }
 flowfolio-quality = { id = "flowfolio.quality" }

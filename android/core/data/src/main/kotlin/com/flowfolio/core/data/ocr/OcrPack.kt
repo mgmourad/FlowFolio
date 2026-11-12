@@ -4,6 +4,7 @@ import android.content.Context
 import com.flowfolio.core.conversion.ocr.OnnxMetadata
 import com.flowfolio.core.conversion.ocr.PaddleOcr
 import com.flowfolio.core.conversion.ocr.ScannedPageReader
+import com.flowfolio.core.ocr.TesseractOcr
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.net.HttpURLConnection
@@ -29,9 +30,10 @@ sealed interface OcrPackState {
 }
 
 /**
- * The scanned-books pack (ADR-0054): PaddleOCR's detector and its Latin and Arabic recognisers, about 39 MB,
- * downloaded when the reader asks for it and checked against pinned SHA-256s. Dynamic Flow's conversion process reads
- * the files directly ([readerIn]), so the pack works in either process.
+ * The scanned-books pack (ADR-0054): PaddleOCR's detector and its Latin and Arabic recognisers, plus Tesseract's
+ * Arabic model (`ara.traineddata`), about 51 MB, downloaded when the reader asks for it and checked against pinned
+ * SHA-256s. Dynamic Flow's conversion process reads the files directly ([readerIn]), so the pack works in either
+ * process.
  *
  * The files come from RapidOCR's ModelScope mirror for now; ADR-0054 moves them to FlowFolio's own releases.
  */
@@ -102,6 +104,7 @@ class OcrPack @Inject constructor(@ApplicationContext private val context: Conte
         const val DETECTOR = "PP-OCRv6_det_small.onnx"
         const val LATIN = "PP-OCRv6_rec_small.onnx"
         const val ARABIC = "arabic_PP-OCRv5_rec_mobile.onnx"
+        const val ARA = "ara.traineddata"
 
         val FILES = listOf(
             PackFile(
@@ -121,6 +124,12 @@ class OcrPack @Inject constructor(@ApplicationContext private val context: Conte
                 BASE + "PP-OCRv5/rec/$ARABIC",
                 "c1192e632d0baa9146ae5b756a0e635e3dc63c1733737ebfd1629e87144e9295",
                 8_023_828
+            ),
+            PackFile(
+                ARA,
+                "https://github.com/tesseract-ocr/tessdata_best/raw/main/$ARA",
+                "ab9d157d8e38ca00e7e39c7d5363a5239e053f5b0dbdb3167dde9d8124335896",
+                12_603_724
             )
         )
 
@@ -144,7 +153,12 @@ class OcrPack @Inject constructor(@ApplicationContext private val context: Conte
                 engine,
                 rightToLeft = rtl
             )
-            return ScannedPageReader(reader(LATIN, "paddle-v6s", false), reader(ARABIC, "paddle-ar-v5", true))
+            // Arabic is read by Tesseract and checked by PaddleOCR's Arabic model (OcrGate); Tesseract's text is kept.
+            return ScannedPageReader(
+                reader(LATIN, "paddle-v6s", false),
+                reader(ARABIC, "paddle-ar-v5", true),
+                TesseractOcr(dir, "ara")
+            )
         }
 
         private fun sha256(file: File): String {

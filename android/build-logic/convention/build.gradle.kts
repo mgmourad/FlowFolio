@@ -44,6 +44,10 @@ gradlePlugin {
             id = "flowfolio.sherpa-onnx"
             implementationClass = "SherpaOnnxConventionPlugin"
         }
+        register("tesseract") {
+            id = "flowfolio.tesseract"
+            implementationClass = "TesseractConventionPlugin"
+        }
         register("hilt") {
             id = "flowfolio.hilt"
             implementationClass = "HiltConventionPlugin"

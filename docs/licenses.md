@@ -17,6 +17,11 @@ Release dates were checked on Maven Central, Google Maven, PyPI, or GitHub Relea
 | ONNX Runtime C API headers | 1.28.2 | 2026 | MIT | build (:core:voice) | Three headers fetched at build time, SHA-256 pinned (`OrtHeaders`), for the OCR bridge to sherpa-onnx's runtime (ADR-0054) |
 | ONNX Runtime Java | 1.28.0 | 2026-07-27 | MIT | tests (:core:conversion) | JVM only, to measure OCR against real scans; not in the app (its Android glue wants `VERS_1.28.0` symbols, sherpa ships 1.28.2) |
 | PaddleOCR PP-OCRv6 det/rec small, PP-OCRv5 Arabic rec | RapidOCR 3.10.0 export | 2026-10-08 | Apache-2.0 | downloaded on request (Settings, Scanned books) | About 39 MB from RapidOCR's ModelScope mirror, SHA-256 pinned (`OcrPack`); to move to FlowFolio's releases |
+| **Tesseract** | 5.5.4 | 2026-10-28 | Apache-2.0 | app | Built from source by `TesseractConventionPlugin` (`:core:ocr`), SHA-256 pinned per ABI (ADR-0054) |
+| **Leptonica** | 1.87.0 | 2025-12-24 | BSD-2-Clause | app | Built from source with no image codecs (raw pixels in), SHA-256 pinned (ADR-0054) |
+| **cpu_features** (`google/cpu_features`, `ndk_compat`) | 0.9.0 | 2023 | Apache-2.0 | app (statically linked) | Transitive build dependency of Tesseract 5.5 on Android (NEON detection); linked into `libtesseract.so`, no separate `.so` |
+| tessdata_best `ara.traineddata` | main | 2026-11-11 | Apache-2.0 | downloaded on request (Settings, Scanned books) | 12.6 MB, SHA-256 pinned (`OcrPack`); to move to FlowFolio's releases |
+| tess4j | 5.21.0 | 2026-11-07 | Apache-2.0 | test (`:tools:convert`) | JNA wrapper over libtesseract for the desktop JVM; CI installs `libtesseract` (ADR-0054) |
 | Chaquopy (Gradle plugin + runtime) | 17.2.0 | 2026-09-30 | MIT | app/build | Embeds CPython 3.12 (PSF-2.0) for arm64-v8a and x86_64 only; pip-installs at build time, which F-Droid still has to be checked against (ADR-0047) |
 | CPython (through Chaquopy) | 3.12 | - | PSF-2.0 | app | Shipped as Chaquopy's prebuilt runtime |
 | yt-dlp | 2026.10.26 | 2026-10-26 | Unlicense | app | Source only, via pip. Its *PyInstaller release binaries* are GPLv3+ and are NOT used. No ffmpeg: only an address is extracted, and MediaPlayer plays it (ADR-0047) |

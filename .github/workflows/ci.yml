@@ -154,6 +154,9 @@ jobs:
       - name: Fetch the CC BY books
         # Skips books already cached with the right hash; fails on a hash mismatch.
         run: python3 -I tools/corpus/fetch_corpus.py --only physics,high-school-statistics,introduction-intellectual-property
+      - name: Install Tesseract for OCR tests
+        # tess4j calls libtesseract through JNA (ADR-0054); tesseract-ocr-ara is the Arabic model those tests read with.
+        run: sudo apt-get update && sudo apt-get install -y libtesseract-dev tesseract-ocr-ara
       - name: Convert and check against the baselines
         working-directory: android
         run: ./gradlew :tools:convert:test --tests "*CorpusTest*"

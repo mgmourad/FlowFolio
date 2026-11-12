@@ -5,6 +5,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+### Phase 7 M2: Arabic scanned books read by Tesseract (2026-11-11)
+- **Tesseract reads Arabic scans.** Tesseract 5.5.4 and Leptonica 1.87.0 are built from source with the NDK for
+  arm64-v8a, armeabi-v7a and x86_64 (pinned tarballs, SHA-256-checked, as PDFium and sherpa-onnx are). Google's
+  `cpu_features` (`ndk_compat`, Apache-2.0) is a statically-linked build dependency Tesseract 5.5 needs on Android to
+  detect NEON. Raw grayscale pixels go in, so no image codec library is built.
+- **The two engines agree.** A scanned Arabic page is read by Tesseract and checked by PaddleOCR's Arabic model; the
+  page becomes text only when their words agree at least 40% (`OcrGate`), and Tesseract's text is shown. Tesseract
+  returns Arabic in logical order, so no reordering is applied (PaddleOCR's visual-order output still is).
+- **The pack grows to 51 MB.** `ara.traineddata` (tessdata_best, 12.6 MB) joins the three PaddleOCR models in
+  Settings → Dynamic Flow → Scanned books, wired through `TesseractOcr` in `:core:ocr`.
+- **CI can read Arabic.** `tess4j` 5.21.0 (Apache-2.0) is added to `:tools:convert` tests only, and the Linux runner
+  installs `libtesseract` and `tesseract-ocr-ara`.
+- Verified on `fold8_api37`: a two-page Arabic scan converts with both pages read as `ocr:tesseract-ara` (word
+  agreement 58% and 80%).
+
 ### Arabic books, from the owner's own (2026-11-11)
 - **Typed Arabic text reads in order.** The words of a born-digital Arabic page came out reversed. The cause was a
   PDF that gives its spaces a flat box on the baseline: the converter's same-line test saw no overlap at each space
