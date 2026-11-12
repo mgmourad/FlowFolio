@@ -51,7 +51,9 @@ import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioTabs
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Motion
+import com.flowfolio.core.designsystem.dragDownToDismiss
 import com.flowfolio.core.designsystem.glass
+import com.flowfolio.core.designsystem.swipeTabs
 import com.flowfolio.core.model.Bookmark
 import com.flowfolio.core.voice.Voice
 import com.flowfolio.core.voice.VoicePackState
@@ -96,28 +98,30 @@ internal fun BoxScope.ReaderPanels(
     onNarratorContinuous: (Boolean) -> Unit = {},
     onNarratorVoice: (String) -> Unit = {}
 ) {
-    DockPanel(panel == Panel.CONTENTS, inner = LIST_PADDING) {
+    DockPanel(panel == Panel.CONTENTS, inner = LIST_PADDING, onDismiss = onDismiss) {
         ContentsPanel(navigation, s.anchorPage, mark.all, jump) { onPanel(Panel.GO_TO) }
     }
-    DockPanel(panel == Panel.DICTIONARY) {
+    DockPanel(panel == Panel.DICTIONARY, onDismiss = onDismiss) {
         // ADR-0052: Words, on History from the dock (a selection opens it on Define or Translate).
         WordsPanel(null, WordsTab.HISTORY, navigation, jump, onClose = null)
     }
-    DockPanel(panel == Panel.ANNOTATIONS, inner = LIST_PADDING) {
+    DockPanel(panel == Panel.ANNOTATIONS, inner = LIST_PADDING, onDismiss = onDismiss) {
         AnnotationList(mark.notes, navigation, jump)
     }
-    DockPanel(panel == Panel.GO_TO, inner = LIST_PADDING) {
+    DockPanel(panel == Panel.GO_TO, inner = LIST_PADDING, onDismiss = onDismiss) {
         GoToForm(navigation.labels, s.pageCount, jump, onDismiss)
     }
-    DockPanel(panel == Panel.MARK, inner = LIST_PADDING) {
+    DockPanel(panel == Panel.MARK, inner = LIST_PADDING, onDismiss = onDismiss) {
         ColourStrip(mark) { chosen ->
             if (chosen == null) mark.onUnmark() else mark.onMark(chosen)
             onDismiss()
         }
         RibbonList(mark.all, navigation, jump)
     }
-    DockPanel(panel == Panel.SETTINGS) { ReaderSettingsContent(s.reflowable, s.bookFont, flow, onFlow) }
-    DockPanel(panel == Panel.SEARCH) {
+    DockPanel(panel == Panel.SETTINGS, onDismiss = onDismiss) {
+        ReaderSettingsContent(s.reflowable, s.bookFont, flow, onFlow)
+    }
+    DockPanel(panel == Panel.SEARCH, onDismiss = onDismiss) {
         ReaderSearchPanel(
             searchQuery,
             hits,
@@ -130,7 +134,7 @@ internal fun BoxScope.ReaderPanels(
             onDismiss
         )
     }
-    DockPanel(panel == Panel.NARRATOR) {
+    DockPanel(panel == Panel.NARRATOR, onDismiss = onDismiss) {
         ReaderNarratorPanel(
             narrator.narrating,
             narrator.rate,
@@ -178,10 +182,13 @@ private fun ContentsPanel(
             counts = listOf(null, ribbonMarks.size)
         )
     }
-    if (ribbons) {
-        ContentsHeaderless(tabs) { RibbonList(ribbonMarks, navigation, jump, heading = false) }
-    } else {
-        ContentsList(navigation.outline, navigation.labels, page, jump, onGoTo, tabs)
+    // A Column, as the panel is: the title, tabs and list below one another.
+    Column(Modifier.swipeTabs(if (ribbons) 1 else 0, 2) { ribbons = it == 1 }) {
+        if (ribbons) {
+            ContentsHeaderless(tabs) { RibbonList(ribbonMarks, navigation, jump, heading = false) }
+        } else {
+            ContentsList(navigation.outline, navigation.labels, page, jump, onGoTo, tabs)
+        }
     }
 }
 
@@ -206,6 +213,7 @@ private fun ContentsHeaderless(tabs: @Composable () -> Unit, content: @Composabl
 private fun BoxScope.DockPanel(
     visible: Boolean,
     inner: Dp = PANEL_PADDING,
+    onDismiss: () -> Unit = {},
     content: @Composable ColumnScope.() -> Unit
 ) {
     val density = LocalDensity.current
@@ -229,6 +237,7 @@ private fun BoxScope.DockPanel(
                 .widthIn(max = READER_DOCK_WIDTH)
                 .fillMaxWidth()
                 .heightIn(max = room.coerceAtLeast(MIN_PANEL))
+                .dragDownToDismiss(onDismiss)
                 .glass(PanelShape, tint = panelTint())
                 .padding(inner),
             content = content

@@ -21,7 +21,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -108,6 +107,7 @@ import com.flowfolio.core.designsystem.coverSpot
 import com.flowfolio.core.designsystem.detailsCoverKey
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.designsystem.shelfCoverKey
+import com.flowfolio.core.designsystem.swipeTabs
 import com.flowfolio.core.model.Availability
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.BookStorage
@@ -514,25 +514,6 @@ private val TWO_PANE_WIDTH = 600.dp
 private val FULL_TITLE_WIDTH = 440.dp
 private const val TAB_SLIDE = 8
 private const val TAB_COUNT = 5
-private val SWIPE_TAB = 56.dp
-
-/** Moves to the next tab on a swipe to the left and the previous on a swipe to the right; vertical scrolls pass. */
-private fun Modifier.swipeTabs(tab: Int, count: Int, onTab: (Int) -> Unit): Modifier = pointerInput(tab, count) {
-    var total = 0f
-    detectHorizontalDragGestures(
-        onDragStart = { total = 0f },
-        onDragEnd = {
-            val threshold = SWIPE_TAB.toPx()
-            when {
-                total < -threshold && tab < count - 1 -> onTab(tab + 1)
-                total > threshold && tab > 0 -> onTab(tab - 1)
-            }
-        }
-    ) { change, dx ->
-        change.consume()
-        total += dx
-    }
-}
 
 private val SIDE = 22.dp
 

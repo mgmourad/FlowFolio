@@ -46,6 +46,7 @@ import com.flowfolio.core.designsystem.FlowFolioTabs
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.glass
+import com.flowfolio.core.designsystem.swipeTabs
 
 /** The Words panel's tabs (ADR-0052, the mock's `rpanel` for words). */
 internal enum class WordsTab { DEFINE, TRANSLATE, HISTORY }
@@ -70,7 +71,12 @@ internal fun WordsPanel(
 ) {
     var tab by rememberSaveable(target, initial) { mutableIntStateOf(initial.ordinal) }
     val p = FlowFolio.palette
-    Column(modifier.fillMaxWidth().testTag(ReaderTestTags.WORDS)) {
+    Column(
+        modifier
+            .fillMaxWidth()
+            .swipeTabs(tab, WordsTab.entries.size) { tab = it }
+            .testTag(ReaderTestTags.WORDS)
+    ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 stringResource(R.string.reader_words),

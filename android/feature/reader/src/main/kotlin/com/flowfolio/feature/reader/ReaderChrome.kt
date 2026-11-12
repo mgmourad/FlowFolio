@@ -91,6 +91,7 @@ import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Motion
 import com.flowfolio.core.designsystem.ScreenEntrance
+import com.flowfolio.core.designsystem.dragDownToDismiss
 import com.flowfolio.core.designsystem.glass
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.model.FlowStatus
@@ -200,6 +201,7 @@ internal fun BoxScope.ReaderChrome(
             Box(
                 Modifier
                     .reveal(DOCK_ORDER)
+                    .dragDownToDismiss(actions.onDismissRiffle)
                     .coachSpot(CoachSpot.STRIP)
                     .onSizeChanged { riffleHeight = with(density) { it.height.toDp() } }
             ) { bottomBar { ToolRow(actions, panel, Modifier.padding(horizontal = 18.dp).padding(bottom = 4.dp)) } }

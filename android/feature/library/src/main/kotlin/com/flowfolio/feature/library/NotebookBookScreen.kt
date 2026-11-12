@@ -68,6 +68,7 @@ import com.flowfolio.core.designsystem.color
 import com.flowfolio.core.designsystem.marker
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.designsystem.showFlowFolio
+import com.flowfolio.core.designsystem.swipeTabs
 import com.flowfolio.core.model.Book
 import kotlinx.coroutines.launch
 
@@ -104,8 +105,12 @@ fun NotebookBookScreen(
     val gutter = libraryGutter()
     var playing by remember { mutableStateOf<String?>(null) }
     Box(Modifier.fillMaxSize().chromeStart()) {
+        val kinds = listOf<MarkKind?>(null) + MARK_ORDER
         LazyColumn(
-            Modifier.fillMaxSize().testTag(LibraryTestTags.NOTEBOOK_BOOK),
+            Modifier
+                .fillMaxSize()
+                .swipeTabs(kinds.indexOf(kind), kinds.size) { kind = kinds[it] }
+                .testTag(LibraryTestTags.NOTEBOOK_BOOK),
             contentPadding = PaddingValues(
                 start = gutter,
                 end = gutter,

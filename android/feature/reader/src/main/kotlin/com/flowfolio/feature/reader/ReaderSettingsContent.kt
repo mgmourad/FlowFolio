@@ -64,6 +64,7 @@ import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.Motion
+import com.flowfolio.core.designsystem.swipeTabs
 import com.flowfolio.core.model.ControlsAutoHide
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.PaperStyle
@@ -103,7 +104,9 @@ internal fun ColumnScope.ReaderSettingsContent(
     // The tabs slide over each other: the next tab comes in from the side it lies on.
     AnimatedContent(
         selected.coerceIn(0, tabs.lastIndex),
-        modifier = Modifier.weight(1f, fill = false),
+        modifier = Modifier
+            .weight(1f, fill = false)
+            .swipeTabs(selected.coerceIn(0, tabs.lastIndex), tabs.size) { selected = it },
         transitionSpec = {
             val way = if (targetState > initialState) 1 else -1
             (slideInHorizontally(tween(Motion.MEDIUM_MS, easing = Motion.EaseOut)) { it * way } + fadeIn())
