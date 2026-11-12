@@ -54,7 +54,9 @@ internal fun WhatsNewDialog(release: Release, onOk: () -> Unit) {
                 style = FlowFolioType.heroTitle.merge(FlowFolio.title)
             )
             Text(
-                stringResource(R.string.whats_new_version, release.versionName),
+                // The installed build, not the newest published release: a build ahead of the releases page
+                // (or a release whose page is not up yet) was headed with the older version (M4).
+                stringResource(R.string.whats_new_version, BuildConfig.VERSION_NAME.removeSuffix("-dev")),
                 style = FlowFolioType.subtitle.merge(FlowFolio.hint)
             )
             Spacer(Modifier.height(2.dp))
@@ -67,9 +69,11 @@ internal fun WhatsNewDialog(release: Release, onOk: () -> Unit) {
                 // ADR-0052: this build's own notes from the bundled CHANGELOG, offline; the releases page's notes
                 // only when the changelog has nothing for it.
                 val context = androidx.compose.ui.platform.LocalContext.current
+                // Changelog.current keeps to the reader-facing section when the version has one.
                 val bundled = androidx.compose.runtime.remember {
-                    com.flowfolio.feature.library.Changelog.read(context)
-                        .firstOrNull { it.version == BuildConfig.VERSION_NAME.removeSuffix("-dev") }
+                    val all = com.flowfolio.feature.library.Changelog.read(context)
+                    val own = all.any { it.version == BuildConfig.VERSION_NAME.removeSuffix("-dev") }
+                    if (own) com.flowfolio.feature.library.Changelog.current(all, BuildConfig.VERSION_NAME) else null
                 }
                 if (bundled != null) {
                     com.flowfolio.feature.library.VersionNotesView(bundled)
