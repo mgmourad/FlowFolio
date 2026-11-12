@@ -82,6 +82,7 @@ import com.flowfolio.core.designsystem.coverLanding
 import com.flowfolio.core.designsystem.coverSpot
 import com.flowfolio.core.designsystem.detailsCoverKey
 import com.flowfolio.core.designsystem.jiggle
+import com.flowfolio.core.designsystem.rememberSearchKeyboard
 import com.flowfolio.core.designsystem.reveal
 import com.flowfolio.core.designsystem.shelfCoverKey
 import com.flowfolio.core.model.Availability
@@ -185,10 +186,13 @@ internal fun SearchField(
             )
         }
 
+        val searchKeyboard = rememberSearchKeyboard()
         OutlinedTextField(
             value = query,
             onValueChange = onQuery,
             singleLine = true,
+            keyboardOptions = searchKeyboard.options,
+            keyboardActions = searchKeyboard.actions,
             placeholder = { Text(stringResource(hintRes), style = FlowFolio.hint) },
             leadingIcon = { FlowFolioGlyph(Glyph.Search, contentDescription = null, size = 20.dp, glow = false) },
             shape = androidx.compose.foundation.shape.RoundedCornerShape(50),

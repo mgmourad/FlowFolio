@@ -41,6 +41,7 @@ import com.flowfolio.core.designsystem.FlowFolioAlertDialog
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.rememberSearchKeyboard
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.Shelf
 
@@ -111,10 +112,13 @@ internal fun AddBooksDialog(shelf: Shelf, books: List<Book>, onConfirm: (List<St
 @Composable
 private fun BookSearch(query: String, onQuery: (String) -> Unit) {
     val p = FlowFolio.palette
+    val searchKeyboard = rememberSearchKeyboard()
     OutlinedTextField(
         value = query,
         onValueChange = onQuery,
         singleLine = true,
+        keyboardOptions = searchKeyboard.options,
+        keyboardActions = searchKeyboard.actions,
         placeholder = { Text(stringResource(R.string.search_hint), style = FlowFolio.hint) },
         shape = RoundedCornerShape(50),
         colors = OutlinedTextFieldDefaults.colors(

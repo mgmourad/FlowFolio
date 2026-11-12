@@ -552,11 +552,6 @@ private fun ShelfCardView(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f).padding(top = 8.dp, end = 4.dp)
                 )
-                if (card.hasPdf) {
-                    Box(Modifier.padding(top = 4.dp)) {
-                        ShelfFlowToggle(card.shelf.id, card.flowActive, card.flowConverting, actions.onToggleFlow)
-                    }
-                }
                 Box {
                     FlowFolioIconButton(
                         onClick = { if (menuEnabled) menu = true },
@@ -570,7 +565,14 @@ private fun ShelfCardView(
                 }
             }
             Fan(card.books.take(FAN_SIZE), if (wide) FAN_HEIGHT_WIDE else FAN_HEIGHT)
-            ShelfStatsRow(card)
+            // The Dynamic Flow toggle sits beside the stats: in the title row it left the name a few letters wide
+            // on the folded screen ("Comp / uter...", owner 2026-11-12).
+            Row(verticalAlignment = Alignment.Bottom) {
+                ShelfStatsRow(card, Modifier.weight(1f))
+                if (card.hasPdf) {
+                    ShelfFlowToggle(card.shelf.id, card.flowActive, card.flowConverting, actions.onToggleFlow)
+                }
+            }
         }
     }
 }
@@ -696,9 +698,17 @@ private fun formatCompactReadTime(millis: Long): String {
  */
 @Composable
 private fun Fan(books: List<Book>, height: androidx.compose.ui.unit.Dp) {
-    BoxWithConstraints(
-        Modifier.fillMaxWidth().padding(start = 4.dp, end = 10.dp, top = 10.dp, bottom = 12.dp).height(height)
-    ) {
+    // As tall as its covers, not a fixed height: on the folded screen the covers came out about 100 dp tall in a
+    // 132 dp fan, leaving an empty band in every card (owner, 2026-11-12). [height] is now the most it may take.
+    BoxWithConstraints(Modifier.fillMaxWidth().padding(start = 4.dp, end = 10.dp, top = 10.dp, bottom = 12.dp)) {
+        val fitted = minOf(maxWidth * FAN_COVER_SHARE, height * COVER_ASPECT) / COVER_ASPECT + FAN_LIFT
+        FanCovers(books, minOf(height, fitted))
+    }
+}
+
+@Composable
+private fun FanCovers(books: List<Book>, height: androidx.compose.ui.unit.Dp) {
+    BoxWithConstraints(Modifier.fillMaxWidth().height(height)) {
         val n = books.size
         if (n == 0) {
             Text(
@@ -774,5 +784,8 @@ private const val FAN_COVER_SHARE = 0.44f
 private const val FAN_STEP_DEG = 5f
 private val NEW_CARD_MIN = 200.dp
 private val FAN_HEIGHT = 132.dp
+
+/** Room above the covers for the outer ones, lifted as they tilt. */
+private val FAN_LIFT = 8.dp
 private val FAN_HEIGHT_WIDE = 190.dp
 private val OUTLINE = 2.dp

@@ -49,6 +49,7 @@ import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.chromeStart
+import com.flowfolio.core.designsystem.rememberSearchKeyboard
 
 /** The library's search bar (`.searchbar`, ADR-0052): a pill that opens the global search. */
 @Composable
@@ -186,10 +187,13 @@ private fun SearchInput(query: String, onQuery: (String) -> Unit, modifier: Modi
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         FlowFolioGlyph(Glyph.Search, null, color = p.ink3, size = 18.dp, glow = false)
+        val searchKeyboard = rememberSearchKeyboard()
         BasicTextField(
             value = query,
             onValueChange = onQuery,
             singleLine = true,
+            keyboardOptions = searchKeyboard.options,
+            keyboardActions = searchKeyboard.actions,
             textStyle = FlowFolioType.body.copy(fontSize = 15.sp, color = p.ink),
             cursorBrush = SolidColor(p.accent),
             modifier = Modifier.weight(1f).focusRequester(focus).testTag(LibraryTestTags.SEARCH_FIELD),

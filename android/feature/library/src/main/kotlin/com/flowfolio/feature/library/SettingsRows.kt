@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -79,14 +80,38 @@ internal fun ChoiceRow(
         }
         return
     }
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Label(title, detail, Modifier.weight(1f).padding(end = 12.dp))
-        FlowFolioSegmented(options.map { stringResource(it) }, selected, onSelect)
+    // Beside the label when the options leave it room, else under it: three options on the folded screen left the
+    // label a few letters wide ("Librar / y stats", owner 2026-11-12).
+    Layout(
+        content = {
+            Label(title, detail, Modifier)
+            FlowFolioSegmented(options.map { stringResource(it) }, selected, onSelect)
+        },
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp)
+    ) { (label, segmented), constraints ->
+        val gap = 12.dp.roundToPx()
+        val seg = segmented.measure(constraints.copy(minWidth = 0, minHeight = 0))
+        val room = constraints.maxWidth - seg.width - gap
+        if (room >= MIN_LABEL_WIDTH.roundToPx()) {
+            val text = label.measure(constraints.copy(minWidth = 0, maxWidth = room, minHeight = 0))
+            val height = maxOf(text.height, seg.height)
+            layout(constraints.maxWidth, height) {
+                text.placeRelative(0, (height - text.height) / 2)
+                seg.placeRelative(constraints.maxWidth - seg.width, (height - seg.height) / 2)
+            }
+        } else {
+            val text = label.measure(constraints.copy(minWidth = 0, minHeight = 0))
+            val below = 10.dp.roundToPx()
+            layout(constraints.maxWidth, text.height + below + seg.height) {
+                text.placeRelative(0, 0)
+                seg.placeRelative(0, text.height + below)
+            }
+        }
     }
 }
+
+/** The narrowest a row's label may get beside its options before they move under it. */
+private val MIN_LABEL_WIDTH = 140.dp
 
 @Composable
 internal fun Label(title: Int, detail: Int?, modifier: Modifier) {

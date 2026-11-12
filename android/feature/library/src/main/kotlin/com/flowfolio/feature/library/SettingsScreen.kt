@@ -113,7 +113,6 @@ fun SettingsScreen(
             onTheme = viewModel::setTheme,
             onAppStyle = viewModel::setAppStyle,
             onMaterialSeed = viewModel::setMaterialSeed,
-            onGlow = viewModel::setGlow,
             onStatsBand = viewModel::setStatsBand,
             onPageTurn = viewModel::setPageTurn,
             onSpreads = viewModel::setSpreads,
@@ -563,11 +562,6 @@ private fun AppearanceGroup(settings: UserSettings, actions: SettingsActions) {
             listOf(R.string.theme_system_short, R.string.theme_dark, R.string.theme_light),
             themes.indexOf(settings.theme)
         ) { actions.onTheme(themes[it]) }
-        // Material You has no lights to turn off.
-        if (settings.appStyle != AppStyle.MATERIAL) {
-            Divider()
-            SwitchRow(R.string.settings_glow, R.string.settings_glow_detail, settings.neonGlow, actions.onGlow)
-        }
         Divider()
         ChoiceRow(
             R.string.settings_stats_band,

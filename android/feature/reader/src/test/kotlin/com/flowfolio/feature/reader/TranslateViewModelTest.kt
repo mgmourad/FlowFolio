@@ -79,7 +79,6 @@ private class Settings(initial: UserSettings) : SettingsRepository {
     override suspend fun setSpreadCoverAlone(on: Boolean) = Unit
     override suspend fun setPaperStyle(style: PaperStyle) = Unit
     override suspend fun setPageTurn(turn: PageTurn) = Unit
-    override suspend fun setNeonGlow(on: Boolean) = Unit
     override suspend fun setAutoUpdate(on: Boolean) = Unit
 
     override suspend fun setOnlineLookup(on: Boolean) = Unit

@@ -56,6 +56,7 @@ import com.flowfolio.core.designsystem.FlowFolioChip
 import com.flowfolio.core.designsystem.FlowFolioGlyph
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.rememberSearchKeyboard
 
 /**
  * In-book search (`.rpanel` search, ADR-0052): "Search in this book" and Esc to close; the field with the number of
@@ -176,13 +177,15 @@ private fun SearchField(
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         FlowFolioGlyph(Glyph.Search, null, color = p.ink3, size = 18.dp, glow = false)
+        val searchKeyboard = rememberSearchKeyboard()
         BasicTextField(
             value = query,
             onValueChange = onQuery,
             singleLine = true,
             textStyle = FlowFolioType.body.copy(fontSize = 15.sp, color = p.ink),
             cursorBrush = SolidColor(p.accent),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardOptions = searchKeyboard.options,
+            keyboardActions = searchKeyboard.actions,
             modifier = modifier
                 .weight(1f)
                 .onPreviewKeyEvent { e ->

@@ -58,7 +58,6 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             spreadCoverAlone = p[COVER_ALONE] ?: defaults.spreadCoverAlone,
             paperStyle = p[PAPER_STYLE].toEnum(defaults.paperStyle),
             pageTurn = p[PAGE_TURN].toEnum(defaults.pageTurn),
-            neonGlow = p[NEON_GLOW] ?: defaults.neonGlow,
             autoUpdate = p[AUTO_UPDATE] ?: defaults.autoUpdate,
             onlineLookup = p[ONLINE_LOOKUP] ?: defaults.onlineLookup,
             onlineLookupAsked = p[ONLINE_LOOKUP_ASKED] ?: defaults.onlineLookupAsked,
@@ -169,10 +168,6 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
 
     suspend fun setPageTurn(turn: PageTurn) {
         store.edit { it[PAGE_TURN] = turn.name }
-    }
-
-    suspend fun setNeonGlow(on: Boolean) {
-        store.edit { it[NEON_GLOW] = on }
     }
 
     suspend fun setControlsAutoHide(value: ControlsAutoHide) {
@@ -294,7 +289,6 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val COVER_ALONE = booleanPreferencesKey("spread_cover_alone")
         val PAPER_STYLE = stringPreferencesKey("reader_paper")
         val PAGE_TURN = stringPreferencesKey("reader_page_turn")
-        val NEON_GLOW = booleanPreferencesKey("neon_glow")
         val AUTO_UPDATE = booleanPreferencesKey("auto_update")
         val ONLINE_LOOKUP = booleanPreferencesKey("online_lookup")
         val ONLINE_LOOKUP_ASKED = booleanPreferencesKey("online_lookup_asked")

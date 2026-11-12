@@ -222,8 +222,6 @@
     <string name="settings_theme">Light or dark</string>
     <string name="settings_theme_detail">Changes with a circular reveal</string>
     <string name="theme_system_short">System</string>
-    <string name="settings_glow">Night glow</string>
-    <string name="settings_glow_detail">A soft bloom on titles in dark mode</string>
     <string name="settings_turn">Page turn</string>
     <string name="settings_turn_detail">How pages turn in the reader</string>
     <string name="turn_curl">Curl</string>

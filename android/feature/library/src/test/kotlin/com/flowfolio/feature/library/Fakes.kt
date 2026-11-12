@@ -133,8 +133,6 @@ class FakeSettings(initial: UserSettings = UserSettings()) : SettingsRepository 
 
     override suspend fun setPageTurn(turn: PageTurn) = state.update { it.copy(pageTurn = turn) }
 
-    override suspend fun setNeonGlow(on: Boolean) = state.update { it.copy(neonGlow = on) }
-
     override suspend fun setOnlineLookup(on: Boolean) =
         state.update { it.copy(onlineLookup = on, onlineLookupAsked = true) }
 

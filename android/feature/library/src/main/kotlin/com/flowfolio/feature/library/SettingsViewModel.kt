@@ -39,7 +39,6 @@ data class SettingsActions(
     val onTheme: (ThemePreference) -> Unit = {},
     val onAppStyle: (AppStyle) -> Unit = {},
     val onMaterialSeed: (MaterialSeed) -> Unit = {},
-    val onGlow: (Boolean) -> Unit = {},
     /** The library's stats band: collapsed, expanded or hidden (ADR-0052). */
     val onStatsBand: (StatsBand) -> Unit = {},
     val onNarratorSkip: (NarratorSkip) -> Unit = {},
@@ -341,8 +340,6 @@ class SettingsViewModel @Inject constructor(
     fun setAppStyle(style: AppStyle) = viewModelScope.launch { repo.setAppStyle(style) }
 
     fun setMaterialSeed(seed: MaterialSeed) = viewModelScope.launch { repo.setMaterialSeed(seed) }
-
-    fun setGlow(on: Boolean) = viewModelScope.launch { repo.setNeonGlow(on) }
 
     fun setStatsBand(band: StatsBand) = viewModelScope.launch { repo.setStatsBand(band) }
 

@@ -92,15 +92,4 @@ class BookmarksUiTest {
         compose.onNodeWithText(res.getString(R.string.bookmarks_filter_all)).performClick()
         assertEquals(null, chosen)
     }
-
-    @Test
-    fun neonGlowSwitchReportsTheChange() {
-        var glow: Boolean? = null
-        compose.setContent {
-            FlowFolioTheme { SettingsContent(UserSettings(), SettingsActions(onGlow = { glow = it })) }
-        }
-        compose.onNodeWithText(res.getString(R.string.settings_appearance)).performClick()
-        compose.onNodeWithText(res.getString(R.string.settings_glow)).performScrollTo().performClick()
-        assertEquals(true, glow)
-    }
 }

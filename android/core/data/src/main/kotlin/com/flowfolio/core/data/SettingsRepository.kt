@@ -73,8 +73,6 @@ interface SettingsRepository {
 
     suspend fun setPageTurn(turn: PageTurn)
 
-    suspend fun setNeonGlow(on: Boolean)
-
     suspend fun setAutoUpdate(on: Boolean)
 
     suspend fun setOnlineLookup(on: Boolean)
@@ -201,10 +199,6 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setPageTurn(turn: PageTurn) {
         source.setPageTurn(turn)
-    }
-
-    override suspend fun setNeonGlow(on: Boolean) {
-        source.setNeonGlow(on)
     }
 
     override suspend fun setAutoUpdate(on: Boolean) {

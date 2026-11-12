@@ -54,6 +54,7 @@ import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioPill
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.rememberSearchKeyboard
 import com.flowfolio.core.model.Translation
 import com.flowfolio.core.model.WordDefinition
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -265,10 +266,13 @@ private fun DictionarySearchField(query: String, onQuery: (String) -> Unit) {
     val p = FlowFolio.palette
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
+    val searchKeyboard = rememberSearchKeyboard()
     OutlinedTextField(
         value = query,
         onValueChange = onQuery,
         singleLine = true,
+        keyboardOptions = searchKeyboard.options,
+        keyboardActions = searchKeyboard.actions,
         placeholder = { Text(stringResource(R.string.reader_dictionary_search_hint), style = FlowFolio.hint) },
         leadingIcon = { FlowFolioGlyph(Glyph.Search, contentDescription = null, size = 18.dp, glow = false) },
         shape = RoundedCornerShape(50),
