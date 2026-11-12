@@ -17,6 +17,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.flowfolio.core.designsystem.ButtonStyle
 import com.flowfolio.core.designsystem.DialogAction
 import com.flowfolio.core.designsystem.FlowFolio
@@ -66,3 +67,20 @@ internal fun ScanNotice(minutes: Int, onAnswer: (convert: Boolean, dontAsk: Bool
 private const val MINUTES_PER_HOUR = 60
 
 internal const val SCAN_NOTICE_TAG = "scan_notice"
+
+/** The scan question over every screen, while Dynamic Flow waits for an answer (TM1). */
+@Composable
+internal fun ScanAskHost(appViewModel: AppViewModel) {
+    val scanAsk by appViewModel.scanAsk.collectAsStateWithLifecycle()
+    scanAsk?.let { ScanNotice(it.minutes, appViewModel::answerScan) }
+}
+
+/** Gives every cover under [content] its book's conversion progress, for the bar along its foot (TM1). */
+@Composable
+internal fun ConversionProgressHost(appViewModel: AppViewModel, content: @Composable () -> Unit) {
+    val converting by appViewModel.conversionProgress.collectAsStateWithLifecycle()
+    androidx.compose.runtime.CompositionLocalProvider(
+        com.flowfolio.core.designsystem.LocalConversionProgress provides converting,
+        content = content
+    )
+}

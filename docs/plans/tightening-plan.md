@@ -1,6 +1,11 @@
 # Tightening plan: TM1 and TM2
 
-- **Status:** Approved by the owner 2026-11-12; TM1 in progress.
+- **Status:** Approved by the owner 2026-11-12; TM1 built 2026-11-12 (Fold timing still to measure).
+- **Where TM1 differs from this plan:**
+  - Night glow is removed as a setting, but the design system keeps its glow-capable palette (always off). Removing
+    the fields would touch every component for nothing visible.
+  - The scan notice is decided in `DynamicFlow.convert`, not only in the reader, so the library's and shelves' Dynamic
+    Flow switches ask too.
 - **What these are:** tightening milestones, an unplanned phase taken as discovered, after Phase 7. They are not
   feature phases: they harden what exists. Two milestones, each ending with a polish check, a debug APK on the phone and
   the emulator, and a beta release (ADR-0042/0050: **0.7.0-beta.3** after TM1, **0.7.0-beta.4** after TM2).

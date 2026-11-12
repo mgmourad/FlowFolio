@@ -118,18 +118,23 @@ class FlowService : Service() {
 
     private class Job(val bookId: String, val title: String, val file: String?, val uri: String?)
 
+    /** Runs [work] holding the engine, which an OCR book may hand over and take back meanwhile ([Progress]). */
+    private fun withEngine(job: Job, work: () -> Unit) {
+        engine.lock()
+        try {
+            work()
+        } finally {
+            if (engine.isHeldByCurrentThread) engine.unlock()
+            if (reading == job.bookId) reading = null
+        }
+    }
+
     // Whatever stops a conversion, the app hears how it ended and the partial bundle goes: the last catch is that net.
     @Suppress("TooGenericExceptionCaught")
     private fun run(job: Job, ahead: Boolean = false) {
         val started = SystemClock.elapsedRealtime()
         val failure = try {
-            engine.lock()
-            try {
-                convert(job, ahead)
-            } finally {
-                if (engine.isHeldByCurrentThread) engine.unlock()
-                if (reading == job.bookId) reading = null
-            }
+            withEngine(job) { convert(job, ahead) }
             null
         } catch (_: PdfException.PasswordRequired) {
             FlowFailure.PASSWORD

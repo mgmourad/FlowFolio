@@ -227,6 +227,18 @@ it. Also: the tour's 11 pictures retaken without the status bar, and "Replay the
   - On `fold8_api37` it updated 0.7.0-beta.1 in place, and What's new showed "Version 0.7.0-beta.2" with only the
     reader-facing notes. That screen exposed the popup's own labelling bug, fixed in `b182c93`.
   - Phase 7 is still not signed off (`docs/plans/phase7-signoff.md`, draft).
+
+**Tightening milestones after Phase 7** (`docs/plans/tightening-plan.md`, approved by the owner 2026-11-12): TM1, the
+reading surface and conversion, then TM2, the library, the app's size and widgets.
+- **TM1 built 2026-11-12** (CHANGELOG, Unreleased):
+  - dark reader chrome on every paper (ADR-0056, contrast measured);
+  - swiping between tabs and pulling reader panels down to close them;
+  - a quick book is converted ahead of a slow OCR book, which pauses at a page and resumes, and a stopped OCR book
+    also resumes (`FileOcrCache`);
+  - the scan notice before OCR (`FlowNotice.ScanAsk`) and the cover progress bar (`conversionBar`);
+  - the processor-aware updater (`Updates.pickApk`);
+  - the quick fixes. Night glow is removed.
+- Still open: Fold speed (known issue 55), which needs the owner's phone connected.
 - **The owner's Arabic book, 2026-11-11** (CHANGELOG, Unreleased, "Arabic books"): typed Arabic pages had their
   words reversed (flat-box spaces cut every line; fixed in `Extraction`); right-to-left pages now read their right
   column first (`ReadingOrder`); and an Arabic scanned book skips OCR once its pages vote it Arabic while no Arabic

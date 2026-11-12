@@ -18,10 +18,10 @@ class FileOcrCache(private val dir: File, private val stamp: String) : OcrCache 
         val file = fileOf(index).takeIf { it.isFile } ?: return null
         val lines = file.readLines()
         val head = lines.firstOrNull()?.split(' ') ?: return null
-        if (head.size < HEAD_FIELDS || head[0] != MAGIC || head[1] != stamp) return null
-        val scale = head[2].toFloat()
-        val rendered = head[3] == "1"
-        val engine = head[4]
+        if (head.size < HEAD_FIELDS || head[0] != MAGIC || head[STAMP] != stamp) return null
+        val scale = head[SCALE].toFloat()
+        val rendered = head[RENDERED] == "1"
+        val engine = head[ENGINE]
         val read = lines.drop(1).filter { it.isNotEmpty() }.map(::lineOf)
         OcrResult(if (engine == NONE) null else OcrPage(read, engine), scale, rendered)
     }.getOrNull()
@@ -49,12 +49,24 @@ class FileOcrCache(private val dir: File, private val stamp: String) : OcrCache 
     private fun lineOf(row: String): OcrLine {
         val (numbers, text) = row.split('\t', limit = 2).let { it[0] to it.getOrElse(1) { "" } }
         val n = numbers.split(' ')
-        return OcrLine(text, PixelBox(n[0].toInt(), n[1].toInt(), n[2].toInt(), n[3].toInt()), n[4].toFloat())
+        val box = PixelBox(n[LEFT].toInt(), n[TOP].toInt(), n[RIGHT].toInt(), n[BOTTOM].toInt())
+        return OcrLine(text, box, n[CONFIDENCE].toFloat())
     }
 
     private companion object {
         const val MAGIC = "FFOCR1"
         const val NONE = "-"
         const val HEAD_FIELDS = 5
+
+        // The header's fields after the magic word, and a line's before its text.
+        const val STAMP = 1
+        const val SCALE = 2
+        const val RENDERED = 3
+        const val ENGINE = 4
+        const val LEFT = 0
+        const val TOP = 1
+        const val RIGHT = 2
+        const val BOTTOM = 3
+        const val CONFIDENCE = 4
     }
 }

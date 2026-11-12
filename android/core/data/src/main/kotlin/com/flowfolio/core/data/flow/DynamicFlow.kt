@@ -300,16 +300,8 @@ class DefaultDynamicFlow @Inject constructor(
         val current = _statuses.value[bookId]
         val started = current is FlowStatus.Converting || current == FlowStatus.Queued || files.ready(bookId)
         val book = if (started) null else withContext(io) { books.get(bookId)?.toBook() }
-        if (book?.format != BookFormat.PDF) return
+        if (book?.format != BookFormat.PDF || asksFirst(book)) return
         titles[bookId] = book.title
-        // A scan never converted before: say what OCR means and how long it takes, and convert once agreed (TM1).
-        if (bookId !in agreed && neverConverted(bookId) && settings.settings.first().scanNotice) {
-            val minutes = scanMinutes(book)
-            if (minutes != null) {
-                _notices.tryEmit(FlowNotice.ScanAsk(bookId, book.title, minutes))
-                return
-            }
-        }
         if (files.outdated(bookId)) reanchorWhenReady += bookId
         set(bookId, FlowStatus.Converting(0f))
         lastHeard[bookId] = SystemClock.elapsedRealtime()
@@ -348,6 +340,17 @@ class DefaultDynamicFlow @Inject constructor(
         } else {
             withContext(io) { reading.setFlowMode(bookId, false) }
         }
+    }
+
+    /**
+     * A scan never converted before: says what OCR means and how long it takes ([FlowNotice.ScanAsk]) and returns
+     * true, so nothing converts until [answerScan] agrees (TM1).
+     */
+    private suspend fun asksFirst(book: com.flowfolio.core.model.Book): Boolean {
+        val asking = book.id !in agreed && neverConverted(book.id) && settings.settings.first().scanNotice
+        val minutes = if (asking) scanMinutes(book) else null
+        minutes?.let { _notices.tryEmit(FlowNotice.ScanAsk(book.id, book.title, it)) }
+        return minutes != null
     }
 
     /** Nothing of a conversion is on disk: no bundle, no partial one, no pages already read by OCR. */

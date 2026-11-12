@@ -5,6 +5,57 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+### For readers
+- **Clearer reading tools.** While you read, the bars and panels are dark on every paper, so their text stands out on
+  light and sepia pages too.
+- **Swipe to move between tabs** wherever there are tabs: book details, the Notebook, Words, Contents and Aa.
+- **Pull a reader panel down to close it.** That works for Aa, Search, Contents, Narrator, Words and the riffle bar,
+  and is easiest with the phone folded.
+- **The keyboard's Search key** runs the search and puts the keyboard away, in every search box.
+- **Before a scanned book is converted,** FlowFolio says what to expect: the text may not be exactly right, how long
+  it takes, and that you can keep reading meanwhile. You can turn this notice off.
+- **A progress bar on the book's cover** while its Dynamic Flow converts.
+- **Quick books no longer wait** behind a long scanned book: the scan pauses, the quick book converts, then the scan
+  carries on from where it stopped. A scan stopped part-way also resumes instead of starting again.
+- Shelf cards are as tall as their covers, and settings no longer break a label mid-word on the folded screen.
+- Night glow is gone: it no longer changed anything.
+
+### Tightening milestone TM1: the reading surface and conversion (2026-11-12)
+- **Plan:** `docs/plans/tightening-plan.md` (approved 2026-11-12).
+- **Dark reader chrome (ADR-0056).**
+  - The bars, dock, riffle, panels and selection menus use the dark palette (`ReaderChromePalette`) with a pale
+    hairline edge (`readerChromeGlass`). The selection handles keep following the paper.
+  - The dark third ink is lifted 70% toward the second inside the chrome only. Measured on `fold8_api37`, secondary
+    text went from 2.8:1 to 4.7:1 on light, 4.9:1 on sepia and 6.4:1 on black paper (labels 10.3–14.1:1).
+- **Gestures.**
+  - `swipeTabs` lives in the design system and is used on book details, the Notebook's book page, Words, Contents
+    and Aa.
+  - `dragDownToDismiss` is on every `DockPanel` and the riffle card. A list inside scrolls first through nested
+    scroll; a scroll back up retracts the panel before the list moves.
+- **Conversion.**
+  - `FlowService` runs a priority thread. While an OCR book is reading pages, a newly asked-for book converts there,
+    and the OCR book gives the engine lock away at its next page (`FlowPause.WAITING`). Only one conversion works at
+    a time.
+  - `FileOcrCache` keeps each scanned page's OCR, stamped with the engine version, beside the bundle, and removes it
+    once the book converts. A paused, stopped or killed conversion reads only the pages it has not read
+    (`OcrResumeTest`, `FileOcrCacheTest`).
+  - Verified on the emulator: Think Python, asked for second, finished in 62 s while the Arabic sample paused at 12%,
+    and the Arabic sample then finished.
+- **The scan notice.**
+  - `DynamicFlow.convert` checks a never-converted book's first four pages and emits `FlowNotice.ScanAsk` instead of
+    converting when most carry no text. `answerScan` converts, or puts the book back on its PDF; "Don't show this
+    again" is `UserSettings.scanNotice`.
+  - The estimate is a cautious 4 s a page until the Fold is measured (known issue 55).
+- **Cover progress:** `conversionBar` reads `LocalConversionProgress`, which `AppViewModel` provides from Dynamic
+  Flow's statuses.
+- **Updates:** `Updates.pickApk` prefers the APK for the phone's processor, then the universal one, ahead of TM2's
+  per-processor releases (`PickApkTest`).
+- **Quick fixes:**
+  - Shelf cards size their cover fan from the covers, and the Dynamic Flow toggle sits beside the stats.
+  - A settings choice row stacks its options under the label when the label would get less than 140 dp.
+  - `rememberSearchKeyboard` puts the Search key on every search field.
+  - Night glow (`UserSettings.neonGlow`) is removed.
+
 ## [0.7.0-beta.2] - 2026-11-12
 
 ### For readers
