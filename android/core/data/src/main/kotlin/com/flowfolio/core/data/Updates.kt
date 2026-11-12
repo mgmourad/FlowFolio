@@ -2,6 +2,7 @@ package com.flowfolio.core.data
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -215,11 +216,11 @@ class Updates @Inject constructor(
         }
     }
 
-    /** The one APK a release offers, or null when it has none (a notes-only release, say). */
+    /** The APK this phone should install from a release, or null when it has none (a notes-only release, say). */
     private fun apkAsset(assets: JSONArray?): JSONObject? = assets?.let { list ->
-        (0 until list.length())
-            .mapNotNull { list.optJSONObject(it) }
-            .firstOrNull { it.optString("name").endsWith(".apk") }
+        val all = (0 until list.length()).mapNotNull { list.optJSONObject(it) }
+        val chosen = pickApk(all.map { it.optString("name") }, Build.SUPPORTED_ABIS.toList())
+        all.firstOrNull { it.optString("name") == chosen }
     }
 
     /**
@@ -255,7 +256,22 @@ class Updates @Inject constructor(
         const val BUFFER = 64 * 1024
         const val AGENT = "FlowFolio (Android; https://github.com/mgmourad/FlowFolio)"
         const val TOO_MANY_REQUESTS = 429
-        val APK_NAME = Regex("""-(\d+)\.apk$""")
+
+        /** `flowfolio-<version>-<versionCode>.apk`, or `...-<versionCode>-<abi>.apk` for one processor type (TM2). */
+        val APK_NAME = Regex("""-(\d+)(?:-[a-z0-9_]+(?:-[a-z0-9_]+)?)?\.apk$""")
+
+        /**
+         * Which APK of a release to install (TM1): the one built for the first processor type in [abis] (the phone's
+         * own, most preferred first), else the universal APK, else any APK. Releases from TM2 carry one APK per
+         * processor type beside the universal one; older releases only the universal one.
+         */
+        fun pickApk(names: List<String>, abis: List<String>): String? {
+            val apks = names.filter { it.endsWith(".apk") }
+            for (abi in abis) apks.firstOrNull { it.endsWith("-$abi.apk") }?.let { return it }
+            return apks.firstOrNull { UNIVERSAL.containsMatchIn(it) } ?: apks.firstOrNull()
+        }
+
+        private val UNIVERSAL = Regex("""-\d+\.apk$""")
 
         /** What an HTTP status means for a reader waiting on a check. */
         fun failureFor(code: Int): UpdateFailure = when (code) {
