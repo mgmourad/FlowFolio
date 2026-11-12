@@ -8,6 +8,4 @@ plugins {
 
 dependencies {
     implementation(libs.kotlinx.serialization.json)
-    // OCR's measured check against real scans runs ONNX Runtime on the JVM (ADR-0054); tests only.
-    testImplementation(libs.onnxruntime.jvm)
 }

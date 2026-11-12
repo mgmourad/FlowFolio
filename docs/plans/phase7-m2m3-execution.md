@@ -43,16 +43,27 @@ debug command. Commit it before touching anything else.
 
 ## 5. M3: the scanned-books quality gate
 
-- Corpus (manifest + hashes only): clean scans, skewed, two-column, footnotes, mixed typed+scanned, Arabic-with-English,
-  typed Arabic. Ground truth ~30 EN / ~20 AR pages in `samples/golden/` (owner checks Arabic).
-- CI baselines: per-page word recall + CER, share of pages kept as text, planted bad pages stay pictures.
-- Tune 0.85 confidence / 40% agreement on the corpus; record numbers.
-- Typed Arabic PDFs: verify the inherited fix; finish `page-progression-direction="rtl"` + `dir="rtl"`/`lang="ar"`.
+- **Corpus + ground truth**: fetch the spike's proofread Wikisource pages (30 English + 20 Arabic) into
+  `samples/corpus/cache/ocr/` (gitignored); commit the proofread text as ground truth to `samples/golden/ocr/`, with a
+  manifest (id, source, sha256 of the scan, script, expected outcome).
+- **JVM Tesseract**: `JvmTesseract` (tess4j) mirrors `JvmOnnxModel` (PaddleOCR on onnxruntime-jvm); both move to
+  `:tools:convert` test (the corpus harness, ADR-0054's "tess4j in :tools:convert only"), so the gate runs in the
+  `corpus` CI job where `libtesseract` is installed.
+- **`OcrCorpusTest`**: per page word recall + CER against ground truth; the share of pages kept as text; planted bad
+  pages (handwriting, a photo, heavy blur) stay pictures; baselines committed in `samples/golden/ocr/`.
+- **Tune the gates** (0.85 confidence, 40% agreement) on the corpus and record the numbers.
+- **CI**: the corpus job fetches the pages + models and runs `OcrCorpusTest` alongside `CorpusTest`.
 
-## 6. Handover
+## 6. Speed on the real Fold
 
-Update CLAUDE.md, CHANGELOG, plan status; build the handover APK (new name); install on emulator (folded + unfolded)
-and the owner's phone; report what was verified and what was not.
+- Convert a 50-page English scan in a non-debuggable build in `:convert` on the owner's phone (known issues 22, 30);
+  target 2 s/page. If slow: batch recognition, more ORT threads, `ocrScale` 2.5.
+
+## 7. Release 0.7.0-beta.1
+
+- Bump `flowfolio.versionName`/`versionCode` to `0.7.0-beta.1`/`700001`, CHANGELOG heading, commit, push, wait for
+  green CI, `assembleRelease` (signed with the release key `~/.flowfolio/flowfolio-release.jks`, SHA-256 `59fbae55`),
+  tag, `gh release create --prerelease`.
 
 ---
 

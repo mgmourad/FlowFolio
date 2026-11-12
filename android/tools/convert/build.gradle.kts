@@ -12,7 +12,9 @@ dependencies {
     implementation(libs.jna)
     implementation(libs.kotlinx.serialization.json)
     testImplementation(libs.epubcheck)
-    // OCR tests on the desktop JVM (ADR-0054): Tesseract through JNA, tests only, never in the app.
+    // OCR tests on the desktop JVM (ADR-0054): PaddleOCR on ONNX Runtime's JVM build and Tesseract through JNA
+    // (tess4j), tests only, never in the app. CI installs libtesseract for the latter.
+    testImplementation(libs.onnxruntime.jvm)
     testImplementation(libs.tess4j)
 }
 

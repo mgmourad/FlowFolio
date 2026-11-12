@@ -130,14 +130,16 @@ jobs:
           retention-days: 7
 
   corpus:
-    # The converter's quality gate (Phase 3 M3): the CC BY books of the corpus, converted on the JVM and checked
-    # against samples/golden/ (EPUBCheck, the sidecar schema, the baselines and the hand-labelled pages). The
-    # CC BY-NC-SA books stay a local check (CLAUDE.md, known issue 10).
+    # The converter's quality gate (Phase 3 M3 and Phase 7 M3): the CC BY books of the corpus, converted on the JVM
+    # and checked against samples/golden/ (EPUBCheck, the sidecar schema, the baselines and the hand-labelled pages),
+    # plus the scanned-books gate (OcrCorpusTest: word recall and CER against proofread ground truth). The CC BY-NC-SA
+    # books stay a local check (CLAUDE.md, known issue 10).
     name: Converter corpus
     needs: changes
     if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    # The scanned pages come from Wikisource, which rate-limits; the first run is slow, later runs hit the cache.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
@@ -154,12 +156,33 @@ jobs:
       - name: Fetch the CC BY books
         # Skips books already cached with the right hash; fails on a hash mismatch.
         run: python3 -I tools/corpus/fetch_corpus.py --only physics,high-school-statistics,introduction-intellectual-property
+      - name: Restore the OCR scans
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: samples/corpus/cache/ocr
+          key: corpus-ocr-${{ hashFiles('samples/golden/ocr/manifest.txt') }}
+      - name: Fetch the OCR pages
+        # The scanned corpus (ADR-0054); skips pages already cached with the right hash.
+        run: python3 -I tools/corpus/fetch_ocr_corpus.py
+      - name: Fetch the OCR models
+        run: |
+          mkdir -p samples/corpus/cache/ocr-models
+          cd samples/corpus/cache/ocr-models
+          for f in PP-OCRv6_det_small.onnx PP-OCRv6_rec_small.onnx arabic_PP-OCRv5_rec_mobile.onnx; do
+            curl -fsSLO "https://github.com/mgmourad/FlowFolio/releases/download/ocr-models-v1/$f"
+          done
       - name: Install Tesseract for OCR tests
         # tess4j calls libtesseract through JNA (ADR-0054); tesseract-ocr-ara is the Arabic model those tests read with.
-        run: sudo apt-get update && sudo apt-get install -y libtesseract-dev tesseract-ocr-ara
+        run: |
+          sudo apt-get update && sudo apt-get install -y libtesseract-dev tesseract-ocr-ara
+          echo "TESSDATA=$(dirname "$(dpkg -L tesseract-ocr-ara | grep 'ara.traineddata$')")" >> "$GITHUB_ENV"
       - name: Convert and check against the baselines
         working-directory: android
-        run: ./gradlew :tools:convert:test --tests "*CorpusTest*"
+        env:
+          FLOWFOLIO_OCR_PAGES: ../samples/corpus/cache/ocr
+          FLOWFOLIO_OCR_MODELS: ../samples/corpus/cache/ocr-models
+          FLOWFOLIO_TESSDATA: ${{ env.TESSDATA }}
+        run: ./gradlew :tools:convert:test --tests "*CorpusTest*" --tests "*OcrCorpusTest*"
       - name: Upload the corpus report
         if: always()
         continue-on-error: true
