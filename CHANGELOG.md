@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [0.7.0-beta.3] - 2026-11-12
+
 ### For readers
 - **Clearer reading tools.** While you read, the bars and panels are dark on every paper, so their text stands out on
   light and sepia pages too.
@@ -45,7 +47,9 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   - `DynamicFlow.convert` checks a never-converted book's first four pages and emits `FlowNotice.ScanAsk` instead of
     converting when most carry no text. `answerScan` converts, or puts the book back on its PDF; "Don't show this
     again" is `UserSettings.scanNotice`.
-  - The estimate is a cautious 4 s a page until the Fold is measured (known issue 55).
+  - The estimate uses 6 s a page, from the Fold measurement below.
+- **OCR speed measured on the Fold** (release build 0.7.0-beta.2, 50-page scans): 4.4 s a page for English and 7.0 s
+  for Arabic, 2–3.5 times the plan's 2 s target (known issue 55).
 - **Cover progress:** `conversionBar` reads `LocalConversionProgress`, which `AppViewModel` provides from Dynamic
   Flow's statuses.
 - **Updates:** `Updates.pickApk` prefers the APK for the phone's processor, then the universal one, ahead of TM2's

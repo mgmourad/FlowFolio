@@ -421,10 +421,10 @@ class DefaultDynamicFlow @Inject constructor(
         private const val SCANNED_MAX_CHARS = 20
 
         /**
-         * Seconds OCR takes a page, for the notice's estimate: a cautious placeholder until it is measured on the
-         * Fold (CLAUDE.md, known issue 55).
+         * Seconds OCR takes a page, for the notice's estimate. Measured on the owner's Fold in a release build
+         * (2026-11-12): 4.4 s for English, 7.0 s for Arabic; the script is not known yet when the notice asks.
          */
-        private const val OCR_SECONDS_PER_PAGE = 4
+        private const val OCR_SECONDS_PER_PAGE = 6
         private const val SECONDS_PER_MINUTE = 60
 
         const val NOTICE_BUFFER = 8

@@ -238,7 +238,7 @@ reading surface and conversion, then TM2, the library, the app's size and widget
   - the scan notice before OCR (`FlowNotice.ScanAsk`) and the cover progress bar (`conversionBar`);
   - the processor-aware updater (`Updates.pickApk`);
   - the quick fixes. Night glow is removed.
-- Still open: Fold speed (known issue 55), which needs the owner's phone connected.
+- Fold speed measured: 4.4 s a page English, 7.0 s Arabic (known issue 55), against a 2 s target.
 - **The owner's Arabic book, 2026-11-11** (CHANGELOG, Unreleased, "Arabic books"): typed Arabic pages had their
   words reversed (flat-box spaces cut every line; fixed in `Extraction`); right-to-left pages now read their right
   column first (`ReadingOrder`); and an Arabic scanned book skips OCR once its pages vote it Arabic while no Arabic
@@ -726,12 +726,14 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     swiping it out of Recents on the owner's Samsung (One UI can be harsher than stock Android). Android 15+ allows a
     `dataSync` foreground service about 6 hours a day (`onTimeout`); a scanned book at debug-build OCR speed could
     reach that, and the conversion does not yet resume where it stopped.
-55. **OCR speed on the Fold is unmeasured** (2026-11-12). The M3 claim of 0.7–1.4 s a page was estimated from the
-    desktop JVM. On `fold8_api37` a scanned Arabic page takes about a minute even in the release build, all of it in
-    native code: Tesseract 21 s and PaddleOCR detection 16 s for a page Tesseract reads in 0.4 s on a Mac. Plain CPU
-    work is only 1.3x slower there, the system spends 44% of its time in the kernel, and 1.9 GB is swapped, so the
-    emulator's memory handling under HVF is the likely cause, not the code. Measure on the phone with a 50-page scan
-    before believing any number; the emulator cannot answer this.
+55. **OCR speed on the Fold: 4.4 s a page for English, 7.0 s for Arabic** (measured 2026-11-12, release build
+    0.7.0-beta.2 in `:convert`, 50-page scans, the whole conversion: 217.8 s and 347.8 s). The plan's target was
+    2 s a page, so a 300-page scan takes about 22 minutes in English and 35 in Arabic. The M3 claim of 0.7–1.4 s was
+    estimated from the desktop JVM and is wrong. Speed-ups not yet tried: batched recognition (RapidOCR batches 6 lines),
+    more ORT threads, `ocrScale` 2.5, and for Arabic, not recognising the page twice (the script check and the
+    reading).
+    - The emulator cannot measure this: native OCR runs about 50x slower there than on a Mac (kernel time and swap
+      under HVF), while plain CPU work is only 1.3x slower.
     - The OCR gate needs absolute paths: `FLOWFOLIO_OCR_PAGES`, `FLOWFOLIO_OCR_MODELS`, `FLOWFOLIO_TESSDATA`
       (tessdata_best `ara.traineddata`, from the `ocr-models-v1` release). Ground truth comes from `samples/golden/ocr`.
 53. **OCR on the phone goes through `OrtBridge`, never ONNX Runtime's Java API** (2026-11-11). sherpa-onnx's

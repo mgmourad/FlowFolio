@@ -29,7 +29,7 @@
 | Bad pages stay pictures | **Met** | The 9 manuscripts, a heavily blurred page and the English clipping read by the Arabic engines all stay pictures |
 | Typed Arabic PDFs read correctly | **Met** | Reading order and line breaks fixed in M2 (`RightToLeftLineTest`); the owner's book's typed pages read in order |
 | Right-to-left books | **Met** | `dir="rtl"`, `lang="ar"`, `page-progression-direction="rtl"`, right column first |
-| At most 2 s a page on the Fold | **Not measured** | Known issue 55: the emulator is 50 times slower than a Mac in native code and cannot answer this |
+| At most 2 s a page on the Fold | **Not met** | Measured 2026-11-12 on the owner's Fold, release build: 4.4 s a page English, 7.0 s Arabic (known issue 55) |
 
 ## What Phase 7 delivered
 
@@ -48,8 +48,8 @@
 
 ## Left open
 
-1. **Speed on the Fold.** Measure a 50-page English scan and a 50-page Arabic scan in the release build on the phone
-   (known issue 55).
+1. **Speed on the Fold** is 4.4 s a page for English and 7.0 s for Arabic, against a 2 s target (known issue 55).
+   Batched recognition and fewer double readings are the next things to try.
 2. **Arabic accuracy.** Kept pages read at about 16% CER on the corpus against the plan's 6%.
    - Better PaddleOCR Arabic models, or Tesseract's `ara` plus `script/Arabic`, are the next things to try.
    - The corpus needs mid-century book print with proofread text, which it lacks. The owner's book would be ideal if a
