@@ -28,4 +28,18 @@
     <string name="flow_notice_carrying_text">Highlights, notes and bookmarks in %1$s</string>
     <string name="flow_notice_carried">Your notes came across</string>
     <string name="flow_notice_carried_text">%1$d of %2$d found their place.</string>
+    <!-- TM1: before a scanned book is read by OCR. -->
+    <string name="scan_notice_title">This book is a scan</string>
+    <string name="scan_notice_body">Its pages are pictures, so Dynamic Flow reads them with text recognition. The text may not be exactly right, and it takes a while: %1$s for this book.\n\nYou can keep reading the original, or read another book. You will get a notification when it is ready.</string>
+    <string name="scan_notice_convert">Convert</string>
+    <string name="scan_notice_not_now">Not now</string>
+    <string name="scan_notice_dont_ask">Don\'t show this again</string>
+    <plurals name="scan_notice_minutes">
+        <item quantity="one">about a minute</item>
+        <item quantity="other">about %1$d minutes</item>
+    </plurals>
+    <plurals name="scan_notice_hours">
+        <item quantity="one">about an hour</item>
+        <item quantity="other">about %1$d hours</item>
+    </plurals>
 </resources>

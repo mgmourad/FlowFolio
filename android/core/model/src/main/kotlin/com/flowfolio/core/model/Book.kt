@@ -154,6 +154,8 @@ data class UserSettings(
     val text: ReaderText = ReaderText(),
     /** "Turn on Dynamic Flow upon opening" (ADR-0045): PDFs whose view was never chosen open in Dynamic Flow. */
     val dynamicFlowOnOpen: Boolean = false,
+    /** Explain, before a scanned book is read by OCR, that it may not be exact and takes a while (TM1). */
+    val scanNotice: Boolean = true,
     /** What switching views does with the highlights, notes and bookmarks made in the view being left. */
     val flowCarry: FlowCarry = FlowCarry.ASK,
     /** Reading Atmosphere (owner, M5): whether the chosen atmosphere is put on for every book. */

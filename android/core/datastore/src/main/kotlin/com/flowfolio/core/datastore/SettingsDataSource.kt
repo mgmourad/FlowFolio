@@ -75,6 +75,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             text = readerText(p),
             appStyle = p[APP_STYLE].toEnum(defaults.appStyle),
             dynamicFlowOnOpen = p[FLOW_ON_OPEN] ?: defaults.dynamicFlowOnOpen,
+            scanNotice = p[SCAN_NOTICE] ?: defaults.scanNotice,
             flowCarry = p[FLOW_CARRY].toEnum(defaults.flowCarry),
             atmosphereOn = p[ATMOSPHERE_ON] ?: defaults.atmosphereOn,
             atmosphereName = p[ATMOSPHERE_NAME],
@@ -214,6 +215,10 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         store.edit { it[FLOW_ON_OPEN] = on }
     }
 
+    suspend fun setScanNotice(on: Boolean) {
+        store.edit { it[SCAN_NOTICE] = on }
+    }
+
     suspend fun setFlowCarry(carry: FlowCarry) {
         store.edit { it[FLOW_CARRY] = carry.name }
     }
@@ -306,6 +311,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val KEEP_SCREEN_ON = booleanPreferencesKey("keep_screen_on")
         val APP_STYLE = stringPreferencesKey("app_style")
         val FLOW_ON_OPEN = booleanPreferencesKey("dynamic_flow_on_open")
+        val SCAN_NOTICE = booleanPreferencesKey("scan_notice")
         val FLOW_CARRY = stringPreferencesKey("flow_carry")
         val MATERIAL_SEED = stringPreferencesKey("material_seed")
         val TEXT_FONT = stringPreferencesKey("text_font")

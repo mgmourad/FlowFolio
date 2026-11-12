@@ -82,8 +82,15 @@ class MainActivity : ComponentActivity() {
                                 rustic = shown.style == AppStyle.RUSTIC
                             ).paper,
                             spread = { w, h -> reading.opensAsSpread(w, h) }
-                        ) { CoverFlightHost { FlowFolioApp(appViewModel) } }
+                        ) {
+                            val converting by appViewModel.conversionProgress.collectAsStateWithLifecycle()
+                            androidx.compose.runtime.CompositionLocalProvider(
+                                com.flowfolio.core.designsystem.LocalConversionProgress provides converting
+                            ) { CoverFlightHost { FlowFolioApp(appViewModel) } }
+                        }
                         FlowNoticeHost(appViewModel.flowNotices, appViewModel::onNotificationOpen)
+                        val scanAsk by appViewModel.scanAsk.collectAsStateWithLifecycle()
+                        scanAsk?.let { ScanNotice(it.minutes, appViewModel::answerScan) }
                         val update by appViewModel.updateAvailable.collectAsStateWithLifecycle()
                         update?.let { release ->
                             UpdateBanner(

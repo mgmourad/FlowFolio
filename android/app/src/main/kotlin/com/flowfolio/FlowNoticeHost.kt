@@ -103,7 +103,7 @@ private fun NoticeCard(notice: FlowNotice, onTap: () -> Unit) {
 }
 
 private fun titleOf(notice: FlowNotice): Int = when (notice) {
-    is FlowNotice.Started -> R.string.flow_notice_started
+    is FlowNotice.Started, is FlowNotice.ScanAsk -> R.string.flow_notice_started
     is FlowNotice.Done -> R.string.flow_notice_done
     is FlowNotice.Failed -> R.string.flow_notice_failed
     is FlowNotice.CarryStarted -> R.string.flow_notice_carrying
@@ -112,7 +112,7 @@ private fun titleOf(notice: FlowNotice): Int = when (notice) {
 
 @Composable
 private fun textOf(notice: FlowNotice): String = when (notice) {
-    is FlowNotice.Started -> stringResource(R.string.flow_notice_started_text, notice.title)
+    is FlowNotice.Started, is FlowNotice.ScanAsk -> stringResource(R.string.flow_notice_started_text, notice.title)
 
     is FlowNotice.Done -> stringResource(R.string.flow_notice_done_text, notice.title)
 

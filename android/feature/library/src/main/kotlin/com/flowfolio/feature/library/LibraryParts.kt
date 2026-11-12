@@ -78,6 +78,7 @@ import com.flowfolio.core.designsystem.LocalCoverFlights
 import com.flowfolio.core.designsystem.SHELF_ANGLE
 import com.flowfolio.core.designsystem.ShelfPlank
 import com.flowfolio.core.designsystem.color
+import com.flowfolio.core.designsystem.conversionBar
 import com.flowfolio.core.designsystem.coverLanding
 import com.flowfolio.core.designsystem.coverSpot
 import com.flowfolio.core.designsystem.detailsCoverKey
@@ -319,6 +320,7 @@ internal fun ShelfBook(
                 book.face(cover),
                 Modifier
                     .width(width)
+                    .conversionBar(book.id)
                     .graphicsLayer {
                         val s = if (lifted) LIFT_SCALE else 1f
                         scaleX = s

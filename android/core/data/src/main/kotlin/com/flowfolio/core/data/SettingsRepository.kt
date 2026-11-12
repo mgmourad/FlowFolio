@@ -110,6 +110,9 @@ interface SettingsRepository {
     /** Dynamic Flow (ADR-0045): open PDFs in it, and what switching views does with annotations. */
     suspend fun setDynamicFlowOnOpen(on: Boolean) = Unit
 
+    /** The notice before a scanned book is read by OCR ("Don't show this again" turns it off). */
+    suspend fun setScanNotice(on: Boolean) = Unit
+
     suspend fun setFlowCarry(carry: FlowCarry) = Unit
 }
 
@@ -263,6 +266,10 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setDynamicFlowOnOpen(on: Boolean) {
         source.setDynamicFlowOnOpen(on)
+    }
+
+    override suspend fun setScanNotice(on: Boolean) {
+        source.setScanNotice(on)
     }
 
     override suspend fun setFlowCarry(carry: FlowCarry) {

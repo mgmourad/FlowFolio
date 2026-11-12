@@ -38,6 +38,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -71,8 +72,17 @@ interface DynamicFlow {
     /** The conversion's health for the book (M2), or null when it has no bundle. */
     fun health(bookId: String): BookHealth?
 
-    /** Converts [bookId] in the background unless it is converted or converting already. */
+    /**
+     * Converts [bookId] in the background unless it is converted or converting already. A scanned book never converted
+     * before asks first ([FlowNotice.ScanAsk]) and converts once [answerScan] says so.
+     */
     suspend fun convert(bookId: String)
+
+    /**
+     * The answer to [FlowNotice.ScanAsk]: [convert] reads the book by OCR now; otherwise the book goes back to its PDF,
+     * so it does not ask every time it opens. [dontAsk] stops asking for every book.
+     */
+    suspend fun answerScan(bookId: String, convert: Boolean, dontAsk: Boolean) = Unit
 
     /**
      * Sets the book's view (true Dynamic Flow); turning it on converts the book when it has no bundle yet. With [carry]
@@ -140,7 +150,9 @@ class DefaultDynamicFlow @Inject constructor(
     private val bookmarks: BookmarkDao,
     @IoDispatcher private val io: CoroutineDispatcher,
     // Lazy: the carrier tells this class what it carried, so neither can be made inside the other.
-    private val carrier: dagger.Lazy<AnnotationCarrier>
+    private val carrier: dagger.Lazy<AnnotationCarrier>,
+    private val pdf: com.flowfolio.core.pdf.PdfEngine,
+    private val settings: com.flowfolio.core.data.SettingsRepository
 ) : DynamicFlow {
     private val files = FlowFiles(context.filesDir)
     private val scope = CoroutineScope(SupervisorJob() + io)
@@ -151,6 +163,9 @@ class DefaultDynamicFlow @Inject constructor(
     private val _wantsNotificationPermission = MutableStateFlow(false)
     override val wantsNotificationPermission: StateFlow<Boolean> = _wantsNotificationPermission.asStateFlow()
     private val titles = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /** Scanned books the reader agreed to have read by OCR (TM1): they convert without asking again. */
+    private val agreed = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     /** Books whose PDF changes go into their Dynamic Flow once it is converted. */
     private val carryWhenReady = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
@@ -287,6 +302,14 @@ class DefaultDynamicFlow @Inject constructor(
         val book = if (started) null else withContext(io) { books.get(bookId)?.toBook() }
         if (book?.format != BookFormat.PDF) return
         titles[bookId] = book.title
+        // A scan never converted before: say what OCR means and how long it takes, and convert once agreed (TM1).
+        if (bookId !in agreed && neverConverted(bookId) && settings.settings.first().scanNotice) {
+            val minutes = scanMinutes(book)
+            if (minutes != null) {
+                _notices.tryEmit(FlowNotice.ScanAsk(bookId, book.title, minutes))
+                return
+            }
+        }
         if (files.outdated(bookId)) reanchorWhenReady += bookId
         set(bookId, FlowStatus.Converting(0f))
         lastHeard[bookId] = SystemClock.elapsedRealtime()
@@ -317,6 +340,51 @@ class DefaultDynamicFlow @Inject constructor(
         if (on) convert(bookId)
     }
 
+    override suspend fun answerScan(bookId: String, convert: Boolean, dontAsk: Boolean) {
+        if (dontAsk) settings.setScanNotice(false)
+        if (convert) {
+            agreed += bookId
+            convert(bookId)
+        } else {
+            withContext(io) { reading.setFlowMode(bookId, false) }
+        }
+    }
+
+    /** Nothing of a conversion is on disk: no bundle, no partial one, no pages already read by OCR. */
+    private fun neverConverted(bookId: String) = !files.epub(bookId).exists() &&
+        !files.partial(bookId).exists() && !files.ocrCache(bookId).exists()
+
+    /**
+     * About how many minutes OCR will take when [book] looks scanned (most of its first pages carry almost no text),
+     * else null. Any trouble opening it is left to the conversion, which reports it.
+     */
+    private suspend fun scanMinutes(book: com.flowfolio.core.model.Book): Int? = withContext(io) {
+        runCatching {
+            val fd = when (val s = book.storage) {
+                is BookStorage.Copied -> android.os.ParcelFileDescriptor.open(
+                    File(s.path),
+                    android.os.ParcelFileDescriptor.MODE_READ_ONLY
+                )
+
+                is BookStorage.Linked -> context.contentResolver.openFileDescriptor(android.net.Uri.parse(s.uri), "r")
+            } ?: return@runCatching null
+            // The file stays open while PDFium reads it.
+            fd.use { file ->
+                pdf.open(file).use { doc ->
+                    val sample = (0 until minOf(doc.pageCount, SCAN_SAMPLE_PAGES))
+                    val scanned = sample.count { i ->
+                        doc.pageText(i).text.count { !it.isWhitespace() } < SCANNED_MAX_CHARS
+                    }
+                    if (scanned * 2 <= sample.count()) {
+                        null
+                    } else {
+                        ((doc.pageCount * OCR_SECONDS_PER_PAGE) / SECONDS_PER_MINUTE).coerceAtLeast(1)
+                    }
+                }
+            }
+        }.getOrNull()
+    }
+
     override suspend fun saveFlowPlace(bookId: String, locator: String, pdfPage: Int?) = withContext(io) {
         if (pdfPage ==
             null
@@ -345,6 +413,17 @@ class DefaultDynamicFlow @Inject constructor(
     }
 
     private companion object {
+        /** How many first pages are looked at to tell a scan, and how little text a scanned page has (TM1). */
+        private const val SCAN_SAMPLE_PAGES = 4
+        private const val SCANNED_MAX_CHARS = 20
+
+        /**
+         * Seconds OCR takes a page, for the notice's estimate: a cautious placeholder until it is measured on the
+         * Fold (CLAUDE.md, known issue 55).
+         */
+        private const val OCR_SECONDS_PER_PAGE = 4
+        private const val SECONDS_PER_MINUTE = 60
+
         const val NOTICE_BUFFER = 8
         const val TAG = "FlowFolioFlow"
 

@@ -58,6 +58,7 @@ import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.designsystem.LocalCoverFlights
 import com.flowfolio.core.designsystem.ShelfPlank
+import com.flowfolio.core.designsystem.conversionBar
 import com.flowfolio.core.designsystem.coverLanding
 import com.flowfolio.core.designsystem.coverSpot
 import com.flowfolio.core.designsystem.detailsCoverKey
@@ -120,7 +121,8 @@ internal fun BookTile(item: LibraryItem, origin: String, actions: LibraryActions
                     .fillMaxWidth()
                     .scale(if (pressed) PRESSED else 1f)
                     .coverSpot(spot)
-                    .coverLanding(shelfCoverKey(book.id, origin), 0f),
+                    .coverLanding(shelfCoverKey(book.id, origin), 0f)
+                    .conversionBar(book.id),
                 badges = item.badges()
             )
             item.statusLabel()?.let { label ->
@@ -283,7 +285,7 @@ private fun BookListRow(item: LibraryItem, actions: LibraryActions, modifier: Mo
         horizontalArrangement = Arrangement.spacedBy(14.dp)
     ) {
         Box {
-            BookCover(book.face(cover), Modifier.width(52.dp))
+            BookCover(book.face(cover), Modifier.width(52.dp).conversionBar(book.id))
             BookMenu(item, LIST_ORIGIN, menu, actions) { menu = false }
         }
         Column(Modifier.weight(1f)) {

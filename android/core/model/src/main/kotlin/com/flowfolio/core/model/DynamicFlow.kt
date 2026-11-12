@@ -43,6 +43,12 @@ sealed interface FlowNotice {
 
     data class Started(override val bookId: String, override val title: String) : FlowNotice
 
+    /**
+     * The book is a scan, never converted: before reading it by OCR, ask (TM1). [minutes] is about how long it takes.
+     * The app answers with [com.flowfolio.core.model.FlowNotice] handling of its own; nothing converts until then.
+     */
+    data class ScanAsk(override val bookId: String, override val title: String, val minutes: Int) : FlowNotice
+
     data class Done(override val bookId: String, override val title: String) : FlowNotice
 
     data class Failed(override val bookId: String, override val title: String, val reason: FlowFailure) : FlowNotice

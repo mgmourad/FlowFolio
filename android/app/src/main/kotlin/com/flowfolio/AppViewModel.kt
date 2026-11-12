@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -42,8 +43,38 @@ class AppViewModel @Inject constructor(
     private val flow: DynamicFlow,
     private val updates: Updates
 ) : ViewModel() {
-    /** Dynamic Flow's notices for the app's banner (ADR-0045). */
-    val flowNotices: Flow<FlowNotice> = flow.notices
+    /** Dynamic Flow's notices for the app's banner (ADR-0045); the scan question is a dialog of its own. */
+    val flowNotices: Flow<FlowNotice> = flow.notices.filter { it !is FlowNotice.ScanAsk }
+
+    /** How far each converting book is, for the bar on its cover (TM1). */
+    val conversionProgress: StateFlow<Map<String, Float>> = flow.statuses
+        .map { all ->
+            all.mapNotNull { (id, s) ->
+                when (s) {
+                    is com.flowfolio.core.model.FlowStatus.Converting -> id to s.fraction
+                    com.flowfolio.core.model.FlowStatus.Queued -> id to 0f
+                    else -> null
+                }
+            }.toMap()
+        }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(STOP_MS), emptyMap())
+
+    /** A scanned book waiting for the reader's go-ahead before OCR (TM1); null when nothing is asked. */
+    private val _scanAsk = MutableStateFlow<FlowNotice.ScanAsk?>(null)
+    val scanAsk: StateFlow<FlowNotice.ScanAsk?> = _scanAsk.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            flow.notices.collect { if (it is FlowNotice.ScanAsk) _scanAsk.value = it }
+        }
+    }
+
+    /** The scan question's answer: convert now or not, and whether to ask again for other books. */
+    fun answerScan(convert: Boolean, dontAsk: Boolean) {
+        val ask = _scanAsk.value ?: return
+        _scanAsk.value = null
+        viewModelScope.launch { flow.answerScan(ask.bookId, convert, dontAsk) }
+    }
 
     /** A newer build found by the automatic check, shown as a banner; null once dismissed or when up to date. */
     private val _updateAvailable = MutableStateFlow<Release?>(null)
@@ -186,3 +217,5 @@ class AppViewModel @Inject constructor(
         const val CHECK_INTERVAL_MS = 60 * 1000L
     }
 }
+
+private const val STOP_MS = 5_000L

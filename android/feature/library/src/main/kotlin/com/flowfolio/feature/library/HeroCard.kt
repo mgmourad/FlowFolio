@@ -33,6 +33,7 @@ import com.flowfolio.core.designsystem.FlowFolioIconButton
 import com.flowfolio.core.designsystem.FlowFolioProgressBar
 import com.flowfolio.core.designsystem.FlowFolioType
 import com.flowfolio.core.designsystem.Glyph
+import com.flowfolio.core.designsystem.conversionBar
 import com.flowfolio.core.designsystem.coverLanding
 import com.flowfolio.core.designsystem.coverSpot
 import com.flowfolio.core.designsystem.shelfCoverKey
@@ -66,6 +67,7 @@ internal fun ContinueReadingCard(
                 book.face(cover),
                 Modifier
                     .width(if (wide) 150.dp else 116.dp)
+                    .conversionBar(book.id)
                     .clickable(role = Role.Button) { actions.onOpen(item, HERO_ORIGIN) }
                     .coverSpot(actions.heroSpot)
                     .coverLanding(shelfCoverKey(book.id, HERO_ORIGIN), 0f),
