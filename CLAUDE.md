@@ -180,14 +180,24 @@ it. Also: the tour's 11 pictures retaken without the status bar, and "Replay the
 - Arabic: PaddleOCR and Tesseract together. A page becomes text only when the two engines' words agree at least 40%,
   and Tesseract's text is used.
 - Arabic printed before about 1950 will mostly stay pictures.
-- **M2 built 2026-11-11 for English** (CHANGELOG, Unreleased; plan status in `docs/plans/phase7-plan.md`).
+- **M2 built 2026-11-11** (CHANGELOG, Unreleased; plan status in `docs/plans/phase7-plan.md`).
   - Code: `:core:conversion/ocr` (PaddleOCR in Kotlin, `ScannedPageReader`, `OcrGate`, `Script`, `OcrPages`,
-    `OnnxMetadata`), `Converter.Settings.ocr`, `PdfSource.renderPixels`.
+    `OnnxMetadata`, `TesseractPage`), `Converter.Settings.ocr`, `PdfSource.renderPixels`.
   - Phone side: `:core:voice` `OrtBridge` (C API bridge to sherpa's ORT; headers fetched by `SherpaOnnxConventionPlugin`)
     and `:core:data/ocr` (`AndroidOnnxModel`, `OcrPack`, wired into `FlowService`); Settings → Dynamic Flow → Scanned
     books.
-  - Left for M3's session: Tesseract for Arabic, speed on the Fold, mirroring the models
-    (`docs/plans/phase7-handoff-m3.md`).
+  - **Tesseract for Arabic, built from source**: Tesseract 5.5.4 + Leptonica 1.87.0 + Google's `cpu_features`
+    (Apache-2.0, statically linked), cross-compiled by `TesseractConventionPlugin` for arm64-v8a/armeabi-v7a/x86_64,
+    raw grayscale pixels in (no image codecs). `:core:ocr` holds the C API bridge and `TesseractOcr`; Tesseract's
+    Arabic is logical order, so it is not reordered (PaddleOCR's visual order is). `libc++_shared.so` is bundled.
+    Verified on `fold8_api37`: a two-page Arabic scan reads as `ocr:tesseract-ara` (agreement 58% and 80%).
+  - **Arabic books open right to left**: `dir="rtl"` + `lang="ar"` on chapters and package, and
+    `page-progression-direction="rtl"` on the spine (Engine 1.5.2).
+  - **Models mirrored** on FlowFolio's releases (`ocr-models-v1`); `OcrPack` points there, SHA-256s pinned.
+  - For CI, `tess4j` 5.21.0 in `:tools:convert` tests only, and the Linux runner installs `libtesseract` +
+    `tesseract-ocr-ara`.
+  - Left: speed on the Fold (release build, ~2 s a page), then M3's corpus and gate tuning
+    (`docs/plans/phase7-handoff-m3.md`, `docs/plans/phase7-m2m3-execution.md`).
   - CI has not run on M2.
 - **The owner's Arabic book, 2026-11-11** (CHANGELOG, Unreleased, "Arabic books"): typed Arabic pages had their
   words reversed (flat-box spaces cut every line; fixed in `Extraction`); right-to-left pages now read their right

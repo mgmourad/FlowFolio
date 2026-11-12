@@ -59,13 +59,15 @@ record:
 
 ## M2: OCR in the pipeline
 
-> **Status, 2026-11-11: built for English, Arabic waits on Tesseract.** Done: PaddleOCR in Kotlin
+> **Status, 2026-11-11: built for English and Arabic.** PaddleOCR in Kotlin
 > (`:core:conversion/ocr`, 98.9% median word recall on the spike's pages, matching RapidOCR), the script check that
-> keeps Arabic pages away from the Latin model, the converter hook and sidecar (`ocr:<engine>@<confidence>`,
-> `fallback:ocr-low-confidence`), the phone's bridge to sherpa-onnx's ONNX Runtime, and the scanned-books pack in
-> Settings → Dynamic Flow. Verified on `fold8_api37`: a scanned sample reflows; its Arabic page stays a picture.
-> Left: Tesseract on Android for Arabic, speed on the Fold (the emulator's debug build takes about 25–35 s a page),
-> and mirroring the models. See `docs/plans/phase7-handoff-m3.md`.
+> keeps Arabic pages away from the Latin model, Tesseract 5.5.4 + Leptonica built from source for Arabic (agreement
+> with PaddleOCR at 40%, `:core:ocr`), the converter hook and sidecar (`ocr:<engine>@<confidence>`,
+> `fallback:ocr-low-confidence`), the phone's bridge to sherpa-onnx's ONNX Runtime, the scanned-books pack in
+> Settings → Dynamic Flow (mirrored on `ocr-models-v1`), and Arabic books opening right to left (`dir="rtl"`,
+> `lang="ar"`, `page-progression-direction="rtl"`). Verified on `fold8_api37`: a two-page Arabic scan reflows as
+> `ocr:tesseract-ara`. Left: speed on the Fold (the emulator's debug build takes about 25–35 s a page), and M3's
+> corpus and gate tuning. See `docs/plans/phase7-m2m3-execution.md`.
 
 - **An `OcrEngine` interface in `:core:conversion`** (plain JVM). The phone and desktop implementations sit outside it,
   as `PdfSource` does today.
