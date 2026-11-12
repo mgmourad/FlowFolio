@@ -51,4 +51,10 @@ interface ReadingSessionDao {
             "JOIN books b ON b.id = s.book_id WHERE s.ended_at > :sinceMillis"
     )
     fun observeLibraryTotalSince(sinceMillis: Long): Flow<Long>
+
+    /** The sessions in books still in the library that ended after [sinceMillis] (the reading streak, TM2). */
+    @Query(
+        "SELECT s.* FROM reading_sessions s JOIN books b ON b.id = s.book_id WHERE s.ended_at > :sinceMillis"
+    )
+    suspend fun sessionsSince(sinceMillis: Long): List<ReadingSessionEntity>
 }

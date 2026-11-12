@@ -33,10 +33,12 @@ import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
 import com.flowfolio.feature.library.ResourcesOfferHost
+import com.flowfolio.feature.reader.Narration
 import com.flowfolio.feature.reader.layout.ReaderLayout
 import com.flowfolio.feature.reader.layout.chooseLayout
 import com.flowfolio.feature.reader.riffle.RiffleDemo
 import com.flowfolio.feature.reader.tone
+import com.flowfolio.widget.ACTION_NARRATE
 import dagger.hilt.android.AndroidEntryPoint
 
 private const val EXTRA_OPEN_BOOK = "openBookId"
@@ -131,8 +133,12 @@ class MainActivity : ComponentActivity() {
             else -> null
         }
         uri?.let { appViewModel.onSharedFile(it.toString()) }
-        // A Dynamic Flow notification (ours, so not only in debug builds) opens its book.
-        intent.getStringExtra(FlowNotifications.EXTRA_OPEN_BOOK)?.let(appViewModel::onNotificationOpen)
+        // A Dynamic Flow notification or a home-screen widget (ours, so not only in debug builds) opens its book;
+        // the Narrator widget's Play also asks the reader to start narrating once its pages are ready.
+        intent.getStringExtra(FlowNotifications.EXTRA_OPEN_BOOK)?.let { bookId ->
+            if (intent.action == ACTION_NARRATE) Narration.startWhenOpened(bookId)
+            appViewModel.onNotificationOpen(bookId)
+        }
         // Debug builds: `am start ... --es openBookId <sha256> [--es layout single|spread]` (measurement scripts).
         val debuggable = isDebuggable()
         val bookId = intent.getStringExtra(EXTRA_OPEN_BOOK)

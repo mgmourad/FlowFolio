@@ -100,6 +100,15 @@ fun FlowFolioPalette(dark: Boolean, content: @Composable () -> Unit) {
     }
 }
 
+/** The [style]'s light and dark palettes outside Compose (the home-screen widgets, TM2). */
+fun paletteFamilyOf(context: android.content.Context, style: AppStyle, seed: MaterialSeed): PaletteFamily =
+    when (style) {
+        AppStyle.FLOWFOLIO -> PaletteFamily(LightPalette, DarkPalette)
+        AppStyle.RUSTIC -> PaletteFamily(RusticLightPalette, RusticDarkPalette)
+        AppStyle.MATERIAL -> materialFamily(context, seed)
+        AppStyle.AMOLED -> PaletteFamily(AmoledPalette, AmoledPalette)
+    }
+
 /** The [style]'s light and dark palettes; Material You's are made once per seed (and wallpaper). */
 @Composable
 fun paletteFamily(style: AppStyle, seed: MaterialSeed): PaletteFamily = when (style) {

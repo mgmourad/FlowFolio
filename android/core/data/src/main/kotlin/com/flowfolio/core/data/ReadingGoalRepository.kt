@@ -49,6 +49,9 @@ interface ReadingGoalRepository {
     suspend fun saveGoal(goal: ReadingGoal) {}
 
     suspend fun resetGoal(scope: String) {}
+
+    /** Days in a row with some reading, up to today (or yesterday, when today has none yet). */
+    suspend fun streakDays(): Int = 0
 }
 
 @Singleton
@@ -77,6 +80,12 @@ class DefaultReadingGoalRepository @Inject constructor(
     override suspend fun resetGoal(scope: String) = withContext(io) {
         dao.delete(scope)
         scheduler.cancel(scope)
+    }
+
+    override suspend fun streakDays(): Int = withContext(io) {
+        val now = clock.now()
+        val since = now - ReadingStreak.LOOKBACK_DAYS * ReadingStreak.DAY_MS
+        ReadingStreak.days(sessions.sessionsSince(since).map { it.startedAt to it.endedAt }, now)
     }
 
     companion object {

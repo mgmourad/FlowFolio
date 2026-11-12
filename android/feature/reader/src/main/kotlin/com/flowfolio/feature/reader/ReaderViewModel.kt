@@ -1616,6 +1616,11 @@ class ReaderViewModel @Inject constructor(
         // The lock screen and the notifications follow playing, paused and the speed. Kept after every property
         // (Kotlin runs initialisers in order, and viewModelScope starts this at once): the flows must exist.
         viewModelScope.launch { combine(_narrating, _narratorRate) { _, _ -> }.collect { publishNowPlaying() } }
+        // The Narrator widget's Play, with nothing playing, opened this book: narrate once the pages are ready.
+        viewModelScope.launch {
+            _state.first { it is ReaderState.Ready }
+            if (NarrationHub.takeStartOnOpen(bookId) && !_narrating.value) startNarration()
+        }
     }
 
     override fun onCleared() {

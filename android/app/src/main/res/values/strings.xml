@@ -42,4 +42,31 @@
         <item quantity="one">about an hour</item>
         <item quantity="other">about %1$d hours</item>
     </plurals>
+    <!-- Home-screen widgets (TM2). -->
+    <string name="widget_continue_name">Continue reading</string>
+    <string name="widget_continue_description">The book you are reading, where you left it</string>
+    <string name="widget_continue_label">Continue reading</string>
+    <string name="widget_continue_empty">Open a book in FlowFolio and it waits here</string>
+    <string name="widget_continue_page">p. %1$s of %2$s</string>
+    <string name="widget_goal_name">Reading goal</string>
+    <string name="widget_goal_description">Today\'s reading against your goal, and your streak</string>
+    <string name="widget_goal_label">Reading goal</string>
+    <string name="widget_goal_today">%1$d of %2$d min today</string>
+    <string name="widget_goal_week">%1$d of %2$d min this week</string>
+    <string name="widget_goal_month">%1$d of %2$d min this month</string>
+    <string name="widget_goal_of">of %1$d min</string>
+    <string name="widget_goal_no_streak">Read today to start a streak</string>
+    <plurals name="widget_goal_streak">
+        <item quantity="one">%1$d day in a row</item>
+        <item quantity="other">%1$d days in a row</item>
+    </plurals>
+    <string name="widget_narrator_name">Narrator</string>
+    <string name="widget_narrator_description">Listen to your book, and control it from the home screen</string>
+    <string name="widget_narrator_label">Narrator</string>
+    <string name="widget_narrator_empty">Open a book in FlowFolio to listen to it here</string>
+    <string name="widget_narrator_play">Play</string>
+    <string name="widget_narrator_pause">Pause</string>
+    <string name="widget_narrator_previous">Back</string>
+    <string name="widget_narrator_next">Forward</string>
+    <string name="widget_narrator_speed">%1$s×</string>
 </resources>

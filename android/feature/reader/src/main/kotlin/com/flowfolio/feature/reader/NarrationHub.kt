@@ -56,6 +56,16 @@ internal object NarrationHub {
     var commands: NarrationCommands? = null
         private set
 
+    /** A book whose reader should start narrating once its pages are ready (the widget's Play), taken once. */
+    @Volatile
+    var startOnOpen: String? = null
+
+    fun takeStartOnOpen(bookId: String): Boolean {
+        if (startOnOpen != bookId) return false
+        startOnOpen = null
+        return true
+    }
+
     fun refresh() {
         _refreshes.value++
     }

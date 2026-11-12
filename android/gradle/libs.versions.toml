@@ -45,6 +45,8 @@ epubcheck = "5.4.0"
 tess4j = "5.21.0"
 # Voice-pack download (Phase 6 M3): tar.bz2 extraction of the Kokoro model (sherpa-onnx's release format).
 commonsCompress = "1.27.1"
+# Home-screen widgets (TM2, owner-approved 2026-11-12): Jetpack Glance, Apache-2.0, released 2026-08-26.
+glance = "1.2.0"
 
 
 # SDK levels (ADR-0006)
@@ -55,6 +57,7 @@ targetSdk = "37"
 [libraries]
 mlkit-translate = { module = "com.google.mlkit:translate", version.ref = "mlkitTranslate" }
 mlkit-language-id = { module = "com.google.mlkit:language-id", version.ref = "mlkitLanguageId" }
+androidx-glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }

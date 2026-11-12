@@ -60,6 +60,41 @@
             </intent-filter>
         </receiver>
 
+        <!-- Home-screen widgets (TM2). -->
+        <receiver
+            android:name="com.flowfolio.widget.ContinueReadingReceiver"
+            android:exported="true"
+            android:label="@string/widget_continue_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_continue" />
+        </receiver>
+        <receiver
+            android:name="com.flowfolio.widget.ReadingGoalReceiver"
+            android:exported="true"
+            android:label="@string/widget_goal_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_goal" />
+        </receiver>
+        <receiver
+            android:name="com.flowfolio.widget.NarratorWidgetReceiver"
+            android:exported="true"
+            android:label="@string/widget_narrator_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_narrator" />
+        </receiver>
+
         <!-- Hands a downloaded update to the system installer; serves nothing but that one cache folder. -->
         <provider
             android:name="androidx.core.content.FileProvider"
