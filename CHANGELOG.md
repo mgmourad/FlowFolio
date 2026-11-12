@@ -5,6 +5,49 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+### For readers
+- **Arabic scanned books now become text.** Most pages of a typical printed Arabic book now reflow; before, about
+  half stayed pictures. Books you already converted are converted again the next time you open them.
+- **Fewer broken words** in some PDFs: words like "necessary" no longer split in two.
+- **Bullet lists come through as lists** in books whose bullets used to show up as empty lines.
+- **What's new is shorter:** it now shows the changes you will notice, not the developers' notes.
+- The Scanned books setting now says it reads Arabic, which it does.
+
+### Phase 7 M4: verifying M3, the Arabic gate, and the open issues (2026-11-12)
+- **Verifying M3 found that no Arabic book worked** (owner's report, confirmed on his 1960s Egyptian book).
+  - Tesseract read the pages well; PaddleOCR, the checker, garbled a letter in most words.
+  - Whole-word agreement therefore fell to 0.17–0.57, and pages Tesseract had read well stayed pictures.
+  - **ADR-0055** (proposed) measures agreement by letter pairs instead (Dice over in-word bigrams), with the bar at
+    0.66. On the M3 corpus it keeps exactly the pages it kept before and rejects every misread page, manuscripts
+    included; on the owner's book it keeps 10 of 11 body pages where 6 were kept before.
+  - PaddleOCR now checks Tesseract on the lines already detected, rather than detecting the page a second time.
+  - Engine **1.5.3**: books convert again on their next opening.
+- **CI's OCR gate had never run.**
+  - The corpus job passed the OCR paths relative to the wrong folder, so `OcrCorpusTest` skipped all three tests
+    while the job stayed green. It also read Ubuntu's smaller `tesseract-ocr-ara`, not the phone's `tessdata_best`.
+  - Now: absolute paths; ground truth read from `samples/golden/ocr/`; the phone's four models fetched from the
+    mirror and checked against `OcrPack`'s hashes; and a set-but-missing folder fails the test instead of skipping it.
+  - Baselines tightened to just under the measurements (Arabic recall 0.88, kept 0.35; English kept 0.95, CER 0.05).
+- **Known issue 51 fixed** (*Learning DevOps*):
+  - "necessar y", "repositor y", "encr ypt": that PDF sets its fonts at size 1 (known issue 46), so the word-space
+    rule allowed a quarter of a point and kerning read as a space. The em now comes from the glyph box when the
+    reported size is less than a third of it.
+  - Its square bullets are U+0082, a control code, and came out as empty paragraphs; the C1 range now counts as a
+    bullet.
+  - "repositor" and "Packer CL" without their last letter are in the PDF itself: PDFium and Poppler both read them
+    that way, and the page prints them so.
+- **Known issue 44 is no longer reproducible.** The Python book's cover now converts as one whole-page picture
+  (Phase 4's full-page covers).
+- **Known issue 45 did not reproduce.** On `fold8_api37` three taps at the right edge of a reflowed book turned
+  three spreads; taps sent while a reflowed book is still opening are dropped, which fits the original report.
+- **What's new:**
+  - It shows a version's `### For readers` section on its own when there is one.
+  - A build ahead of the changelog is labelled with its own version, not "Unreleased".
+- **Speed is not yet known on the Fold** (see CLAUDE.md, known issue 55). On `fold8_api37` one Arabic page takes
+  about a minute in the release build. The time is in native code (Tesseract 21 s, PaddleOCR detection 16 s), which
+  is 50 times slower there than on a Mac, while plain CPU work is only 1.3 times slower: the emulator's memory
+  handling, not the code, is the likely cause.
+
 ## [0.7.0-beta.1] - 2026-11-12
 
 ### Phase 7 M3: the scanned-books quality gate (2026-11-12)
@@ -14,11 +57,12 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 - **`OcrCorpusTest`** (in `:tools:convert`, the corpus harness) measures, per page, word recall and CER, the share of
   pages kept as text, and that the manuscripts and a blurred page stay pictures. It runs in the `corpus` CI job
   (which installs `libtesseract` and fetches the pages and models), checked against the committed baselines.
-- **The gates hold as ADR-0054 set them.** English 98.9% recall / 3.0% CER, all 21 pages kept at the 0.85 confidence
+- **The gates hold as ADR-0054 set them.** English 98.9% recall / 3.0% CER, 20 of 21 pages kept (corrected 2026-11-12: not all 21) at the 0.85 confidence
   gate; Arabic printed 93.0% recall / 16.0% CER on the pages the two engines agreed on (4 of 10 kept at the 40% bar —
   the pre-1950 metal type stays pictures, the 9 manuscripts do too).
 - **OCR is fast enough.** English recognition is about 0.35 s a page compiled (the debug build's 25–35 s was
-  interpreted Kotlin); on the Fold that is about 0.7–1.4 s a page, inside the 2 s target.
+  interpreted Kotlin); on the Fold that is about 0.7–1.4 s a page, inside the 2 s target. (Corrected 2026-11-12: this was
+  estimated from the desktop JVM, not measured on the Fold.)
 
 ### Phase 7 M2: Arabic scanned books read by Tesseract (2026-11-11)
 - **Tesseract reads Arabic scans.** Tesseract 5.5.4 and Leptonica 1.87.0 are built from source with the NDK for

@@ -858,13 +858,16 @@ class Blocks(styles: List<Style>) {
 
         /**
          * A list marker at the start of a line, then a space: a bullet (including the private-use bullets of symbol
-         * fonts mapped to Unicode), a dash, or a number, letter or roman numeral with a stop or bracket.
+         * fonts mapped to Unicode, and the C1 control codes a font with a broken Unicode map gives its bullet --
+         * *Learning DevOps* draws its "▪" as U+0082, which came out as empty paragraphs, known issue 51), a dash, or a
+         * number, letter or roman numeral with a stop or bracket.
          */
         private val LIST_MARKER = Regex(
-            "^\\s*([•◦▪▸►‣∙·○■□●◆◇❖➢➤✓✔▶–—*\\-\\uF0B7\\uF0A7\\uF0D8\\uF0FC\\uF076\\uF06E\\uF06C\\uF0A8]|" +
+            "^\\s*([•◦▪▸►‣∙·○■□●◆◇❖➢➤✓✔▶–—*\\-\\uF0B7\\uF0A7\\uF0D8\\uF0FC\\uF076\\uF06E\\uF06C\\uF0A8" +
+                "\\u0080-\\u009F]|" +
                 "\\(?\\d{1,3}[.)]|\\(?[a-zA-Z][.)]|\\(?[ivxlc]{1,6}[.)])\\s+"
         )
-        private val LONE_MARKER = Regex("^([•◦▪●■□–\\-\\uF0B7\\uF0A7]|\\(?\\d{1,3}[.)]|\\(?[a-z][.)])$")
+        private val LONE_MARKER = Regex("^([•◦▪●■□–\\-\\uF0B7\\uF0A7\\u0080-\\u009F]|\\(?\\d{1,3}[.)]|\\(?[a-z][.)])$")
         private const val BULLET = "•"
         private const val SYMBOL = "symbol"
 

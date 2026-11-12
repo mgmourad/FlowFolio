@@ -28,7 +28,11 @@ class ScannedPageReader(
         val script = arabic?.let { Script.of(image, rects, latin, it) } ?: Script.LATIN
         return script to when (script) {
             Script.LATIN -> latin.read(image, rects).takeIf { it.confidence >= OcrGate.MIN_CONFIDENCE }
-            Script.ARABIC -> tesseractArabic?.let { OcrGate(it, arabic).read(image) }
+
+            // PaddleOCR checks Tesseract on the lines already found, rather than detecting the page a second time.
+            Script.ARABIC -> tesseractArabic?.read(image)?.takeIf { page ->
+                OcrGate.trusts(page, arabic?.read(image, rects))
+            }
         }
     }
 

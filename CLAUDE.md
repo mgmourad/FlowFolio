@@ -211,6 +211,13 @@ it. Also: the tour's 11 pictures retaken without the status bar, and "Replay the
     Robolectric test (`BookmarksViewModelTest`) needed a re-run. The release APK is signed with the release key
     (SHA-256 `59fbae55`, ADR-0049), so it updates `com.flowfolio` in place.
   - Left for M4: the owner's tweak batch and beta-readiness (the plan's M4).
+- **M3 verified and M4 built, 2026-11-12** (CHANGELOG, Unreleased; sign-off draft `docs/plans/phase7-signoff.md`).
+  - Verifying M3 found that **no Arabic book worked**: PaddleOCR, the checker, garbled the owner's 1960s book, so word
+    agreement rejected pages Tesseract read well. **ADR-0055** (proposed) measures agreement by letter pairs, bar
+    0.66: same corpus result, 10 of 11 of the book's body pages kept (6 before). Engine 1.5.3.
+  - **CI's OCR gate had never run** (relative paths skipped all three tests; it also used Ubuntu's smaller Arabic
+    model). Fixed, and a set-but-missing folder now fails.
+  - Known issues 44, 45 and 51 closed (below). Fold speed still unmeasured (known issue 55).
 - **The owner's Arabic book, 2026-11-11** (CHANGELOG, Unreleased, "Arabic books"): typed Arabic pages had their
   words reversed (flat-box spaces cut every line; fixed in `Extraction`); right-to-left pages now read their right
   column first (`ReadingOrder`); and an Arabic scanned book skips OCR once its pages vote it Arabic while no Arabic
@@ -657,14 +664,14 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     strip. The VoiceMark picture needs a stand-in `VoiceRecorder` bound for the capture only (known issue 40);
     never commit it.
 
-44. **The converter overflows a full-page cover image** (2026-11-03). On the reflowed title page of
-    *Introduction to Python Programming* (OpenStax) the cover artwork is laid out wider than the column and is
-    clipped mid-word ("Progra..."). Body pages are fine, including code panels, lists and headings; it is the
-    full-bleed title graphic that is not fitted to the column. Found while capturing launch screenshots.
-45. **Taps did not turn pages in the reflowed view** on `fold8_api37`, 2026-11-03: 26 taps near the right edge
-    did nothing, while a drag turned the page every time. Known issue 16 says a single tap turns a page, so
-    either that is wrong for Dynamic Flow books or the turn style defaults to one that needs a drag.
-    **Observed, not diagnosed** -- check before trusting either reading.
+44. ~~The converter overflows a full-page cover image.~~ No longer reproducible (2026-11-12): the Python book's
+    cover converts as one whole-page picture (Phase 4's full-page covers).
+
+45. ~~Taps did not turn pages in the reflowed view.~~ Did not reproduce (2026-11-12): on `fold8_api37` three taps
+    at the right edge of a reflowed book turned three spreads. Taps sent while a reflowed book is still opening are
+    dropped, which fits the original report (taps sent right after `openBookId`). Checked again on a Dynamic Flow
+    book (the owner's Arabic sample): a tap at the right edge turned the spread.
+
 50. **Narrator Mode can only say words in the voice's lexicon** (2026-11-10). sherpa-onnx 2.0.1's multi-language
     Kokoro (and Piper with a lexicon) drops any other word silently: `debug=true` logs `OOV word skipped`. Passing
     `espeak-ng-data` or `lang` changes nothing, and 2.0.1 is the newest release. So every utterance goes through
@@ -679,11 +686,12 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
       Leaving the book still stops narration, by design for now.
     - `ReaderViewModel` launches collectors in `init` on `Main.immediate`, so an `init` block must come **after**
       every property it reads: one placed above `_narratorRate` crashed the reader on open (2026-11-10).
-51. **The converter drops or detaches a "y" in *Learning DevOps*** (found 2026-11-10 while measuring Narrator
-    Mode). List items lose their last letter and full stop ("Adds the apt HashiCorp repositor", "Downloads the
-    Packer CL"), with empty bullet paragraphs between them, and words split before a "y" ("carr y out", "encr ypt").
-    This is converter output (spec 1.2 engine), so it shows on screen and in Narrator Mode alike. Not yet
-    diagnosed; the fix needs the corpus baselines (`CorpusTest`, CI).
+51. ~~The converter drops or detaches a "y" in *Learning DevOps*.~~ Fixed 2026-11-12. The split words came from
+    the size-1 fonts (known issue 46): the word-space rule now takes its em from the glyph box when the reported size
+    is under a third of it. Its square bullets are U+0082 and now count as bullets. The missing last letters
+    ("repositor", "Packer CL") are missing from the PDF itself: PDFium and Poppler read them so, and the page prints
+    them so.
+
 52. **Updates install through a `PackageInstaller` session** (`core/data/UpdateInstaller.kt`, 2026-11-11). With
     "Install updates automatically" on, the session asks for `USER_ACTION_NOT_REQUIRED`. Android honours that only
     when FlowFolio is the installer of record of itself. A copy installed by adb or a browser therefore shows
@@ -697,6 +705,14 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     swiping it out of Recents on the owner's Samsung (One UI can be harsher than stock Android). Android 15+ allows a
     `dataSync` foreground service about 6 hours a day (`onTimeout`); a scanned book at debug-build OCR speed could
     reach that, and the conversion does not yet resume where it stopped.
+55. **OCR speed on the Fold is unmeasured** (2026-11-12). The M3 claim of 0.7–1.4 s a page was estimated from the
+    desktop JVM. On `fold8_api37` a scanned Arabic page takes about a minute even in the release build, all of it in
+    native code: Tesseract 21 s and PaddleOCR detection 16 s for a page Tesseract reads in 0.4 s on a Mac. Plain CPU
+    work is only 1.3x slower there, the system spends 44% of its time in the kernel, and 1.9 GB is swapped, so the
+    emulator's memory handling under HVF is the likely cause, not the code. Measure on the phone with a 50-page scan
+    before believing any number; the emulator cannot answer this.
+    - The OCR gate needs absolute paths: `FLOWFOLIO_OCR_PAGES`, `FLOWFOLIO_OCR_MODELS`, `FLOWFOLIO_TESSDATA`
+      (tessdata_best `ara.traineddata`, from the `ocr-models-v1` release). Ground truth comes from `samples/golden/ocr`.
 53. **OCR on the phone goes through `OrtBridge`, never ONNX Runtime's Java API** (2026-11-11). sherpa-onnx's
     `libonnxruntime.so` exports `OrtGetApiBase@@VERS_1.28.2`; `onnxruntime-android`'s Java glue (only 1.28.0 is
     published) asks for `@VERS_1.28.0`, so Android refuses to load it. Two copies of the runtime cannot share one
@@ -751,4 +767,4 @@ no ffmpeg because only an address is extracted), updating from the releases page
 release identity after the signing key was lost (0049, accepted; supersedes the key-custody part of 0042), release-channel
 renumbering (0050, accepted 2026-11-07: 3–4 alpha, 5–6 canary, 7 beta), offline neural TTS via `sherpa-onnx` with
 Kokoro and Piper voice packs (0051, accepted 2026-11-08), the Quiet Library design overhaul (0052), and Narrator Mode
-in the background with a media session and two players (0053, 2026-11-10). The OCR engine is ADR-0054 (Phase 7 M1).
+in the background with a media session and two players (0053, 2026-11-10). The OCR engine is ADR-0054 (Phase 7 M1). ADR-0055 (proposed, 2026-11-12) measures the Arabic engines' agreement by letter pairs, bar 0.66.

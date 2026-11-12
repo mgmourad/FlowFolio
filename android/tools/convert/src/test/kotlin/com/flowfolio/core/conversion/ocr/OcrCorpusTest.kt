@@ -24,9 +24,21 @@ import org.junit.Test
  * too.
  */
 class OcrCorpusTest {
-    private val pages = System.getenv("FLOWFOLIO_OCR_PAGES")?.let(::File)
-    private val models = System.getenv("FLOWFOLIO_OCR_MODELS")?.let(::File)
-    private val tessdata = System.getenv("FLOWFOLIO_TESSDATA")?.let(::File)
+    private val pages = folder("FLOWFOLIO_OCR_PAGES")
+    private val models = folder("FLOWFOLIO_OCR_MODELS")
+    private val tessdata = folder("FLOWFOLIO_TESSDATA")
+
+    /** The proofread text, committed beside the manifest; the scans are fetched elsewhere. */
+    private val truth = File(System.getProperty("flowfolio.golden") ?: "../../samples/golden", "ocr")
+
+    /**
+     * The folder an environment variable names, or null when it is unset (the test then skips). A variable that is
+     * set but names no folder fails instead: CI once passed paths relative to the wrong folder, and every OCR test
+     * skipped while the job stayed green (2026-11-12).
+     */
+    private fun folder(name: String): File? = System.getenv(name)?.let { path ->
+        File(path).also { check(it.isDirectory) { "$name=$path is not a folder (from ${File("").absolutePath})" } }
+    }
 
     @Test
     fun englishScansReadToTextAtTheBaseline() {
@@ -79,13 +91,13 @@ class OcrCorpusTest {
             val id = image.nameWithoutExtension
             if (id in excluded) continue
             total++
-            val truth = File(pages, "$id.txt").readText()
+            val expected = File(truth, "$id.txt").readText()
             val read = reader.read(load(image))
             if (read != null) {
                 kept++
                 val text = read.lines.joinToString("\n") { it.text }
-                recalls += Recall.of(truth, text)
-                cers += Cer.of(truth, text)
+                recalls += Recall.of(expected, text)
+                cers += Cer.of(expected, text)
             }
         }
         fun median(v: List<Float>) = if (v.isEmpty()) 0f else v.sorted()[v.size / 2]
@@ -141,12 +153,13 @@ class OcrCorpusTest {
         val MANUSCRIPTS = setOf("ar-00", "ar-06", "ar-09", "ar-10", "ar-11", "ar-12", "ar-13", "ar-17", "ar-18")
         val ENGLISH_ABSTRACT = setOf("ar-19")
 
-        // Baselines from the M3 run on the spike's corpus (English 98.9% recall / 3.0% CER / 20 of 21 kept;
-        // Arabic printed 93.0% recall / 16.0% CER / 4 of 10 kept — the pre-1950 pages stay pictures, ADR-0054).
+        // Baselines from the run of 2026-11-12 with tessdata_best and ADR-0055's letter-pair agreement: English 98.9%
+        // recall / 3.0% CER / 20 of 21 kept; Arabic printed 93.0% recall / 16.0% CER / 4 of 10 kept (the pre-1950 type
+        // stays pictures, ADR-0054). Each bar sits just under its measurement, so one page lost fails the gate.
         const val EN_RECALL = 0.95f
-        const val EN_CER = 0.08f
-        const val EN_KEPT = 0.90f
-        const val AR_RECALL = 0.80f
-        const val AR_KEPT = 0.20f
+        const val EN_CER = 0.05f
+        const val EN_KEPT = 0.95f
+        const val AR_RECALL = 0.88f
+        const val AR_KEPT = 0.35f
     }
 }

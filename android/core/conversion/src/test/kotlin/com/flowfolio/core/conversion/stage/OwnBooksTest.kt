@@ -75,6 +75,22 @@ class OwnBooksTest {
     }
 
     @Test
+    fun aBulletMappedToAControlCodeIsStillABullet() {
+        // Learning DevOps draws its square bullets as U+0082 (known issue 51): each became an empty paragraph.
+        val items = listOf("Adds the repository", "Updates the local repository", "Downloads the CLI")
+        val lines = items.flatMapIndexed { i, t ->
+            val top = 100f + i * 18.6f
+            listOf(
+                line("\u0082", Box(72f, top, 76f, top + 13f), calibri),
+                line(t, Box(84f, top, 400f, top + 15f), calibri)
+            )
+        }
+        val blocks = Blocks(styles).of(page(lines), lines.map { Item.Text(it) })
+        assertEquals(items, blocks.single { it.type == BlockType.LIST }.listItems.map { it.text })
+        assertTrue(blocks.none { it.type == BlockType.PARAGRAPH })
+    }
+
+    @Test
     fun wordsSecondLevelBulletIsAnOInCourierNew() {
         val first = line("After choosing the OS, choose:", Box(90f, 100f, 400f, 117f), calibri)
         val o = line("o", Box(126f, 119f, 133f, 136f), courier)

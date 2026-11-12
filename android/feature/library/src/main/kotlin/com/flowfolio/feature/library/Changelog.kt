@@ -115,12 +115,27 @@ object Changelog {
     }
 
     /**
-     * The notes for [versionName] (a debug build's "-dev" ignored), else the newest version that has any; an empty
-     * "Unreleased" right after a release is skipped.
+     * The notes for [versionName] (a debug build's "-dev" ignored), else the newest version that has any, labelled as
+     * the installed build when they are "Unreleased": a build ahead of its changelog heading is what the reader is
+     * running (M4: such a build was headed "Unreleased" or with an older version). An empty "Unreleased" is skipped.
+     *
+     * A version with a `### For readers` section shows only that section: the rest of the changelog is written for
+     * the people building FlowFolio (corpus numbers, module names), not for someone who just updated the app.
      */
-    fun current(all: List<VersionNotes>, versionName: String): VersionNotes? =
-        all.firstOrNull { it.version == versionName.removeSuffix("-dev") }
+    fun current(all: List<VersionNotes>, versionName: String): VersionNotes? {
+        val installed = versionName.removeSuffix("-dev")
+        val notes = all.firstOrNull { it.version == installed }
             ?: all.firstOrNull { it.sections.isNotEmpty() }
+                ?.let { if (it.version.equals(UNRELEASED, ignoreCase = true)) it.copy(version = installed) else it }
+            ?: return null
+        val forReaders = notes.sections.filter { it.heading.equals(FOR_READERS, ignoreCase = true) }
+        return if (forReaders.isEmpty()) notes else notes.copy(sections = forReaders)
+    }
+
+    private const val UNRELEASED = "Unreleased"
+
+    /** The changelog section What's new shows on its own when a version has one. */
+    const val FOR_READERS = "For readers"
 
     private fun friendly(heading: String): String = when {
         heading.startsWith("Added", ignoreCase = true) -> "New"

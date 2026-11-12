@@ -44,7 +44,18 @@ class ChangelogTest {
     fun currentFallsBackToTheNewest() {
         val all = Changelog.parse(md)
         assertEquals("0.6.0-canary.1", Changelog.current(all, "0.6.0-canary.1")?.version)
-        assertEquals("Unreleased", Changelog.current(all, "9.9.9")?.version)
+        // A build ahead of the changelog shows the unreleased notes under its own version.
+        assertEquals("9.9.9", Changelog.current(all, "9.9.9")?.version)
+    }
+
+    @Test
+    fun aForReadersSectionIsShownOnItsOwn() {
+        val all = Changelog.parse(
+            "## [1.1.0] - 2026-11-12\n\n### For readers\n- Arabic books read.\n\n### Phase 7 M3\n- CER 16%.\n"
+        )
+        val notes = Changelog.current(all, "1.1.0")!!
+        assertEquals(listOf("For readers"), notes.sections.map { it.heading })
+        assertEquals("Arabic books read.", notes.sections.single().lines.single().text)
     }
 
     @Test

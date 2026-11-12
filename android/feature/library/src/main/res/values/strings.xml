@@ -825,7 +825,7 @@
     <string name="narrator_skip_chapter">Chapter</string>
     <string name="narrator_skip_subchapter">Subchapter</string>
     <string name="settings_scanned">Scanned books</string>
-    <string name="settings_scanned_detail">Lets Dynamic Flow read pages that are pictures of text, in English and other Latin-script languages. Arabic is coming. A %1$s download.</string>
+    <string name="settings_scanned_detail">Lets Dynamic Flow read pages that are pictures of text, in English and other Latin-script languages and in Arabic. A %1$s download.</string>
     <string name="settings_scanned_ready">Installed. Scanned pages Dynamic Flow can read become text; the rest stay pictures.</string>
     <string name="settings_scanned_downloading">Downloading… %1$d%%</string>
     <string name="settings_scanned_failed">The download did not arrive whole. Try again.</string>

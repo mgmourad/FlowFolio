@@ -19,7 +19,16 @@ class WordSpacingTest {
      * Builds a one-line page. [chars] is the text; [advance] is how far the pen moves per character and [ink] how
      * much of that the glyph's box actually covers, so `advance - ink` is the gap PDFium reports between them.
      */
-    private fun line(chars: String, size: Float, advance: Float, ink: Float, spaceAt: Set<Int> = emptySet()): String {
+    // A test helper: each parameter is one property of the line being built.
+    @Suppress("LongParameterList")
+    private fun line(
+        chars: String,
+        size: Float,
+        advance: Float,
+        ink: Float,
+        spaceAt: Set<Int> = emptySet(),
+        boxHeight: Float = size
+    ): String {
         val n = chars.length
         val boxes = FloatArray(n * 4)
         var pen = 0f
@@ -28,7 +37,7 @@ class WordSpacingTest {
             boxes[i * 4] = pen
             boxes[i * 4 + 1] = 0f
             boxes[i * 4 + 2] = pen + ink
-            boxes[i * 4 + 3] = size
+            boxes[i * 4 + 3] = boxHeight
             pen += advance
         }
         val raw = RawPage(
@@ -80,6 +89,16 @@ class WordSpacingTest {
         assertEquals(
             "I am a cat",
             line("Iamacat", size = 10f, advance = 6f, ink = 6f, spaceAt = setOf(1, 3, 4))
+        )
+    }
+
+    @Test
+    fun `a font reported at size 1 still keeps its kerning inside words`() {
+        // Learning DevOps sets every font at size 1 and scales it through the text matrix (known issues 46 and 51):
+        // the glyphs are 15 points tall, and 0.3 pt of kerning between "r" and "y" was read as a word space.
+        assertEquals(
+            "necessary to",
+            line("necessaryto", size = 1f, advance = 6.3f, ink = 6f, spaceAt = setOf(9), boxHeight = 15f)
         )
     }
 }

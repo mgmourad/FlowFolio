@@ -1,6 +1,5 @@
 package com.flowfolio.core.conversion.stage
 
-import com.flowfolio.core.conversion.pdf.Box
 import com.flowfolio.core.conversion.pdf.RawPage
 
 /** Which way a line of text reads, by Unicode's rule: its first strongly directional character decides. */
@@ -22,12 +21,6 @@ object TextDirection {
         Character.DIRECTIONALITY_LEFT_TO_RIGHT -> false
         else -> null
     }
-
-    /**
-     * The empty space between the previous character (from [lastLeft] to [lastRight]) and [b], whichever side [b]
-     * lies on: text reading right to left steps leftwards, and a Latin word inside an Arabic line steps rightwards.
-     */
-    fun gapBetween(lastLeft: Float, lastRight: Float, b: Box): Float = maxOf(b.left - lastRight, lastLeft - b.right)
 
     /** Whether most of [text]'s strongly directional characters read right to left (a whole book's script). */
     fun mostlyRightToLeft(text: CharSequence): Boolean {

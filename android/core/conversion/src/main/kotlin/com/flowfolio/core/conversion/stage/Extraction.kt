@@ -170,8 +170,9 @@ object Extraction {
             if (!raw.text[i].isWhitespace()) style = key
             // A quarter em *more than this line's usual gap* is a word space the PDF left out. On ordinary text
             // the usual gap is nil and this is the plain quarter-em rule; [typicalGap] explains the rest.
-            val gap = TextDirection.gapBetween(lastLeft, lastRight, b)
-            if (!lastRight.isNaN() && gap > typicalGap + raw.fontSizes[i] * WORD_GAP_EMS && text.isNotEmpty() &&
+            val gap = GlyphMetrics.gapBetween(lastLeft, lastRight, b)
+            if (!lastRight.isNaN() && gap > typicalGap + GlyphMetrics.emOf(raw.fontSizes[i], b) * WORD_GAP_EMS &&
+                text.isNotEmpty() &&
                 text.last() != ' ' && !raw.text[i].isWhitespace()
             ) {
                 space()
@@ -222,7 +223,7 @@ object Extraction {
             if (!lastRight.isNaN() &&
                 !raw.text[i].isWhitespace()
             ) {
-                gaps += TextDirection.gapBetween(lastLeft, lastRight, b)
+                gaps += GlyphMetrics.gapBetween(lastLeft, lastRight, b)
             }
             lastRight = b.right
             lastLeft = b.left

@@ -30,7 +30,7 @@ class PaddleOcrScansTest {
             val started = System.nanoTime()
             val page = ocr.read(load(image))
             val seconds = (System.nanoTime() - started) / 1e9
-            val recall = Recall.of(File(pages, "$name.txt").readText(), page.lines.joinToString("\n") { it.text })
+            val recall = Recall.of(truthOf(name).readText(), page.lines.joinToString("\n") { it.text })
             recalls += recall
             if (page.confidence >= OcrGate.MIN_CONFIDENCE) kept += name
             println(
@@ -109,6 +109,14 @@ class PaddleOcrScansTest {
         const val SPIKE_MEDIAN = 0.987f
         const val TOLERANCE = 0.01f
     }
+}
+
+/** A page's proofread text: beside its scan (the spike's layout) or committed under `samples/golden/ocr/`. */
+private fun truthOf(name: String): File {
+    val pages = System.getenv("FLOWFOLIO_OCR_PAGES")?.let(::File)
+    val beside = pages?.let { File(it, "$name.txt") }
+    return beside?.takeIf { it.isFile }
+        ?: File(File(System.getProperty("flowfolio.golden") ?: "../../samples/golden", "ocr"), "$name.txt")
 }
 
 /** The share of a reference's words an OCR reading has (as multisets), line-end hyphens joined, as `rescore.py`. */

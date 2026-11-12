@@ -30,10 +30,12 @@ class OcrPiecesTest {
     }
 
     @Test
-    fun agreementCountsSharedWordsOverTheLongerReading() {
-        val a = page("the quick brown fox", "jumps over")
-        val b = page("the quick brown cat", "jumps")
-        assertEquals(4f / 6f, OcrGate.agree(a, b), 1e-4f)
+    fun agreementIsTheOverlapOfLetterPairs() {
+        // "abcd" has ab bc cd; "abxd" has ab bx xd: one pair in common out of six.
+        assertEquals(2f / 6f, OcrGate.agree(page("abcd"), page("abxd")), 1e-4f)
+        // A word one engine got nearly right still counts for most of its pairs.
+        assertTrue(OcrGate.agree(page("المدرسة الكبيرة"), page("المدرسة الكبيرا")) > OcrGate.MIN_AGREEMENT)
+        assertEquals(0f, OcrGate.agree(page("abc"), page("xyz")), 1e-4f)
         // Arabic: vowel marks and letter forms do not count as disagreement.
         assertEquals(1f, OcrGate.agree(page("أَحْمَد في المدرسة"), page("احمد فى المدرسه")), 1e-4f)
     }

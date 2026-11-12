@@ -165,23 +165,32 @@ jobs:
         # The scanned corpus (ADR-0054); skips pages already cached with the right hash.
         run: python3 -I tools/corpus/fetch_ocr_corpus.py
       - name: Fetch the OCR models
+        # The phone's own models, from FlowFolio's mirror and checked against the hashes OcrPack pins: tessdata_best
+        # `ara` (12.6 MB), not Ubuntu's smaller tesseract-ocr-ara, so the gate measures what readers get.
         run: |
           mkdir -p samples/corpus/cache/ocr-models
           cd samples/corpus/cache/ocr-models
-          for f in PP-OCRv6_det_small.onnx PP-OCRv6_rec_small.onnx arabic_PP-OCRv5_rec_mobile.onnx; do
-            curl -fsSLO "https://github.com/mgmourad/FlowFolio/releases/download/ocr-models-v1/$f"
+          base=https://github.com/mgmourad/FlowFolio/releases/download/ocr-models-v1
+          for f in PP-OCRv6_det_small.onnx PP-OCRv6_rec_small.onnx arabic_PP-OCRv5_rec_mobile.onnx ara.traineddata; do
+            [ -f "$f" ] || curl -fsSLO "$base/$f"
           done
+          sha256sum -c - <<'SUMS'
+          090f04abcd9d9a7498bc4ebf677e4cb9bdce1fe4197ddb7e529f1ef44e1ff94f  PP-OCRv6_det_small.onnx
+          6f327246b50388f3c176ae304bd95767ea6dc0c9ae92153ef8cbe210b3c14884  PP-OCRv6_rec_small.onnx
+          c1192e632d0baa9146ae5b756a0e635e3dc63c1733737ebfd1629e87144e9295  arabic_PP-OCRv5_rec_mobile.onnx
+          ab9d157d8e38ca00e7e39c7d5363a5239e053f5b0dbdb3167dde9d8124335896  ara.traineddata
+          SUMS
       - name: Install Tesseract for OCR tests
-        # tess4j calls libtesseract through JNA (ADR-0054); tesseract-ocr-ara is the Arabic model those tests read with.
-        run: |
-          sudo apt-get update && sudo apt-get install -y libtesseract-dev tesseract-ocr-ara
-          echo "TESSDATA=$(dirname "$(dpkg -L tesseract-ocr-ara | grep 'ara.traineddata$')")" >> "$GITHUB_ENV"
+        # tess4j calls libtesseract through JNA (ADR-0054); the model comes from the mirror above.
+        run: sudo apt-get update && sudo apt-get install -y libtesseract-dev
       - name: Convert and check against the baselines
         working-directory: android
         env:
-          FLOWFOLIO_OCR_PAGES: ../samples/corpus/cache/ocr
-          FLOWFOLIO_OCR_MODELS: ../samples/corpus/cache/ocr-models
-          FLOWFOLIO_TESSDATA: ${{ env.TESSDATA }}
+          # Absolute: Gradle runs tests in the module's folder, where a relative path silently pointed nowhere and
+          # every OCR test skipped (found 2026-11-12).
+          FLOWFOLIO_OCR_PAGES: ${{ github.workspace }}/samples/corpus/cache/ocr
+          FLOWFOLIO_OCR_MODELS: ${{ github.workspace }}/samples/corpus/cache/ocr-models
+          FLOWFOLIO_TESSDATA: ${{ github.workspace }}/samples/corpus/cache/ocr-models
         run: ./gradlew :tools:convert:test --tests "*CorpusTest*" --tests "*OcrCorpusTest*"
       - name: Upload the corpus report
         if: always()
