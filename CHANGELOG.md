@@ -5,6 +5,46 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [0.7.0-beta.4] - 2026-11-12
+
+### For readers
+- **A smaller download.** Each phone now gets an app built for its own processor: about 143 MB instead of 359 MB.
+  The in-app updater picks the right one.
+- **Optional downloads, offered once.** After the tour (or Skip), FlowFolio offers the scanned-books reader, the
+  Narrator voices and the WordNet dictionary, each with its size. They stay in Settings → Storage → Optional
+  downloads.
+- **A book to start with.** A new library opens with Chapter 1 of OpenStax *Physics* (CC BY 4.0).
+- **Folders stay in step.** Pull down on Library or Shelves to bring in new books from folders you imported; books
+  added to a folder join its shelf. A book deleted from the folder stays in your library.
+- **Home-screen widgets:** Continue reading, Reading goal (with your streak) and Narrator (play, pause, back,
+  forward and speed), each in two sizes and in the app's theme.
+- **A floating narrator.** While a book is read aloud, a small see-through Play/Pause and Stop sits on the page; drag
+  it anywhere.
+- **Reader polish:** pull the riffle bar down to put the controls away; a glowing grip says which windows pull down;
+  the dark reader panels show the page through as haze again; swipe between Notes and VoiceMark, and between the
+  Notebook's kinds; the search text is centred in its box; the chapter name no longer jumps when the controls show;
+  folded, the title bar shows the book's title before the chapter.
+- **The converting book's cover** now darkens at the foot and shows "Dynamic Flow · N%" with a clear bar.
+- **The tour** shows phone-shaped pictures on a folded or narrow screen, and has a new slide: "Folded or open,
+  FlowFolio fits".
+
+### Tightening milestone TM2: the library, the app's size and widgets (2026-11-12)
+- **Folder sync:** `FolderSync` (`DefaultFolderSync`, one file per folder under `filesDir/folders`), `FolderRefresh`,
+  pull-to-refresh on Library and Shelves.
+- **Size (ADR-0057):** ABI splits for arm64-v8a, armeabi-v7a and x86_64 plus the universal APK; WordNet is a download
+  (`WordNetPack`, release `resources-v1`); `ResourceDownloads` and `ResourcesOfferHost` (after the splash and tour;
+  What's new waits for both).
+- **Demo book:** `assets/demo/physics-ch1.pdf`, imported once into an empty library (`importBundled`).
+- **Widgets:** Jetpack Glance 1.2.0 (`app/widget/`): `ContinueReadingWidget`, `ReadingGoalWidget` (streak from
+  `ReadingStreak`), `NarratorWidget` (through `Narration` in `:feature:reader`); `WidgetUpdater` redraws them.
+- **Reader batch:** `NarratorFloat`; `dragDownToDismiss` draws the grip; chrome glass at 74% over a 28 dp blur;
+  `ChromeActions.onDismissRiffle` now required and wired; running heads no longer pad by the system bars.
+- **Tour:** `Tour.folded` pictures (`tour_folded_*`) and the `Shapes` slide; the frame takes each picture's shape.
+- **Verification:** the widgets, demo book, offer and the reader batch were checked by hand on `fold8_api37`. The
+  tour's new folded pictures and the folded title-bar fix were built but **not tested** (owner, 2026-11-12: release
+  without further testing); the unfolded tour pictures were not retaken, and the folded VoiceMark slide reuses the
+  unfolded picture (recording cannot be shown on the emulator, known issue 40).
+
 ## [0.7.0-beta.3] - 2026-11-12
 
 ### For readers

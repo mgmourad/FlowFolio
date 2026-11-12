@@ -66,19 +66,57 @@ import kotlinx.coroutines.launch
  *
  * The pictures are real screenshots of this build, not drawings of it. A tour that shows something the app does not
  * look like teaches the wrong thing, and is worse than no tour at all; these are retaken whenever the screens change.
+ * Each has two: [shot], the unfolded Fold, and [folded], its cover screen, picked by the shape of the screen the
+ * tour is on (TM2), so a phone sees a phone. [Shapes] shows the two side by side.
  */
-internal enum class Tour(@DrawableRes val shot: Int, @StringRes val title: Int, @StringRes val body: Int) {
-    Library(R.drawable.tour_library, R.string.tour_library_title, R.string.tour_library_body),
-    Reading(R.drawable.tour_reading, R.string.tour_reading_title, R.string.tour_reading_body),
-    Riffle(R.drawable.tour_riffle, R.string.tour_riffle_title, R.string.tour_riffle_body),
-    Flow(R.drawable.tour_flow, R.string.tour_flow_title, R.string.tour_flow_body),
-    Marking(R.drawable.tour_marking, R.string.tour_marking_title, R.string.tour_marking_body),
-    Voice(R.drawable.tour_voice, R.string.tour_voice_title, R.string.tour_voice_body),
-    Words(R.drawable.tour_words, R.string.tour_words_title, R.string.tour_words_body),
-    Listen(R.drawable.tour_listen, R.string.tour_listen_title, R.string.tour_listen_body),
-    Atmosphere(R.drawable.tour_atmosphere, R.string.tour_atmosphere_title, R.string.tour_atmosphere_body),
-    Goal(R.drawable.tour_goal, R.string.tour_goal_title, R.string.tour_goal_body),
-    Yours(R.drawable.tour_yours, R.string.tour_yours_title, R.string.tour_yours_body)
+internal enum class Tour(
+    @DrawableRes val shot: Int,
+    @DrawableRes val folded: Int,
+    @StringRes val title: Int,
+    @StringRes val body: Int
+) {
+    Library(
+        R.drawable.tour_library,
+        R.drawable.tour_folded_library,
+        R.string.tour_library_title,
+        R.string.tour_library_body
+    ),
+    Shapes(R.drawable.tour_shapes, R.drawable.tour_shapes, R.string.tour_shapes_title, R.string.tour_shapes_body),
+    Reading(
+        R.drawable.tour_reading,
+        R.drawable.tour_folded_reading,
+        R.string.tour_reading_title,
+        R.string.tour_reading_body
+    ),
+    Riffle(
+        R.drawable.tour_riffle,
+        R.drawable.tour_folded_riffle,
+        R.string.tour_riffle_title,
+        R.string.tour_riffle_body
+    ),
+    Flow(R.drawable.tour_flow, R.drawable.tour_folded_flow, R.string.tour_flow_title, R.string.tour_flow_body),
+    Marking(
+        R.drawable.tour_marking,
+        R.drawable.tour_folded_marking,
+        R.string.tour_marking_title,
+        R.string.tour_marking_body
+    ),
+    Voice(R.drawable.tour_voice, R.drawable.tour_folded_voice, R.string.tour_voice_title, R.string.tour_voice_body),
+    Words(R.drawable.tour_words, R.drawable.tour_folded_words, R.string.tour_words_title, R.string.tour_words_body),
+    Listen(
+        R.drawable.tour_listen,
+        R.drawable.tour_folded_listen,
+        R.string.tour_listen_title,
+        R.string.tour_listen_body
+    ),
+    Atmosphere(
+        R.drawable.tour_atmosphere,
+        R.drawable.tour_folded_atmosphere,
+        R.string.tour_atmosphere_title,
+        R.string.tour_atmosphere_body
+    ),
+    Goal(R.drawable.tour_goal, R.drawable.tour_folded_goal, R.string.tour_goal_title, R.string.tour_goal_body),
+    Yours(R.drawable.tour_yours, R.drawable.tour_folded_yours, R.string.tour_yours_title, R.string.tour_yours_body)
 }
 
 /** What the app remembers about having given the tour; cleared by "Introduce features again". */
@@ -164,7 +202,7 @@ private fun TourPage(tour: Tour) {
                 horizontalArrangement = Arrangement.spacedBy(36.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(Modifier.weight(1.2f), contentAlignment = Alignment.Center) { Shot(tour, Modifier) }
+                Box(Modifier.weight(1.2f), contentAlignment = Alignment.Center) { Shot(tour, folded = false, Modifier) }
                 Column(Modifier.weight(1f)) { Words(tour, TextAlign.Start) }
             }
         } else {
@@ -173,7 +211,7 @@ private fun TourPage(tour: Tour) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
-                Shot(tour, Modifier.weight(1f, fill = false))
+                Shot(tour, folded = true, Modifier.weight(1f, fill = false))
                 Words(tour, TextAlign.Center)
             }
         }
@@ -181,17 +219,19 @@ private fun TourPage(tour: Tour) {
 }
 
 @Composable
-private fun Shot(tour: Tour, modifier: Modifier) {
+private fun Shot(tour: Tour, folded: Boolean, modifier: Modifier) {
     val p = FlowFolio.palette
     val shape = RoundedCornerShape(20.dp)
+    val painter = painterResource(if (folded) tour.folded else tour.shot)
+    val size = painter.intrinsicSize
     Image(
-        painter = painterResource(tour.shot),
+        painter = painter,
         contentDescription = null,
         contentScale = ContentScale.Fit,
         modifier = modifier
             // Hugs the picture rather than the space it was given, so the frame is drawn around the screenshot
             // and not around a band of nothing above and below it.
-            .aspectRatio(SHOT_ASPECT)
+            .aspectRatio(if (size.height > 0f) size.width / size.height else SHOT_ASPECT)
             .softShadow(shape, p.ink.copy(alpha = SHOT_GLOW), blur = 28.dp)
             .clip(shape)
             .border(1.dp, p.edge, shape)
@@ -245,8 +285,9 @@ private val TWO_COLUMNS = 600.dp
 private val SKIP_HEIGHT = 42.dp
 
 /**
- * The reference device's unfolded screen, which every tour picture was taken on, less the status bar and the gesture
- * bar (72 px each), which the pictures leave out (owner, 2026-11-10).
+ * The reference device's unfolded screen less the status bar and the gesture bar (72 px each), which the pictures
+ * leave out (owner, 2026-11-10); the folded pictures are its cover screen, 1080 x 2376, cut the same way. The frame
+ * takes each picture's own shape, and falls back to this.
  */
 private const val SHOT_ASPECT = 2256f / 2360f
 

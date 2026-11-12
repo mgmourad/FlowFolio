@@ -243,6 +243,13 @@ reading surface and conversion, then TM2, the library, the app's size and widget
   `59118d32bd20aac5efdb541442373e7b45ab7818f987806371777601af839314`, signed `CN=FlowFolio Release` (`59fbae55`).
   Green CI (the OCR gate ran: 3 tests, 0 skipped); updated beta.2 in place on `fold8_api37`, and What's new showed
   "Version 0.7.0-beta.3" with the reader notes only. Next: TM2.
+- **TM2 built and released as FlowFolio 0.7.0-beta.4 (build 700004), 2026-11-12** (CHANGELOG): folder sync,
+  per-processor APKs (ADR-0057) with WordNet as a download (`resources-v1`), the optional-downloads offer, the demo
+  book, three Glance widgets, the floating narrator and the owner's reader batch, and tour pictures by screen shape.
+  Released on the owner's instruction **without the final test pass**: the folded tour pictures and the folded
+  title-bar fix are untested, CI was not waited for, and the unfolded tour pictures were not retaken.
+  Release assets are now four APKs (universal under the old name, then `-arm64-v8a`, `-armeabi-v7a`, `-x86_64`),
+  each with its `.sha256`.
 - **The owner's Arabic book, 2026-11-11** (CHANGELOG, Unreleased, "Arabic books"): typed Arabic pages had their
   words reversed (flat-box spaces cut every line; fixed in `Extraction`); right-to-left pages now read their right
   column first (`ReadingOrder`); and an Arabic scanned book skips OCR once its pages vote it Arabic while no Arabic

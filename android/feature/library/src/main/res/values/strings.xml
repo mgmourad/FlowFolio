@@ -566,6 +566,8 @@
     <string name="tour_start">Start reading</string>
     <string name="tour_library_title">Your library</string>
     <string name="tour_library_body">Bring in PDFs and EPUBs with the + button \u2014 one file, several, or a whole folder. Every book shows how far you have got, and the shelf below holds the rest.</string>
+    <string name="tour_shapes_title">Folded or open, FlowFolio fits</string>
+    <string name="tour_shapes_body">Folded, a page fills the cover screen. Open, two pages sit side by side and every screen spreads out to use the room.</string>
     <string name="tour_reading_title">A book that turns</string>
     <string name="tour_reading_body">Pages curl as you turn them, two at a time on an unfolded screen. Tap the middle for the controls, the sides to turn, and pinch to change the type size.</string>
     <string name="tour_riffle_title">Flick through it</string>

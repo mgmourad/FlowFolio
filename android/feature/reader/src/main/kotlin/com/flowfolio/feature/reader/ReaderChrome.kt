@@ -398,13 +398,14 @@ private fun TitlePill(title: TitleLine, wide: Boolean, modifier: Modifier) {
             .testTag(ReaderTestTags.TITLE),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // As the mock's `.tt`: the title gives way (ellipsis) so the chapter after it stays readable.
+        // As the mock's `.tt`: unfolded, the title gives way (ellipsis) so the chapter after it stays readable.
+        // Folded there is room for one of them: the title comes first and the chapter takes what is left.
         Text(
             title.title,
             style = FlowFolioType.body.copy(fontSize = 13.sp, color = p.ink, fontWeight = FontWeight.SemiBold),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false)
+            modifier = if (wide) Modifier.weight(1f, fill = false) else Modifier
         )
         title.chapter?.takeIf { it.isNotBlank() && it != title.title }?.let {
             Text(
@@ -412,7 +413,8 @@ private fun TitlePill(title: TitleLine, wide: Boolean, modifier: Modifier) {
                 style = FlowFolioType.body.copy(fontSize = 13.sp, color = p.ink2),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = CHAPTER_MAX)
+                // Folded, measured after the title, so it can no longer squeeze the title out (2026-11-12).
+                modifier = if (wide) Modifier.widthIn(max = CHAPTER_MAX) else Modifier.weight(1f, fill = false)
             )
         }
         val left = title.millisLeft
