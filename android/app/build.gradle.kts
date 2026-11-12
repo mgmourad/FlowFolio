@@ -18,6 +18,22 @@ android {
         // The adb hooks the measurement tools use (openBookId, importPath, startPage, gcNow): debug builds always
         // have them; of the release-like builds only the baseline-profile plugin's benchmark build types do.
         buildConfigField("boolean", "MEASUREMENT_HOOKS", "false")
+        // ADR-0057: the processor types FlowFolio ships for. 32-bit x86 (53 MB that some prebuilt libraries bring) is
+        // left out: no phone uses it, and x86_64 covers emulators.
+        ndk { abiFilters += SHIPPED_ABIS }
+    }
+
+    // ADR-0057: a release is also built as one APK per processor type, beside the universal APK, so a phone downloads
+    // only its own code (about 150 MB instead of 357 MB on arm64). Only for release builds: the debug APK handed over
+    // for testing stays one file.
+    val releasing = gradle.startParameter.taskNames.any { it.contains("Release", ignoreCase = true) }
+    splits {
+        abi {
+            isEnable = releasing
+            reset()
+            include(*SHIPPED_ABIS.toTypedArray())
+            isUniversalApk = true
+        }
     }
 
     buildFeatures { buildConfig = true }
@@ -168,3 +184,6 @@ dependencies {
     androidTestImplementation(libs.androidx.test.uiautomator)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
 }
+
+/** The processor types a release ships for (ADR-0057). */
+val SHIPPED_ABIS: List<String> get() = listOf("arm64-v8a", "armeabi-v7a", "x86_64")

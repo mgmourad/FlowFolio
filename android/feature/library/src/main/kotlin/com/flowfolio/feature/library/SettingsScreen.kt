@@ -142,6 +142,7 @@ fun SettingsScreen(
             onGuideSeen = viewModel::markGuideSeen,
             onGuidesReset = viewModel::resetGuides,
             onReplayTour = viewModel::replayTour,
+            onOfferResources = viewModel::offerResources,
             onClearCache = viewModel::clearCache,
             onResetApp = viewModel::resetApp,
             onCheckUpdates = viewModel::checkForUpdates,

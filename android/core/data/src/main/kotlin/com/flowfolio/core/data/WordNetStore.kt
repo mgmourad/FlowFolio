@@ -14,27 +14,23 @@ internal data class WordNetSense(val pos: String, val definition: String)
 
 /**
  * On-phone WordNet (owner, 2026-11-07): the full Princeton WordNet 3.1 database, built by
- * `tools/dictionary/build_wordnet.py` into a compact SQLite file and bundled gzipped. It is decompressed into
- * `filesDir/dictionary/wordnet.db` on first use and queried read-only, so definitions stay offline and memory stays
- * bounded (the database is never loaded whole).
+ * `tools/dictionary/build_wordnet.py` into a compact SQLite file. Since TM2 it is downloaded on request ([WordNetPack])
+ * rather than bundled; it lives in `filesDir/dictionary/wordnet.db` and is queried read-only, so definitions stay
+ * offline and memory stays bounded. Without it, lookups return nothing and Define uses its other sources.
  */
 @Singleton
 class WordNetStore @Inject constructor(
     @ApplicationContext private val context: Context,
     @IoDispatcher private val io: CoroutineDispatcher
 ) {
-    private val dir: File get() = File(context.filesDir, "dictionary").apply { mkdirs() }
-    private val dbFile: File get() = File(dir, "wordnet.db")
+    private val dbFile: File get() = dbFileIn(context.filesDir)
 
     @Volatile
     private var db: SQLiteDatabase? = null
 
     private fun ensureDb(): SQLiteDatabase? = db ?: synchronized(this) {
         db ?: runCatching {
-            if (!dbFile.exists()) {
-                // AAPT2 decompresses the bundled `.gz` asset and strips the suffix, so it opens as the raw database.
-                context.assets.open(ASSET).use { input -> dbFile.outputStream().use { input.copyTo(it) } }
-            }
+            if (!dbFile.exists()) return null
             SQLiteDatabase.openDatabase(dbFile.path, null, SQLiteDatabase.OPEN_READONLY)
         }.getOrNull()?.also { db = it }
     }
@@ -54,7 +50,8 @@ class WordNetStore @Inject constructor(
         emptyList()
     }
 
-    private companion object {
-        const val ASSET = "wordnet.db"
+    companion object {
+        /** Where the database lives once downloaded ([WordNetPack]). */
+        fun dbFileIn(filesDir: File) = File(File(filesDir, "dictionary"), "wordnet.db")
     }
 }

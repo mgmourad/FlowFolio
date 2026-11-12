@@ -79,7 +79,9 @@ data class SettingsActions(
     /** The tutorial, first-run windows and tips (owner, M5). */
     val onGuideSeen: (String) -> Unit = {},
     val onGuidesReset: () -> Unit = {},
-    val onReplayTour: () -> Unit = {}
+    val onReplayTour: () -> Unit = {},
+    /** Shows the offer of optional downloads again (TM2). */
+    val onOfferResources: () -> Unit = {}
 )
 
 /** How trying a stream address went: nothing yet, fetching, playing, or it could not be played. */
@@ -241,6 +243,11 @@ class SettingsViewModel @Inject constructor(
     /** Remembers that a first-run window or tip has been seen. */
     fun markGuideSeen(id: String) {
         viewModelScope.launch { repo.markGuideSeen(id) }
+    }
+
+    /** Shows the optional downloads again: [ResourcesOfferHost] draws the offer once it is forgotten (TM2). */
+    fun offerResources() {
+        viewModelScope.launch { repo.forgetGuide(RESOURCES_OFFERED) }
     }
 
     /** Shows the 11-slide tour again: the app shell's [OnboardingHost] draws it once the tour is forgotten. */

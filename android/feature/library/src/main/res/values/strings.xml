@@ -835,4 +835,23 @@
         <item quantity="one">1 new book from your folders</item>
         <item quantity="other">%1$d new books from your folders</item>
     </plurals>
+    <!-- TM2: the optional downloads offered after the first launch. -->
+    <string name="resources_title">Make FlowFolio yours</string>
+    <string name="resources_subtitle">FlowFolio comes light. Add any of these whenever you like; they stay on this phone and work offline.</string>
+    <string name="resources_scanned">Scanned books</string>
+    <string name="resources_scanned_text">Read books that are pictures of pages: their text reflows to your screen, in English and Arabic.</string>
+    <string name="resources_voices">Narrator voices</string>
+    <string name="resources_voices_text">Natural voices that read your books aloud, on the phone and with the screen off.</string>
+    <string name="resources_dictionary">Dictionary</string>
+    <string name="resources_dictionary_text">Princeton WordNet for Define: clear definitions for words you meet, without a connection.</string>
+    <string name="resources_total">Download size: %1$s</string>
+    <string name="resources_background">Downloads carry on in the background. You can change this later in Settings → Storage.</string>
+    <string name="resources_download">Download selected</string>
+    <string name="resources_later">Later</string>
+    <string name="resources_done">Done</string>
+    <string name="resources_downloading">Downloading · %1$d%%</string>
+    <string name="resources_ready">On this phone</string>
+    <string name="resources_failed">Could not download. Try again later from Settings → Storage.</string>
+    <string name="settings_resources">Optional downloads</string>
+    <string name="settings_resources_detail">Scanned books, Narrator voices and the dictionary</string>
 </resources>

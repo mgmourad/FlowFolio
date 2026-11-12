@@ -103,6 +103,7 @@ object LibraryTestTags {
     const val SHELVES_NEVER = "shelves_ask_never"
     const val SHELVES_YES = "shelves_ask_yes"
     const val TOUR = "onboarding_tour"
+    const val RESOURCES_OFFER = "resources_offer"
     const val TOUR_SKIP = "onboarding_skip"
     const val TOUR_NEXT = "onboarding_next"
     const val INTENT_CHIPS = "details_intent_chips"
