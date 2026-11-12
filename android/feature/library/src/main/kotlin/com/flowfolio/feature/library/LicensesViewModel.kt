@@ -143,7 +143,12 @@ private val SHIPPED = listOf(
     LicenseEntry("Apache Commons Compress", "Apache-2.0", "Unpacks downloaded voice-pack archives"),
     LicenseEntry("AndroidX ProfileInstaller", "Apache-2.0", "Installs the startup profile"),
     LicenseEntry("English Wiktionary", "CC BY-SA 4.0", "The offline dictionary's word data"),
-    LicenseEntry("Princeton WordNet 3.1", "WordNet License", "Bundled lexical database of synonyms and hypernyms")
+    LicenseEntry("Princeton WordNet 3.1", "WordNet License", "Lexical database for Define, downloaded on request"),
+    LicenseEntry(
+        "OpenStax Physics, Chapter 1",
+        "CC BY 4.0",
+        "The demo book. \u00A9 OpenStax, Rice University (openstax.org/details/books/physics), unchanged"
+    )
 )
 
 /** A filename's readable form, for any PDFium notice not in [PDFIUM_THIRD_PARTY]. */

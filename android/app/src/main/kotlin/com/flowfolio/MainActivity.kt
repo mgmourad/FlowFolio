@@ -32,6 +32,7 @@ import com.flowfolio.core.model.AppStyle
 import com.flowfolio.core.model.PageTurn
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
+import com.flowfolio.feature.library.ResourcesOfferHost
 import com.flowfolio.feature.reader.layout.ReaderLayout
 import com.flowfolio.feature.reader.layout.chooseLayout
 import com.flowfolio.feature.reader.riffle.RiffleDemo
@@ -83,26 +84,7 @@ class MainActivity : ComponentActivity() {
                             ).paper,
                             spread = { w, h -> reading.opensAsSpread(w, h) }
                         ) { ConversionProgressHost(appViewModel) { CoverFlightHost { FlowFolioApp(appViewModel) } } }
-                        FlowNoticeHost(appViewModel.flowNotices, appViewModel::onNotificationOpen)
-                        ScanAskHost(appViewModel)
-                        val update by appViewModel.updateAvailable.collectAsStateWithLifecycle()
-                        update?.let { release ->
-                            UpdateBanner(
-                                release,
-                                onOpen = appViewModel::onUpdateOpen,
-                                onDismiss = appViewModel::dismissUpdate
-                            )
-                        }
-                        val updatedTo by appViewModel.updatedTo.collectAsStateWithLifecycle()
-                        updatedTo?.let { UpdatedBanner(it, onDismiss = appViewModel::dismissUpdated) }
-                        val whatsNew by appViewModel.whatsNew.collectAsStateWithLifecycle()
-                        val tutorialSeen by appViewModel.tutorialSeen.collectAsStateWithLifecycle()
-                        // A first install shows the tour first, then this; an update shows it straight away.
-                        if (tutorialSeen) {
-                            whatsNew?.let { release -> WhatsNewDialog(release, onOk = appViewModel::dismissWhatsNew) }
-                        }
-                        AskNotificationsOnce()
-                        if (splash) FlowFolioSplash(stringResource(R.string.splash_tagline)) { splash = false }
+                        Overlays(splash) { splash = false }
                     }
                 }
             }
@@ -168,6 +150,32 @@ class MainActivity : ComponentActivity() {
     }
 
     /** Status and navigation bar icons follow the app's theme (not the system's), over fully transparent bars. */
+    // Everything drawn over the app: notices, banners, the first-run windows and the splash on top.
+    @Composable
+    private fun Overlays(splash: Boolean, onSplashDone: () -> Unit) {
+        FlowNoticeHost(appViewModel.flowNotices, appViewModel::onNotificationOpen)
+        ScanAskHost(appViewModel)
+        val update by appViewModel.updateAvailable.collectAsStateWithLifecycle()
+        update?.let { release ->
+            UpdateBanner(
+                release,
+                onOpen = appViewModel::onUpdateOpen,
+                onDismiss = appViewModel::dismissUpdate
+            )
+        }
+        val updatedTo by appViewModel.updatedTo.collectAsStateWithLifecycle()
+        updatedTo?.let { UpdatedBanner(it, onDismiss = appViewModel::dismissUpdated) }
+        val whatsNew by appViewModel.whatsNew.collectAsStateWithLifecycle()
+        val tutorialSeen by appViewModel.tutorialSeen.collectAsStateWithLifecycle()
+        // The tour and the downloads offer come first (a first install, or the first update with the offer).
+        if (tutorialSeen) {
+            whatsNew?.let { release -> WhatsNewDialog(release, onOk = appViewModel::dismissWhatsNew) }
+        }
+        AskNotificationsOnce()
+        // The offer of optional downloads is its own window, so it waits for the splash to finish (TM2).
+        if (splash) FlowFolioSplash(stringResource(R.string.splash_tagline), onSplashDone) else ResourcesOfferHost()
+    }
+
     @Composable
     private fun SystemBarsFollowTheme(dark: Boolean) {
         LaunchedEffect(dark) {

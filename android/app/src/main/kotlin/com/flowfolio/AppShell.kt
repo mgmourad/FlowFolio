@@ -179,8 +179,6 @@ fun AppShell(route: String?, onSelect: (TopLevel) -> Unit, content: @Composable 
         }
         // Over the bars and everything else: the app's own tour, the first time it opens (owner, M5 round 4).
         OnboardingHost()
-        // After the tour, once: the optional downloads (TM2), its own window since most people skip the tour.
-        com.flowfolio.feature.library.ResourcesOfferHost()
     }
 }
 

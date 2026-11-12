@@ -16,12 +16,12 @@ repos:
       - id: check-merge-conflict
       - id: check-added-large-files
         args: [--maxkb=1024]
-        # Two things are committed large on purpose. Generated baseline profiles are about 2 MB of text each and
+        # Four things are committed large on purpose. Generated baseline profiles are about 2 MB of text each and
         # git compresses them well; the ambient recordings are the owner's own, already down to mono 64 kbps, and
-        # have to ship inside the app for Reading Atmosphere to play offline; the WordNet database is the full
-        # Princeton WordNet 3.1, gzipped, and has to ship for offline definitions. The limit still guards everything
-        # else -- corpus PDFs above all, which are never committed.
-        exclude: ^(android/app/src/release/generated/baselineProfiles/|android/core/data/src/main/res/raw/|android/core/data/src/main/assets/)
+        # have to ship inside the app for Reading Atmosphere to play offline; the demo book is one CC BY OpenStax
+        # chapter (about 4 MB) that a first launch opens with. WordNet is a download since TM2 and no longer
+        # committed. The limit still guards everything else -- corpus PDFs above all, which are never committed.
+        exclude: ^(android/app/src/release/generated/baselineProfiles/|android/core/data/src/main/res/raw/|android/app/src/main/assets/demo/)
       - id: detect-private-key
       - id: mixed-line-ending
         args: [--fix=no]

@@ -79,16 +79,16 @@ const val RESOURCES_OFFERED = "resources_offer"
 @Composable
 fun ResourcesOfferHost(viewModel: ResourcesOfferViewModel = hiltViewModel()) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
-    val seen = settings?.seenGuides ?: return
-    if (TOUR_SEEN !in seen || RESOURCES_OFFERED in seen) return
-    // Nothing left to offer (all three already on the phone): the offer is made, quietly.
-    val missing = Resource.entries.map { viewModel.state(it).collectAsStateWithLifecycle().value }
-        .any { it != ResourceState.Ready }
-    if (!missing) {
-        LaunchedEffect(Unit) { viewModel.close() }
-        return
+    val seen = settings?.seenGuides
+    val states = Resource.entries.map { viewModel.state(it).collectAsStateWithLifecycle().value }
+    when {
+        seen == null || TOUR_SEEN !in seen || RESOURCES_OFFERED in seen -> Unit
+
+        // Nothing left to offer (all three already on the phone): the offer is made, quietly.
+        states.all { it == ResourceState.Ready } -> LaunchedEffect(Unit) { viewModel.close() }
+
+        else -> ResourcesOffer(viewModel)
     }
-    ResourcesOffer(viewModel)
 }
 
 /** What the offer shows and does. */
@@ -167,34 +167,39 @@ private fun ResourcesOffer(viewModel: ResourcesOfferViewModel) {
                 val total = Resource.entries
                     .filter { it.name in chosen && viewModel.state(it).value != ResourceState.Ready }
                     .sumOf { viewModel.sizeOf(it) }
-                Row(
-                    Modifier.fillMaxWidth().padding(top = 16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        if (started) {
-                            stringResource(R.string.resources_background)
-                        } else {
-                            stringResource(R.string.resources_total, Formatter.formatShortFileSize(context, total))
-                        },
-                        style = FlowFolioType.rowDetail.copy(color = p.ink3),
-                        modifier = Modifier.weight(1f)
-                    )
-                    if (started) {
-                        FlowFolioPrimaryButton(stringResource(R.string.resources_done), viewModel::close)
+                OfferFooter(
+                    note = if (started) {
+                        stringResource(R.string.resources_background)
                     } else {
-                        FlowFolioGhostButton(stringResource(R.string.resources_later), viewModel::close)
-                        Spacer(Modifier.width(8.dp))
-                        FlowFolioPrimaryButton(
-                            stringResource(R.string.resources_download),
-                            onClick = {
-                                viewModel.download(Resource.entries.filter { it.name in chosen }.toSet())
-                                started = true
-                            }
-                        )
+                        stringResource(R.string.resources_total, Formatter.formatShortFileSize(context, total))
+                    },
+                    started = started,
+                    onClose = viewModel::close,
+                    onDownload = {
+                        viewModel.download(Resource.entries.filter { it.name in chosen }.toSet())
+                        started = true
                     }
-                }
+                )
             }
+        }
+    }
+}
+
+/** The total (or that downloads go on in the background) and the offer's buttons. */
+@Composable
+private fun OfferFooter(note: String, started: Boolean, onClose: () -> Unit, onDownload: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            note,
+            style = FlowFolioType.rowDetail.copy(color = FlowFolio.palette.ink3),
+            modifier = Modifier.weight(1f)
+        )
+        if (started) {
+            FlowFolioPrimaryButton(stringResource(R.string.resources_done), onClose)
+        } else {
+            FlowFolioGhostButton(stringResource(R.string.resources_later), onClose)
+            Spacer(Modifier.width(8.dp))
+            FlowFolioPrimaryButton(stringResource(R.string.resources_download), onClick = onDownload)
         }
     }
 }

@@ -12,6 +12,7 @@ import com.flowfolio.core.model.FlowNotice
 import com.flowfolio.core.model.MaterialSeed
 import com.flowfolio.core.model.ThemePreference
 import com.flowfolio.core.model.UserSettings
+import com.flowfolio.feature.library.RESOURCES_OFFERED
 import com.flowfolio.feature.library.TOUR_SEEN
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -150,9 +151,12 @@ class AppViewModel @Inject constructor(
         }
     }
 
-    /** Whether the first-run tour is behind us, so the "what's new" popup can appear on a fresh install. */
+    /**
+     * Whether the first-run tour and the offer of optional downloads are both behind us, so the "what's new" popup
+     * comes after them rather than stacked on them (TM2).
+     */
     val tutorialSeen: StateFlow<Boolean> = settings.settings
-        .map { TOUR_SEEN in it.seenGuides }
+        .map { TOUR_SEEN in it.seenGuides && RESOURCES_OFFERED in it.seenGuides }
         .stateIn(viewModelScope, SharingStarted.Eagerly, true)
 
     /** The reader pressed "Ok": remember this build and put the popup away. */

@@ -172,6 +172,10 @@ internal fun Book.matches(query: String): Boolean =
 /** What the app remembers about having offered to turn folders into shelves (owner, M5 round 4). */
 private const val FOLDER_SHELVES = "folders_to_shelves"
 
+/** The guide id that remembers the demo book was given, and the asset it comes from (TM2). */
+private const val DEMO_BOOK = "demo_book"
+private const val DEMO_ASSET = "demo/physics-ch1.pdf"
+
 /** How many recent books the global search shows before anything is typed. */
 private const val RECENT_IN_SEARCH = 4
 
@@ -438,6 +442,19 @@ class LibraryViewModel @Inject constructor(
     init {
         // Folders read in place show what was added to them on the phone, without asking (TM2).
         viewModelScope.launch { folderRefresh.run(inPlaceOnly = true) }
+        viewModelScope.launch { giveDemoBook() }
+    }
+
+    /**
+     * A fresh library starts with one freely licensed book to try Dynamic Flow on (TM2, owner 2026-11-12): chapter 1
+     * of OpenStax *Physics* (CC BY 4.0). Once only, and only into an empty library: a reader updating with books of
+     * their own is not handed one, and one who deletes it does not get it back.
+     */
+    private suspend fun giveDemoBook() {
+        val settings = settingsRepo.settings.first()
+        if (DEMO_BOOK in settings.seenGuides) return
+        settingsRepo.markGuideSeen(DEMO_BOOK)
+        if (library.observeBooks(LibrarySort.RECENT).first().isEmpty()) library.importBundled(DEMO_ASSET)
     }
 
     /** Pull-to-refresh: checks every imported folder, copied or read in place, for books added since (TM2). */

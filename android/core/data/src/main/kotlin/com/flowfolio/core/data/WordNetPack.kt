@@ -66,21 +66,21 @@ class WordNetPack @Inject constructor(@ApplicationContext private val context: C
         connection.connectTimeout = TIMEOUT_MS
         connection.readTimeout = TIMEOUT_MS
         try {
-            connection.inputStream.use { input ->
-                out.outputStream().use { o ->
-                    val buffer = ByteArray(BUFFER)
-                    var total = 0L
-                    var n = input.read(buffer)
-                    while (n >= 0) {
-                        o.write(buffer, 0, n)
-                        total += n
-                        _state.value = ResourceState.Downloading((total.toFloat() / SIZE).coerceAtMost(1f))
-                        n = input.read(buffer)
-                    }
-                }
-            }
+            connection.inputStream.use { input -> out.outputStream().use { o -> copy(input, o) } }
         } finally {
             connection.disconnect()
+        }
+    }
+
+    private fun copy(input: java.io.InputStream, out: java.io.OutputStream) {
+        val buffer = ByteArray(BUFFER)
+        var total = 0L
+        var n = input.read(buffer)
+        while (n >= 0) {
+            out.write(buffer, 0, n)
+            total += n
+            _state.value = ResourceState.Downloading((total.toFloat() / SIZE).coerceAtMost(1f))
+            n = input.read(buffer)
         }
     }
 

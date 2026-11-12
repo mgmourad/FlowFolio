@@ -38,7 +38,9 @@ class DefaultLibraryRepository @Inject constructor(
     private val flow: com.flowfolio.core.data.flow.DynamicFlow = com.flowfolio.core.data.flow.DynamicFlow.None,
     private val bookmarkDao: BookmarkDao? = null,
     private val annotationDao: AnnotationDao? = null,
-    private val translations: TranslationRepository? = null
+    private val translations: TranslationRepository? = null,
+    /** For books bundled in the app's assets (the demo book); null in tests. */
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context? = null
 ) : LibraryRepository {
 
     override fun observeBookmarkCount(bookId: String): Flow<Int> = bookmarkDao?.count(bookId) ?: flowOf(0)
@@ -89,6 +91,20 @@ class DefaultLibraryRepository @Inject constructor(
     }
 
     override suspend fun heldFolders(): List<String> = withContext(io) { source.heldFolders() }
+
+    override suspend fun importBundled(asset: String): ImportResult {
+        val context = context ?: return ImportResult.NotABook
+        val copy = withContext(io) {
+            File(context.cacheDir, asset.substringAfterLast('/')).also { out ->
+                context.assets.open(asset).use { input -> out.outputStream().use { input.copyTo(it) } }
+            }
+        }
+        return try {
+            import(android.net.Uri.fromFile(copy).toString(), StorageMode.COPY)
+        } finally {
+            withContext(io) { copy.delete() }
+        }
+    }
 
     // Each early return is a distinct, user-visible import outcome; nesting them would hide that.
     @Suppress("ReturnCount")

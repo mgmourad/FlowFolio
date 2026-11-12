@@ -72,10 +72,8 @@ class DefaultFolderSync(
 
     private suspend fun syncLocked(inPlaceOnly: Boolean): FolderSyncReport {
         val added = ArrayList<Book>()
-        for (folder in all()) {
-            if (inPlaceOnly && folder.mode != StorageMode.LINK) continue
-            val files = library.listFolder(folder.uri) ?: continue
-            val fresh = files.filter { it.uri !in folder.seen }
+        for (folder in all().filter { !inPlaceOnly || it.mode == StorageMode.LINK }) {
+            val fresh = library.listFolder(folder.uri).orEmpty().filter { it.uri !in folder.seen }
             if (fresh.isEmpty()) continue
             for (file in fresh) {
                 val result = library.import(

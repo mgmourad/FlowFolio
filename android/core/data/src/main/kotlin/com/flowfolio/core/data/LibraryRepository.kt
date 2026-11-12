@@ -36,6 +36,12 @@ interface LibraryRepository {
     /** Keeps access to a picked folder for reading its books in place; false when the provider does not allow it. */
     suspend fun persistFolderAccess(treeUri: String): Boolean
 
+    /**
+     * Imports a book bundled in the app's assets ([asset], under `assets/`), copied like any other book (TM2: the demo
+     * book a fresh library starts with).
+     */
+    suspend fun importBundled(asset: String): ImportResult = ImportResult.NotABook
+
     /** The folders FlowFolio keeps access to (TM2: folders read in place from before folder sync). */
     suspend fun heldFolders(): List<String> = emptyList()
 
