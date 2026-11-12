@@ -14,7 +14,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
   page becomes text only when their words agree at least 40% (`OcrGate`), and Tesseract's text is shown. Tesseract
   returns Arabic in logical order, so no reordering is applied (PaddleOCR's visual-order output still is).
 - **The pack grows to 51 MB.** `ara.traineddata` (tessdata_best, 12.6 MB) joins the three PaddleOCR models in
-  Settings → Dynamic Flow → Scanned books, wired through `TesseractOcr` in `:core:ocr`.
+  Settings → Dynamic Flow → Scanned books, wired through `TesseractOcr` in `:core:ocr`. The models are now mirrored
+  on FlowFolio's releases (`ocr-models-v1`) with SHA-256s pinned, instead of ModelScope.
 - **CI can read Arabic.** `tess4j` 5.21.0 (Apache-2.0) is added to `:tools:convert` tests only, and the Linux runner
   installs `libtesseract` and `tesseract-ocr-ara`.
 - Verified on `fold8_api37`: a two-page Arabic scan converts with both pages read as `ocr:tesseract-ara` (word

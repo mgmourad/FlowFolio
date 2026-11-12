@@ -35,7 +35,7 @@ sealed interface OcrPackState {
  * SHA-256s. Dynamic Flow's conversion process reads the files directly ([readerIn]), so the pack works in either
  * process.
  *
- * The files come from RapidOCR's ModelScope mirror for now; ADR-0054 moves them to FlowFolio's own releases.
+ * The files are mirrored on FlowFolio's GitHub releases (`ocr-models-v1`, ADR-0054), with SHA-256s pinned.
  */
 @Singleton
 class OcrPack @Inject constructor(@ApplicationContext private val context: Context) {
@@ -100,7 +100,7 @@ class OcrPack @Inject constructor(@ApplicationContext private val context: Conte
     class PackFile(val name: String, val url: String, val sha256: String, val size: Long)
 
     companion object {
-        private const val BASE = "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/"
+        private const val BASE = "https://github.com/mgmourad/FlowFolio/releases/download/ocr-models-v1/"
         const val DETECTOR = "PP-OCRv6_det_small.onnx"
         const val LATIN = "PP-OCRv6_rec_small.onnx"
         const val ARABIC = "arabic_PP-OCRv5_rec_mobile.onnx"
@@ -109,25 +109,25 @@ class OcrPack @Inject constructor(@ApplicationContext private val context: Conte
         val FILES = listOf(
             PackFile(
                 DETECTOR,
-                BASE + "PP-OCRv6/det/$DETECTOR",
+                BASE + DETECTOR,
                 "090f04abcd9d9a7498bc4ebf677e4cb9bdce1fe4197ddb7e529f1ef44e1ff94f",
                 9_929_594
             ),
             PackFile(
                 LATIN,
-                BASE + "PP-OCRv6/rec/$LATIN",
+                BASE + LATIN,
                 "6f327246b50388f3c176ae304bd95767ea6dc0c9ae92153ef8cbe210b3c14884",
                 21_234_383
             ),
             PackFile(
                 ARABIC,
-                BASE + "PP-OCRv5/rec/$ARABIC",
+                BASE + ARABIC,
                 "c1192e632d0baa9146ae5b756a0e635e3dc63c1733737ebfd1629e87144e9295",
                 8_023_828
             ),
             PackFile(
                 ARA,
-                "https://github.com/tesseract-ocr/tessdata_best/raw/main/$ARA",
+                BASE + ARA,
                 "ab9d157d8e38ca00e7e39c7d5363a5239e053f5b0dbdb3167dde9d8124335896",
                 12_603_724
             )
