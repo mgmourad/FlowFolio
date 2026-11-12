@@ -218,6 +218,15 @@ it. Also: the tour's 11 pictures retaken without the status bar, and "Replay the
   - **CI's OCR gate had never run** (relative paths skipped all three tests; it also used Ubuntu's smaller Arabic
     model). Fixed, and a set-but-missing folder now fails.
   - Known issues 44, 45 and 51 closed (below). Fold speed still unmeasured (known issue 55).
+- **Released as FlowFolio 0.7.0-beta.2 (build 700002) on 2026-11-12** (owner's instruction, ahead of the Phase 7
+  sign-off), tag `v0.7.0-beta.2` at `b182c93`, APK SHA-256
+  `2ad4e445fc366ae3eba3c4fdd1c0206c57deb8fe9bb212a5509271e1646e6612`, signed `CN=FlowFolio Release` (`59fbae55`).
+  - Green CI on `b182c93`, and for the first time the OCR gate really ran there: 3 tests, 0 skipped.
+    - English: 98.9% recall, 3.0% CER, 20 of 21 pages kept.
+    - Arabic: 92.6% recall, 19.1% CER, 4 of 10 kept. The runner's Tesseract is 5.5.0, against 5.5.4 on the Mac.
+  - On `fold8_api37` it updated 0.7.0-beta.1 in place, and What's new showed "Version 0.7.0-beta.2" with only the
+    reader-facing notes. That screen exposed the popup's own labelling bug, fixed in `b182c93`.
+  - Phase 7 is still not signed off (`docs/plans/phase7-signoff.md`, draft).
 - **The owner's Arabic book, 2026-11-11** (CHANGELOG, Unreleased, "Arabic books"): typed Arabic pages had their
   words reversed (flat-box spaces cut every line; fixed in `Extraction`); right-to-left pages now read their right
   column first (`ReadingOrder`); and an Arabic scanned book skips OCR once its pages vote it Arabic while no Arabic
