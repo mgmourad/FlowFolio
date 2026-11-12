@@ -5,6 +5,8 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [0.7.0-beta.2] - 2026-11-12
+
 ### For readers
 - **Arabic scanned books now become text.** Most pages of a typical printed Arabic book now reflow; before, about
   half stayed pictures. Books you already converted are converted again the next time you open them.
