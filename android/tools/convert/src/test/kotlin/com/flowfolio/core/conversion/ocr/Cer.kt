@@ -16,11 +16,11 @@ object Cer {
     }
 
     /** Words as [Recall] has them, but with the spike's Arabic letter-form unification (for CER the letters matter). */
-    private fun words(t: String): List<String> = Regex("\\w+").findAll(normalise(t)).map { it.value }.toList()
+    private fun words(t: String): List<String> = WORD.findAll(normalise(t)).map { it.value }.toList()
 
     private fun normalise(t: String): String = Normalizer.normalize(t, Normalizer.Form.NFKC)
-        .replace(Regex("(\\w)-\\s*\\n\\s*(\\w)"), "$1$2")
-        .replace(Regex("(\\w)- (\\w)"), "$1$2")
+        .replace(Regex("([\\p{L}\\p{N}])-\\s*\\n\\s*([\\p{L}\\p{N}])"), "$1$2")
+        .replace(Regex("([\\p{L}\\p{N}])- ([\\p{L}\\p{N}])"), "$1$2")
         .replace(Regex("\\.{3,}|(?:\\. ){3,}|_{3,}"), " ")
         .replace(MARKS, "")
         .replace(ALEFS, "ا")
@@ -48,4 +48,5 @@ object Cer {
 
     private val MARKS = Regex("[\\u064B-\\u065F\\u0670\\u0640]")
     private val ALEFS = Regex("[إأآٱ]")
+    private val WORD = Regex("[\\p{L}\\p{N}]+")
 }

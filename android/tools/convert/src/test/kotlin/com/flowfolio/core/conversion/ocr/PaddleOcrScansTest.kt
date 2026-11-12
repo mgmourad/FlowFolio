@@ -113,6 +113,9 @@ class PaddleOcrScansTest {
 
 /** The share of a reference's words an OCR reading has (as multisets), line-end hyphens joined, as `rescore.py`. */
 object Recall {
+    /** Letters and numbers, Arabic and Latin alike (Java's `\w` is ASCII and would miss Arabic). */
+    private val WORD = Regex("[\\p{L}\\p{N}]+")
+
     fun of(truth: String, read: String): Float {
         val want = words(truth)
         val have = words(read).groupingBy { it }.eachCount().toMutableMap()
@@ -127,10 +130,10 @@ object Recall {
         return if (want.isEmpty()) 0f else hit.toFloat() / want.size
     }
 
-    private fun words(t: String): List<String> = Regex("\\w+").findAll(
+    private fun words(t: String): List<String> = WORD.findAll(
         java.text.Normalizer.normalize(t, java.text.Normalizer.Form.NFKC)
-            .replace(Regex("(\\w)-\\s*\\n\\s*(\\w)"), "$1$2")
-            .replace(Regex("(\\w)- (\\w)"), "$1$2")
+            .replace(Regex("([\\p{L}\\p{N}])-\\s*\\n\\s*([\\p{L}\\p{N}])"), "$1$2")
+            .replace(Regex("([\\p{L}\\p{N}])- ([\\p{L}\\p{N}])"), "$1$2")
             .lowercase()
     ).map { it.value }.toList()
 }

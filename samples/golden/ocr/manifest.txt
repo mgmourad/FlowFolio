@@ -1,0 +1,41 @@
+ar-00 ar A Light Note on the Science of Writing and Inks WDL3176.pdf 6 89aeb5b344f148f1401fa01c0f5b41f04f6d918e41408a752a70fcba955f84d0
+ar-01 ar (Fransīs) Fatḥ Allāh Marrāsh – Kitāb Ghābat al-Ḥaqq & Mashhad al-Aḥwāl (Cairo, 1881) – Volume 2 (Mashhad al-Aḥwāl).pdf 11 6fab804ce1911a5d78a5c647be6ad551fa0f4dc2f54fbc5d13d50654624cd8cb
+ar-02 ar -1956-المرأة ليست لعبة الرجل- سلامة موسى.djvu 7 63ae41f13f5973a9e22cae06446d4be8ca209afb9213faf4f085233ef7df6453
+ar-03 ar -عبد المتعال الصعيدي- تاريخ الإصلاح في الأزهر-1943.pdf 28 f50107d30456f8fec05ebb0465a3d58b831d998b6d72b184a23e631fb0cc05c4
+ar-04 ar -1911-كتاب المطالعة العربية - نبوية موسى.djvu 5 e8210bf7478e26ee9f0792b7a3e007ab519402c64820f77770327e1c5a539f71
+ar-05 ar Al-Ḥurrīyah Journal, vol.1-2, 15-07-1924.pdf 25 e8c00f4566212bf3ec1cb0f7fd2e16d3ab3861d6dc08aa9300f88b607c69529d
+ar-06 ar Al-Waṣīyah al-Jāmiʻah li-Ibn Taymīyah (Anṣār al-Sunnah, 1947).pdf 7 48ddb731a2a971c25c3f44a9697091d6a92a3ba0e5fee7937716aa00d6801fb2
+ar-07 ar Al-Bayan wa al-Tabyin (1926).pdf 6 08dbce9f76c1016d9ad26bbf66a97cd6170cd322eaa1c49be3b147b5c6cf3fda
+ar-08 ar Coalition Provisional Authority Order No. 83 - Amendment to the Copyright Law.pdf 1 610ab95b77c7d36db3cdc8ebfe734e3d9989cc6d1a81b71a54117775d2a7c992
+ar-09 ar Certificate of Emancipation for Female Slave WDL9672.pdf 1 e426d522e69d9802ff2ea59c2cbe0a7387788a8c578b9d93db7aaa7292dee91b
+ar-10 ar Commentary on "The Little Sparkles on the Science of Calculation" WDL4280.pdf 2 b403534eb8694e2de8c1dfc797968dafdc7546d6288754f29be24236726e4123
+ar-11 ar Commentary by Islam's Sheikh Zakariyya al-Ansari on Ibn al-Hā’im's Poem on the Science of Algebra and Balancing Called the Creator's Epiphany in Explaining the Cogent WDL3202.pdf 2 ecb8e71654f751f0e919ea2d5b40d4c0b093f1163c1d0c841512c6ba8d142294
+ar-12 ar Badar Mawlid.pdf 2 7d6bb94208aa4aca9f0351169c381df9870dd8798f8f7c4463b1ef7cad7d1eec
+ar-13 ar Commentary on the Gift of Arithmetic WDL2867.pdf 8 c55a63572d0984a96b80e340f2a50ca5ade1559f2af65dd3a573a5927e119220
+ar-14 ar Gaza History Aref el Aref 1943.pdf 21 17fffd14dfc11f6f837cbdb7f80b64d3f9c0cd4609a12d2744db1ae339b49391
+ar-15 ar Constitutional Declaration of the Syrian Arab Republic (2025).pdf 1 cd35f0ec8c746356bb69011feb50e654cc24a870b0d6c2b0c2a147f2752a2d11
+ar-16 ar JUA0680291.pdf 2 42a315195a1efc0dee32bf12113d5a31d78894a8fa5871eace61cc0f8d1e47d5
+ar-17 ar Jokes Relating to the Commentary on Al-Mataalia and Its Honorable Marginal Notes WDL6992.pdf 10 9fa3daa0fa04fe95b0e11b2cd3b45bcbc7357815ebd3cf49e51fd6b16f25a116
+ar-18 ar Glosses of al-Hifnī on the Yāsamīnīyya WDL3222.pdf 2 2b219e84e238080f087e4240f865c581e0576ad5a71e6d705485ff0b70947950
+ar-19 ar Jua0680504.pdf 3 cf59519f29f04c9c236f07d99945f623e92814924c141aa6623ed1fb62eee778
+en-00 en "Gentlemen Prefer Blondes" - Anita Loos.pdf 106 0d57f6c81d007ecfef428d66bad678ef20af44092f7e2c01f8fcb776deba6a6d
+en-01 en "A modern Hercules", the tale of a sculptress (IA amodernherculest00wins).pdf 9 5b2635bad8e125b3d7d5dd9c48bbef40b4d228766d6a91980327454391bd23bc
+en-02 en "For the great empire of liberty, forward!" (IA forgreatempireof00schu).pdf 5 d6cad14585d30e4055ea19541e25a87bbcad4c4f28af3f86130e1b358562ea45
+en-03 en "N" Rays (Garcin).djvu 13 023b4a9b537c6ed5b3cbdc4235b9dce5c8ba7f14fd721cc38ad533604ecb9137
+en-04 en "Homo Sum" being a letter to an anti-suffragist from an anthropologist.djvu 7 b87bc0d3e96d97f821afbd52891b2b8cc4097ebacae9382eb01d3ae4961d9ae5
+en-05 en "Red"·Fed·Memoirs-Hickey-1925.pdf 3 e8103450520aa5fa4833d73e972fa26046affc9b27449b8f6a3cf55c48ffdecc
+en-06 en "Rome's recruits" - a list of Protestants who have become Catholics since the Tractarian movement (IA romesrecruitslis00whitrich).pdf 10 84ed8f1d0ab7101b066549042484a87b577243b9134a165af4ddb38dd74857c5
+en-07 en "Oranges and lemons", an old ditty of London citie (IA orangeslemonsold00mitcrich).pdf 9 49846c6b1446d6b36ea4e25471fc93933b5d2ccf9770f0b24433c8f397fbcd2e
+en-08 en "Round the world." - Letters from Japan, China, India, and Egypt (IA roundworldletter00fogg 0).pdf 13 92ac2f4ef0be8ba1c4bae29c428fc584684c2e6b90c241afee434c52cc5b7b4a
+en-09 en "The Mummy" Volume 1.djvu 10 3c934b9d7cc76245859bc712ec7359341bbd12f59eefeda4404d23358b7c8098
+en-10 en "The Mummy" Volume 2.djvu 10 19cf1aa8a14e9e7ae415e1a946fe98b08b506650c185ce776640a238ee5d1a22
+en-11 en "The Mummy" Volume 3.djvu 10 65955a46e808754ed6eeeee7635c95768b54ffd23d3417d3cf7b7bf9678df789
+en-12 en "The Nonsense of It," a printed pamphlet arguing for woman suffrage.djvu 1 a489c4e671af4d487e3074714b26f727f4f8c23ce6f609a501dc9c5eb7406765
+en-13 en "The next war"; an appeal to common sense (IA thenextwarappeal01irwi).pdf 100 84a6e36c0711907d0b7bf5c798c3d441c499c9a29c41f65b720d9aacfca9069e
+en-14 en "The Treasure Chest" A Fairy Pageant Play by Josephine Thorp - DPLA - d2004e4af7db00f278ac5cfb1634ee7a.pdf 5 a165bf23c62e85f6581515cefc6ab17b7e8b423dd7eb165e60c50b79f77e3c06
+en-15 en "The Past Meets the Present" Historical Drama Belmont 1750-1955 - DPLA - 1c7659cdd2d80a609303340b04f9d2f5.pdf 8 404fa2c884a5ab21bcf7ffe7d2e43047aefa7a2eaa99348bf3345ef370bfb52a
+en-16 en '49, the gold-seeker of the Sierras (IA cu31924022428670).pdf 15 9604c9caf6d19c896a1b5804f05ab688b0dac2700d4010aca693eeca2468c67e
+en-17 en 'Tis Sixty Years Since.djvu 11 e2008713ae26b3114c26877020b062dba2335b39b2951dde919c4ac51ce8b8da
+en-18 en 'Black Lives' Nov 1928.pdf 1 7f05662f638317bd199e04ea35f49d066aa0c0bc9d38e3f81a8d1c80e3325745
+en-19 en 'Tis pity she's a whore, and The broken heart (IA tispitysheswhore00ford).pdf 13 d93df007f0a1704b4bf6aa94c2aa22001a46af64d7c5a6766c33fe9105a50216
+en-20 en 'Twas on the morn of sweet May Day (1).pdf 2 30d6857554a904815125a3b07c56520605d1f6780a4fb5c10a01fb771d611690

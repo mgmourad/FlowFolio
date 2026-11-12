@@ -63,10 +63,19 @@ def entries(text: str) -> list[dict[str, str]]:
         line = line.strip()
         if not line or line.startswith("#"):
             continue
+        # `id lang book page sha256`; the book name may contain spaces.
         parts = line.split()
-        if len(parts) != 5:
+        if len(parts) < 5:
             raise SystemExit(f"bad manifest line: {line!r}")
-        out.append(dict(zip(("id", "lang", "book", "page", "sha256"), parts)))
+        out.append(
+            {
+                "id": parts[0],
+                "lang": parts[1],
+                "book": " ".join(parts[2:-2]),
+                "page": parts[-2],
+                "sha256": parts[-1],
+            }
+        )
     return out
 
 

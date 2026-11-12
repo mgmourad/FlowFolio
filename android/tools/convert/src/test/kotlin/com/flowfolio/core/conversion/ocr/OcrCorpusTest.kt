@@ -69,7 +69,7 @@ class OcrCorpusTest {
     private fun hasAny(lang: String) =
         pages!!.listFiles { f -> f.name.matches(Regex("$lang-\\d+\\.jpg")) }!!.isNotEmpty()
 
-    /** Median recall, median CER, and (pages read, kept as text) over [lang]-NN pages not in [excluded]. */
+    /** Median recall and CER over the pages read as text, and (pages read, kept as text) over [lang]-NN pages. */
     private fun measure(reader: OcrReader, lang: String, excluded: Set<String>): Triple<Float, Float, Pair<Int, Int>> {
         val recalls = ArrayList<Float>()
         val cers = ArrayList<Float>()
@@ -81,12 +81,14 @@ class OcrCorpusTest {
             total++
             val truth = File(pages, "$id.txt").readText()
             val read = reader.read(load(image))
-            val text = read?.lines?.joinToString("\n") { it.text } ?: ""
-            recalls += Recall.of(truth, text)
-            cers += Cer.of(truth, text)
-            if (read != null) kept++
+            if (read != null) {
+                kept++
+                val text = read.lines.joinToString("\n") { it.text }
+                recalls += Recall.of(truth, text)
+                cers += Cer.of(truth, text)
+            }
         }
-        fun median(v: List<Float>) = v.sorted()[v.size / 2]
+        fun median(v: List<Float>) = if (v.isEmpty()) 0f else v.sorted()[v.size / 2]
         return Triple(median(recalls), median(cers), total to kept)
     }
 
@@ -139,11 +141,12 @@ class OcrCorpusTest {
         val MANUSCRIPTS = setOf("ar-00", "ar-06", "ar-09", "ar-10", "ar-11", "ar-12", "ar-13", "ar-17", "ar-18")
         val ENGLISH_ABSTRACT = setOf("ar-19")
 
-        // Baselines from the M3 run; tuned below on the corpus.
-        const val EN_RECALL = 0.90f
-        const val EN_CER = 0.15f
+        // Baselines from the M3 run on the spike's corpus (English 98.9% recall / 3.0% CER / 20 of 21 kept;
+        // Arabic printed 93.0% recall / 16.0% CER / 4 of 10 kept — the pre-1950 pages stay pictures, ADR-0054).
+        const val EN_RECALL = 0.95f
+        const val EN_CER = 0.08f
         const val EN_KEPT = 0.90f
-        const val AR_RECALL = 0.55f
+        const val AR_RECALL = 0.80f
         const val AR_KEPT = 0.20f
     }
 }
