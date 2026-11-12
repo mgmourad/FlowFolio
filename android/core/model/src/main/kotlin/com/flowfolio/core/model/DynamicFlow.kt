@@ -27,7 +27,8 @@ sealed interface FlowStatus {
     data class Failed(val reason: FlowFailure) : FlowStatus
 }
 
-enum class FlowPause { HOT, BATTERY }
+/** Why a conversion is paused: the phone is [HOT], the [BATTERY] is low, or it is [WAITING] for a quicker book. */
+enum class FlowPause { HOT, BATTERY, WAITING }
 
 /**
  * Why a conversion ended without a book: [INTERRUPTED] means it was stopped part-way (Android ended the conversion

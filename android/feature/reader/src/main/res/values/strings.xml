@@ -184,6 +184,7 @@
     <string name="flow_status_queued">Waiting for another book to finish</string>
     <string name="flow_status_hot">Paused while your phone cools down</string>
     <string name="flow_status_battery">Paused: the battery is low</string>
+    <string name="flow_status_waiting">Paused while a quicker book converts</string>
     <string name="flow_status_failed">This book can\'t be reflowed. It stays a PDF.</string>
     <string name="flow_status_interrupted">Stopped. Tap Dynamic Flow to retry.</string>
     <string name="flow_status_on">On: the text flows to fit your screen</string>

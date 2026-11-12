@@ -7,6 +7,7 @@
     <string name="flow_converting_text">%1$s · %2$d%%</string>
     <string name="flow_paused_hot">Paused while your phone cools down</string>
     <string name="flow_paused_battery">Paused: the battery is low. Plug in to go on.</string>
+    <string name="flow_paused_waiting">Paused while a quicker book converts</string>
     <string name="flow_done_title">Dynamic Flow is ready</string>
     <string name="flow_done_text">%1$s now flows to fit your screen. Tap to read.</string>
     <string name="flow_failed_title">Dynamic Flow couldn\'t prepare this book</string>

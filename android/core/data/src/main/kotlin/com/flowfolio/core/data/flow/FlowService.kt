@@ -13,6 +13,7 @@ import android.os.SystemClock
 import android.util.Log
 import com.flowfolio.core.conversion.ConversionException
 import com.flowfolio.core.conversion.Converter
+import com.flowfolio.core.conversion.SidecarBuilder
 import com.flowfolio.core.conversion.epub.SourceInfo
 import com.flowfolio.core.data.R
 import com.flowfolio.core.data.ocr.OcrPack
@@ -28,17 +29,36 @@ import java.nio.file.StandardCopyOption
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.locks.ReentrantLock
 import kotlinx.serialization.json.Json
 
 /**
  * Converts PDFs to their Dynamic Flow bundles (ADR-0045), in its own process (`:convert`, so PDFium parsing an
  * untrusted file can't take the app down) as a foreground service with a progress notification. One book at a time; the
  * others wait in order. It pauses while the phone is hot or the battery is low and not charging, and tells the app how
- * far it is with broadcasts only the app receives ([FlowProtocol]). If the process is stopped, the book converts again
- * from the start the next time it is asked for.
+ * far it is with broadcasts only the app receives ([FlowProtocol]).
+ *
+ * A book asked for while a scanned book is being read by OCR does not wait behind it (TM1, owner 2026-11-12): it
+ * converts on a second thread while the OCR book pauses at its next page. Only one conversion works at a time
+ * ([engine]): PDFium is used from one thread at a time, and two books' memory at once ran the process out of it. The
+ * OCR book's pages are kept as they are read ([FileOcrCache]), so it resumes where it paused, and a book whose process
+ * Android stopped resumes too, the next time it is asked for.
  */
 class FlowService : Service() {
     private val worker = Executors.newSingleThreadExecutor { Thread(it, "flow-convert") }
+
+    /** Books that should not wait behind a slow OCR book convert here, while that book pauses. */
+    private val priority = Executors.newSingleThreadExecutor { Thread(it, "flow-priority") }
+
+    /** Held by whichever conversion is working; an OCR book hands it over at a page boundary. */
+    private val engine = ReentrantLock(true)
+
+    /** The book on [worker] reading scanned pages by OCR, if any: books asked for now go to [priority]. */
+    @Volatile private var reading: String? = null
+
+    /** Books on [priority] not finished yet: the OCR book waits while there are any. */
+    private val waiting = AtomicInteger(0)
 
     /** Books started and not finished, in order, with their titles. */
     private val queued = LinkedHashMap<String, String>()
@@ -80,7 +100,18 @@ class FlowService : Service() {
                     intent.getStringExtra(FlowProtocol.EXTRA_FILE),
                     intent.getStringExtra(FlowProtocol.EXTRA_URI)
                 )
-            worker.execute { run(job) }
+            if (reading != null) {
+                waiting.incrementAndGet()
+                priority.execute {
+                    try {
+                        run(job, ahead = true)
+                    } finally {
+                        waiting.decrementAndGet()
+                    }
+                }
+            } else {
+                worker.execute { run(job) }
+            }
         }
         return START_NOT_STICKY
     }
@@ -89,10 +120,16 @@ class FlowService : Service() {
 
     // Whatever stops a conversion, the app hears how it ended and the partial bundle goes: the last catch is that net.
     @Suppress("TooGenericExceptionCaught")
-    private fun run(job: Job) {
+    private fun run(job: Job, ahead: Boolean = false) {
         val started = SystemClock.elapsedRealtime()
         val failure = try {
-            convert(job)
+            engine.lock()
+            try {
+                convert(job, ahead)
+            } finally {
+                if (engine.isHeldByCurrentThread) engine.unlock()
+                if (reading == job.bookId) reading = null
+            }
             null
         } catch (_: PdfException.PasswordRequired) {
             FlowFailure.PASSWORD
@@ -152,13 +189,14 @@ class FlowService : Service() {
         }.onFailure { Log.w(TAG, "OCR pack could not load", it) }.getOrNull()
     }
 
-    private fun convert(job: Job) {
+    private fun convert(job: Job, ahead: Boolean) {
         val fd = open(job) ?: throw FileNotFoundException("no file for ${job.bookId}")
         files.dir(job.bookId).mkdirs()
-        val progress = Progress(job)
+        val progress = Progress(job, ahead)
+        val cache = FileOcrCache(files.ocrCache(job.bookId), SidecarBuilder.ENGINE_VERSION)
         val result = fd.use { pfd ->
             PdfiumConversionSource.open(pfd).use { pdf ->
-                Converter(Converter.Settings(ocr = ocr)).convertProgressively(
+                Converter(Converter.Settings(ocr = ocr, ocrCache = cache)).convertProgressively(
                     pdf,
                     SourceInfo(job.title.ifBlank { job.bookId }, job.bookId, pdf.pageCount, pdf.metadata("Title")),
                     Instant.now().truncatedTo(ChronoUnit.SECONDS).toString(),
@@ -176,6 +214,8 @@ class FlowService : Service() {
         }
         val sidecar = JSON.encodeToString(result.sidecar).toByteArray()
         writeAtomically(files.sidecar(job.bookId)) { it.write(sidecar) }
+        // Converted: the pages' OCR is in the book now.
+        files.ocrCache(job.bookId).deleteRecursively()
     }
 
     /** Writes [bytes] to [target] without leaving it half-written: a sibling temp, then an atomic rename over it. */
@@ -195,7 +235,7 @@ class FlowService : Service() {
     }
 
     /** Turns the converter's stages into one fraction, tells the app and the notification, and pauses when it must. */
-    private inner class Progress(private val job: Job) {
+    private inner class Progress(private val job: Job, private val ahead: Boolean) {
         private var lastSent = 0L
         private var lastPercent = -1
         private var lastFraction = 0f
@@ -209,7 +249,29 @@ class FlowService : Service() {
                 Thread.sleep(PAUSE_CHECK_MS)
                 pause = pauseReason()
             }
+            if (!ahead) {
+                when (p.stage) {
+                    "ocr" -> {
+                        reading = job.bookId
+                        if (waiting.get() > 0) giveWay(p)
+                    }
+
+                    // Past the pages: no more OCR, so books asked for now just wait their turn.
+                    "layout", "images", "writing" -> if (reading == job.bookId) reading = null
+                }
+            }
             report(fraction(p), null, force = false)
+        }
+
+        /** Hands the engine to the books waiting on [priority] and takes it back once they are done. */
+        private fun giveWay(p: Converter.Progress) {
+            report(fraction(p), FlowPause.WAITING, force = true)
+            engine.unlock()
+            try {
+                while (waiting.get() > 0) Thread.sleep(GIVE_WAY_CHECK_MS)
+            } finally {
+                engine.lock()
+            }
         }
 
         /** A chapter finished: the book is readable through [finished] of [total]; tell the app now. */
@@ -229,12 +291,10 @@ class FlowService : Service() {
             send(FlowProtocol.progress(packageName, job.bookId, fraction, pause, chapters, totalChapters))
             val pausedText = pause?.let {
                 getString(
-                    if (it ==
-                        FlowPause.HOT
-                    ) {
-                        R.string.flow_paused_hot
-                    } else {
-                        R.string.flow_paused_battery
+                    when (it) {
+                        FlowPause.HOT -> R.string.flow_paused_hot
+                        FlowPause.BATTERY -> R.string.flow_paused_battery
+                        FlowPause.WAITING -> R.string.flow_paused_waiting
                     }
                 )
             }
@@ -262,6 +322,7 @@ class FlowService : Service() {
 
     override fun onDestroy() {
         worker.shutdownNow()
+        priority.shutdownNow()
         // Books still waiting or converting will not finish here: the app hears so and can ask again.
         val unfinished = synchronized(queued) { queued.keys.toList().also { queued.clear() } }
         unfinished.forEach { send(FlowProtocol.done(packageName, it, FlowFailure.INTERRUPTED)) }
@@ -272,6 +333,7 @@ class FlowService : Service() {
         private const val TAG = "FlowFolioFlow"
         private const val REPORT_MS = 400L
         private const val PAUSE_CHECK_MS = 5_000L
+        private const val GIVE_WAY_CHECK_MS = 500L
         private const val LOW_BATTERY = 15
         private const val OCR_THREADS = 4
         private const val PERCENT = 100

@@ -22,6 +22,9 @@ class FlowFiles(private val root: File) {
     /** Where the converter writes before the bundle is complete. */
     fun partial(bookId: String) = File(dir(bookId), "$EPUB.part")
 
+    /** Each scanned page's OCR while the book converts ([FileOcrCache]), so a stopped conversion resumes. */
+    fun ocrCache(bookId: String) = File(dir(bookId), "ocr")
+
     /**
      * What the reader may open now: the complete EPUB when it is current, else the partial bundle while it is still
      * being written (progressive delivery, spec 6). A partial is only readable while [converting] is true — a stale

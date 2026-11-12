@@ -156,6 +156,7 @@ private fun statusLine(flow: FlowState): String = when (val s = flow.status) {
     is FlowStatus.Converting -> when {
         s.paused == FlowPause.HOT -> stringResource(R.string.flow_status_hot)
         s.paused == FlowPause.BATTERY -> stringResource(R.string.flow_status_battery)
+        s.paused == FlowPause.WAITING -> stringResource(R.string.flow_status_waiting)
         s.readableChapters > 0 -> stringResource(R.string.flow_status_chapters, s.readableChapters, s.totalChapters)
         else -> stringResource(R.string.flow_status_converting, (s.fraction * PERCENT).toInt())
     }

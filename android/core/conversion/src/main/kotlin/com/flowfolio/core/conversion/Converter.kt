@@ -13,6 +13,7 @@ import com.flowfolio.core.conversion.ir.PageKind
 import com.flowfolio.core.conversion.ir.Role
 import com.flowfolio.core.conversion.ocr.OcrPages
 import com.flowfolio.core.conversion.ocr.OcrReader
+import com.flowfolio.core.conversion.ocr.OcrResult
 import com.flowfolio.core.conversion.pdf.Box
 import com.flowfolio.core.conversion.pdf.Crop
 import com.flowfolio.core.conversion.pdf.EncodedImage
@@ -46,7 +47,9 @@ class Converter(private val settings: Settings = Settings()) {
         /** Reads scanned pages (ADR-0054); null keeps every scanned page a picture, as before. */
         val ocr: com.flowfolio.core.conversion.ocr.OcrReader? = null,
         /** Pixels per point a scanned page is drawn at for OCR (3 is 216 dpi; a US Letter page is 1836 px wide). */
-        val ocrScale: Float = 3f
+        val ocrScale: Float = 3f,
+        /** Remembers each scanned page's OCR, so a stopped conversion resumes; null reads every page afresh. */
+        val ocrCache: com.flowfolio.core.conversion.ocr.OcrCache? = null
     )
 
     /** Progress: [stage] (`reading`, `ocr` for scanned pages, `layout`, `images`, `writing`) and how far into it. */
@@ -160,16 +163,23 @@ class Converter(private val settings: Settings = Settings()) {
     private fun ocrIfScanned(pdf: PdfSource, i: Int, page: Page, ocr: OcrReader?, progress: (Progress) -> Unit): Page {
         val reader = ocr?.takeIf { page.kind == PageKind.SCANNED } ?: return page
         progress(Progress("ocr", i, pdf.pageCount))
-        val image = pdf.renderPixels(i, settings.ocrScale)
-        val read = image?.let { reader.read(it) }?.takeIf { r -> r.lines.sumOf { it.text.length } >= MIN_OCR_CHARS }
-        page.ocrRejected = image != null && read == null
-        return if (image == null || read == null) {
+        val result = settings.ocrCache?.get(i) ?: readPage(pdf, i, reader).also { settings.ocrCache?.put(i, it) }
+        val read = result.page
+        page.ocrRejected = result.rendered && read == null
+        return if (read == null) {
             page
         } else {
-            Extraction.page(OcrPages.raw(i, page.width, page.height, read, image.scale)).also {
+            Extraction.page(OcrPages.raw(i, page.width, page.height, read, result.scale)).also {
                 it.ocr = "ocr:${read.engine}@${"%.2f".format(java.util.Locale.ROOT, read.confidence)}"
             }
         }
+    }
+
+    /** Draws page [i] and reads it; what is kept must have [MIN_OCR_CHARS] of text. */
+    private fun readPage(pdf: PdfSource, i: Int, reader: OcrReader): OcrResult {
+        val image = pdf.renderPixels(i, settings.ocrScale) ?: return OcrResult(null, 0f, rendered = false)
+        val read = reader.read(image)?.takeIf { r -> r.lines.sumOf { it.text.length } >= MIN_OCR_CHARS }
+        return OcrResult(read, image.scale, rendered = true)
     }
 
     private fun layOut(doc: Document, progress: (Progress) -> Unit) {
