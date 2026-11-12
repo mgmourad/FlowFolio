@@ -64,6 +64,7 @@ import com.flowfolio.core.designsystem.ScrollToTopOnTab
 import com.flowfolio.core.designsystem.card
 import com.flowfolio.core.designsystem.chromeStart
 import com.flowfolio.core.designsystem.reveal
+import com.flowfolio.core.designsystem.swipeTabs
 import com.flowfolio.core.model.Book
 
 /**
@@ -83,10 +84,17 @@ fun NotebookHome(onOpenBook: (Book, MarkKind?) -> Unit, viewModel: NotebookViewM
     val grid = rememberLazyGridState()
     var searching by rememberSaveable { mutableStateOf(false) }
     ScrollToTopOnTab("notebook", grid)
+    // The kind chips are the Notebook's tabs: a swipe across the page moves to the next or previous kind (owner,
+    // 2026-11-12). The chip row scrolls sideways by itself, so a swipe on it scrolls the chips instead.
+    val kinds = remember { listOf<MarkKind?>(null) + MARK_ORDER }
     LazyVerticalGrid(
         state = grid,
         columns = GridCells.Fixed(if (wide) 2 else 1),
-        modifier = Modifier.fillMaxSize().chromeStart().testTag(LibraryTestTags.NOTEBOOK),
+        modifier = Modifier
+            .fillMaxSize()
+            .chromeStart()
+            .swipeTabs(kinds.indexOf(state.filter).coerceAtLeast(0), kinds.size) { viewModel.onFilter(kinds[it]) }
+            .testTag(LibraryTestTags.NOTEBOOK),
         contentPadding = PaddingValues(
             start = gutter,
             end = gutter,

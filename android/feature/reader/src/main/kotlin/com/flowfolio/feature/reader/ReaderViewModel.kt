@@ -71,6 +71,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -854,6 +855,11 @@ class ReaderViewModel @Inject constructor(
     private val _narrating = MutableStateFlow(false)
     internal val narrating: StateFlow<Boolean> = _narrating.asStateFlow()
 
+    /** Whether this book's narration is under way, playing or paused: the floating player shows meanwhile. */
+    internal val narrationSession: StateFlow<Boolean> = NarrationHub.nowPlaying
+        .map { it?.bookId == bookId }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     init {
         // Every way narration ends (stopped, the book's end, a failure) gives the audio focus back.
         viewModelScope.launch { _narrating.collect { on -> if (!on) narratorFocus.release() } }
@@ -977,6 +983,9 @@ class ReaderViewModel @Inject constructor(
     fun toggleNarration() {
         if (_narrating.value) stopNarration() else startNarration()
     }
+
+    /** Stops narrating and ends the session: the players, the widget's controls and the floating player go. */
+    fun endNarration() = narrationCommands.close()
 
     fun setNarratorRate(rate: Float) {
         _narratorRate.value = rate

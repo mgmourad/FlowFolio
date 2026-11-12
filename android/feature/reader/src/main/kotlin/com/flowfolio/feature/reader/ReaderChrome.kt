@@ -472,7 +472,9 @@ private fun BoxScope.PageNumber(
         // (the title ends at the left page's inner margin, the section ends at the right page's outer margin). Folded,
         // the section (else the chapter) sits at the top, shifted left of the text border and cut at the front camera
         // so the punch-hole never clips it (owner, 2026-11-07). Hidden while the chrome shows, so a running head never
-        // sits under the top bar's buttons (owner, 2026-11-07).
+        // sits under the top bar's buttons (owner, 2026-11-07). No status- or navigation-bar padding: those bars show
+        // and hide with the chrome, so padding by them moved the heads for a moment each time (owner, 2026-11-12); they
+        // sit where they rest while reading, with the bars away.
         if (state.reflowable && !controlsVisible) {
             val leftPage = pages.firstOrNull() ?: state.anchorPage
             val rightPage = pages.lastOrNull() ?: state.anchorPage
@@ -482,7 +484,7 @@ private fun BoxScope.PageNumber(
                 chapter?.let {
                     ChapterLabel(
                         it,
-                        Modifier.align(Alignment.TopStart).statusBarsPadding()
+                        Modifier.align(Alignment.TopStart)
                             .padding(horizontal = PAGE_MARGIN, vertical = FOOTER_MARGIN)
                             .widthIn(max = half - PAGE_MARGIN * 2),
                         actions
@@ -493,7 +495,7 @@ private fun BoxScope.PageNumber(
                         it,
                         // Right-aligned to the right page's outer margin: it can grow left only to that page's inner
                         // margin, then truncates at the end of the line on the right (owner, 2026-11-07).
-                        Modifier.align(Alignment.BottomEnd).navigationBarsPadding()
+                        Modifier.align(Alignment.BottomEnd)
                             .padding(end = PAGE_MARGIN)
                             .padding(vertical = FOOTER_MARGIN)
                             .widthIn(max = half - PAGE_MARGIN * 2),
@@ -505,7 +507,7 @@ private fun BoxScope.PageNumber(
                     val camera = cameraEdgeDp(half)
                     ChapterLabel(
                         it,
-                        Modifier.align(Alignment.TopStart).statusBarsPadding()
+                        Modifier.align(Alignment.TopStart)
                             .padding(start = FOLDED_HEAD_INSET, top = FOOTER_MARGIN)
                             .widthIn(max = (camera - FOLDED_HEAD_INSET - HEAD_GAP).coerceAtLeast(0.dp)),
                         actions

@@ -12,8 +12,8 @@ internal class ChromeActions(
     val onBack: () -> Unit,
     /** Contents, Go to page, Aa and the ribbon button: show or hide their panel (and restart the chrome's clock). */
     val onPanel: (Panel) -> Unit,
-    /** Tells the reader to hide the riffle/bottom bar. */
-    val onDismissRiffle: () -> Unit = {}
+    /** The riffle bar was pulled down: put the controls away. Required, so it is never left unwired. */
+    val onDismissRiffle: () -> Unit
 )
 
 /**

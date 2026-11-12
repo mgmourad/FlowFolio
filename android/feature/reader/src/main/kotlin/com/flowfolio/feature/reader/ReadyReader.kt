@@ -340,13 +340,26 @@ internal fun BoxScope.Controls(
                     flowNow,
                     controlsVisible = overlay.chrome.shown,
                     mark = mark,
-                    actions = ChromeActions(parts.onBack, onPanel = overlay::open),
+                    // Pulling the riffle bar down puts the controls away (owner, 2026-11-12: it sprang back).
+                    actions = ChromeActions(
+                        parts.onBack,
+                        onPanel = overlay::open,
+                        onDismissRiffle = overlay::closeAll
+                    ),
                     panel = overlay.panel,
                     // The mock keeps the whole dock, riffle included, under an open panel.
                     bottomBarVisible = overlay.chrome.shown && !overlay.riffleDismissed,
                     bottomBar = parts.bar
                 )
             }
+            // Over the page, chrome or not, while narration is under way (owner, 2026-11-12).
+            val narrationSession by parts.book.narrationSession.collectAsStateWithLifecycle()
+            NarratorFloat(
+                session = narrationSession,
+                playing = narrating,
+                onToggle = parts.book::toggleNarration,
+                onStop = parts.book::endNarration
+            )
             ReaderPanels(
                 overlay.panel,
                 s,

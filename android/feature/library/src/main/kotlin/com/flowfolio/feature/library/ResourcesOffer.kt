@@ -131,6 +131,8 @@ private fun ResourcesOffer(viewModel: ResourcesOfferViewModel) {
     val context = LocalContext.current
     var chosen by rememberSaveable { mutableStateOf(Resource.entries.map { it.name }.toSet()) }
     var started by rememberSaveable { mutableStateOf(false) }
+    // Each download's state, collected (not read from the flow) so the total follows it.
+    val states = Resource.entries.associateWith { viewModel.state(it).collectAsStateWithLifecycle().value }
     Dialog(onDismissRequest = viewModel::close, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Box(Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp), contentAlignment = Alignment.Center) {
             Column(
@@ -153,7 +155,7 @@ private fun ResourcesOffer(viewModel: ResourcesOfferViewModel) {
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     OFFERS.forEachIndexed { i, offer ->
-                        val state by viewModel.state(offer.resource).collectAsStateWithLifecycle()
+                        val state = states.getValue(offer.resource)
                         OfferCard(
                             offer = offer,
                             order = i,
@@ -165,7 +167,7 @@ private fun ResourcesOffer(viewModel: ResourcesOfferViewModel) {
                     }
                 }
                 val total = Resource.entries
-                    .filter { it.name in chosen && viewModel.state(it).value != ResourceState.Ready }
+                    .filter { it.name in chosen && states[it] != ResourceState.Ready }
                     .sumOf { viewModel.sizeOf(it) }
                 OfferFooter(
                     note = if (started) {

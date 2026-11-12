@@ -47,6 +47,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -103,7 +104,7 @@ internal fun ReaderSearchPanel(
             onQuery,
             count = if (query.trim().length >= MIN_CHARS) shown.size else null,
             onClose = onClose,
-            modifier = Modifier.padding(top = 12.dp).focusRequester(focus)
+            modifier = Modifier.focusRequester(focus)
         )
         Row(
             Modifier.padding(top = 12.dp).horizontalScroll(rememberScrollState()),
@@ -168,6 +169,9 @@ private fun SearchField(
     val shape = RoundedCornerShape(14.dp)
     Row(
         Modifier
+            // The gap above the field belongs out here: given to the text inside, it pushed the query, its hint and
+            // the cursor below the field's middle (owner, 2026-11-12).
+            .padding(top = 12.dp)
             .fillMaxWidth()
             .height(FIELD_HEIGHT)
             .border(1.5.dp, p.accent, shape)
@@ -182,7 +186,7 @@ private fun SearchField(
             value = query,
             onValueChange = onQuery,
             singleLine = true,
-            textStyle = FlowFolioType.body.copy(fontSize = 15.sp, color = p.ink),
+            textStyle = FieldText.copy(color = p.ink),
             cursorBrush = SolidColor(p.accent),
             keyboardOptions = searchKeyboard.options,
             keyboardActions = searchKeyboard.actions,
@@ -193,11 +197,12 @@ private fun SearchField(
                 }
                 .testTag(ReaderTestTags.SEARCH_FIELD),
             decorationBox = { inner ->
-                Box(contentAlignment = Alignment.CenterStart) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
                     if (query.isEmpty()) {
                         Text(
                             stringResource(R.string.reader_search_hint),
-                            style = FlowFolioType.body.copy(fontSize = 15.sp, color = p.ink3)
+                            style = FieldText.copy(color = p.ink3),
+                            maxLines = 1
                         )
                     }
                     inner()
@@ -213,6 +218,13 @@ private fun SearchField(
         }
     }
 }
+
+/** The query and its hint: one line of the font's own height, centred in the field. */
+private val FieldText = FlowFolioType.body.copy(
+    fontSize = 15.sp,
+    lineHeight = 20.sp,
+    lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.Both)
+)
 
 @Composable
 private fun Note(text: Int) {

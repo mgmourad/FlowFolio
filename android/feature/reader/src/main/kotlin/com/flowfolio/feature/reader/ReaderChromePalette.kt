@@ -2,15 +2,23 @@ package com.flowfolio.feature.reader
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import com.flowfolio.core.designsystem.FlowFolioPalette
 import com.flowfolio.core.designsystem.GlassStyle
 
 /**
  * The reader's chrome glass (ADR-0056, owner 2026-11-12): dark on every paper. Light glass over a light or sepia
- * page left the tools' text too faint to read. The dark palette's own tint (its surface at 84%) is the scrim; a pale
+ * page left the tools' text too faint to read. The dark surface at 74% over a wide blur is the scrim: dark enough to
+ * read on, while the page still shows through as haze (owner, 2026-11-12: "not too transparent, not opaque"). A pale
  * hairline keeps the edge visible on dark papers, where dark glass over a dark page otherwise reads as a hole.
+ * Call inside [ReaderChromePalette], whose surface it takes.
  */
-internal fun readerChromeGlass(): GlassStyle = GlassStyle(edge = Color.White.copy(alpha = CHROME_EDGE))
+@Composable
+internal fun readerChromeGlass(): GlassStyle = GlassStyle(
+    tint = com.flowfolio.core.designsystem.FlowFolio.palette.surface.copy(alpha = CHROME_TINT),
+    edge = Color.White.copy(alpha = CHROME_EDGE),
+    blur = CHROME_BLUR
+)
 
 /**
  * The dark palette for the reader's chrome (ADR-0056), its third ink lifted toward the second: the dark palette's
@@ -32,3 +40,5 @@ internal fun ReaderChromePalette(content: @Composable () -> Unit) {
 private const val INK3_LIFT = 0.7f
 
 private const val CHROME_EDGE = 0.16f
+private const val CHROME_TINT = 0.74f
+private val CHROME_BLUR = 28.dp

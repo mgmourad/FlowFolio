@@ -238,27 +238,16 @@ private fun BoxScope.DockPanel(
                 .fillMaxWidth()
                 .heightIn(max = room.coerceAtLeast(MIN_PANEL))
                 .dragDownToDismiss(onDismiss)
-                .glass(PanelShape, tint = panelTint())
-                .padding(inner),
+                .glass(PanelShape)
+                // Room above the content for the grip that says "pull down to close".
+                .padding(start = inner, end = inner, bottom = inner, top = maxOf(inner, GRIP_CLEARANCE)),
             content = content
         )
     }
 }
 
-/**
- * The panels' glass. On dark papers it is nearly opaque (the app's surface at 88%): text over the light frosted glass
- * of the bars was hard to read where the page behind had a bright photo (owner, 2026-10-18). On light papers the
- * light palette's own glass reads well.
- */
-@Composable
-private fun panelTint(): Color {
-    val p = FlowFolio.palette
-    return if (p.dark) p.surface.copy(alpha = DARK_PANEL_ALPHA) else p.background.copy(alpha = LIGHT_PANEL_ALPHA)
-}
-
-private const val DARK_PANEL_ALPHA = 0.88f
-private const val LIGHT_PANEL_ALPHA = 0.6f
 private val PanelShape = RoundedCornerShape(24.dp)
+private val GRIP_CLEARANCE = 16.dp
 private val PANEL_GAP = 10.dp
 private val PANEL_PADDING = 18.dp
 private val LIST_PADDING = 4.dp

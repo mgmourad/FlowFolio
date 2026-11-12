@@ -65,6 +65,7 @@ import com.flowfolio.core.designsystem.VoiceBar
 import com.flowfolio.core.designsystem.Waveform
 import com.flowfolio.core.designsystem.glass
 import com.flowfolio.core.designsystem.marker
+import com.flowfolio.core.designsystem.swipeTabs
 import com.flowfolio.core.model.Annotation
 import com.flowfolio.core.model.HighlightColor
 import kotlin.math.roundToInt
@@ -96,6 +97,23 @@ internal fun AnnotationList(
         modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)
     )
     Box(Modifier.padding(horizontal = 20.dp)) { SheetTabs(tabs, tab) { tab = it } }
+    // A swipe across the list moves between the tabs (owner, 2026-11-12), as in every other tabbed panel.
+    Column(
+        Modifier.fillMaxWidth().swipeTabs(tab, tabs.size) {
+            tab = it
+        }
+    ) { AnnotationTab(all, tab, navigation, onGo, vm) }
+}
+
+/** The notes ([tab] 0) or the VoiceMarks (1). */
+@Composable
+private fun AnnotationTab(
+    all: List<Annotation>,
+    tab: Int,
+    navigation: BookNavigation,
+    onGo: (Int) -> Unit,
+    vm: ReaderAnnotationsViewModel
+) {
     val shown = if (tab == 0) all.filter { it.voice == null } else all.filter { it.voice != null }
     if (shown.isEmpty()) {
         Text(

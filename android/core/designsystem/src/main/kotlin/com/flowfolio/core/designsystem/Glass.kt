@@ -26,11 +26,12 @@ import dev.chrisbanes.haze.hazeSource
 val LocalGlassState = staticCompositionLocalOf<HazeState?> { null }
 
 /**
- * Overrides the glass look below it: [tint] over the blur and the [edge] hairline (null keeps the default). The reader
+ * Overrides the glass look below it: [tint] over the blur, the [edge] hairline and the [blur] radius (null keeps the
+ * default). The reader
  * uses a lighter, frosted tint over dark pages, where the default dark tint would read as a hole rather than glass.
  */
 @Immutable
-data class GlassStyle(val tint: Color? = null, val edge: Color? = null)
+data class GlassStyle(val tint: Color? = null, val edge: Color? = null, val blur: Dp? = null)
 
 val LocalGlassStyle = staticCompositionLocalOf { GlassStyle() }
 
@@ -47,7 +48,7 @@ fun Modifier.glassSource(): Modifier = LocalGlassState.current?.let { hazeSource
 fun Modifier.glass(
     shape: Shape,
     tint: Color = LocalGlassStyle.current.tint ?: FlowFolio.palette.surface.copy(alpha = GLASS_ALPHA),
-    blur: Dp = 18.dp
+    blur: Dp = LocalGlassStyle.current.blur ?: 18.dp
 ): Modifier {
     val p = FlowFolio.palette
     val edge = LocalGlassStyle.current.edge ?: p.edge.copy(alpha = EDGE_ALPHA)
