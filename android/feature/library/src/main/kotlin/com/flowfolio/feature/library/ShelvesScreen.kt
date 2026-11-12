@@ -133,29 +133,36 @@ fun ShelvesScreen(onOpenShelf: (Long) -> Unit, viewModel: ShelvesViewModel = hil
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val resources = LocalResources.current
+    val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
     Box(Modifier.fillMaxSize()) {
-        ShelvesContent(
-            state = state,
-            onOpen = onOpenShelf,
-            onNew = { edit = ShelfEdit.New },
-            onRename = { edit = ShelfEdit.Rename(it) },
-            onDelete = { edit = ShelfEdit.Delete(it) },
-            selection = selection,
-            onDeleteChosen = { confirmBulk = true },
-            onAddBooks = { edit = ShelfEdit.AddBooks(it) },
-            onBatchFlow = { edit = ShelfEdit.BatchFlow(it) },
-            onToggleFlow = { card ->
-                if (card.flowActive) {
-                    viewModel.setShelfFlowOff(card.shelf.id)
-                } else if (viewModel.isShelfFlowReady(card.shelf.id)) {
-                    viewModel.startBatchFlow(card.shelf.id)
-                } else {
-                    edit = ShelfEdit.BatchFlow(card.shelf)
-                }
-            },
-            onColour = { edit = ShelfEdit.Colour(it) },
-            onOrder = viewModel::setOrder
-        )
+        // Pull down to bring imported folders up to date (TM2).
+        androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+            isRefreshing = refreshing,
+            onRefresh = viewModel::refresh
+        ) {
+            ShelvesContent(
+                state = state,
+                onOpen = onOpenShelf,
+                onNew = { edit = ShelfEdit.New },
+                onRename = { edit = ShelfEdit.Rename(it) },
+                onDelete = { edit = ShelfEdit.Delete(it) },
+                selection = selection,
+                onDeleteChosen = { confirmBulk = true },
+                onAddBooks = { edit = ShelfEdit.AddBooks(it) },
+                onBatchFlow = { edit = ShelfEdit.BatchFlow(it) },
+                onToggleFlow = { card ->
+                    if (card.flowActive) {
+                        viewModel.setShelfFlowOff(card.shelf.id)
+                    } else if (viewModel.isShelfFlowReady(card.shelf.id)) {
+                        viewModel.startBatchFlow(card.shelf.id)
+                    } else {
+                        edit = ShelfEdit.BatchFlow(card.shelf)
+                    }
+                },
+                onColour = { edit = ShelfEdit.Colour(it) },
+                onOrder = viewModel::setOrder
+            )
+        }
         FlowFolioSnackbarHost(
             snackbar,
             Modifier.align(Alignment.BottomCenter).padding(bottom = LocalChromePadding.current.calculateBottomPadding())

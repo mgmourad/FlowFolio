@@ -829,4 +829,10 @@
     <string name="settings_scanned_failed">The download did not arrive whole. Try again.</string>
     <string name="settings_scanned_download">Download</string>
     <string name="settings_scanned_remove">Remove</string>
+    <!-- TM2: pull to refresh the imported folders. -->
+    <string name="msg_folders_up_to_date">Your folders are up to date</string>
+    <plurals name="msg_folders_added">
+        <item quantity="one">1 new book from your folders</item>
+        <item quantity="other">%1$d new books from your folders</item>
+    </plurals>
 </resources>

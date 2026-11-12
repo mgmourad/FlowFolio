@@ -88,6 +88,8 @@ class DefaultLibraryRepository @Inject constructor(
         return ImportResult.Duplicate(existing.toBook())
     }
 
+    override suspend fun heldFolders(): List<String> = withContext(io) { source.heldFolders() }
+
     // Each early return is a distinct, user-visible import outcome; nesting them would hide that.
     @Suppress("ReturnCount")
     private suspend fun importCopy(uri: String, folder: String?): ImportResult {

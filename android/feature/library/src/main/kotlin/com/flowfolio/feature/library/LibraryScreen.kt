@@ -170,63 +170,76 @@ fun LibraryScreen(
     val stats = rememberLibraryStats(statsViewModel, state.continueReading?.book?.id)
     val setBookGoal = rememberLibraryBookGoalDialog(statsViewModel)
     val openGoal = rememberLibraryGoalDialog(statsViewModel, stats, state, onOpenDetails)
-    LibraryContent(
-        state,
-        rememberMessages(viewModel),
-        stats,
-        LibraryActions(
-            onImport = { importPicker.launch(PDF_TYPES) },
-            onImportFolder = { folderPicker.launch(null) },
-            onImportFolderAsShelves = { shelvesPicker.launch(null) },
-            onFolderToShelves = viewModel::onFolderToShelves,
-            onOpen = { item, origin ->
-                if (item.availability == Availability.MISSING) locate(item.book) else onOpenDetails(item.book, origin)
-            },
-            onResume = { item ->
-                if (item.availability == Availability.MISSING) {
-                    locate(item.book)
-                } else {
-                    viewModel.onBookOpened(item.book.id)
-                    opener?.open(heroSpot) { onRead(item.book) } ?: onRead(item.book)
-                }
-            },
-            onDelete = viewModel::onRequestDelete,
-            onLocate = locate,
-            onAddToShelf = { shelving = it },
-            onFlow = rememberDynamicFlowSwitch(viewModel),
-            onFavorite = viewModel::toggleFavorite,
-            onFinished = viewModel::toggleFinished,
-            onOpenShelf = onOpenShelf,
-            onReadingGoal = openGoal,
-            onStat = { target ->
-                when (target) {
-                    is StatTarget.Filter -> viewModel.onFilter(target.filter)
-                    is StatTarget.Notebook -> onOpenNotebook(target.section)
-                    StatTarget.Goal -> openGoal()
-                }
-            },
-            onOpenFolder = onOpenFolder,
-            onRemoveFolder = rememberRemoveFolder(viewModel),
-            onReorder = { id: Long, ids: List<String> -> shelves.setOrder(id, ids).let {} }
-                .takeIf { state.filter == LibraryFilter.ALL && state.query.isBlank() },
-            onBookmarks = onBookmarks,
-            onAnnotations = onAnnotations,
-            onDictionary = onDictionary,
-            onSetBookGoal = setBookGoal,
-            onSort = viewModel::onSortChange,
-            onView = viewModel::onViewChange,
-            onStatsBand = viewModel::onStatsBand,
-            onFilter = viewModel::onFilter,
-            onQuery = viewModel::onQuery,
-            heroSpot = heroSpot,
-            welcomeVisible = welcome,
-            onWelcomeSeen = { viewModel.markGuideSeen(Guide.Welcome.id) },
-            onNeverShowTips = { viewModel.disableTips(Guide.Welcome.id) }
-        ),
-        found,
-        scrollToShelf,
-        onScrolledToShelf
-    )
+    val refreshing by viewModel.refreshing.collectAsStateWithLifecycle()
+    // Pull down to bring imported folders up to date (TM2).
+    androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+        isRefreshing = refreshing,
+        onRefresh = viewModel::refresh
+    ) {
+        LibraryContent(
+            state,
+            rememberMessages(viewModel),
+            stats,
+            LibraryActions(
+                onImport = { importPicker.launch(PDF_TYPES) },
+                onImportFolder = { folderPicker.launch(null) },
+                onImportFolderAsShelves = { shelvesPicker.launch(null) },
+                onFolderToShelves = viewModel::onFolderToShelves,
+                onOpen = { item, origin ->
+                    if (item.availability ==
+                        Availability.MISSING
+                    ) {
+                        locate(item.book)
+                    } else {
+                        onOpenDetails(item.book, origin)
+                    }
+                },
+                onResume = { item ->
+                    if (item.availability == Availability.MISSING) {
+                        locate(item.book)
+                    } else {
+                        viewModel.onBookOpened(item.book.id)
+                        opener?.open(heroSpot) { onRead(item.book) } ?: onRead(item.book)
+                    }
+                },
+                onDelete = viewModel::onRequestDelete,
+                onLocate = locate,
+                onAddToShelf = { shelving = it },
+                onFlow = rememberDynamicFlowSwitch(viewModel),
+                onFavorite = viewModel::toggleFavorite,
+                onFinished = viewModel::toggleFinished,
+                onOpenShelf = onOpenShelf,
+                onReadingGoal = openGoal,
+                onStat = { target ->
+                    when (target) {
+                        is StatTarget.Filter -> viewModel.onFilter(target.filter)
+                        is StatTarget.Notebook -> onOpenNotebook(target.section)
+                        StatTarget.Goal -> openGoal()
+                    }
+                },
+                onOpenFolder = onOpenFolder,
+                onRemoveFolder = rememberRemoveFolder(viewModel),
+                onReorder = { id: Long, ids: List<String> -> shelves.setOrder(id, ids).let {} }
+                    .takeIf { state.filter == LibraryFilter.ALL && state.query.isBlank() },
+                onBookmarks = onBookmarks,
+                onAnnotations = onAnnotations,
+                onDictionary = onDictionary,
+                onSetBookGoal = setBookGoal,
+                onSort = viewModel::onSortChange,
+                onView = viewModel::onViewChange,
+                onStatsBand = viewModel::onStatsBand,
+                onFilter = viewModel::onFilter,
+                onQuery = viewModel::onQuery,
+                heroSpot = heroSpot,
+                welcomeVisible = welcome,
+                onWelcomeSeen = { viewModel.markGuideSeen(Guide.Welcome.id) },
+                onNeverShowTips = { viewModel.disableTips(Guide.Welcome.id) }
+            ),
+            found,
+            scrollToShelf,
+            onScrolledToShelf
+        )
+    }
     LibraryDialogs(state.dialog, viewModel)
     shelving?.let { ShelveBookFlow(it, state.shelves, shelves) { shelving = null } }
 }
@@ -453,6 +466,12 @@ internal fun LibraryMessage.text(context: android.content.Context): String = whe
         already.takeIf { it > 0 }?.let { context.getString(R.string.msg_already_count, it) },
         failed.takeIf { it > 0 }?.let { context.getString(R.string.msg_failed_count, it) }
     ).joinToString(" · ")
+
+    is LibraryMessage.FoldersSynced -> if (added == 0) {
+        context.getString(R.string.msg_folders_up_to_date)
+    } else {
+        context.resources.getQuantityString(R.plurals.msg_folders_added, added, added)
+    }
 
     LibraryMessage.FolderEmpty -> context.getString(R.string.msg_folder_empty)
 

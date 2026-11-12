@@ -32,6 +32,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -219,6 +220,9 @@ sealed interface LibraryMessage {
     /** Shelves made from a folder the reader picked, rather than from a whole import. */
     data class ShelvesMade(val shelves: Int) : LibraryMessage
 
+    /** A refresh checked the imported folders and added [added] books (TM2). */
+    data class FoldersSynced(val added: Int) : LibraryMessage
+
     data object Relinked : LibraryMessage
 
     data object RelinkDifferentFile : LibraryMessage
@@ -237,7 +241,8 @@ class LibraryViewModel @Inject constructor(
     private val shelfRepo: ShelfRepository,
     private val lookup: BookLookup,
     readingRepo: ReadingRepository,
-    private val flow: DynamicFlow = DynamicFlow.None
+    private val flow: DynamicFlow = DynamicFlow.None,
+    private val folders: com.flowfolio.core.data.FolderSync = com.flowfolio.core.data.FolderSync.None
 ) : ViewModel(),
     FlowSwitching {
     /** Whether switching a book's view asks first, or what was answered for good (ADR-0045). */
@@ -420,8 +425,33 @@ class LibraryViewModel @Inject constructor(
     private val batch = BatchImport(
         library,
         onProgress = { p -> transient.update { it.copy(importing = p != null, progress = p) } },
-        onDone = { outcome -> afterBatch(outcome) }
+        onDone = { outcome -> afterBatch(outcome) },
+        folders = folders
     )
+
+    /** A pull-to-refresh is checking the imported folders (TM2). */
+    private val _refreshing = MutableStateFlow(false)
+    val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()
+
+    private val folderRefresh = FolderRefresh(library, folders, shelfRepo)
+
+    init {
+        // Folders read in place show what was added to them on the phone, without asking (TM2).
+        viewModelScope.launch { folderRefresh.run(inPlaceOnly = true) }
+    }
+
+    /** Pull-to-refresh: checks every imported folder, copied or read in place, for books added since (TM2). */
+    fun refresh() {
+        if (_refreshing.value) return
+        viewModelScope.launch {
+            _refreshing.value = true
+            try {
+                messageChannel.send(LibraryMessage.FoldersSynced(folderRefresh.run(inPlaceOnly = false)))
+            } finally {
+                _refreshing.value = false
+            }
+        }
+    }
 
     private suspend fun afterBatch(outcome: BatchImport.Outcome) {
         when {

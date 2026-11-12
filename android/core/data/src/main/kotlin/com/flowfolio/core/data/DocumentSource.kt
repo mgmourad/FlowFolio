@@ -41,6 +41,9 @@ interface DocumentSource {
 
     /** Keeps read access to the folder [treeUri] and everything under it across restarts; false when not allowed. */
     fun persistFolderAccess(treeUri: String): Boolean
+
+    /** The folders FlowFolio keeps access to (picked for reading in place, or kept for syncing). */
+    fun heldFolders(): List<String> = emptyList()
 }
 
 class AndroidDocumentSource @Inject constructor(@ApplicationContext private val context: Context) : DocumentSource {
@@ -126,6 +129,10 @@ class AndroidDocumentSource @Inject constructor(@ApplicationContext private val 
     }
 
     override fun persistFolderAccess(treeUri: String): Boolean = persistReadAccess(treeUri)
+
+    override fun heldFolders(): List<String> = resolver.persistedUriPermissions
+        .filter { it.isReadPermission && DocumentsContract.isTreeUri(it.uri) }
+        .map { it.uri.toString() }
 
     private class Child(val id: String, val name: String, val mime: String?)
 

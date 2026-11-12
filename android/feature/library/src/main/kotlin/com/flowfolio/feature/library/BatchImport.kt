@@ -1,6 +1,7 @@
 package com.flowfolio.feature.library
 
 import com.flowfolio.core.data.FolderFile
+import com.flowfolio.core.data.FolderSync
 import com.flowfolio.core.data.ImportResult
 import com.flowfolio.core.data.LibraryRepository
 import com.flowfolio.core.model.Book
@@ -15,7 +16,9 @@ internal class BatchImport(
     private val library: LibraryRepository,
     /** Books done and books in all while it runs; null when it ends. */
     private val onProgress: (Pair<Int, Int>?) -> Unit,
-    private val onDone: suspend (Outcome) -> Unit
+    private val onDone: suspend (Outcome) -> Unit,
+    /** Remembers imported folders, so books added to them later come in on a refresh (TM2). */
+    private val folders: FolderSync = FolderSync.None
 ) {
     /**
      * How a batch went. [linkRefused] holds what could not be read in place and can be copied instead; [unreadable]
@@ -45,9 +48,19 @@ internal class BatchImport(
             inPlace && !library.persistFolderAccess((request as ImportRequest.Folder).treeUri) ->
                 Outcome(linkRefused = request)
 
-            else -> importAll(files, mode, accessHeld = inPlace)
+            else -> importAll(files, mode, accessHeld = inPlace).also { remember(request, mode, files) }
         }
         onDone(outcome)
+    }
+
+    /**
+     * A folder is remembered for syncing (TM2). One copied into the app keeps read access to the source folder too,
+     * so a refresh can find what is added there; when the provider refuses, it simply is not synced.
+     */
+    private suspend fun remember(request: ImportRequest, mode: StorageMode, files: List<FolderFile>) {
+        if (request !is ImportRequest.Folder) return
+        val held = mode == StorageMode.LINK || library.persistFolderAccess(request.treeUri)
+        if (held) folders.remember(request.treeUri, mode, files.map { it.uri })
     }
 
     private suspend fun importAll(files: List<FolderFile>, mode: StorageMode, accessHeld: Boolean): Outcome {

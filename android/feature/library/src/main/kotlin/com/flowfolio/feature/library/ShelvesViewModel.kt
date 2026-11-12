@@ -109,8 +109,28 @@ class ShelvesViewModel @Inject constructor(
     @ApplicationContext private val appContext: Context? = null,
     private val settings: SettingsRepository? = null,
     /** The one count of marks every screen shares (ADR-0052); null in tests, which count the repositories. */
-    markCounts: MarkCounts? = null
+    markCounts: MarkCounts? = null,
+    folders: com.flowfolio.core.data.FolderSync = com.flowfolio.core.data.FolderSync.None
 ) : ViewModel() {
+    private val folderRefresh = FolderRefresh(library, folders, shelves)
+
+    /** A pull-to-refresh is checking the imported folders (TM2). */
+    private val _refreshing = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val refreshing: kotlinx.coroutines.flow.StateFlow<Boolean> = _refreshing
+
+    /** Pull-to-refresh on Shelves: new books from imported folders, onto their folders' shelves (TM2). */
+    fun refresh() {
+        if (_refreshing.value) return
+        viewModelScope.launch {
+            _refreshing.value = true
+            try {
+                folderRefresh.run(inPlaceOnly = false)
+            } finally {
+                _refreshing.value = false
+            }
+        }
+    }
+
     private val countsByBook: Flow<Map<String, BookMarkCounts>> = markCounts?.all?.map { it.byBook }
         ?: combine(annotationsRepo.observeAll(), bookmarksRepo.observeAll(), dictionaryRepo.observeWords()) { a, b, w ->
             countByBook(a, b, w)

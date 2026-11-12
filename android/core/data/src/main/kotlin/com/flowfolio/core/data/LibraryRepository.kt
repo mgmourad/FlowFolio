@@ -36,6 +36,9 @@ interface LibraryRepository {
     /** Keeps access to a picked folder for reading its books in place; false when the provider does not allow it. */
     suspend fun persistFolderAccess(treeUri: String): Boolean
 
+    /** The folders FlowFolio keeps access to (TM2: folders read in place from before folder sync). */
+    suspend fun heldFolders(): List<String> = emptyList()
+
     suspend fun availability(book: Book): Availability
 
     /** Size of the file at [uri] if known, for showing in the storage choice before importing. */

@@ -107,6 +107,11 @@ object DataProviders {
     fun bookFiles(@ApplicationContext context: Context): BookFiles = BookFiles(context.filesDir).also { it.clearTemp() }
 
     @Provides
+    @Singleton
+    fun folderSync(@ApplicationContext context: Context, library: LibraryRepository): FolderSync =
+        DefaultFolderSync(java.io.File(context.filesDir, "folders"), library)
+
+    @Provides
     @IoDispatcher
     fun io(): CoroutineDispatcher = Dispatchers.IO
 }
