@@ -302,52 +302,60 @@ internal fun BoxScope.AnnotatingLayer(
     val hasOverlay = annotating.note != null || annotating.translating != null ||
         annotating.defining != null || annotating.voiceMarking != null
     if (!pick.active && !hasOverlay) return
+    // The selection's handles are drawn on the page, so they follow its paper; the menus and panels around them are
+    // the reader's dark chrome (ADR-0056).
     FlowFolioPalette(dark = s.tone.dark) {
         if (pick.selecting) {
             SelectionMarks(pick, annotating::frameOfPick, FlowFolio.palette.ink, onLens = { annotating.lens = it }) {
                 pick.clear()
             }
         }
-        val note = annotating.note
-        val voiceMark = annotating.voiceMarking
-        val editing = pick.editing
-        val translating = annotating.translating
-        val defining = annotating.defining
-        when {
-            // ADR-0052: Define and Translate open the one Words panel, on their own tab.
-            defining != null -> {
-                SelectionCatcher { annotating.defining = null }
-                WordsSheet(
-                    WordsTarget(defining.word, defining.page, defining.locator),
-                    WordsTab.DEFINE,
-                    navigation,
-                    { page ->
-                        annotating.defining = null
-                        onGo(page)
-                    }
-                ) { annotating.defining = null }
+    }
+    ReaderChromePalette {
+        androidx.compose.runtime.CompositionLocalProvider(
+            com.flowfolio.core.designsystem.LocalGlassStyle provides readerChromeGlass()
+        ) {
+            val note = annotating.note
+            val voiceMark = annotating.voiceMarking
+            val editing = pick.editing
+            val translating = annotating.translating
+            val defining = annotating.defining
+            when {
+                // ADR-0052: Define and Translate open the one Words panel, on their own tab.
+                defining != null -> {
+                    SelectionCatcher { annotating.defining = null }
+                    WordsSheet(
+                        WordsTarget(defining.word, defining.page, defining.locator),
+                        WordsTab.DEFINE,
+                        navigation,
+                        { page ->
+                            annotating.defining = null
+                            onGo(page)
+                        }
+                    ) { annotating.defining = null }
+                }
+
+                translating != null -> {
+                    SelectionCatcher { annotating.translating = null }
+                    WordsSheet(
+                        WordsTarget(translating.text, translating.page, translating.locator),
+                        WordsTab.TRANSLATE,
+                        navigation,
+                        { page ->
+                            annotating.translating = null
+                            onGo(page)
+                        }
+                    ) { annotating.translating = null }
+                }
+
+                voiceMark != null -> VoiceMarkLayer(annotating, voiceMark)
+
+                note != null -> NoteLayer(annotating, note)
+
+                editing != null -> EditingBar(annotating, editing)
+
+                !annotating.dragging -> SelectionBar(annotating)
             }
-
-            translating != null -> {
-                SelectionCatcher { annotating.translating = null }
-                WordsSheet(
-                    WordsTarget(translating.text, translating.page, translating.locator),
-                    WordsTab.TRANSLATE,
-                    navigation,
-                    { page ->
-                        annotating.translating = null
-                        onGo(page)
-                    }
-                ) { annotating.translating = null }
-            }
-
-            voiceMark != null -> VoiceMarkLayer(annotating, voiceMark)
-
-            note != null -> NoteLayer(annotating, note)
-
-            editing != null -> EditingBar(annotating, editing)
-
-            !annotating.dragging -> SelectionBar(annotating)
         }
     }
 }
