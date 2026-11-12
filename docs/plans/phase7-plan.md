@@ -104,6 +104,13 @@ record:
 
 ## M3: The quality gate for scanned books
 
+> **Status, 2026-11-12: done, and the release is out.** The corpus (41 proofread pages), ground truth, `OcrCorpusTest`
+> (word recall + CER per page, share kept as text, manuscripts and a blurred page stay pictures) and its CI wiring are
+> in; baselines recorded. English 98.9% recall / 3.0% CER (all kept), Arabic printed 93.0% recall (4 of 10 kept, the
+> pre-1950 print stays pictures). The 0.85 confidence gate and the 40% agreement bar needed no change — they separate
+> good pages from bad exactly as ADR-0054 set them. Typed Arabic PDFs and right-to-left books were fixed in M2
+> (the flat-box-space bug, `dir="rtl"`/`lang="ar"`/`page-progression-direction="rtl"`).
+
 - **A scanned corpus**, public-domain scans only, English and Arabic, kept out of the repository; the manifest and hashes go in, as for
   today's corpus. It includes clean scans, a skewed or photographed book, two columns, footnotes, a mixed
   typed-and-scanned PDF, an Arabic book with English terms and numbers, and a typed Arabic PDF.

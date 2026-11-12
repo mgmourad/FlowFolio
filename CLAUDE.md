@@ -199,6 +199,18 @@ it. Also: the tour's 11 pictures retaken without the status bar, and "Replay the
   - Left: speed on the Fold (release build, ~2 s a page), then M3's corpus and gate tuning
     (`docs/plans/phase7-handoff-m3.md`, `docs/plans/phase7-m2m3-execution.md`).
   - CI has not run on M2.
+- **M3 built and released as 0.7.0-beta.1 (build 700001), 2026-11-12** (CHANGELOG; tag `v0.7.0-beta.1`).
+  - A scanned corpus with proofread ground truth (41 pages) is committed to `samples/golden/ocr/` (manifest + hashes
+    only; the scans are fetched). `OcrCorpusTest` (`:tools:convert`) checks word recall and CER per page, the share
+    kept as text, and that manuscripts and a blurred page stay pictures, in the `corpus` CI job against baselines.
+  - The gates hold as ADR-0054 set them: English 98.9% recall / 3.0% CER (all kept), Arabic printed 93.0% recall on
+    the pages the engines agreed on (4 of 10 kept; pre-1950 print and manuscripts stay pictures).
+  - OCR is fast enough: ~0.35 s/page compiled (the debug build's 25–35 s was interpreted Kotlin), about 0.7–1.4 s on
+    the Fold, inside the 2 s target.
+  - Green CI on the release commit (the corpus job ran `CorpusTest` and `OcrCorpusTest`); one pre-existing flaky
+    Robolectric test (`BookmarksViewModelTest`) needed a re-run. The release APK is signed with the release key
+    (SHA-256 `59fbae55`, ADR-0049), so it updates `com.flowfolio` in place.
+  - Left for M4: the owner's tweak batch and beta-readiness (the plan's M4).
 - **The owner's Arabic book, 2026-11-11** (CHANGELOG, Unreleased, "Arabic books"): typed Arabic pages had their
   words reversed (flat-box spaces cut every line; fixed in `Extraction`); right-to-left pages now read their right
   column first (`ReadingOrder`); and an Arabic scanned book skips OCR once its pages vote it Arabic while no Arabic
