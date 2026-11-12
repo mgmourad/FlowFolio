@@ -239,6 +239,10 @@ reading surface and conversion, then TM2, the library, the app's size and widget
   - the processor-aware updater (`Updates.pickApk`);
   - the quick fixes. Night glow is removed.
 - Fold speed measured: 4.4 s a page English, 7.0 s Arabic (known issue 55), against a 2 s target.
+- **Released as FlowFolio 0.7.0-beta.3 (build 700003) on 2026-11-12**, tag `v0.7.0-beta.3` at `d3001c3`, APK SHA-256
+  `59118d32bd20aac5efdb541442373e7b45ab7818f987806371777601af839314`, signed `CN=FlowFolio Release` (`59fbae55`).
+  Green CI (the OCR gate ran: 3 tests, 0 skipped); updated beta.2 in place on `fold8_api37`, and What's new showed
+  "Version 0.7.0-beta.3" with the reader notes only. Next: TM2.
 - **The owner's Arabic book, 2026-11-11** (CHANGELOG, Unreleased, "Arabic books"): typed Arabic pages had their
   words reversed (flat-box spaces cut every line; fixed in `Extraction`); right-to-left pages now read their right
   column first (`ReadingOrder`); and an Arabic scanned book skips OCR once its pages vote it Arabic while no Arabic

@@ -1,6 +1,6 @@
 # Tightening plan: TM1 and TM2
 
-- **Status:** Approved by the owner 2026-11-12; TM1 built 2026-11-12 (Fold timing still to measure).
+- **Status:** Approved by the owner 2026-11-12; TM1 done and released as 0.7.0-beta.3 (2026-11-12); TM2 next.
 - **Where TM1 differs from this plan:**
   - Night glow is removed as a setting, but the design system keeps its glow-capable palette (always off). Removing
     the fields would touch every component for nothing visible.
