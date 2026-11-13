@@ -4,6 +4,12 @@ Read this first. Keep it current: update at the end of every phase.
 
 ## Current phase
 
+**PROJECT COMPLETE: signed off by the owner 2026-11-12** (`docs/plans/project-signoff.md`). Phases 0–7, the UX
+overhaul and both tightening milestones are signed off; the release at sign-off is **0.7.0-beta.5 (build 700005)**,
+built by `.github/workflows/release.yml` (push a `v*` tag). From here, work is maintenance: tweaks and fixes in
+batches under the working agreement below, each released through the workflow. The carried-forward limitations are
+listed in the sign-off. The history below is kept for reference.
+
 **Phase 2 (EPUB reading and the pagination engine) signed off by the owner 2026-10-27**
 (`docs/plans/phase2-signoff.md`). Next: Phase 3, converter v1 on the phone: plan drafted 2026-10-27
 (`docs/plans/phase3-plan.md`, three milestones: M1 engine and extraction, M2 from structure to EPUB, M3 on the phone
@@ -213,7 +219,7 @@ it. Also: the tour's 11 pictures retaken without the status bar, and "Replay the
   - Left for M4: the owner's tweak batch and beta-readiness (the plan's M4).
 - **M3 verified and M4 built, 2026-11-12** (CHANGELOG, Unreleased; sign-off draft `docs/plans/phase7-signoff.md`).
   - Verifying M3 found that **no Arabic book worked**: PaddleOCR, the checker, garbled the owner's 1960s book, so word
-    agreement rejected pages Tesseract read well. **ADR-0055** (proposed) measures agreement by letter pairs, bar
+    agreement rejected pages Tesseract read well. **ADR-0055** (accepted with the Phase 7 sign-off) measures agreement by letter pairs, bar
     0.66: same corpus result, 10 of 11 of the book's body pages kept (6 before). Engine 1.5.3.
   - **CI's OCR gate had never run** (relative paths skipped all three tests; it also used Ubuntu's smaller Arabic
     model). Fixed, and a set-but-missing folder now fails.
@@ -226,7 +232,7 @@ it. Also: the tour's 11 pictures retaken without the status bar, and "Replay the
     - Arabic: 92.6% recall, 19.1% CER, 4 of 10 kept. The runner's Tesseract is 5.5.0, against 5.5.4 on the Mac.
   - On `fold8_api37` it updated 0.7.0-beta.1 in place, and What's new showed "Version 0.7.0-beta.2" with only the
     reader-facing notes. That screen exposed the popup's own labelling bug, fixed in `b182c93`.
-  - Phase 7 is still not signed off (`docs/plans/phase7-signoff.md`, draft).
+  - Phase 7 signed off by the owner 2026-11-12 (`docs/plans/phase7-signoff.md`), ADR-0055 accepted.
 
 **Tightening milestones after Phase 7** (`docs/plans/tightening-plan.md`, approved by the owner 2026-11-12): TM1, the
 reading surface and conversion, then TM2, the library, the app's size and widgets.
@@ -797,7 +803,7 @@ become a required check (known issue 6), and F-Droid submission is possible when
 
 ## Decision log
 
-ADRs 0001–0049 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
+ADRs 0001–0058 in `docs/adr/`: record decisions, monorepo, licensing policy, uv, Android build
 structure, minSdk 29, Hilt, CI design, on-device conversion engine (supersedes 0002 in part and 0004),
 PDFium via own JNI bridge, vendored pagecurl, Phase 1 modules, reader memory budget, design language and Night
 pages (0014), annotations (0016), online services (0017), on-device translation (0018, supersedes the
@@ -807,4 +813,4 @@ no ffmpeg because only an address is extracted), updating from the releases page
 release identity after the signing key was lost (0049, accepted; supersedes the key-custody part of 0042), release-channel
 renumbering (0050, accepted 2026-11-07: 3–4 alpha, 5–6 canary, 7 beta), offline neural TTS via `sherpa-onnx` with
 Kokoro and Piper voice packs (0051, accepted 2026-11-08), the Quiet Library design overhaul (0052), and Narrator Mode
-in the background with a media session and two players (0053, 2026-11-10). The OCR engine is ADR-0054 (Phase 7 M1). ADR-0055 (proposed, 2026-11-12) measures the Arabic engines' agreement by letter pairs, bar 0.66.
+in the background with a media session and two players (0053, 2026-11-10). The OCR engine is ADR-0054 (Phase 7 M1). ADR-0055 (accepted 2026-11-12) measures the Arabic engines' agreement by letter pairs, bar 0.66. ADR-0056 dark reader chrome, ADR-0057 a smaller app (per-processor APKs, downloadable packs), ADR-0058 two editions and resumable pack downloads.

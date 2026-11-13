@@ -1,6 +1,6 @@
 # ADR-0055: Measure the Arabic engines' agreement by letter pairs, not whole words
 
-- **Status:** Proposed (2026-11-12). Supersedes the agreement *measure* in ADR-0054. ADR-0054's design stands:
+- **Status:** Accepted (owner, 2026-11-12, with the Phase 7 sign-off). Supersedes the agreement *measure* in ADR-0054. ADR-0054's design stands:
   Tesseract reads, PaddleOCR checks, and Tesseract's text is kept.
 - **Date:** 2026-11-12
 - **Deciders:** product owner, lead engineer

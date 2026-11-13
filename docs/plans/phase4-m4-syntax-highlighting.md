@@ -1,6 +1,6 @@
 # Phase 4 M4 plan: syntax highlighting for code (Dynamic Flow)
 
-- **Status:** Draft, for the owner's approval
+- **Status:** Done: built and closed with Phase 4, signed off by the owner 2026-11-06 (`phase4-signoff.md`).
 - **Phase plan:** `PLAN.local.md`, owner's on-the-fly tweak during Phase 4 M3
 
 ## Goal

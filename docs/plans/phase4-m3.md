@@ -1,6 +1,6 @@
 # Phase 4 M3 plan: fallbacks worth keeping
 
-- **Status:** Draft, for the owner's approval
+- **Status:** Done: built and closed with Phase 4, signed off by the owner 2026-11-06 (`phase4-signoff.md`).
 - **Phase plan:** `PLAN.local.md`, Phase 4 — this is the work that replaces the dropped old Phase 5, now that images
   are the long-term answer for tables and equations.
 

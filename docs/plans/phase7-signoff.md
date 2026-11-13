@@ -1,21 +1,22 @@
 # Phase 7 sign-off: scanned books (English and Arabic)
 
-- **Status:** **Draft, awaiting the owner** (2026-11-12). Not signed off. 0.7.0-beta.1 went out before this
-  sign-off (by the M3 session). 0.7.0-beta.2 was released on the owner's instruction (2026-11-12) to get the Arabic
-  fix to readers; Phase 7 still closes with this sign-off.
+- **Status:** **Signed off by the product owner, 2026-11-12**, with the project's completion
+  ([`project-signoff.md`](project-signoff.md)). 0.7.0-beta.1 and beta.2 went out before this sign-off on the
+  owner's instruction; the phase closes with 0.7.0-beta.5.
 - **Plan:** [`phase7-plan.md`](phase7-plan.md), with handoffs [`phase7-handoff-m3.md`](phase7-handoff-m3.md),
   [`phase7-handoff-m4.md`](phase7-handoff-m4.md) and the M2/M3 execution record
   [`phase7-m2m3-execution.md`](phase7-m2m3-execution.md).
 - **Decisions in this phase:**
   - [ADR-0054](../adr/0054-ocr-engine.md), the engines, accepted 2026-11-11.
-  - [ADR-0055](../adr/0055-arabic-agreement-by-letter-pairs.md), the Arabic agreement measure. **Proposed**: to be
-    accepted with this sign-off.
+  - [ADR-0055](../adr/0055-arabic-agreement-by-letter-pairs.md), the Arabic agreement measure, accepted with this
+    sign-off.
 - **Verified on:**
   - the `fold8_api37` emulator (debug and release builds);
   - the JVM suite (`spotlessCheck detekt lintDebug testDebugUnitTest`, `:core:conversion:test`, `:tools:convert:test`
     with the PDF corpus and the OCR gate), run on this Mac;
   - the owner's Arabic book, page by page.
-  - **Not** on the owner's Fold, and **not** in CI since the M4 changes.
+  - Later on the owner's Fold (OCR speed, 2026-11-12) and in CI from 0.7.0-beta.2 on (the OCR gate ran: 3 tests, 0
+    skipped).
 
 ## Done when (the plan) — where it stands
 
@@ -55,7 +56,7 @@
    - The corpus needs mid-century book print with proofread text, which it lacks. The owner's book would be ideal if a
      few pages can be proofread.
    - The owner has not yet checked the Arabic ground truth, as M3's handoff asked.
-3. **CI on the M4 changes** has not run: the fixed OCR job will run for the first time at the next push.
+3. ~~CI on the M4 changes~~: ran from 0.7.0-beta.2, OCR gate included.
 4. **M4's owner items:**
    - the owner's polish list (not yet given);
    - the second copy of the release key in GitHub Actions secrets (ADR-0049, the owner's step);
@@ -64,3 +65,8 @@
    - whether the tour needs a slide for scanned books.
 5. **A page in two columns read by OCR** reads straight across both columns (the 1883 clipping); figures on scanned
    pages are dropped when the page becomes text.
+
+## Sign-off
+
+Signed off by the product owner on 2026-11-12. Items 1, 2, 4 and 5 above are carried forward as known limitations
+(`project-signoff.md`), not blockers.
