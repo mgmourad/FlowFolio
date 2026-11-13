@@ -1,0 +1,75 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: Fraunces; src: url(fraunces.ttf); font-weight: 100 900; }
+@font-face { font-family: Fraunces; src: url(fraunces_italic.ttf); font-style: italic; font-weight: 100 900; }
+@font-face { font-family: Instrument; src: url(instrument_sans.ttf); font-weight: 100 900; }
+:root { --bg:#1b1611; --card:#2a221b; --line:#3d3229; --ink:#f6efe3; --ink2:#cdbfae; --ink3:#9a8b79; --accent:#e8763b; --accent2:#c2410c; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 2400px; height: 1260px; overflow: hidden; }
+body { background: var(--bg); color: var(--ink); font-family: Instrument; position: relative; }
+.glow1 { position: absolute; left: -300px; top: -420px; width: 1300px; height: 1000px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(232,118,59,.22), rgba(232,118,59,0) 65%); }
+.glow2 { position: absolute; right: -300px; bottom: -500px; width: 1400px; height: 1100px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(194,65,12,.18), rgba(194,65,12,0) 65%); }
+
+header { position: absolute; left: 90px; right: 90px; top: 62px; height: 200px; display: flex; align-items: center; justify-content: space-between; }
+.brand { display: flex; align-items: center; gap: 30px; }
+.brand img { width: 128px; height: 128px; border-radius: 32px; box-shadow: 0 18px 40px rgba(0,0,0,.45); }
+.brand h1 { font-family: Fraunces; font-weight: 650; font-size: 92px; letter-spacing: -2px; line-height: 1; }
+.brand p { margin-top: 10px; font-family: Fraunces; font-size: 44px; font-weight: 450; color: var(--ink2); letter-spacing: -.5px; }
+.brand p em { color: var(--accent); font-style: italic; }
+.side { text-align: right; }
+.badges { display: flex; gap: 12px; justify-content: flex-end; }
+.badge { font-size: 22px; font-weight: 650; padding: 11px 20px; border-radius: 999px; border: 1.5px solid var(--line); color: var(--ink); background: rgba(255,255,255,.04); }
+.badge.hot { background: var(--accent2); border-color: var(--accent2); color: #fff; }
+.url { margin-top: 18px; font-size: 24px; color: var(--ink3); font-weight: 600; letter-spacing: .3px; }
+
+.grid { position: absolute; left: 90px; right: 90px; top: 300px; bottom: 64px; display: grid;
+  grid-template-columns: repeat(5, 1fr); grid-template-rows: 1fr 1fr; gap: 28px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 26px; overflow: hidden; display: flex; flex-direction: column;
+  box-shadow: 0 18px 40px rgba(0,0,0,.35); }
+.shot { flex: none; height: 312px; overflow: hidden; background: #f6efe3; position: relative; }
+.shot img { width: 100%; height: 100%; object-fit: cover; object-position: top; display: block; }
+.shot.wide { background: #e7dccb; display: grid; place-items: center; }
+.shot.wide img { object-fit: contain; height: 100%; width: 100%; }
+.txt { padding: 16px 20px 18px; flex: 1; }
+.txt b { display: block; font-size: 27px; font-weight: 700; letter-spacing: -.2px; }
+.txt span { display: block; margin-top: 4px; font-size: 18.5px; color: var(--ink2); line-height: 1.3; }
+.n { position: absolute; left: 14px; top: 14px; width: 34px; height: 34px; border-radius: 50%; background: rgba(27,22,17,.82);
+  color: var(--accent); font-weight: 700; font-size: 17px; display: grid; place-items: center; border: 1px solid rgba(232,118,59,.5); }
+</style></head>
+<body>
+<div class="glow1"></div><div class="glow2"></div>
+<header>
+  <div class="brand"><img src="icon.png">
+    <div><h1>FlowFolio</h1><p>Any PDF, <em>reflowed</em> to fit your screen.</p></div></div>
+  <div class="side">
+    <div class="badges"><span class="badge hot">Free &amp; open source</span><span class="badge">Works offline</span><span class="badge">No account · No ads</span></div>
+    <div class="url">Android 10+ · github.com/mgmourad/FlowFolio</div>
+  </div>
+</header>
+
+<div class="grid">
+  <div class="card"><div class="shot"><img src="library.png"></div>
+    <div class="txt"><b>Your library</b><span>Stats, search across every book, goals at a glance</span></div></div>
+  <div class="card"><div class="shot"><img src="shelves.png"></div>
+    <div class="txt"><b>Shelves</b><span>Your collections, made from folders or by hand</span></div></div>
+  <div class="card"><div class="shot"><img src="flow.png"></div>
+    <div class="txt"><b>Dynamic Flow</b><span>Turns PDFs and scans into reflowable books, on the phone</span></div></div>
+  <div class="card"><div class="shot"><img src="marking.png"></div>
+    <div class="txt"><b>Highlights &amp; notes</b><span>Nine colours, notes and spoken VoiceMarks</span></div></div>
+  <div class="card"><div class="shot"><img src="words.png"></div>
+    <div class="txt"><b>Dictionary &amp; translate</b><span>Define or translate any word, offline</span></div></div>
+  <div class="card"><div class="shot"><img src="listen.png"></div>
+    <div class="txt"><b>Narrator Mode</b><span>Natural offline voices that turn the pages</span></div></div>
+  <div class="card"><div class="shot"><img src="riffle.png"></div>
+    <div class="txt"><b>Riffle bar</b><span>Flick through the book like real paper</span></div></div>
+  <div class="card"><div class="shot"><img src="notebook.png"></div>
+    <div class="txt"><b>Notebook</b><span>Everything you marked, book by book, exportable</span></div></div>
+  <div class="card"><div class="shot"><img src="goal.png"></div>
+    <div class="txt"><b>Reading goals</b><span>Daily, weekly or monthly, with reminders</span></div></div>
+  <div class="card"><div class="shot wide"><img src="widgets.png"></div>
+    <div class="txt"><b>Home-screen widgets</b><span>Continue reading, your goal and the narrator</span></div></div>
+</div>
+</body></html>

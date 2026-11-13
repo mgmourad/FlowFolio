@@ -65,9 +65,13 @@ object Extraction {
         return joinFragments(out)
     }
 
-    /** [line] carries on [prev] on its row: it starts where [prev] ends, give or take an em or two. */
+    /**
+     * [line] carries on [prev] on its row: it starts where [prev] ends, give or take an em or two. The em comes from
+     * [GlyphMetrics.emOf], as word spaces do: a PDF that sets its fonts at size 1 (known issue 46) otherwise left
+     * every word of *Color Atlas of Genetics* on a line of its own, and every word a paragraph (2026-11-12).
+     */
     private fun continues(prev: Line, line: Line): Boolean {
-        val em = line.style.size.coerceAtLeast(1f)
+        val em = GlyphMetrics.emOf(line.style.size, line.box).coerceAtLeast(1f)
         val gap = if (TextDirection.rightToLeft(prev.text)) {
             prev.box.left - line.box.right
         } else {
@@ -253,7 +257,10 @@ object Extraction {
 
     private const val LINE_END_HYPHEN = '\u0002'
     private const val MIN_LINE_OVERLAP = 0.5f
-    private const val JOIN_GAP_EMS = 1f
+
+    // A fully justified line in a narrow column spaces its words more than an em apart (Color Atlas of Genetics,
+    // 2026-11-12); an unruled table's columns stand much further apart than that (`technical.pdf`).
+    private const val JOIN_GAP_EMS = 1.8f
 
     /**
      * How much wider than a within-word gap a real word space is. Raised from the plain quarter em (2026-11-06) so a

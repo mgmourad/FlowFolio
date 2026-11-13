@@ -5,6 +5,20 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+### For readers
+- **Home-screen widgets work in the released app.** They stayed on "Loading" in 0.7.0-beta.5: the release build's
+  shrinker removed a constructor the widget engine needs.
+- **Two-column textbooks read properly in Dynamic Flow.** Books that set their fonts at size 1, such as Thieme's
+  *Color Atlas of Genetics*, came out one word per line; their paragraphs now reflow whole, and the coloured tabs on
+  the page edge no longer land mid-sentence.
+
+### Fixes
+- R8 keep rules for WorkManager's input mergers and workers and for the widget receivers (`proguard-rules.pro`).
+- `Extraction.continues` measures with `GlyphMetrics.emOf` and joins up to 1.8 em (justified narrow columns);
+  `Shapes` drops text-free drawings that run off the page edge (`isEdgeTab`). Engine 1.5.4, so Dynamic Flow bundles
+  rebuild on next open.
+- Launch banner redone with ten features and their screenshots (`docs/launch/`).
+
 ## [0.7.0-beta.5] - 2026-11-12
 
 ### For readers

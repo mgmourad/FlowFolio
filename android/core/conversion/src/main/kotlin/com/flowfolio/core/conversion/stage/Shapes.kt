@@ -60,7 +60,7 @@ object Shapes {
         // the lines of an equation stand.
         val grouped = Regions.clusters(joinRows(display, DISPLAY_ROW_GAP), DISPLAY_REACH).map {
             it.first
-        }.filterNot(::isBar)
+        }.filterNot(::isBar).filterNot { d -> isEdgeTab(page, d) && placed.none { d.containsCentre(it.box) } }
         val equations = grouped.map { d ->
             val inside = placed.filter { d.containsCentre(it.box) }
             // The equation's number at the end of its row ("2.7") goes with it, not into a paragraph of its own.
@@ -166,6 +166,14 @@ object Shapes {
         return thin in BAR_MIN..BAR_MAX && maxOf(b.width, b.height) >= BAR_LENGTH
     }
 
+    /**
+     * A shape that runs off the page's edge: a thumb-index tab or a printer's bleed (the coloured tabs down the side of
+     * *Color Atlas of Genetics*, 2026-11-12). With no text inside it is decoration; set as an "equation" it landed in
+     * the middle of a sentence.
+     */
+    private fun isEdgeTab(page: Page, d: Box): Boolean =
+        d.left < EDGE || d.top < EDGE || d.right > page.width - EDGE || d.bottom > page.height - EDGE
+
     private fun overlapY(a: Box, b: Box) = minOf(a.bottom, b.bottom) - maxOf(a.top, b.top)
 
     private fun gapX(a: Box, b: Box) = maxOf(b.left - a.right, a.left - b.right)
@@ -174,6 +182,7 @@ object Shapes {
 
     private fun Box.padded(by: Float) = Box(left - by, top - by, right + by, bottom + by)
 
+    private const val EDGE = 0.5f
     private const val RULE = 0.6f
     private const val BACKDROP_INSET = 0.5f
 
