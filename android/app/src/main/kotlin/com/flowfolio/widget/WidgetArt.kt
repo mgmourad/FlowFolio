@@ -193,8 +193,12 @@ internal class WidgetArt(private val context: Context) {
         }
     }
 
-    /** [glyph] in white, [size] square, as the app draws it (stroked or filled). */
-    fun glyph(glyph: Glyph, size: Dp, strokeBoost: Float = 1f): Art {
+    /**
+     * [glyph] in white, [size] square, as the app draws it (stroked or filled), at [opacity]. A faint glyph must be
+     * faint in the bitmap itself: the widget's tint blends SRC_ATOP, which keeps the bitmap's alpha and ignores the
+     * tint's own.
+     */
+    fun glyph(glyph: Glyph, size: Dp, strokeBoost: Float = 1f, opacity: Float = 1f): Art {
         val s = px(size)
         val bitmap = Bitmap.createBitmap(s, s, Bitmap.Config.ARGB_8888)
         val path = glyph.androidPath().apply { transform(Matrix().apply { setScale(s / GLYPH_BOX, s / GLYPH_BOX) }) }
@@ -202,6 +206,7 @@ internal class WidgetArt(private val context: Context) {
             path,
             Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 color = Color.WHITE
+                alpha = (opacity.coerceIn(0f, 1f) * 255).toInt()
                 style = if (glyph.isFilled) Paint.Style.FILL else Paint.Style.STROKE
                 strokeWidth = glyph.strokeUnits * strokeBoost * s / GLYPH_BOX
                 strokeCap = Paint.Cap.ROUND

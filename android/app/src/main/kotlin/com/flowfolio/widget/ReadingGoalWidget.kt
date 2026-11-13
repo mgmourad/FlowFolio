@@ -154,7 +154,10 @@ private fun Ring(today: GoalToday, colors: WidgetColors, art: WidgetArt, ring: D
             colorFilter = ColorFilter.tint(colors.accent),
             modifier = GlanceModifier.fillMaxSize()
         )
-        ArtImage(art.glyph(Glyph.Glasses, ring * GLASSES_SHARE, strokeBoost = 0.8f), colors.faint)
+        ArtImage(
+            art.glyph(Glyph.Glasses, ring * GLASSES_SHARE, strokeBoost = 0.6f, opacity = GLASSES_OPACITY),
+            colors.ink
+        )
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             val number = if (today.progress >= 1f) "✓" else "${today.readMinutes}"
             ArtImage(
@@ -196,3 +199,6 @@ private val GAP = 16.dp
 private val STREAK_ROOM = 26.dp
 private const val GLASSES_SHARE = 0.72f
 private const val NUMBER_SHARE = 0.32f
+
+/** The glasses behind the number: a watermark, there to be seen and not read. */
+private const val GLASSES_OPACITY = 0.08f
