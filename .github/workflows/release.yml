@@ -59,7 +59,7 @@ jobs:
         working-directory: android
         run: ./gradlew :app:assembleEssentialRelease :app:assembleFullRelease
       - name: Collect, check and hash the APKs
-        run: tools/release/collect-apks.sh "$RUNNER_TEMP/apks"
+        run: bash tools/release/collect-apks.sh "$RUNNER_TEMP/apks"
       - name: Publish the pre-release
         env:
           GH_TOKEN: ${{ github.token }}
