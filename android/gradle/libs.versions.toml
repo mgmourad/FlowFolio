@@ -33,7 +33,7 @@ datastore = "1.2.1"
 navigation = "2.10.2"
 hiltNavigation = "1.4.0"
 turbine = "1.2.1"
-spotless = "8.10.4"
+spotless = "8.11.0"
 ktlint = "1.8.0"
 detekt = "1.23.8"
 # Phase 3 converter (owner-approved 2026-10-27): JSON for the IR and flowfolio.json; JNA and EPUBCheck for the
