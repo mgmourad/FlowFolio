@@ -22,7 +22,9 @@ for edition in essential full; do
   for abi in universal arm64-v8a armeabi-v7a; do
     src="$apks/$edition/release/app-$edition-$abi-release.apk"
     if [ "$abi" = universal ]; then name="flowfolio-$version-$code$suffix.apk"; else name="flowfolio-$version-$code-$abi$suffix.apk"; fi
-    cert=$("$signer" verify --print-certs "$src" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+    # The wording of the signer line varies between apksigner versions ("Signer #1 ...", "Signer (minSdkVersion=...)
+    # ..."): take the first certificate SHA-256 whatever precedes it.
+    cert=$("$signer" verify --print-certs "$src" | sed -n 's/^.*certificate SHA-256 digest: //p' | head -1)
     [ "$cert" = "$release_cert" ] || { echo "$src is not signed with the release key ($cert)" >&2; exit 1; }
     cp "$src" "$out/$name"
     (cd "$out" && shasum -a 256 "$name" > "$name.sha256")
