@@ -3,6 +3,7 @@ package com.flowfolio.widget
 import android.content.Context
 import android.graphics.Bitmap
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -104,103 +105,104 @@ class NarratorWidgetAction : ActionCallback {
 private fun command(command: Narration.Command): Action =
     actionRunCallback<NarratorWidgetAction>(actionParametersOf(NarratorWidgetAction.COMMAND to command.name))
 
-@Suppress("LongMethod") // one layout per size, read top to bottom
 @Composable
 private fun NarratorContent(shown: NarratorShown?, colors: WidgetColors) {
     val context = LocalContext.current
     val size = LocalSize.current
-    val wide = size.width >= NarratorWidget.MEDIUM.width
-    val coverHeight = size.height - 24.dp
     val open = if (shown == null) openAppIntent(context) else openBookIntent(context, shown.bookId)
-    Box(
-        GlanceModifier.fillMaxSize().cornerRadius(24.dp).background(colors.background)
-            .clickable(actionStartActivity(open)).padding(12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        when {
-            shown == null -> Empty(context.getString(R.string.widget_narrator_empty), colors)
-
-            wide -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                shown.cover?.let {
-                    Image(
-                        ImageProvider(it),
-                        contentDescription = null,
-                        contentScale = ContentScale.Fit,
-                        modifier = GlanceModifier.size(coverHeight * 2 / 3, coverHeight).cornerRadius(6.dp)
-                    )
-                    Spacer(GlanceModifier.width(12.dp))
-                }
-                Column(GlanceModifier.defaultWeight()) {
-                    Text(
-                        context.getString(R.string.widget_narrator_label),
-                        style = TextStyle(color = colors.accent, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                    )
-                    Text(
-                        shown.title,
-                        maxLines = 1,
-                        style = TextStyle(color = colors.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    )
-                    shown.chapter?.takeIf { it.isNotBlank() }?.let {
-                        Text(it, maxLines = 1, style = TextStyle(color = colors.ink2, fontSize = 12.sp))
-                    }
-                    Spacer(GlanceModifier.height(6.dp))
-                    Controls(shown, colors)
-                }
-            }
-
-            // Small: the cover (or the title, without one), with Play over its bottom corner.
-            else -> Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.BottomEnd) {
-                Box(GlanceModifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    if (shown.cover != null) {
-                        Image(
-                            ImageProvider(shown.cover),
-                            contentDescription = shown.title,
-                            contentScale = ContentScale.Fit,
-                            modifier = GlanceModifier.fillMaxSize().cornerRadius(6.dp)
-                        )
-                    } else {
-                        Text(
-                            shown.title,
-                            maxLines = 3,
-                            style = TextStyle(color = colors.ink, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        )
-                    }
-                }
-                PlayButton(shown, colors)
+    WidgetCard(colors, actionStartActivity(open)) {
+        if (shown == null) {
+            Empty(context.getString(R.string.widget_narrator_empty), colors)
+            return@WidgetCard
+        }
+        val art = WidgetArt(context)
+        val inner = DpSize(size.width - CARD_PADDING * 2, size.height - CARD_PADDING * 2)
+        if (size.width >= NarratorWidget.MEDIUM.width) {
+            NarratorWide(shown, colors, art, inner)
+        } else {
+            // Small: the book, with a large Play over its corner.
+            val cover = minOf(coverWidthFor(inner.height), inner.width / 1.28f)
+            Box(contentAlignment = Alignment.BottomEnd) {
+                ArtImage(art.book(shown.cover, shown.title, cover), null, shown.title)
+                PlayButton(shown, colors, art, SMALL_PLAY)
             }
         }
     }
 }
 
+/** The book, "Narrator", its title and chapter, and a music player's row: back, play/pause, forward and speed. */
 @Composable
-private fun Controls(shown: NarratorShown, colors: WidgetColors) {
+private fun NarratorWide(shown: NarratorShown, colors: WidgetColors, art: WidgetArt, inner: DpSize) {
     val context = LocalContext.current
-    Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        val live = shown.playing != null
-        if (live) {
-            IconButton(ReaderR.drawable.ic_narrator_previous, R.string.widget_narrator_previous, colors) {
-                command(Narration.Command.PREVIOUS)
-            }
-        }
-        PlayButton(shown, colors)
-        if (live) {
-            IconButton(ReaderR.drawable.ic_narrator_next, R.string.widget_narrator_next, colors) {
-                command(Narration.Command.NEXT)
-            }
-            Spacer(GlanceModifier.width(6.dp))
-            Text(
-                context.getString(R.string.widget_narrator_speed, speedText(shown.playing.rate)),
-                style = TextStyle(color = colors.ink2, fontSize = 12.sp, fontWeight = FontWeight.Medium),
-                modifier = GlanceModifier.cornerRadius(12.dp).background(colors.panel)
-                    .padding(horizontal = 8.dp, vertical = 4.dp).clickable(command(Narration.Command.SPEED))
+    val cover = coverWidthFor(inner.height)
+    val textWidth = inner.width - bookFootprint(cover) - GAP
+    Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+        ArtImage(art.book(shown.cover, shown.title, cover), null, shown.title)
+        Spacer(GlanceModifier.width(GAP))
+        Column(GlanceModifier.width(textWidth)) {
+            ArtImage(
+                art.text(
+                    context.getString(R.string.widget_narrator_label).uppercase(),
+                    WidgetArt.Face.UI,
+                    11.5f,
+                    textWidth,
+                    weight = WidgetArt.BOLD,
+                    tracking = 0.12f
+                ),
+                colors.accent
             )
+            Spacer(GlanceModifier.height(4.dp))
+            ArtImage(
+                art.text(
+                    shown.title,
+                    WidgetArt.Face.DISPLAY,
+                    21f,
+                    textWidth,
+                    maxLines = 2,
+                    weight = WidgetArt.SEMIBOLD
+                ),
+                colors.ink,
+                shown.title
+            )
+            shown.chapter?.takeIf { it.isNotBlank() }?.let {
+                Spacer(GlanceModifier.height(2.dp))
+                ArtImage(art.text(it, WidgetArt.Face.UI, 14f, textWidth), colors.ink2, it)
+            }
+            Spacer(GlanceModifier.height(10.dp))
+            Controls(shown, colors, art)
         }
     }
 }
 
-/** Play or pause the narration; with none running, open the book and start it. */
 @Composable
-private fun PlayButton(shown: NarratorShown, colors: WidgetColors) {
+private fun Controls(shown: NarratorShown, colors: WidgetColors, art: WidgetArt) {
+    val context = LocalContext.current
+    val playing = shown.playing
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        if (playing != null) {
+            Skip(art, WidgetArt.Control.PREVIOUS, R.string.widget_narrator_previous, colors, Narration.Command.PREVIOUS)
+            Spacer(GlanceModifier.width(6.dp))
+        }
+        PlayButton(shown, colors, art, WIDE_PLAY)
+        if (playing != null) {
+            Spacer(GlanceModifier.width(6.dp))
+            Skip(art, WidgetArt.Control.NEXT, R.string.widget_narrator_next, colors, Narration.Command.NEXT)
+            Spacer(GlanceModifier.width(10.dp))
+            val speed = context.getString(R.string.widget_narrator_speed, speedText(playing.rate))
+            Box(
+                GlanceModifier.cornerRadius(14.dp).background(colors.panel).padding(horizontal = 10.dp, vertical = 6.dp)
+                    .clickable(command(Narration.Command.SPEED)),
+                contentAlignment = Alignment.Center
+            ) {
+                ArtImage(art.text(speed, WidgetArt.Face.UI, 14f, 60.dp, weight = WidgetArt.BOLD), colors.ink, speed)
+            }
+        }
+    }
+}
+
+/** Play or pause in the accent circle; with nothing narrating, Play opens the book and starts it. */
+@Composable
+private fun PlayButton(shown: NarratorShown, colors: WidgetColors, art: WidgetArt, size: Dp) {
     val context = LocalContext.current
     val playing = shown.playing?.playing == true
     val action = if (shown.playing != null) {
@@ -209,31 +211,29 @@ private fun PlayButton(shown: NarratorShown, colors: WidgetColors) {
         actionStartActivity(openBookIntent(context, shown.bookId, narrate = true))
     }
     Box(
-        GlanceModifier.size(40.dp).cornerRadius(20.dp).background(colors.accent).clickable(action),
+        GlanceModifier.size(size).cornerRadius(size / 2).background(colors.accent).clickable(action),
         contentAlignment = Alignment.Center
     ) {
-        Image(
-            ImageProvider(if (playing) ReaderR.drawable.ic_narrator_pause else ReaderR.drawable.ic_narrator_play),
-            contentDescription = context.getString(
-                if (playing) R.string.widget_narrator_pause else R.string.widget_narrator_play
-            ),
-            colorFilter = ColorFilter.tint(colors.accentInk),
-            modifier = GlanceModifier.size(22.dp)
+        ArtImage(
+            art.control(if (playing) WidgetArt.Control.PAUSE else WidgetArt.Control.PLAY, size * ICON_SHARE),
+            colors.accentInk,
+            context.getString(if (playing) R.string.widget_narrator_pause else R.string.widget_narrator_play)
         )
     }
 }
 
 @Composable
-private fun IconButton(icon: Int, label: Int, colors: WidgetColors, action: () -> Action) {
-    Box(GlanceModifier.size(40.dp).clickable(action()), contentAlignment = Alignment.Center) {
-        Image(
-            ImageProvider(icon),
-            contentDescription = LocalContext.current.getString(label),
-            colorFilter = ColorFilter.tint(colors.ink),
-            modifier = GlanceModifier.size(22.dp)
-        )
+private fun Skip(art: WidgetArt, kind: WidgetArt.Control, label: Int, colors: WidgetColors, cmd: Narration.Command) {
+    Box(GlanceModifier.size(SKIP).clickable(command(cmd)), contentAlignment = Alignment.Center) {
+        ArtImage(art.control(kind, SKIP * ICON_SHARE), colors.ink, LocalContext.current.getString(label))
     }
 }
 
 /** 1, 1.25, 1.5: the speed as the reader's panel writes it. */
 internal fun speedText(rate: Float): String = "%.2f".format(java.util.Locale.ROOT, rate).trimEnd('0').trimEnd('.')
+
+private val GAP = 14.dp
+private val WIDE_PLAY = 58.dp
+private val SMALL_PLAY = 54.dp
+private val SKIP = 46.dp
+private const val ICON_SHARE = 0.56f

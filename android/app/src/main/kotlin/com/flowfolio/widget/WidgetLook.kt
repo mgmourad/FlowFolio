@@ -68,6 +68,9 @@ internal class WidgetColors(settings: UserSettings, context: Context) {
     val accent = pick { it.accent }
     val accentInk = pick { it.accentInk }
     val track = pick { it.line }
+
+    /** The reading glasses behind the goal's number: there, but never in the way of it. */
+    val faint = pick { it.ink.copy(alpha = GLASSES_ALPHA) }
 }
 
 /**
@@ -134,7 +137,8 @@ internal fun ringBitmap(sweep: Float): Bitmap {
     return bitmap
 }
 
-private const val COVER_PX = 320
+private const val COVER_PX = 420
+private const val GLASSES_ALPHA = 0.11f
 private const val RING_PX = 240
 private const val RING_STROKE = 26f
 private const val START_ANGLE = -90f

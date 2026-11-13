@@ -38,6 +38,7 @@ import androidx.glance.text.TextStyle
 import com.flowfolio.R
 import com.flowfolio.core.model.Book
 import com.flowfolio.core.model.LibrarySort
+import kotlin.math.roundToInt
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -78,82 +79,97 @@ class ContinueReadingReceiver : GlanceAppWidgetReceiver() {
 private fun ContinueContent(item: ContinueBook?, colors: WidgetColors) {
     val context = LocalContext.current
     val size = LocalSize.current
-    val wide = size.width >= ContinueReadingWidget.MEDIUM.width
-    // A book's shape (2:3) at the widget's full height, less the padding.
-    val coverHeight = size.height - 24.dp
     val open = if (item == null) openAppIntent(context) else openBookIntent(context, item.book.id)
-    Box(
-        GlanceModifier.fillMaxSize().cornerRadius(24.dp).background(colors.background)
-            .clickable(actionStartActivity(open)).padding(12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        when {
-            item == null -> Empty(context.getString(R.string.widget_continue_empty), colors)
-
-            wide -> Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                Cover(item.cover, GlanceModifier.width(coverHeight * 2 / 3).fillMaxHeight())
-                Spacer(GlanceModifier.width(12.dp))
-                Column(GlanceModifier.defaultWeight()) {
-                    Text(
-                        context.getString(R.string.widget_continue_label),
-                        style = TextStyle(color = colors.accent, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                    )
-                    Text(
-                        item.book.title,
-                        maxLines = 2,
-                        style = TextStyle(color = colors.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                    )
-                    item.book.author?.takeIf { it.isNotBlank() }?.let {
-                        Text(it, maxLines = 1, style = TextStyle(color = colors.ink2, fontSize = 12.sp))
-                    }
-                    Spacer(GlanceModifier.height(6.dp))
-                    Progress(item.book, colors)
-                }
-            }
-
-            else -> Column(GlanceModifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-                Cover(item.cover, GlanceModifier.defaultWeight().fillMaxWidth())
-                Spacer(GlanceModifier.height(6.dp))
-                Progress(item.book, colors, words = false)
+    WidgetCard(colors, actionStartActivity(open)) {
+        if (item == null) {
+            Empty(context.getString(R.string.widget_continue_empty), colors)
+            return@WidgetCard
+        }
+        val art = WidgetArt(context)
+        val inner = DpSize(size.width - CARD_PADDING * 2, size.height - CARD_PADDING * 2)
+        if (size.width >= ContinueReadingWidget.MEDIUM.width) {
+            ContinueWide(item, colors, art, inner)
+        } else {
+            // Small: the book itself, and how far through it you are under it.
+            val cover = minOf(coverWidthFor(inner.height - GAP * 2), inner.width / 1.28f)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                ArtImage(art.book(item.cover, item.book.title, cover), null, item.book.title)
+                Spacer(GlanceModifier.height(GAP))
+                ProgressLine(item.book.progress, cover, colors)
             }
         }
     }
 }
 
+/**
+ * As the library's Continue card, without its buttons: the book, "Continue reading", the title in Fraunces, the
+ * author, "Page X of Y · N%" and the progress line.
+ */
 @Composable
-private fun Cover(cover: Bitmap?, modifier: GlanceModifier) {
-    if (cover == null) return
-    Image(
-        ImageProvider(cover),
-        contentDescription = null,
-        contentScale = ContentScale.Fit,
-        modifier = modifier.cornerRadius(6.dp)
-    )
-}
-
-@Composable
-private fun Progress(book: Book, colors: WidgetColors, words: Boolean = true) {
-    LinearProgressIndicator(
-        progress = book.progress,
-        modifier = GlanceModifier.fillMaxWidth().height(4.dp),
-        color = colors.accent,
-        backgroundColor = colors.track
-    )
-    if (words && book.pageCount > 0) {
-        val page = (book.lastPage ?: 0) + 1
-        Text(
-            LocalContext.current.getString(
-                R.string.widget_continue_page,
-                "%,d".format(page),
-                "%,d".format(book.pageCount)
-            ),
-            style = TextStyle(color = colors.ink3, fontSize = 11.sp),
-            modifier = GlanceModifier.padding(top = 4.dp)
-        )
+private fun ContinueWide(item: ContinueBook, colors: WidgetColors, art: WidgetArt, inner: DpSize) {
+    val context = LocalContext.current
+    val book = item.book
+    val cover = coverWidthFor(inner.height)
+    val textWidth = inner.width - bookFootprint(cover) - GAP
+    val roomy = inner.height >= ROOMY
+    Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+        ArtImage(art.book(item.cover, book.title, cover), null, book.title)
+        Spacer(GlanceModifier.width(GAP))
+        Column(GlanceModifier.width(textWidth)) {
+            ArtImage(
+                art.text(
+                    context.getString(R.string.widget_continue_label).uppercase(),
+                    WidgetArt.Face.UI,
+                    11.5f,
+                    textWidth,
+                    weight = WidgetArt.BOLD,
+                    tracking = 0.12f
+                ),
+                colors.accent
+            )
+            Spacer(GlanceModifier.height(4.dp))
+            ArtImage(
+                art.text(
+                    book.title,
+                    WidgetArt.Face.DISPLAY,
+                    if (roomy) 24f else 20f,
+                    textWidth,
+                    maxLines = 2,
+                    weight = WidgetArt.SEMIBOLD
+                ),
+                colors.ink,
+                book.title
+            )
+            book.author?.takeIf { it.isNotBlank() }?.let {
+                Spacer(GlanceModifier.height(2.dp))
+                ArtImage(art.text(it, WidgetArt.Face.UI, if (roomy) 15f else 13.5f, textWidth), colors.ink2, it)
+            }
+            Spacer(GlanceModifier.height(if (roomy) 12.dp else 8.dp))
+            if (book.pageCount > 0) {
+                val page = "%,d".format((book.lastPage ?: 0) + 1)
+                val where = context.getString(
+                    R.string.widget_continue_where,
+                    page,
+                    "%,d".format(book.pageCount),
+                    (book.progress * PERCENT).roundToInt()
+                )
+                ArtImage(
+                    art.text(where, WidgetArt.Face.UI, 13f, textWidth, weight = WidgetArt.MEDIUM),
+                    colors.ink2,
+                    where
+                )
+                Spacer(GlanceModifier.height(6.dp))
+            }
+            ProgressLine(book.progress, textWidth, colors)
+        }
     }
 }
 
 @Composable
 internal fun Empty(text: String, colors: WidgetColors) {
-    Text(text, style = TextStyle(color = colors.ink2, fontSize = 13.sp))
+    Text(text, style = TextStyle(color = colors.ink2, fontSize = 14.sp))
 }
+
+private val GAP = 14.dp
+private val ROOMY = 150.dp
+private const val PERCENT = 100

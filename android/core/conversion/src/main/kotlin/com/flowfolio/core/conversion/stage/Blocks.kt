@@ -49,6 +49,42 @@ class Blocks(styles: List<Style>) {
     private var pitch: Map<Float, Float> = emptyMap()
     private var leftEdge = 0f
 
+    /** How many pages the book has, so [Registers] can tell its front and back matter. */
+    var pageCount = 0
+
+    /** A register page ([Registers]): runs of entries as plain lists, between its headings and pictures. */
+    private fun registerBlocks(page: Page, items: List<Item>, kind: Registers.Kind): List<Block> {
+        val out = ArrayList<Block>()
+        val run = ArrayList<Line>()
+        fun flush() {
+            Registers.list(page, run.toList(), kind)?.let { out += it }
+            run.clear()
+        }
+        for (item in items) {
+            when (item) {
+                is Item.Area -> {
+                    flush()
+                    out += regionBlock(page, item.region)
+                }
+
+                is Item.Text -> {
+                    val line = item.line
+                    // The page's title ("Table of Contents", "Index") and an index's letter heads stand alone.
+                    val heading = (byKey[line.style]?.role == Role.HEADING && !Registers.hasLeaders(line)) ||
+                        LETTER_HEAD.matches(line.text.trim())
+                    if (heading) {
+                        flush()
+                        out += textBlocks(page, listOf(line))
+                    } else {
+                        run += line
+                    }
+                }
+            }
+        }
+        flush()
+        return out
+    }
+
     fun of(page: Page, items: List<Item>): List<Block> {
         val out = ArrayList<Block>()
         val run = ArrayList<Line>()
@@ -64,6 +100,9 @@ class Blocks(styles: List<Style>) {
             if (run.isNotEmpty()) out += textBlocks(page, run.toList())
             run.clear()
         }
+        // A contents or index page: one entry per item, headings and pictures kept as they are (2026-11-12).
+        val register = Registers.kindOf(page, items.filterIsInstance<Item.Text>().map { it.line }, pageCount)
+        if (register != null) return registerBlocks(page, items, register)
         for (item in withMarkersJoined(withTables(page, items))) {
             when (item) {
                 is Item.Area -> {
@@ -904,6 +943,7 @@ class Blocks(styles: List<Style>) {
         private val SENTENCE_END = Regex("[.!?:][\"'”’)]?$")
         private const val INDENT_EMS = 0.8f
         private const val MATH_SHARE = 0.5f
+        private val LETTER_HEAD = Regex("[A-Z]")
         private const val EQUATION_PAD = 3f
 
         /** A wider gap than this many line heights ends a code listing; blank lines inside one are smaller. */

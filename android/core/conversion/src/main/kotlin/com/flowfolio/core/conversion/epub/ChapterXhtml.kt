@@ -19,6 +19,7 @@ import com.flowfolio.core.conversion.ir.SUP_CLOSE
 import com.flowfolio.core.conversion.ir.SUP_OPEN
 import com.flowfolio.core.conversion.ir.plain
 import com.flowfolio.core.conversion.stage.Blocks
+import com.flowfolio.core.conversion.stage.Registers
 
 /**
  * One chapter as XHTML (`docs/conversion-spec.md` section 2): every block carries its id and `data-ff-page`; a page
@@ -172,13 +173,16 @@ internal class ChapterXhtml(
             if (level >= open.size) {
                 val tag = if (item.ordered) "ol" else "ul"
                 val first = if (open.isEmpty()) " ${attrs(b)}" else ""
-                sb.append("<$tag$first${if (item.ordered) numbering(item.marker) else ""}>")
+                // A contents or index list (Registers) has no markers at all.
+                val bare = if (item.marker == Registers.PLAIN) " style=\"list-style-type: none\"" else ""
+                sb.append("<$tag$first$bare${if (item.ordered) numbering(item.marker) else ""}>")
                 open += tag
             } else {
                 sb.append("</li>")
                 while (open.size > level + 1) sb.append("</${open.removeAt(open.lastIndex)}></li>")
             }
-            sb.append(if (item.ordered || item.marker in PLAIN_BULLETS) "<li>" else ownMarker(item.marker))
+            val plain = item.ordered || item.marker in PLAIN_BULLETS || item.marker == Registers.PLAIN
+            sb.append(if (plain) "<li>" else ownMarker(item.marker))
                 .append(rich.text(item.text))
         }
         sb.append("</li>")

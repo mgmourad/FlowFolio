@@ -38,7 +38,8 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
     /** The marker of a list item just opened, for the item's first block of text (its own, or a `<p>` inside it). */
     private var pendingMarker: String? = null
 
-    private class ListFrame(val ordered: Boolean, val type: String, var next: Int)
+    /** [plain]: `list-style-type: none`, a list whose items carry no marker (a book's contents or index). */
+    private class ListFrame(val ordered: Boolean, val type: String, var next: Int, val plain: Boolean = false)
     private var skipDepth = 0
     private var depth = 0
     private var pre = 0
@@ -209,7 +210,8 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
         if (name == "ul" || name == "ol") {
             val type = p.getAttributeValue(null, "type").orEmpty()
             val start = p.getAttributeValue(null, "start")?.trim()?.toIntOrNull() ?: 1
-            listFrames += ListFrame(name == "ol", type, start)
+            val plain = p.getAttributeValue(null, "style")?.let { NO_MARKER.containsMatchIn(it) } == true
+            listFrames += ListFrame(name == "ol", type, start, plain)
         }
         indent += indentOf(name)
         style = TextStyle(indentEm = indent)
@@ -335,7 +337,7 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
     private fun nextMarker(): String? {
         val frame = listFrames.lastOrNull()
         return when {
-            frame == null -> null
+            frame == null || frame.plain -> null
             !frame.ordered -> BULLETS[(listFrames.count { !it.ordered } - 1).coerceAtLeast(0) % BULLETS.size]
             else -> numbered(frame.next++, frame.type) + "."
         }
@@ -398,6 +400,7 @@ class ChapterParser(private val path: String, private val nextIslandId: () -> In
         const val CODE_SPACE_EM = 0.9f
         const val ITEM_SPACE_AFTER_EM = 0.3f
         val BULLETS = listOf("•", "◦", "▪")
+        private val NO_MARKER = Regex("list-style-type\\s*:\\s*none")
         private val OWN_MARKER = Regex("list-style-type\\s*:\\s*['\"]([^'\"]*)['\"]")
 
         /** 1 is A, 26 Z, 27 AA (as lists count past z). */

@@ -183,7 +183,7 @@ class Converter(private val settings: Settings = Settings()) {
     }
 
     private fun layOut(doc: Document, progress: (Progress) -> Unit) {
-        val blocks = Blocks(doc.styles)
+        val blocks = Blocks(doc.styles).also { it.pageCount = doc.pages.size }
         // Chapter titles: lines in the book's chapter-title style, or pieces of a chapter's outline title on its page.
         val titleStyles = doc.styles.filter { it.role == Role.HEADING && it.level == 1 }.map { it.key }.toSet()
         val codeStyles = doc.styles.filter { it.role == Role.CODE }.map { it.key }.toSet()

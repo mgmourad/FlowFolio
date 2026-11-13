@@ -26,6 +26,7 @@ import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
 import androidx.glance.layout.width
@@ -34,6 +35,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import com.flowfolio.R
+import com.flowfolio.core.designsystem.Glyph
 import com.flowfolio.core.model.GoalPeriod
 import com.flowfolio.core.model.ReadingGoal
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -81,42 +83,64 @@ class ReadingGoalReceiver : GlanceAppWidgetReceiver() {
 private fun GoalContent(today: GoalToday, colors: WidgetColors) {
     val context = LocalContext.current
     val size = LocalSize.current
-    val wide = size.width >= ReadingGoalWidget.MEDIUM.width
-    // The ring fills the height (medium) or the square left over by the streak line (small), less the padding.
-    val ring = if (wide) size.height - 32.dp else minOf(size.width - 32.dp, size.height - 52.dp)
-    Box(
-        GlanceModifier.fillMaxSize().cornerRadius(24.dp).background(colors.background)
-            .clickable(actionStartActivity(openAppIntent(context))).padding(12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        if (wide) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Ring(today, colors, ring)
-                Spacer(GlanceModifier.width(14.dp))
-                Column(GlanceModifier.defaultWeight()) {
-                    Text(
-                        context.getString(R.string.widget_goal_label),
-                        style = TextStyle(color = colors.accent, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+    val art = WidgetArt(context)
+    val inner = DpSize(size.width - CARD_PADDING * 2, size.height - CARD_PADDING * 2)
+    WidgetCard(colors, actionStartActivity(openAppIntent(context))) {
+        if (size.width >= ReadingGoalWidget.MEDIUM.width) {
+            val ring = inner.height
+            val textWidth = inner.width - ring - GAP
+            Row(GlanceModifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                Ring(today, colors, art, ring)
+                Spacer(GlanceModifier.width(GAP))
+                Column(GlanceModifier.width(textWidth)) {
+                    ArtImage(
+                        art.text(
+                            context.getString(R.string.widget_goal_label).uppercase(),
+                            WidgetArt.Face.UI,
+                            11.5f,
+                            textWidth,
+                            weight = WidgetArt.BOLD,
+                            tracking = 0.12f
+                        ),
+                        colors.accent
                     )
-                    Text(
-                        context.getString(periodText(today.goal.period), today.readMinutes, today.goal.targetMinutes),
-                        style = TextStyle(color = colors.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Spacer(GlanceModifier.height(4.dp))
+                    val line = context.getString(
+                        periodText(today.goal.period),
+                        today.readMinutes,
+                        today.goal.targetMinutes
                     )
-                    Streak(today.streak, colors)
+                    ArtImage(
+                        art.text(
+                            line,
+                            WidgetArt.Face.DISPLAY,
+                            21f,
+                            textWidth,
+                            maxLines = 2,
+                            weight = WidgetArt.SEMIBOLD
+                        ),
+                        colors.ink,
+                        line
+                    )
+                    Spacer(GlanceModifier.height(6.dp))
+                    Streak(today.streak, colors, art, textWidth)
                 }
             }
         } else {
+            val ring = minOf(inner.width, inner.height - STREAK_ROOM)
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Ring(today, colors, ring)
-                Streak(today.streak, colors)
+                Ring(today, colors, art, ring)
+                Spacer(GlanceModifier.height(6.dp))
+                Streak(today.streak, colors, art, inner.width)
             }
         }
     }
 }
 
-/** The track, the progress over it, and the minutes read in the middle. */
+/** The track, the progress over it, faint reading glasses behind, and the minutes read in Fraunces in the middle. */
 @Composable
-private fun Ring(today: GoalToday, colors: WidgetColors, ring: Dp) {
+private fun Ring(today: GoalToday, colors: WidgetColors, art: WidgetArt, ring: Dp) {
+    val context = LocalContext.current
     Box(GlanceModifier.size(ring), contentAlignment = Alignment.Center) {
         Image(
             ImageProvider(ringBitmap(1f)),
@@ -130,33 +154,35 @@ private fun Ring(today: GoalToday, colors: WidgetColors, ring: Dp) {
             colorFilter = ColorFilter.tint(colors.accent),
             modifier = GlanceModifier.fillMaxSize()
         )
+        ArtImage(art.glyph(Glyph.Glasses, ring * GLASSES_SHARE, strokeBoost = 0.8f), colors.faint)
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                if (today.progress >= 1f) "✓" else "${today.readMinutes}",
-                style = TextStyle(
-                    color = colors.ink,
-                    fontSize = (ring.value / 4).sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
+            val number = if (today.progress >= 1f) "✓" else "${today.readMinutes}"
+            ArtImage(
+                art.text(
+                    number,
+                    WidgetArt.Face.DISPLAY,
+                    ring.value * NUMBER_SHARE,
+                    ring * 0.7f,
+                    weight = WidgetArt.SEMIBOLD
+                ),
+                colors.ink,
+                number
             )
-            Text(
-                LocalContext.current.getString(R.string.widget_goal_of, today.goal.targetMinutes),
-                style = TextStyle(color = colors.ink3, fontSize = (ring.value / 11).sp, textAlign = TextAlign.Center)
-            )
+            val of = context.getString(R.string.widget_goal_of, today.goal.targetMinutes)
+            ArtImage(art.text(of, WidgetArt.Face.UI, ring.value * 0.085f, ring * 0.7f), colors.ink3, of)
         }
     }
 }
 
 @Composable
-private fun Streak(days: Int, colors: WidgetColors) {
+private fun Streak(days: Int, colors: WidgetColors, art: WidgetArt, width: Dp) {
     val resources = LocalContext.current.resources
     val text = if (days > 0) {
         resources.getQuantityString(R.plurals.widget_goal_streak, days, days)
     } else {
         resources.getString(R.string.widget_goal_no_streak)
     }
-    Text(text, maxLines = 1, style = TextStyle(color = colors.ink2, fontSize = 12.sp))
+    ArtImage(art.text(text, WidgetArt.Face.UI, 13.5f, width, weight = WidgetArt.MEDIUM), colors.ink2, text)
 }
 
 private fun periodText(period: GoalPeriod): Int = when (period) {
@@ -166,3 +192,7 @@ private fun periodText(period: GoalPeriod): Int = when (period) {
 }
 
 private const val MINUTE_MS = 60_000L
+private val GAP = 16.dp
+private val STREAK_ROOM = 26.dp
+private const val GLASSES_SHARE = 0.72f
+private const val NUMBER_SHARE = 0.32f

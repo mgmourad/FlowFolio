@@ -304,3 +304,10 @@ fun FlowFolioGlyph(
 }
 
 private const val GRID = 24f
+
+/** The glyph as an Android [android.graphics.Path] in its 24-unit box, for drawing outside Compose (the widgets). */
+fun Glyph.androidPath(): android.graphics.Path = androidx.core.graphics.PathParser.createPathFromPathData(pathData)
+
+/** The glyph's stroke width in its 24-unit box, and whether it is filled rather than stroked. */
+val Glyph.strokeUnits: Float get() = stroke
+val Glyph.isFilled: Boolean get() = filled

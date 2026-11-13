@@ -5,12 +5,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [0.7.0-beta.6] - 2026-11-13
+
 ### For readers
+- **Contents and indexes read properly in Dynamic Flow.** A book's table of contents becomes a clean list ("DNA
+  Replication · 50"), the leader dots gone and its sections indented; an index keeps one entry per line, its
+  sub-entries nested under their headword, its columns read top to bottom. Checked on *Color Atlas of Genetics*,
+  Pro Git and four OpenStax textbooks.
+- **Widgets that look like the app.** Continue reading is the library's own card: the 3D book, the title in
+  Fraunces, the author, the page and a progress line. Narrator has the 3D book and a music player's bold controls.
+  Reading goal shows the minutes in Fraunces over faint reading glasses. Less empty space, bigger type.
 - **Home-screen widgets work in the released app.** They stayed on "Loading" in 0.7.0-beta.5: the release build's
   shrinker removed a constructor the widget engine needs.
 - **Two-column textbooks read properly in Dynamic Flow.** Books that set their fonts at size 1, such as Thieme's
   *Color Atlas of Genetics*, came out one word per line; their paragraphs now reflow whole, and the coloured tabs on
   the page edge no longer land mid-sentence.
+
+### Contents, indexes and widgets
+- `Registers` (`:core:conversion`): contents pages (leader dots, front of the book) and index pages (word + page
+  numbers, back of the book, narrow columns) become plain lists (`list-style-type: none`, read by `ChapterParser`),
+  with wrapped titles, wrapped page numbers and link boxes handled. Engine 1.6.0, so bundles rebuild on next open.
+- `WidgetArt` draws the widgets' book (as `BookCover`), their words in Fraunces and Instrument Sans, and bold player
+  controls as tinted bitmaps; `WidgetParts` holds the shared card, image and progress line.
 
 ### Fixes
 - R8 keep rules for WorkManager's input mergers and workers and for the widget receivers (`proguard-rules.pro`).

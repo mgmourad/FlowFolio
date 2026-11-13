@@ -47,6 +47,7 @@
     <string name="widget_continue_description">The book you are reading, where you left it</string>
     <string name="widget_continue_label">Continue reading</string>
     <string name="widget_continue_empty">Open a book in FlowFolio and it waits here</string>
+    <string name="widget_continue_where">Page %1$s of %2$s · %3$d%%</string>
     <string name="widget_continue_page">p. %1$s of %2$s</string>
     <string name="widget_goal_name">Reading goal</string>
     <string name="widget_goal_description">Today\'s reading against your goal, and your streak</string>
