@@ -111,9 +111,12 @@ internal class Annotating(
     /** The transient highlight marking the search hit the reader last jumped to (Phase 6 M1); null when idle. */
     var search by mutableStateOf<Annotation?>(null)
 
-    /** Highlights by page, recomputed only when [all], [extra] or [search] change. */
+    /** What the narrator is reading, on its page (ADR-0059): the sentence, and the word being said. */
+    var spoken by mutableStateOf<List<Annotation>>(emptyList())
+
+    /** Highlights by page, recomputed only when [all], [extra], [search] or [spoken] change. */
     val byPage: Map<Int, List<Annotation>> by derivedStateOf {
-        (all + extra + listOfNotNull(search)).groupBy { it.page }
+        (all + extra + listOfNotNull(search) + spoken).groupBy { it.page }
     }
 
     /** Where the magnifier looks (the finger while selecting or moving a handle); unspecified hides it. */
@@ -160,7 +163,8 @@ internal class Annotating(
     /** A tap on a highlight opens its menu (and is not a page turn). */
     fun tap(point: Offset, area: IntSize): Boolean {
         val hit = frames(area).firstNotNullOfOrNull { f ->
-            byPage[f.page]?.firstOrNull { a -> a.rects.any { it.on(f).contains(point) } }
+            // The search hit and the narrator's marks (negative ids) are not the reader's highlights: no menu.
+            byPage[f.page]?.firstOrNull { a -> a.id >= 0 && a.rects.any { it.on(f).contains(point) } }
         } ?: return false
         pick.clear()
         pick.editing = hit
@@ -260,8 +264,10 @@ internal fun rememberAnnotating(
     val all by vm.all.collectAsStateWithLifecycle()
     val book by vm.book.collectAsStateWithLifecycle()
     val search by viewModel.searchHighlight.collectAsStateWithLifecycle()
+    val spoken by viewModel.spokenHighlight.collectAsStateWithLifecycle()
     annotating.frames = frames
     annotating.search = search
+    annotating.spoken = spoken
     if (s.reflowable) PlaceHighlights(annotating, all, s, viewModel, vm) else annotating.all = all
     annotating.title = book?.title ?: s.title
     annotating.author = book?.author

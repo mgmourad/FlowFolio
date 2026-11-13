@@ -1,8 +1,8 @@
 package com.flowfolio.core.voice
 
 /**
- * One ONNX model on the runtime sherpa-onnx ships, through FlowFolio's own C API bridge (`src/main/cpp`, ADR-0054).
- * Used for OCR; Narrator Mode keeps going through sherpa-onnx. Not thread-safe: one caller at a time.
+ * One ONNX model on Microsoft's ONNX Runtime (ADR-0059), through FlowFolio's own C API bridge (`src/main/cpp`,
+ * ADR-0054). Used for OCR. Not thread-safe: one caller at a time.
  */
 class OrtBridge(path: String, threads: Int) : AutoCloseable {
     private var handle: Long = nativeCreate(path, threads)

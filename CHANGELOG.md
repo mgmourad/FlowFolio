@@ -5,6 +5,32 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [0.7.0-beta.7] - 2026-11-13
+
+### For readers
+- **Narrator Mode reads with Google's voices, the same ones ReadEra uses.** It starts the moment you press Read
+  aloud, with nothing to download. It reads numbers, acronyms, "live" and "US" from the sentence they are in, and it
+  pauses only where a reader would. Choose any voice in your phone's languages, online or on the phone. If an online
+  voice loses its connection, it carries on in the matching offline voice. "More voices" opens the phone's speech
+  settings.
+- **Follow along as it reads.** The sentence being read is highlighted on the page, and the word being said is marked
+  in a stronger colour, in both the PDF view and Dynamic Flow. The highlight moves with the voice and turns the page
+  with it.
+- **A smaller app.** The Full edition is about 117 MB smaller, now that it carries no voices. Voices downloaded by an
+  earlier version are deleted, which frees up to 400 MB.
+- **The Reading goal widget's glasses are a faint watermark** behind the minutes, as intended. They were drawn almost
+  solid.
+
+### Narrator on the phone's speech engine (ADR-0059)
+- `Narrator` drives Android's `TextToSpeech` (Google's engine where installed), one utterance per sentence, the next
+  page queued behind. `onRangeStart` gives the word being spoken, and `SpokenPlaces` matches it to the page text for
+  the highlight. `NarratorVoices` names the engine's voices for the picker, and `UserSettings.narratorVoice` keeps the
+  choice.
+- `SpeechText` no longer cuts at commas, semicolons or colons, or spells out numbers.
+- sherpa-onnx, Kokoro, Piper, the voice packs, `SpeechWords`, `SpeechNumbers`, `FlowFolioLexicon` and Commons
+  Compress are removed.
+- OCR's ONNX Runtime now comes from Microsoft's `onnxruntime-android` 1.28.0 AAR (`OnnxRuntimeConventionPlugin`).
+
 ## [0.7.0-beta.6] - 2026-11-13
 
 ### For readers

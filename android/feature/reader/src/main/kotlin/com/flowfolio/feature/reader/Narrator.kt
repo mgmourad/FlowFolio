@@ -1,66 +1,52 @@
 package com.flowfolio.feature.reader
 
+import android.content.Context
+import android.content.Intent
 import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
 import android.os.Handler
 import android.os.Looper
-import android.os.SystemClock
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Log
-import com.flowfolio.core.voice.PcmAudio
 import com.flowfolio.core.voice.SpeechSegment
-import com.flowfolio.core.voice.VoiceEngine
-import com.flowfolio.core.voice.VoiceSpeakers
-import java.util.concurrent.ArrayBlockingQueue
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
-
-private data class PageBatch(val page: Int, val segments: List<SpeechSegment>)
-
-private class QueuedChunk(
-    val page: Int = 0,
-    val index: Int,
-    val pcm: ShortArray,
-    val flushBeforePlay: Boolean = false,
-    val endOfStream: Boolean = false
-)
+import kotlinx.coroutines.CompletableDeferred
 
 /**
- * Narrator Mode's neural voice (Phase 6 M3): Kokoro or Piper via sherpa-onnx.
+ * Narrator Mode's voice (ADR-0059): the phone's own speech engine, Google's where it is installed, as ReadEra uses it.
+ * It starts at once (nothing to download), reads numbers, acronyms and words spelled alike but said differently from
+ * the sentence around them, and offers its online voices and its offline ones.
  *
- * [speak] decouples ONNX synthesis from [AudioTrack] playback using a single-thread synthesis executor
- * and a bounded producer-consumer queue: the synthesis worker stays 1–3 sentences ahead (including across
- * page boundaries via [setNextPage]) while the playback thread feeds [AudioTrack] continuously, eliminating
- * inter-sentence and cross-page pauses.
+ * A page is queued sentence by sentence, each sentence one utterance, so the engine says each as a whole. The
+ * reader learns which sentence is under way ([speak]'s `onSegment`) and which word within it (`onWord`, from the
+ * engine's word ranges), which is how the spoken text is highlighted on the page. The next page is queued behind the
+ * current one ([setNextPage]), so a page turn leaves no gap.
  */
-internal class Narrator(private var engine: VoiceEngine, @Volatile var modelKey: String? = null) {
-    private val synthExecutor = Executors.newSingleThreadExecutor { r ->
-        Thread(r, "FlowFolio-Narrator-Synth").apply { isDaemon = true }
+internal class Narrator(context: Context) {
+    private val ready = CompletableDeferred<Boolean>()
+    private val engine: String? = preferredEngine(context)
+    private val tts = TextToSpeech(context.applicationContext, { status ->
+        ready.complete(status == TextToSpeech.SUCCESS)
+    }, engine)
+
+    /** Each page's sentences as queued, for starting again from the sentence under way. */
+    private val pages = ConcurrentHashMap<Int, List<SpeechSegment>>()
+
+    private class Run(
+        val id: Int,
+        val onSegment: (Int, Int) -> Unit,
+        val onWord: (Int, Int, Int, Int) -> Unit,
+        val onPageAdvance: (Int) -> Unit,
+        val done: (Int) -> Unit
+    ) {
+        /** The pages queued, in order, and the id of the last utterance queued (the run ends when it does). */
+        val queued = ArrayList<Int>()
+        var lastId: String? = null
     }
 
-    private val pageBatches = ConcurrentHashMap<Int, List<SpeechSegment>>()
-
     @Volatile
-    private var nextBatch: PageBatch? = null
-
-    @Volatile
-    private var sampleRate: Int = engine.sampleRate
-
-    @Volatile
-    private var speakerId: Int = VoiceSpeakers.defaults.first().id
-
-    @Volatile
-    private var rate: Float = 1f
-
-    @Volatile
-    private var generation = 0
-
-    @Volatile
-    private var synthRevision = 0
-
-    @Volatile
-    private var flushRequested = false
+    private var run: Run? = null
+    private var runs = 0
 
     @Volatile
     private var playingPage = 0
@@ -68,349 +54,224 @@ internal class Narrator(private var engine: VoiceEngine, @Volatile var modelKey:
     @Volatile
     private var playingIndex = 0
 
-    @Volatile
-    private var activeQueue: ArrayBlockingQueue<QueuedChunk>? = null
+    private var rate = 1f
+    private var voiceName: String? = null
 
-    @Volatile
-    private var track: AudioTrack? = null
+    /** Waits for the engine; false when the phone has none that works. */
+    suspend fun awaitReady(): Boolean {
+        val ok = ready.await()
+        if (ok) {
+            tts.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build()
+            )
+            tts.setOnUtteranceProgressListener(listener)
+        }
+        return ok
+    }
 
-    @Volatile
-    private var audioWorker: Thread? = null
+    /** The voices this engine has installed or can stream, for the voice picker. */
+    fun voices(): List<android.speech.tts.Voice> = runCatching {
+        tts.voices.orEmpty().filterNot { TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED in it.features }
+    }.getOrDefault(emptyList())
+
+    /** The engine's own choice, for when the reader has made none. */
+    fun defaultVoice(): String? = runCatching { tts.defaultVoice?.name ?: tts.voice?.name }.getOrNull()
 
     fun setRate(value: Float) {
         rate = value
+        tts.setSpeechRate(value)
     }
 
-    fun setVoice(name: String) {
-        VoiceSpeakers.voiceOf(name)?.let { speakerId = it.id }
+    /** Uses the voice named [name]; an unknown name leaves the engine's default. */
+    fun setVoice(name: String?) {
+        voiceName = name
+        val voice = voices().firstOrNull { it.name == name } ?: return
+        tts.voice = voice
     }
 
-    /**
-     * Supplies the next page's segments ahead of time so the synthesis worker can pre-generate the opening
-     * sentence of [page] before the current page finishes playing, bridging mid-sentence page breaks with zero gap.
-     */
-    fun setNextPage(page: Int?, segments: List<SpeechSegment> = emptyList()) {
-        if (page == null || segments.isEmpty()) {
-            nextBatch = null
-        } else {
-            pageBatches[page] = segments
-            nextBatch = PageBatch(page, segments)
-        }
-    }
-
-    /**
-     * Triggers an in-place re-synthesis from the currently playing phrase when speed or Kokoro speaker changes
-     * mid-narration: existing audio continues until the first phrase at the new speed/voice is ready (~300 ms),
-     * then flushes and switches seamlessly without dead air or lock contention.
-     */
-    fun refreshConfig() {
-        synthRevision++
-        activeQueue?.clear()
-    }
-
-    /** Swaps in a freshly loaded engine (Kokoro or a Piper voice), keeping the speed; the reader is paused first. */
-    fun swapEngine(newEngine: VoiceEngine, newSpeakerId: Int, newModelKey: String?) {
+    /** Says [text] once in the current voice, for trying a voice out. */
+    fun preview(text: String) {
         stop()
-        speakerId = newSpeakerId
-        modelKey = newModelKey
-        sampleRate = newEngine.sampleRate
-        synthExecutor.execute {
-            runCatching { engine.release() }
-            engine = newEngine
-        }
+        tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, PREVIEW_ID)
     }
 
-    @Suppress("TooGenericExceptionCaught", "LongParameterList")
+    /**
+     * Reads [segments] of [page] from [startIndex]. [onSegment] and [onWord] follow the voice (the page, the
+     * sentence's index, and for a word its start and end in that sentence's text), [onPageAdvance] tells when it
+     * moves on to a page queued by [setNextPage], and [done] when everything queued has been said.
+     */
+    @Suppress("LongParameterList")
     fun speak(
-        page: Int = 0,
+        page: Int,
         segments: List<SpeechSegment>,
         startIndex: Int = 0,
-        onSegment: (Int, Int) -> Unit = { _, _ -> },
-        onPageAdvance: (Int) -> Unit = {},
+        onSegment: (Int, Int) -> Unit,
+        onWord: (Int, Int, Int, Int) -> Unit,
+        onPageAdvance: (Int) -> Unit,
         done: (Int) -> Unit
     ) {
-        val gen = ++generation
-        stopTrack()
-        pageBatches.clear()
-        pageBatches[page] = segments
-        nextBatch = null
-        val firstIndex = startIndex.coerceIn(0, (segments.size - 1).coerceAtLeast(0))
+        tts.stop()
+        pages.clear()
+        pages[page] = segments
         playingPage = page
-        playingIndex = firstIndex
-        flushRequested = false
-        val queue = ArrayBlockingQueue<QueuedChunk>(QUEUE_CAPACITY)
-        activeQueue = queue
-        synthExecutor.execute {
-            produceSegments(page, segments, firstIndex, queue, gen)
-        }
-        val consumer = Thread({
-            val rateHz = sampleRate
-            val t = createAudioTrack(rateHz)
-            track = t
-            try {
-                if (gen == generation) {
-                    t.play()
-                    consumeAudioQueue(t, rateHz, page, queue, onSegment, onPageAdvance, gen)
-                }
-            } catch (_: InterruptedException) {
-                // Interrupted by stop() or a new speak() call.
-            } catch (err: Throwable) {
-                Log.e(TAG, "narrator playback failed", err)
-            } finally {
-                runCatching { t.stop() }
-                t.release()
-                if (track === t) track = null
-                if (gen == generation) {
-                    generation++
-                    val finishedPage = playingPage
-                    mainHandler.post { done(finishedPage) }
-                }
-            }
-        }, "FlowFolio-Narrator-Audio")
-        audioWorker = consumer
-        consumer.start()
+        playingIndex = startIndex.coerceIn(0, (segments.size - 1).coerceAtLeast(0))
+        val r = Run(++runs, onSegment, onWord, onPageAdvance, done)
+        run = r
+        tts.setSpeechRate(rate)
+        enqueue(r, page, segments, playingIndex)
     }
+
+    /**
+     * Queues [page]'s [segments] behind the page being read, so the voice runs straight on; null takes back a page
+     * queued earlier (continuous reading turned off).
+     */
+    @Suppress("ReturnCount")
+    fun setNextPage(page: Int?, segments: List<SpeechSegment> = emptyList()) {
+        val r = run ?: return
+        if (page == null || segments.isEmpty()) {
+            if (r.queued.size > 1) restartHere(keepNext = false)
+            return
+        }
+        if (page in r.queued) return
+        pages[page] = segments
+        enqueue(r, page, segments, 0)
+    }
+
+    /** Says again from the sentence under way, after the speed or the voice changed. */
+    fun refreshConfig() = restartHere(keepNext = true)
 
     fun stop() {
-        generation++
-        nextBatch = null
-        stopTrack()
-    }
-
-    private fun stopTrack() {
-        activeQueue?.clear()
-        val currentTrack = track
-        runCatching { currentTrack?.pause() }
-        runCatching { currentTrack?.flush() }
-        runCatching { currentTrack?.stop() }
-        audioWorker?.interrupt()
+        run = null
+        tts.stop()
     }
 
     fun release() {
         stop()
-        synthExecutor.execute {
-            runCatching { engine.release() }
-        }
-        synthExecutor.shutdown()
+        tts.shutdown()
     }
 
-    @Suppress("TooGenericExceptionCaught")
-    private fun produceSegments(
-        initialPage: Int,
-        initialSegments: List<SpeechSegment>,
-        startIndex: Int,
-        queue: ArrayBlockingQueue<QueuedChunk>,
-        gen: Int
-    ) {
-        try {
-            var rev = synthRevision
-            var curPage = initialPage
-            var curSegments = initialSegments
-            var i = startIndex
-            var replacing = false
-            var sentEos = false
-            while (gen == generation) {
-                val upcoming = nextBatch?.takeIf { it.page != curPage && it.segments.isNotEmpty() }
-                when {
-                    rev != synthRevision -> {
-                        rev = synthRevision
-                        curPage = playingPage
-                        curSegments = pageBatches[curPage] ?: curSegments
-                        i = playingIndex.coerceIn(0, (curSegments.size - 1).coerceAtLeast(0))
-                        replacing = true
-                        sentEos = false
-                        queue.clear()
-                    }
-
-                    i < curSegments.size -> {
-                        synthesizeAndOffer(curPage, curSegments[i], i, replacing, gen, rev)
-                        replacing = false
-                        i++
-                    }
-
-                    upcoming != null -> {
-                        nextBatch = null
-                        curPage = upcoming.page
-                        curSegments = upcoming.segments
-                        i = 0
-                        sentEos = false
-                    }
-
-                    !sentEos -> {
-                        enqueueChunk(QueuedChunk(index = -1, pcm = ShortArray(0), endOfStream = true), gen, rev)
-                        sentEos = true
-                    }
-
-                    else -> Thread.sleep(QUEUE_POLL_MS)
-                }
-            }
-        } catch (_: InterruptedException) {
-            // Interrupted by stop() or a new speak() call.
-        } catch (t: Throwable) {
-            Log.e(TAG, "narrator synthesis failed", t)
-        }
+    private fun restartHere(keepNext: Boolean) {
+        val r = run ?: return
+        val page = playingPage
+        val segments = pages[page] ?: return
+        val next = r.queued.dropWhile { it != page }.drop(1).firstOrNull()?.takeIf { keepNext }
+        val nextSegments = next?.let { pages[it] }
+        speak(page, segments, playingIndex, r.onSegment, r.onWord, r.onPageAdvance, r.done)
+        if (next != null && nextSegments != null) setNextPage(next, nextSegments)
     }
 
-    @Suppress("LongParameterList")
-    private fun synthesizeAndOffer(
-        page: Int,
-        segment: SpeechSegment,
-        index: Int,
-        flushBeforePlay: Boolean,
-        gen: Int,
-        rev: Int
-    ) {
-        if (gen != generation || rev != synthRevision) return
-        val audio = engine.generate(segment.text, speakerId, rate)
-        sampleRate = audio.sampleRate
-        val pcm = PcmAudio.toTrimmedPcm16(audio.samples, audio.sampleRate, segment.pauseMs)
-        if (gen == generation && rev == synthRevision && pcm.isNotEmpty()) {
-            if (flushBeforePlay) {
-                activeQueue?.clear()
-                flushRequested = true
-            }
-            val chunk = QueuedChunk(page = page, index = index, pcm = pcm, flushBeforePlay = flushBeforePlay)
-            enqueueChunk(chunk, gen, rev)
-        }
-    }
-
-    private fun enqueueChunk(chunk: QueuedChunk, gen: Int, rev: Int) {
-        val queue = activeQueue ?: return
-        while (gen == generation && rev == synthRevision) {
-            if (queue.offer(chunk, QUEUE_POLL_MS, TimeUnit.MILLISECONDS)) return
-        }
-    }
-
-    @Suppress("LongParameterList")
-    private fun consumeAudioQueue(
-        t: AudioTrack,
-        rateHz: Int,
-        initialPage: Int,
-        queue: ArrayBlockingQueue<QueuedChunk>,
-        onSegment: (Int, Int) -> Unit,
-        onPageAdvance: (Int) -> Unit,
-        gen: Int
-    ) {
-        var writtenFrames = 0L
-        var activePage = initialPage
-        var eos = false
-        while (isActive(gen, generation) && !eos) {
-            val chunk = queue.poll(QUEUE_POLL_MS, TimeUnit.MILLISECONDS)
-            if (chunk != null && chunk.endOfStream) {
-                drainTrack(t, writtenFrames, rateHz, gen)
-                if (flushRequested) {
-                    flushRequested = false
-                    writtenFrames = flushAndRestartTrack(t)
-                } else {
-                    eos = true
-                }
-            } else if (chunk != null) {
-                if (chunk.flushBeforePlay || flushRequested) {
-                    flushRequested = false
-                    writtenFrames = flushAndRestartTrack(t)
-                }
-                if (chunk.page != activePage) {
-                    activePage = chunk.page
-                    val newPage = chunk.page
-                    mainHandler.post { onPageAdvance(newPage) }
-                }
-                playingPage = chunk.page
-                playingIndex = chunk.index
-                onSegment(chunk.page, chunk.index)
-                writtenFrames += writeChunkSlices(t, chunk.pcm, gen)
+    private fun enqueue(r: Run, page: Int, segments: List<SpeechSegment>, from: Int) {
+        r.queued += page
+        for (i in from until segments.size) {
+            val id = "${r.id}:$page:$i"
+            tts.speak(segments[i].text, TextToSpeech.QUEUE_ADD, null, id)
+            r.lastId = id
+            val pause = segments[i].pauseMs
+            if (pause > 0) {
+                val silence = "$id:$SILENCE"
+                tts.playSilentUtterance(pause.toLong(), TextToSpeech.QUEUE_ADD, silence)
+                r.lastId = silence
             }
         }
     }
 
-    private fun writeChunkSlices(t: AudioTrack, pcm: ShortArray, gen: Int): Long {
-        var offset = 0
-        var writtenTotal = 0L
-        while (offset < pcm.size && isActive(gen, generation) && !flushRequested) {
-            val count = (pcm.size - offset).coerceAtMost(WRITE_SLICE_SAMPLES)
-            val written = t.write(pcm, offset, count, AudioTrack.WRITE_BLOCKING)
-            if (written <= 0) break
-            offset += written
-            writtenTotal += written
-        }
-        return writtenTotal
+    /** The run, page and sentence an utterance id names, for the current run only. */
+    @Suppress("ReturnCount") // each check is one way an id is not this run's
+    private fun place(id: String?): Triple<Run, Int, Int>? {
+        val parts = id?.split(':') ?: return null
+        val r = run ?: return null
+        if (parts.size < PLACE_PARTS || parts[0].toIntOrNull() != r.id) return null
+        val page = parts[1].toIntOrNull() ?: return null
+        val index = parts[2].toIntOrNull() ?: return null
+        return Triple(r, page, index)
     }
 
-    private fun drainTrack(t: AudioTrack, writtenFrames: Long, rateHz: Int, gen: Int) {
-        if (writtenFrames <= 0L) return
-        val playedAtStart = playedFrames(t)
-        val remainingFrames = (writtenFrames - playedAtStart).coerceAtLeast(0L)
-        val maxWaitMs = (remainingFrames * MILLIS_PER_SECOND / rateHz + DRAIN_GRACE_MS)
-            .coerceAtMost(MAX_DRAIN_WAIT_MS)
-        val deadline = SystemClock.uptimeMillis() + maxWaitMs
-        while (isActive(gen, generation) && !flushRequested && isStillDraining(t, writtenFrames, deadline)) {
-            try {
-                Thread.sleep(DRAIN_POLL_MS)
-            } catch (_: InterruptedException) {
-                Thread.currentThread().interrupt()
+    private val listener = object : UtteranceProgressListener() {
+        override fun onStart(utteranceId: String?) {
+            if (utteranceId?.endsWith(SILENCE) == true) return
+            val (r, page, index) = place(utteranceId) ?: return
+            val turned = page != playingPage
+            playingPage = page
+            playingIndex = index
+            main.post {
+                if (run !== r) return@post
+                if (turned) r.onPageAdvance(page)
+                r.onSegment(page, index)
+            }
+        }
+
+        override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
+            val (r, page, index) = place(utteranceId) ?: return
+            main.post { if (run === r) r.onWord(page, index, start, end) }
+        }
+
+        override fun onDone(utteranceId: String?) {
+            val (r, _, _) = place(utteranceId) ?: return
+            if (utteranceId != r.lastId) return
+            main.post {
+                if (run !== r) return@post
+                run = null
+                r.done(playingPage)
+            }
+        }
+
+        @Deprecated("Deprecated in Java")
+        override fun onError(utteranceId: String?) = onError(utteranceId, TextToSpeech.ERROR)
+
+        override fun onError(utteranceId: String?, errorCode: Int) {
+            val (r, _, _) = place(utteranceId) ?: return
+            Log.w(TAG, "utterance $utteranceId failed: $errorCode")
+            val network = errorCode == TextToSpeech.ERROR_NETWORK || errorCode == TextToSpeech.ERROR_NETWORK_TIMEOUT
+            main.post {
+                if (run !== r) return@post
+                if (network && fallBackOffline()) {
+                    restartHere(keepNext = true)
+                } else if (utteranceId == r.lastId) {
+                    run = null
+                    r.done(playingPage)
+                }
             }
         }
     }
 
-    private companion object {
-        const val TAG = "Narrator"
-        const val QUEUE_CAPACITY = 4
-        const val QUEUE_POLL_MS = 40L
-        const val WRITE_SLICE_SAMPLES = 512
-        const val MILLIS_PER_SECOND = 1000L
-        const val DRAIN_POLL_MS = 20L
-        const val DRAIN_GRACE_MS = 80L
-        const val MAX_DRAIN_WAIT_MS = 8_000L
-
-        val mainHandler = Handler(Looper.getMainLooper())
+    /**
+     * An online voice lost its connection: carry on in the same language's offline voice, the same one where the
+     * engine has it ("en-us-x-iob-network" to "en-us-x-iob-local"). False when there is none.
+     */
+    @Suppress("ReturnCount")
+    private fun fallBackOffline(): Boolean {
+        val current = tts.voice ?: return false
+        if (!current.isNetworkConnectionRequired) return false
+        val offline = voices().filter { !it.isNetworkConnectionRequired && it.locale == current.locale }
+        val twin =
+            offline.firstOrNull { it.name == current.name.replace("-network", "-local") } ?: offline.firstOrNull()
+        twin ?: return false
+        tts.voice = twin
+        return true
     }
-}
 
-private const val QUARTER_SECOND_DIVISOR = 4
-private const val BYTES_PER_SAMPLE = 2
-private const val MIN_BUFFER_FALLBACK = 4096
-private const val HEAD_MASK = 0xFFFFFFFFL
+    companion object {
+        private const val TAG = "Narrator"
+        private const val SILENCE = "s"
+        private const val PLACE_PARTS = 3
+        private const val PREVIEW_ID = "preview"
+        const val GOOGLE_ENGINE = "com.google.android.tts"
+        private val main = Handler(Looper.getMainLooper())
 
-private fun isActive(gen: Int, generation: Int): Boolean = gen == generation && !Thread.currentThread().isInterrupted
+        /** Google's engine where the phone has it (its voices are the ones ReadEra reads with), else the default. */
+        fun preferredEngine(context: Context): String? {
+            val engines = runCatching {
+                context.packageManager.queryIntentServices(Intent(TextToSpeech.Engine.INTENT_ACTION_TTS_SERVICE), 0)
+                    .map { it.serviceInfo.packageName }
+            }.getOrDefault(emptyList())
+            return GOOGLE_ENGINE.takeIf { it in engines }
+        }
 
-private fun playedFrames(t: AudioTrack): Long =
-    runCatching { t.playbackHeadPosition.toLong() and HEAD_MASK }.getOrDefault(0L)
-
-private fun isStillDraining(t: AudioTrack, writtenFrames: Long, deadline: Long): Boolean =
-    SystemClock.uptimeMillis() < deadline && playedFrames(t) < writtenFrames
-
-private fun flushAndRestartTrack(t: AudioTrack): Long {
-    runCatching {
-        t.pause()
-        t.flush()
-        t.play()
+        /** Opens the phone's text-to-speech settings, where voices are installed and the engine chosen. */
+        fun settingsIntent(): Intent =
+            Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
-    return playedFrames(t)
-}
-
-private fun createAudioTrack(sampleRate: Int): AudioTrack {
-    val minBuffer = AudioTrack.getMinBufferSize(
-        sampleRate,
-        AudioFormat.CHANNEL_OUT_MONO,
-        AudioFormat.ENCODING_PCM_16BIT
-    ).coerceAtLeast(MIN_BUFFER_FALLBACK)
-    val bufferBytes = (sampleRate / QUARTER_SECOND_DIVISOR * BYTES_PER_SAMPLE).coerceAtLeast(minBuffer * 2)
-    return AudioTrack.Builder()
-        .setAudioAttributes(
-            AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_MEDIA)
-                // CONTENT_TYPE_MUSIC avoids OEM speech-call DSP effects (such as Samsung AudioVoiceBooster)
-                // that aggressively boost 3–8 kHz and inject high-frequency hiss into neural TTS audio.
-                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                .build()
-        )
-        .setAudioFormat(
-            AudioFormat.Builder()
-                .setSampleRate(sampleRate)
-                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
-                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
-                .build()
-        )
-        .setBufferSizeInBytes(bufferBytes)
-        .setTransferMode(AudioTrack.MODE_STREAM)
-        .build()
 }

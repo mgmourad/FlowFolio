@@ -70,7 +70,7 @@ jobs:
             CHANGELOG.md > "$RUNNER_TEMP/notes.md"
           cat >> "$RUNNER_TEMP/notes.md" <<NOTES
 
-          **Which file?** Two editions, the same app: **Essential** downloads scanned-book reading, Narrator voices
+          **Which file?** Two editions, the same app: **Essential** downloads scanned-book reading
           and the WordNet dictionary when you ask for them; **Full** has them inside, ready offline. Most phones:
           \`-arm64-v8a\`. Older 32-bit phones: \`-armeabi-v7a\`. Not sure (or an emulator): the file without a
           processor name. Full edition files end in \`.full.apk\`. Either edition updates the other in place.

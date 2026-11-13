@@ -53,6 +53,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
             libraryView = p[LIBRARY_VIEW].toEnum(defaults.libraryView),
             statsBand = p[STATS_BAND].toEnum(defaults.statsBand),
             narratorSkip = p[NARRATOR_SKIP].toEnum(defaults.narratorSkip),
+            narratorVoice = p[NARRATOR_VOICE],
             shelvesOrder = p[SHELVES_ORDER].toEnum(defaults.shelvesOrder),
             readerSpreads = p[READER_SPREADS] ?: defaults.readerSpreads,
             spreadCoverAlone = p[COVER_ALONE] ?: defaults.spreadCoverAlone,
@@ -149,6 +150,10 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
 
     suspend fun setNarratorSkip(skip: NarratorSkip) {
         store.edit { it[NARRATOR_SKIP] = skip.name }
+    }
+
+    suspend fun setNarratorVoice(name: String) {
+        store.edit { it[NARRATOR_VOICE] = name }
     }
 
     suspend fun setShelvesOrder(order: ShelvesOrder) {
@@ -289,6 +294,7 @@ class SettingsDataSource @Inject constructor(private val store: DataStore<Prefer
         val LIBRARY_VIEW = stringPreferencesKey("library_view")
         val STATS_BAND = stringPreferencesKey("library_stats_band")
         val NARRATOR_SKIP = stringPreferencesKey("narrator_skip")
+        val NARRATOR_VOICE = stringPreferencesKey("narrator_voice")
         val SHELVES_ORDER = stringPreferencesKey("shelves_order")
         val READER_SPREADS = booleanPreferencesKey("reader_spreads")
         val COVER_ALONE = booleanPreferencesKey("spread_cover_alone")

@@ -6,22 +6,6 @@
 -keep class com.google.mlkit.** { *; }
 -dontwarn com.google.mlkit.**
 
-# sherpa-onnx (Narrator Mode's Kokoro TTS) binds its Kotlin API to native code by class and method
-# name (JNI); R8's renaming would break that binding, so keep its classes whole in the minified build.
--keep class com.k2fsa.sherpa.onnx.** { *; }
--dontwarn com.k2fsa.sherpa.onnx.**
-
-# generateWithCallback invokes the Kotlin Function1 callback from native code by exact JNI signature
-# `invoke([F)Ljava/lang/Integer;`; keep ChunkCallback and all Function1 methods whole so R8 never strips
-# or renames the specialized method.
--keep class com.flowfolio.core.voice.ChunkCallback {
-    public java.lang.Integer invoke(float[]);
-    public java.lang.Object invoke(java.lang.Object);
-}
--keepclassmembers class * extends kotlin.jvm.functions.Function1 {
-    <methods>;
-}
-
 # WorkManager makes its input mergers and workers by reflection. R8 removed OverwritingInputMerger's no-argument
 # constructor, so every Glance widget session (a WorkManager job) failed and the home-screen widgets stayed on
 # "Loading" in release builds (0.7.0-beta.5, 2026-11-12; debug builds are not shrunk, so the emulator never showed it).

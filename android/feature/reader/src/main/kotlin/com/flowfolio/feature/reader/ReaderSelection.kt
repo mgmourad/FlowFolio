@@ -261,7 +261,8 @@ internal fun DrawScope.drawHighlights(highlights: List<Annotation>, darkPaper: B
     val alpha = highlightAlpha(darkPaper)
     val blend = if (darkPaper) BlendMode.SrcOver else BlendMode.Multiply
     highlights.forEach { a ->
-        val colour = a.color.marker.copy(alpha = alpha)
+        // The narrator's sentence is a light wash to read through; the word being said stands out on it.
+        val colour = a.color.marker.copy(alpha = if (a.id == SPOKEN_SENTENCE_ID) alpha * SPOKEN_SHARE else alpha)
         a.rects.forEach { r ->
             drawRect(
                 colour,
@@ -289,6 +290,7 @@ internal fun DrawScope.drawHighlights(highlights: List<Annotation>, darkPaper: B
 internal fun highlightAlpha(darkPaper: Boolean) = if (darkPaper) DARK_ALPHA else LIGHT_ALPHA
 
 private const val SELECTION_ALPHA = 0.32f
+private const val SPOKEN_SHARE = 0.4f
 private const val OFF_SCREEN = -10_000f
 private const val NOTE_DOT = 0.22f
 private const val DARK_ALPHA = 0.38f

@@ -7,6 +7,14 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Narrator Mode reads with the phone's speech engine (ADR-0059): from Android 11 an app sees the engines only
+         when it says it looks for them. Speech settings opens the system's own voice settings. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
+    </queries>
+
     <application>
         <service
             android:name=".NarratorService"

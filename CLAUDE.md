@@ -6,7 +6,11 @@ Read this first. Keep it current: update at the end of every phase.
 
 **PROJECT COMPLETE: signed off by the owner 2026-11-12** (`docs/plans/project-signoff.md`). Phases 0–7, the UX
 overhaul and both tightening milestones are signed off; the release at sign-off is **0.7.0-beta.5 (build 700005)**,
-built by `.github/workflows/release.yml` (push a `v*` tag). From here, work is maintenance: tweaks and fixes in
+built by `.github/workflows/release.yml` (push a `v*` tag). Since then: 0.7.0-beta.6 (contents and indexes, the
+widget redesign) and **0.7.0-beta.7 (build 700007, 2026-11-13): Narrator Mode on the phone's speech engine
+(ADR-0059)**, Google's where installed, with the spoken sentence and word highlighted on the page (`SpokenPlaces`);
+sherpa-onnx, Kokoro and Piper are gone, and OCR's ONNX Runtime is Microsoft's AAR (`OnnxRuntimeConventionPlugin`).
+From here, work is maintenance: tweaks and fixes in
 batches under the working agreement below, each released through the workflow. The carried-forward limitations are
 listed in the sign-off. The history below is kept for reference.
 
@@ -364,7 +368,8 @@ leave the repository able to explain itself: what is in flight, what was verifie
 
 - Android modules (ADR-0012): `:app`, `:core:model` (JVM), `:core:pdf` (PDFium JNI, NDK), `:core:database` (Room),
   `:core:datastore`, `:core:epub` (EPUB parsing, ADR-0020), `:core:reflow` (EPUB pagination and page drawing, ADR-0019),
-  `:core:voice` (offline neural TTS on `sherpa-onnx` for Kokoro and Piper voices, ADR-0051), `:feature:reader:riffle`
+  `:core:voice` (speech text for the narrator, `PackFetch`, and OCR's `OrtBridge` to ONNX Runtime; the narrator itself
+is Android's `TextToSpeech`, ADR-0059), `:feature:reader:riffle`
   (the riffle scrubber, ADR-0022), `:core:data` (repositories, import, reader access), `:core:designsystem`, `:core:pagecurl`
   (vendored), `:feature:library` (library + settings), `:feature:reader` (curl, spreads, page cache),
   `:core:conversion` (the PDF to EPUB converter, plain JVM, ADR-0044), `:core:extract` (yt-dlp on an embedded
@@ -716,7 +721,8 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
     dropped, which fits the original report (taps sent right after `openBookId`). Checked again on a Dynamic Flow
     book (the owner's Arabic sample): a tap at the right edge turned the spread.
 
-50. **Narrator Mode can only say words in the voice's lexicon** (2026-11-10). sherpa-onnx 2.0.1's multi-language
+50. ~~Narrator Mode can only say words in the voice's lexicon~~ Gone with sherpa-onnx (ADR-0059, 2026-11-13): the
+    phone's speech engine reads every word. Kept for the history: (2026-11-10). sherpa-onnx 2.0.1's multi-language
     Kokoro (and Piper with a lexicon) drops any other word silently: `debug=true` logs `OOV word skipped`. Passing
     `espeak-ng-data` or `lang` changes nothing, and 2.0.1 is the newest release. So every utterance goes through
     `SpeechWords.expand` with the voice's `Vocabulary` first: a word reaches the engine only in a form it knows.
@@ -759,7 +765,9 @@ Locally, `-Pflowfolio.corpus=<dir>` points `CorpusTest` at another folder (e.g. 
       under HVF), while plain CPU work is only 1.3x slower.
     - The OCR gate needs absolute paths: `FLOWFOLIO_OCR_PAGES`, `FLOWFOLIO_OCR_MODELS`, `FLOWFOLIO_TESSDATA`
       (tessdata_best `ara.traineddata`, from the `ocr-models-v1` release). Ground truth comes from `samples/golden/ocr`.
-53. **OCR on the phone goes through `OrtBridge`, never ONNX Runtime's Java API** (2026-11-11). sherpa-onnx's
+53. **OCR on the phone goes through `OrtBridge`, never ONNX Runtime's Java API** (2026-11-11). Since ADR-0059 the
+    runtime is Microsoft's `onnxruntime-android` AAR (1.28.0, the JVM tests' version), of which only the `.so` and the
+    C headers are used; the symbol clash below was sherpa-onnx's 1.28.2 copy. sherpa-onnx's
     `libonnxruntime.so` exports `OrtGetApiBase@@VERS_1.28.2`; `onnxruntime-android`'s Java glue (only 1.28.0 is
     published) asks for `@VERS_1.28.0`, so Android refuses to load it. Two copies of the runtime cannot share one
     name either. When sherpa-onnx updates ORT, bump `OrtHeaders` to match and re-run `PaddleOcrScansTest`
@@ -813,4 +821,4 @@ no ffmpeg because only an address is extracted), updating from the releases page
 release identity after the signing key was lost (0049, accepted; supersedes the key-custody part of 0042), release-channel
 renumbering (0050, accepted 2026-11-07: 3–4 alpha, 5–6 canary, 7 beta), offline neural TTS via `sherpa-onnx` with
 Kokoro and Piper voice packs (0051, accepted 2026-11-08), the Quiet Library design overhaul (0052), and Narrator Mode
-in the background with a media session and two players (0053, 2026-11-10). The OCR engine is ADR-0054 (Phase 7 M1). ADR-0055 (accepted 2026-11-12) measures the Arabic engines' agreement by letter pairs, bar 0.66. ADR-0056 dark reader chrome, ADR-0057 a smaller app (per-processor APKs, downloadable packs), ADR-0058 two editions and resumable pack downloads.
+in the background with a media session and two players (0053, 2026-11-10). The OCR engine is ADR-0054 (Phase 7 M1). ADR-0055 (accepted 2026-11-12) measures the Arabic engines' agreement by letter pairs, bar 0.66. ADR-0056 dark reader chrome, ADR-0057 a smaller app (per-processor APKs, downloadable packs), ADR-0058 two editions and resumable pack downloads, ADR-0059 Narrator Mode on the phone's speech engine (supersedes 0051).

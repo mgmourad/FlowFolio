@@ -40,9 +40,9 @@ gradlePlugin {
             id = "flowfolio.pdfium"
             implementationClass = "PdfiumConventionPlugin"
         }
-        register("sherpaOnnx") {
-            id = "flowfolio.sherpa-onnx"
-            implementationClass = "SherpaOnnxConventionPlugin"
+        register("onnxRuntime") {
+            id = "flowfolio.onnxruntime"
+            implementationClass = "OnnxRuntimeConventionPlugin"
         }
         register("tesseract") {
             id = "flowfolio.tesseract"

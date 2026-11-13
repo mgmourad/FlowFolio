@@ -1,18 +1,13 @@
 package com.flowfolio.feature.reader
 
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,27 +24,25 @@ import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
 import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
-import com.flowfolio.core.designsystem.glass
-import com.flowfolio.core.voice.Voice
-import com.flowfolio.core.voice.VoicePackState
-import com.flowfolio.core.voice.VoiceSource
-import kotlinx.coroutines.delay
 
-/** Narrator Mode's controls (Phase 6 M3): play/pause, speed, page turns, and the Kokoro or Piper voice. */
+/** Narrator Mode's controls: play/pause, speed, page turns, and the phone speech engine's voice (ADR-0059). */
+@Suppress("LongMethod") // the panel's rows, one after another
 @Composable
 internal fun ReaderNarratorPanel(
     narrating: Boolean,
     rate: Float,
     continuous: Boolean,
-    voices: List<Voice>,
+    voices: List<NarratorVoice>,
     currentVoice: String?,
-    packState: VoicePackState,
     error: String?,
     onToggle: () -> Unit,
     onRate: (Float) -> Unit,
     onContinuous: (Boolean) -> Unit,
-    onVoice: (String) -> Unit
+    onVoice: (String) -> Unit,
+    onSpeechSettings: () -> Unit,
+    onShown: () -> Unit = {}
 ) {
+    androidx.compose.runtime.LaunchedEffect(Unit) { onShown() }
     Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 12.dp, top = 16.dp, bottom = 8.dp)) {
         Text(
             stringResource(R.string.reader_narrator),
@@ -68,7 +61,9 @@ internal fun ReaderNarratorPanel(
                 modifier = Modifier.padding(top = 12.dp)
             )
         }
-        PackStatus(packState, error)
+        if (error != null) {
+            Text(error, style = FlowFolioType.rowLabel.merge(FlowFolio.item), modifier = Modifier.padding(top = 12.dp))
+        }
         Text(
             stringResource(R.string.reader_narrator_rate),
             style = FlowFolioType.rowLabel.merge(FlowFolio.item),
@@ -93,199 +88,60 @@ internal fun ReaderNarratorPanel(
             )
             FlowFolioToggle(continuous, onContinuous)
         }
-        if (voices.size > 1) {
-            Text(
-                stringResource(R.string.reader_narrator_voice),
-                style = FlowFolioType.rowLabel.merge(FlowFolio.item),
-                modifier = Modifier.padding(top = 16.dp)
-            )
+        Text(
+            stringResource(R.string.reader_narrator_voice),
+            style = FlowFolioType.rowLabel.merge(FlowFolio.item),
+            modifier = Modifier.padding(top = 16.dp)
+        )
+        Row(
+            Modifier.fillMaxWidth().padding(top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             VoicePicker(voices, currentVoice, onVoice)
-        }
-    }
-}
-
-@Composable
-private fun PackStatus(packState: VoicePackState, error: String?) {
-    when (packState) {
-        is VoicePackState.Downloading -> {
-            Text(
-                stringResource(R.string.reader_narrator_downloading, (packState.progress * PERCENT_SCALE).toInt()),
-                style = FlowFolioType.rowLabel.merge(FlowFolio.item),
-                modifier = Modifier.padding(top = 12.dp)
-            )
-            LinearProgressIndicator(
-                progress = { packState.progress },
-                modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
+            FlowFolioGhostButton(
+                text = stringResource(R.string.reader_narrator_speech_settings),
+                onClick = onSpeechSettings
             )
         }
-
-        is VoicePackState.Installing -> InstallingStatus(packState.progress)
-
-        is VoicePackState.Failed -> Text(
-            stringResource(R.string.reader_narrator_download_failed, packState.message),
-            style = FlowFolioType.rowLabel.merge(FlowFolio.item),
-            modifier = Modifier.padding(top = 12.dp)
-        )
-
-        else -> Unit
-    }
-    if (error != null) {
-        Text(
-            error,
-            style = FlowFolioType.rowLabel.merge(FlowFolio.item),
-            modifier = Modifier.padding(top = 12.dp)
-        )
     }
 }
 
+/** "English (Australia) · Voice 2 · Online". */
 @Composable
-private fun InstallingStatus(progress: Float) {
-    val label = if (progress >= 1f) {
-        stringResource(R.string.reader_narrator_loading)
-    } else {
-        stringResource(R.string.reader_narrator_installing, (progress * PERCENT_SCALE).toInt())
-    }
-    Text(
-        label,
-        style = FlowFolioType.rowLabel.merge(FlowFolio.item),
-        modifier = Modifier.padding(top = 12.dp)
-    )
-    if (progress >= 1f) {
-        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
-    } else {
-        LinearProgressIndicator(
-            progress = { progress },
-            modifier = Modifier.fillMaxWidth().padding(top = 6.dp)
-        )
-    }
-}
+private fun voiceLine(v: NarratorVoice): String = listOf(
+    v.language,
+    stringResource(R.string.reader_narrator_voice_number, v.label),
+    stringResource(if (v.online) R.string.reader_narrator_online else R.string.reader_narrator_offline)
+).joinToString(" · ")
 
-/**
- * A floating, non-modal pill at the foot of the page while the narrator's voice is downloading or installing
- * (owner, 2026-11-08): the reader can keep reading, and a brief in-app notice announces when the voice is ready.
- */
+/** The voice and a menu of the engine's voices, a language heading over each language's voices. */
 @Composable
-internal fun BoxScope.VoiceDownloadOverlay(state: VoicePackState) {
-    var sawActiveInstall by remember { mutableStateOf(false) }
-    var transientNotice by remember { mutableStateOf<String?>(null) }
-    val readyText = stringResource(R.string.reader_narrator_ready_notice)
-    val failedMessage = (state as? VoicePackState.Failed)?.let {
-        stringResource(R.string.reader_narrator_download_failed, it.message)
-    }
-    LaunchedEffect(state, readyText, failedMessage) {
-        when (state) {
-            is VoicePackState.Downloading, is VoicePackState.Installing -> {
-                sawActiveInstall = true
-                transientNotice = null
-            }
-
-            VoicePackState.Ready -> if (sawActiveInstall) {
-                sawActiveInstall = false
-                transientNotice = readyText
-                delay(NOTICE_DURATION_MS)
-                transientNotice = null
-            }
-
-            is VoicePackState.Failed -> {
-                sawActiveInstall = false
-                transientNotice = failedMessage
-                delay(ERROR_NOTICE_DURATION_MS)
-                transientNotice = null
-            }
-
-            VoicePackState.Idle -> Unit
-        }
-    }
-    when (state) {
-        is VoicePackState.Downloading -> VoiceProgressPill(
-            title = stringResource(R.string.reader_narrator_downloading_title),
-            detail = stringResource(R.string.reader_narrator_downloading, (state.progress * PERCENT_SCALE).toInt()),
-            progress = state.progress
-        )
-
-        is VoicePackState.Installing -> VoiceProgressPill(
-            title = stringResource(R.string.reader_narrator_installing_title),
-            detail = if (state.progress >= 1f) {
-                stringResource(R.string.reader_narrator_loading)
-            } else {
-                stringResource(R.string.reader_narrator_installing, (state.progress * PERCENT_SCALE).toInt())
-            },
-            progress = state.progress.takeIf { it < 1f }
-        )
-
-        else -> transientNotice?.let { notice -> VoiceNoticePill(notice) }
-    }
-}
-
-@Composable
-private fun BoxScope.VoiceProgressPill(title: String, detail: String, progress: Float?) {
-    Column(
-        Modifier
-            .align(Alignment.BottomCenter)
-            .navigationBarsPadding()
-            .padding(start = 40.dp, end = 40.dp, bottom = 108.dp)
-            .glass(RoundedCornerShape(24.dp), tint = FlowFolio.palette.tabBar)
-            .padding(horizontal = 20.dp, vertical = 14.dp)
-    ) {
-        Text(
-            title,
-            style = FlowFolioType.rowLabel.merge(FlowFolio.title)
-        )
-        if (progress != null) {
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
-            )
-        } else {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 10.dp))
-        }
-        Text(
-            detail,
-            style = FlowFolioType.rowDetail.merge(FlowFolio.hint),
-            modifier = Modifier.padding(top = 6.dp)
-        )
-    }
-}
-
-@Composable
-private fun BoxScope.VoiceNoticePill(message: String) {
-    Column(
-        Modifier
-            .align(Alignment.BottomCenter)
-            .navigationBarsPadding()
-            .padding(start = 40.dp, end = 40.dp, bottom = 108.dp)
-            .glass(RoundedCornerShape(24.dp), tint = FlowFolio.palette.tabBar)
-            .padding(horizontal = 20.dp, vertical = 12.dp)
-    ) {
-        Text(
-            message,
-            style = FlowFolioType.rowLabel.merge(FlowFolio.title)
-        )
-    }
-}
-
-@Composable
-private fun VoicePicker(voices: List<Voice>, current: String?, onVoice: (String) -> Unit) {
+private fun VoicePicker(voices: List<NarratorVoice>, current: String?, onVoice: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
     val selected = voices.firstOrNull { it.name == current }
-    val label = selected?.let { v ->
-        val engineName = if (v.source == VoiceSource.PIPER) "Piper" else "Kokoro"
-        if (v.label.contains(engineName, ignoreCase = true)) v.label else "${v.label} ($engineName)"
-    } ?: stringResource(R.string.reader_narrator_voice_default)
-    FlowFolioGhostButton(text = label, onClick = { open = true })
+    val label = selected?.let { voiceLine(it) } ?: stringResource(R.string.reader_narrator_voice_default)
+    FlowFolioGhostButton(text = label, onClick = { if (voices.isNotEmpty()) open = true })
     FlowFolioMenu(expanded = open, onDismissRequest = { open = false }) {
+        var language: String? = null
         voices.forEach { v ->
-            val engineLabel = if (v.source == VoiceSource.PIPER) "Piper · sherpa-onnx" else "Kokoro · sherpa-onnx"
+            if (v.language != language) {
+                language = v.language
+                Text(
+                    v.language,
+                    style = FlowFolioType.rowDetail.merge(FlowFolio.hint),
+                    modifier = Modifier.padding(start = 16.dp, top = 10.dp, bottom = 2.dp)
+                )
+            }
             DropdownMenuItem(
                 text = {
-                    Column {
-                        Text(v.label)
-                        Text(
-                            "${v.name} · $engineLabel",
-                            fontSize = 11.sp,
-                            color = FlowFolio.palette.text.copy(alpha = 0.55f)
-                        )
-                    }
+                    Text(
+                        stringResource(R.string.reader_narrator_voice_number, v.label) + " · " +
+                            stringResource(
+                                if (v.online) R.string.reader_narrator_online else R.string.reader_narrator_offline
+                            ),
+                        color = if (v.name == current) FlowFolio.palette.accent else FlowFolio.palette.text
+                    )
                 },
                 onClick = {
                     open = false
@@ -302,6 +158,3 @@ internal val SPEEDS = listOf(0.8f, 1f, 1.25f, 1.5f, 2f)
 /** "0.8×", "1×", "1.25×": no trailing zeros. */
 internal fun speedLabel(rate: Float): String =
     java.math.BigDecimal(rate.toString()).stripTrailingZeros().toPlainString() + "×"
-private const val PERCENT_SCALE = 100
-private const val NOTICE_DURATION_MS = 2_500L
-private const val ERROR_NOTICE_DURATION_MS = 3_500L

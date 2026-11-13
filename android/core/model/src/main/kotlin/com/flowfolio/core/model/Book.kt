@@ -108,6 +108,8 @@ data class UserSettings(
     val libraryView: LibraryView = LibraryView.SHELF,
     /** What Narrator Mode's previous and next buttons skip by (owner, 2026-11-10). */
     val narratorSkip: NarratorSkip = NarratorSkip.PARAGRAPH,
+    /** The phone speech engine's voice Narrator Mode reads with (ADR-0059); null for the engine's own default. */
+    val narratorVoice: String? = null,
     /** The library's stats band: its state, remembered, and Settings' choice of Hidden (ADR-0052). */
     val statsBand: StatsBand = StatsBand.COLLAPSED,
     /** How the Shelves tab orders its shelves, remembered (ADR-0052). */

@@ -5,12 +5,11 @@ import android.util.Log
 import com.flowfolio.core.data.ocr.OcrPack
 import com.flowfolio.core.voice.PackFetch
 import com.flowfolio.core.voice.PackFile
-import com.flowfolio.core.voice.VoicePacks
 import java.io.File
 import java.util.zip.GZIPInputStream
 
 /**
- * The Full edition (2026-11-12, owner): the same app with the three optional packs inside it, under
+ * The Full edition (2026-11-12, owner): the same app with the optional packs inside it, under
  * `assets/packs/<group>/<served file name>`, exactly as `resources-v1` and `ocr-models-v1` serve them. On first start
  * they are copied to where the downloads would have put them, so nothing is fetched. The Essential edition has no
  * `assets/packs` and downloads them on request.
@@ -18,7 +17,6 @@ import java.util.zip.GZIPInputStream
 object BundledPacks {
     const val ROOT = "packs"
     const val OCR = "ocr"
-    const val VOICE = "voice"
     const val DICTIONARY = "dictionary"
 
     /** True in the Full edition. */
@@ -26,9 +24,8 @@ object BundledPacks {
         .getOrDefault(false)
 
     /** Each group's files and the folder they go to. */
-    fun groups(context: Context, voiceDir: File): List<Triple<String, List<PackFile>, File>> = listOf(
+    fun groups(context: Context): List<Triple<String, List<PackFile>, File>> = listOf(
         Triple(OCR, OcrPack.FILES, OcrPack.dirIn(context.filesDir)),
-        Triple(VOICE, VoicePacks.kokoroMultiLang.files.orEmpty(), voiceDir),
         Triple(
             DICTIONARY,
             listOf(
@@ -45,9 +42,9 @@ object BundledPacks {
     )
 
     /** Copies (or unpacks) every bundled file not yet in place. Safe to call on every start: present files stay. */
-    fun install(context: Context, voiceDir: File) {
+    fun install(context: Context) {
         if (!present(context)) return
-        for ((group, files, dir) in groups(context, voiceDir)) {
+        for ((group, files, dir) in groups(context)) {
             dir.mkdirs()
             for (f in files) {
                 if (PackFetch.isInPlace(f, dir)) continue

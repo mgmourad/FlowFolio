@@ -39,7 +39,7 @@ first into the second — on the phone, with nothing leaving it.
 | 🔄 **Dynamic Flow** | A textbook PDF whose type is too small reflows to fit your screen. Figures, tables, equations, footnotes and page numbers all survive. The original stays exactly as it is. |
 | 🎚️ **Riffle through it** | Drag the book on the bottom bar to flick pages, with chapters and your ribbons marked along the edge. Hold it to drop a detour mark and come straight back. |
 | ✍️ **Mark it up** | Nine highlight colours, notes, ribbons, and **VoiceMark** — say what you were thinking instead of typing it. |
-| 🔊 **Narrator Mode** | Offline neural voices (Kokoro and Piper via `sherpa-onnx`) that read aloud with natural pauses, turn pages automatically, and work without a connection after a one-time voice download. |
+| 🔊 **Narrator Mode** | Reads aloud with your phone's own voices (Google's where installed, online or offline), highlights the sentence and the word being said, and turns the pages as it goes. Nothing to download. |
 | 📚 **Words, search and languages** | In-book phrase search across PDF and Dynamic Flow views, a bundled English dictionary (Wiktionary + WordNet 3.1 + Wikipedia), and on-device translation. |
 | 🌧️ **Reading Atmosphere** | Page and sound together: rain, a fire, a quiet café, a file of your own, or any stream address. |
 | 🎯 **A reading habit** | Goals by day, week or month, with the days that count and when to be reminded. |
@@ -122,7 +122,7 @@ The APK lands in `app/build/outputs/apk/debug/`.
 | `android/app` | The single activity, navigation and app shell |
 | `android/core/reflow`, `core/epub` | The EPUB pagination engine and parser (ADR-0019, ADR-0020) |
 | `android/core/pdf` | PDFium through our own JNI bridge (ADR-0010) |
-| `android/core/voice` | Offline neural TTS (Kokoro & Piper on `sherpa-onnx`, ADR-0051) |
+| `android/core/voice` | Speech text for the narrator, pack downloads, and OCR's bridge to ONNX Runtime (ADR-0059) |
 | `android/core/conversion` | PDF → EPUB, a plain JVM module that runs on the phone (ADR-0044) |
 | `android/core/extract` | yt-dlp on an embedded Python, for stream audio (ADR-0048) |
 | `android/core/designsystem` | Every token, effect, component and glyph |

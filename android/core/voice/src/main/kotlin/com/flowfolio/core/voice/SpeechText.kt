@@ -12,17 +12,23 @@ internal enum class BlockKind {
 internal data class StructuredBlock(val text: String, val kind: BlockKind, val endsSentence: Boolean)
 
 /**
- * Normalizes reflowed and PDF book text for speech: resolves curly quotes, PDFium (`\u0002`), soft (`\u00AD`) and
- * hard line-break hyphenation, strips running headers/folios, and structures titles, subtitles, paragraphs, and
- * cross-page mid-sentence continuations with natural narration pauses.
+ * Prepares reflowed and PDF book text for the phone's speech engine (ADR-0059): resolves curly quotes, PDFium
+ * (`\u0002`), soft (`\u00AD`) and hard line-break hyphenation, strips running headers and folios, and splits the page
+ * into whole sentences, with a pause after titles, subtitles and paragraphs.
+ *
+ * The words themselves are left alone: numbers, acronyms and words spelled alike but said differently ("live", "US")
+ * are the engine's to read, and it reads them from the sentence around them. A sentence is never cut at a comma,
+ * a semicolon or a colon (a cut there made the engine pause where a reader would not).
  */
 @Suppress("TooManyFunctions")
 object SpeechText {
-    const val TITLE_PAUSE_MS = 480
-    const val SUBTITLE_PAUSE_MS = 340
-    const val PARAGRAPH_PAUSE_MS = 320
-    const val SENTENCE_PAUSE_MS = 150
-    const val CLAUSE_PAUSE_MS = 65
+    // Added to the engine's own pause at the end of every sentence: none between sentences, a little more between
+    // paragraphs, and more after headings.
+    const val TITLE_PAUSE_MS = 450
+    const val SUBTITLE_PAUSE_MS = 320
+    const val PARAGRAPH_PAUSE_MS = 180
+    const val SENTENCE_PAUSE_MS = 0
+    const val CLAUSE_PAUSE_MS = 0
     const val MID_SENTENCE_PAGE_PAUSE_MS = 0
 
     fun normalize(text: String): String = joinHyphenatedWords(cleanQuotesAndDashes(text))
@@ -99,6 +105,7 @@ object SpeechText {
         .replace("\u201C", "")
         .replace("\u201D", "")
         .replace("\"", "")
+        .replace(SPACED_EM_DASH, ", ")
         .replace('\u2014', ' ')
         .replace('\u00A0', ' ')
         .replace("\u2026", "...")
@@ -236,7 +243,7 @@ object SpeechText {
 
     private fun appendBlockSegments(block: StructuredBlock, isLastBlock: Boolean, out: MutableList<SpeechSegment>) {
         if (block.kind == BlockKind.TITLE || block.kind == BlockKind.SUBTITLE) {
-            val cleaned = cleanForLexicon(block.text)
+            val cleaned = cleanForSpeech(block.text)
             if (cleaned.any { it.isLetterOrDigit() }) {
                 val pause = if (block.kind == BlockKind.TITLE) TITLE_PAUSE_MS else SUBTITLE_PAUSE_MS
                 out += SpeechSegment(cleaned, pause)
@@ -274,7 +281,7 @@ object SpeechText {
             listOf(clause)
         }
         for ((phraseIdx, phrase) in phrases.withIndex()) {
-            val cleaned = cleanForLexicon(phrase)
+            val cleaned = cleanForSpeech(phrase)
             if (cleaned.any { it.isLetterOrDigit() }) {
                 val pause = if (phraseIdx < phrases.lastIndex) CLAUSE_PAUSE_MS else clauseEndPause
                 out += SpeechSegment(cleaned, pause)
@@ -330,15 +337,15 @@ object SpeechText {
         return result
     }
 
-    internal fun cleanForLexicon(text: String): String = SpeechNumbers.words(
-        text.replace(REPLACEMENT_BETWEEN_LETTERS, "$1 $2")
-    )
-        .replace(NON_LEXICON_PUNCT, " ")
-        .replace(STRAY_APOSTROPHE, " ")
+    /** [text] as the engine should get it: a PDF's replacement characters and list bullets out, spaces collapsed. */
+    internal fun cleanForSpeech(text: String): String = text
+        .replace(REPLACEMENT_BETWEEN_LETTERS, "$1 $2")
+        .replace(UNSPOKEN, " ")
         .replace(WHITESPACE, " ")
         .trim()
 
-    private const val MAX_SEGMENT_CHARS = 150
+    /** Far under the engines' input limit (4,000 characters): only a run-on sentence is ever cut. */
+    private const val MAX_SEGMENT_CHARS = 1_000
     private const val TARGET_PHRASE_CHARS = 95
     private const val MIN_PHRASE_CHARS = 60
     private const val MIN_HEADING_CHARS = 2
@@ -381,7 +388,7 @@ object SpeechText {
     private val CONTINUATION_END = Regex("[,;:\\-]$")
     private val INLINE_SPACES = Regex("[ \\t]+")
     private val WHITESPACE = Regex("\\s+")
-    private val SENTENCE_SPLIT = Regex("(?<=[.!?])(?<!(?:^|\\s)\\p{Lu}\\.)\\s+|\\s*[;:]\\s+")
+    private val SENTENCE_SPLIT = Regex("(?<=[.!?])(?<!(?:^|\\s)\\p{Lu}\\.)\\s+")
 
     private val ABBREVIATIONS: List<Pair<Regex, String>> = listOf(
         Regex("\\be\\.\\s?g\\.", RegexOption.IGNORE_CASE) to "for example",
@@ -406,6 +413,6 @@ object SpeechText {
     )
     private val CLAUSE_SPLIT = Regex(",\\s+")
     private val REPLACEMENT_BETWEEN_LETTERS = Regex("(\\p{L})\uFFFD(\\p{L})")
-    private val NON_LEXICON_PUNCT = Regex("[^\\p{L}\\p{N}'.,!?;:\\s]+")
-    private val STRAY_APOSTROPHE = Regex("(?<!\\p{L})'|'(?!\\p{L})")
+    private val UNSPOKEN = Regex("[\uFFFD\u25CF\u2022\u25AA\u25A0\u25E6\u2023\u2043]")
+    private val SPACED_EM_DASH = Regex("\\s*\u2014\\s*(?=\\p{L})")
 }

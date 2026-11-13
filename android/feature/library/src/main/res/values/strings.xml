@@ -842,8 +842,6 @@
     <string name="resources_subtitle">FlowFolio comes light. Add any of these whenever you like; they stay on this phone and work offline.</string>
     <string name="resources_scanned">Scanned books</string>
     <string name="resources_scanned_text">Read books that are pictures of pages: their text reflows to your screen, in English and Arabic.</string>
-    <string name="resources_voices">Narrator voices</string>
-    <string name="resources_voices_text">Natural voices that read your books aloud, on the phone and with the screen off.</string>
     <string name="resources_dictionary">Dictionary</string>
     <string name="resources_dictionary_text">Princeton WordNet for Define: clear definitions for words you meet, without a connection.</string>
     <string name="resources_total">Download size: %1$s</string>

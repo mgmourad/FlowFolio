@@ -29,13 +29,22 @@ class SpeechTextTest {
 
     @Test
     fun `replaces dashes and ellipsis with speakable forms`() {
-        assertEquals("a b, c...", SpeechText.normalize("a \u2014 b, c\u2026"))
+        assertEquals("a, b, c...", SpeechText.normalize("a \u2014 b, c\u2026"))
     }
 
     @Test
-    fun `cleans PDF replacement chars, parentheses, bullets and numbers for lexicon`() {
-        val cleaned = SpeechText.cleanForLexicon("● (by pass\uFFFDphrase 149 - cybercrime)")
-        assertEquals("by pass phrase one hundred forty nine cybercrime", cleaned)
+    fun `leaves numbers and punctuation to the engine, taking out only what is never said`() {
+        val cleaned = SpeechText.cleanForSpeech("● (by pass\uFFFDphrase 149 - cybercrime)")
+        assertEquals("(by pass phrase 149 - cybercrime)", cleaned)
+    }
+
+    @Test
+    fun `a sentence is never cut at a semicolon, colon or comma`() {
+        val segments = SpeechText.segments("We tried three things: first, the lock; then the key. It opened.")
+        assertEquals(
+            listOf("We tried three things: first, the lock; then the key.", "It opened."),
+            segments.map { it.text }
+        )
     }
 
     @Test
@@ -50,7 +59,7 @@ class SpeechTextTest {
         """.trimIndent()
         val segments = SpeechText.segments(page)
         assertEquals(6, segments.size)
-        assertEquals("CHAPTER four", segments[0].text)
+        assertEquals("CHAPTER 4", segments[0].text)
         assertEquals(SpeechText.TITLE_PAUSE_MS, segments[0].pauseMs)
         assertEquals("Protecting Personal Devices", segments[1].text)
         assertEquals(SpeechText.SUBTITLE_PAUSE_MS, segments[1].pauseMs)

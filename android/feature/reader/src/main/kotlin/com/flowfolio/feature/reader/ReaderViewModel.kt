@@ -42,13 +42,6 @@ import com.flowfolio.core.reflow.CodeFace
 import com.flowfolio.core.reflow.Locator
 import com.flowfolio.core.voice.SpeechSegment
 import com.flowfolio.core.voice.SpeechText
-import com.flowfolio.core.voice.Voice
-import com.flowfolio.core.voice.VoiceEngine
-import com.flowfolio.core.voice.VoicePackDownloader
-import com.flowfolio.core.voice.VoicePackState
-import com.flowfolio.core.voice.VoicePacks
-import com.flowfolio.core.voice.VoiceSource
-import com.flowfolio.core.voice.VoiceSpeakers
 import com.flowfolio.feature.reader.cache.PageCache
 import com.flowfolio.feature.reader.cache.PageKey
 import com.flowfolio.feature.reader.cache.PdfPageSource
@@ -824,15 +817,15 @@ class ReaderViewModel @Inject constructor(
         locator = hit.locator
     )
 
-    private fun rectsOf(text: PageText, start: Int, end: Int): List<PageRect> {
+    private fun rectsOf(text: PageText, start: Int, end: Int, keep: (Int) -> Boolean = { true }): List<PageRect> {
         val out = ArrayList<PageRect>()
         for (i in start until end.coerceAtMost(text.length)) {
-            if (text.hasBox(i)) out += PageRect(text.left(i), text.top(i), text.right(i), text.bottom(i))
+            if (text.hasBox(i) && keep(i)) out += PageRect(text.left(i), text.top(i), text.right(i), text.bottom(i))
         }
         return out
     }
 
-    /** Narrator Mode (Phase 6 M3): reads the page aloud with Kokoro or Piper (sherpa-onnx), downloaded on first use. */
+    /** Narrator Mode: reads the page aloud with the phone's speech engine (ADR-0059), made on first use. */
     private var narrator: Narrator? = null
 
     private val narratorMutex = kotlinx.coroutines.sync.Mutex()
@@ -845,12 +838,6 @@ class ReaderViewModel @Inject constructor(
     private var pageReadJob: Job? = null
     private var nextPrefetchJob: Job? = null
     private var rateJob: Job? = null
-
-    // External app-specific storage: private to the app, adb-pushable for testing, and the natural home
-    // for a ~150 MB downloaded model (user-manageable, never backed up).
-    private val voiceDir = File(context.getExternalFilesDir(null) ?: context.filesDir, "voice")
-
-    private val downloaders = HashMap<String, VoicePackDownloader>()
 
     private val _narrating = MutableStateFlow(false)
     internal val narrating: StateFlow<Boolean> = _narrating.asStateFlow()
@@ -958,14 +945,24 @@ class ReaderViewModel @Inject constructor(
     private val _narratorContinuous = MutableStateFlow(true)
     internal val narratorContinuous: StateFlow<Boolean> = _narratorContinuous.asStateFlow()
 
-    private val _narratorVoice = MutableStateFlow<String?>(VoiceSpeakers.defaults.first().name)
+    /** The voice chosen (Settings keeps it); null until the engine's default is known. */
+    private val _narratorVoice = MutableStateFlow<String?>(null)
     internal val narratorVoice: StateFlow<String?> = _narratorVoice.asStateFlow()
 
-    internal val narratorVoices: List<Voice> = (
-        VoiceSpeakers.defaults +
-            VoiceSpeakers.all.filter { it.source == VoiceSource.PIPER } +
-            VoiceSpeakers.all
-        ).distinctBy { it.name }
+    /** The engine's voices in the phone's languages, once the engine has started. */
+    private val _narratorVoices = MutableStateFlow<List<NarratorVoice>>(emptyList())
+    internal val narratorVoices: StateFlow<List<NarratorVoice>> = _narratorVoices.asStateFlow()
+
+    /**
+     * What is being read, highlighted on its page (owner, 2026-11-13): the sentence, and the word being said in a
+     * stronger colour. Empty when the narrator is quiet.
+     */
+    private val spokenMarks = MutableStateFlow<List<Annotation>>(emptyList())
+    internal val spokenHighlight: StateFlow<List<Annotation>> = spokenMarks.asStateFlow()
+
+    /** Each page's spoken sentences matched to its text, made when the voice first reaches the page. */
+    private val spokenPlaces = java.util.concurrent.ConcurrentHashMap<Int, SpokenPlaces>()
+    private var spokenJob: Job? = null
 
     @Volatile
     private var currentSegmentPage: Int = -1
@@ -973,10 +970,7 @@ class ReaderViewModel @Inject constructor(
     @Volatile
     private var currentSegmentIndex: Int = 0
 
-    private val _voicePackState = MutableStateFlow<VoicePackState>(VoicePackState.Idle)
-    internal val voicePackState: StateFlow<VoicePackState> = _voicePackState.asStateFlow()
-
-    /** A narrator failure the panel should tell the reader about (a download or model-load error). */
+    /** A narrator failure the panel should tell the reader about (no speech engine, no audio focus). */
     private val _narratorError = MutableStateFlow<String?>(null)
     internal val narratorError: StateFlow<String?> = _narratorError.asStateFlow()
 
@@ -1009,24 +1003,27 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    /** Reads on in the voice named [name], or (not reading) says a line in it so the reader hears it. */
     fun setNarratorVoice(name: String) {
-        if (_narratorVoice.value == name && narrator != null && voiceLoadJob?.isActive != true) return
         _narratorVoice.value = name
-        _narratorError.value = null
-        voiceLoadJob?.cancel()
-        val voice = VoiceSpeakers.voiceOf(name) ?: return
-        val targetKey = if (voice.source == VoiceSource.PIPER) voice.modelKey else null
-        val current = narrator
-        if (current != null && current.modelKey == targetKey) {
-            _voicePackState.value = VoicePackState.Ready
-            current.setVoice(name)
-            if (_narrating.value) current.refreshConfig()
+        viewModelScope.launch { settingsRepository.setNarratorVoice(name) }
+        val current = narrator ?: return
+        current.setVoice(name)
+        if (_narrating.value) {
+            current.refreshConfig()
         } else {
-            current?.stop()
-            voiceLoadJob = viewModelScope.launch {
-                if (ensureNarratorReady() && _narrating.value) readPage(anchorPage, resumeSegment = true)
-            }
+            current.preview(context.getString(R.string.reader_narrator_preview))
         }
+    }
+
+    /** The narrator panel opened: start the engine now, so its voices are there to choose from. */
+    fun prepareNarrator() {
+        if (narrator == null) viewModelScope.launch { ensureNarratorReady() }
+    }
+
+    /** Opens the phone's own speech settings: more voices, and the engine itself. */
+    fun openSpeechSettings() {
+        runCatching { context.startActivity(Narrator.settingsIntent()) }
     }
 
     private fun startNarration() {
@@ -1040,98 +1037,89 @@ class ReaderViewModel @Inject constructor(
         nowPlaying()?.let { NarrationHub.attach(narrationCommands, it) }
         NarratorService.start(context)
         voiceLoadJob?.cancel()
-        val current = narrator
-        val voice = VoiceSpeakers.voiceOf(_narratorVoice.value.orEmpty()) ?: VoiceSpeakers.defaults.first()
-        val targetKey = if (voice.source == VoiceSource.PIPER) voice.modelKey else null
-        if (current != null && current.modelKey == targetKey) {
-            _voicePackState.value = VoicePackState.Ready
-            current.setRate(_narratorRate.value)
-            current.setVoice(voice.name)
-            readPage(anchorPage, resumeSegment = true)
-        } else {
-            voiceLoadJob = viewModelScope.launch {
-                if (ensureNarratorReady() && _narrating.value) readPage(anchorPage, resumeSegment = true)
-            }
+        voiceLoadJob = viewModelScope.launch {
+            if (ensureNarratorReady() && _narrating.value) readPage(anchorPage, resumeSegment = true)
         }
     }
 
+    /** Starts the phone's speech engine once (well under a second), with the chosen voice and speed. */
     private suspend fun ensureNarratorReady(): Boolean = narratorMutex.withLock {
-        val voice = VoiceSpeakers.voiceOf(_narratorVoice.value.orEmpty()) ?: VoiceSpeakers.defaults.first()
-        val targetKey = if (voice.source == VoiceSource.PIPER) voice.modelKey else null
         val existing = narrator
-        if (existing != null && existing.modelKey == targetKey) {
+        if (existing != null) {
             existing.setRate(_narratorRate.value)
-            existing.setVoice(voice.name)
-            _voicePackState.value = VoicePackState.Ready
             return@withLock true
         }
-        val engine = downloadAndLoadVoice(targetKey) ?: return@withLock false
-        val current = narrator
-        if (current == null) {
-            val created = Narrator(engine, targetKey)
-            created.setRate(_narratorRate.value)
-            created.setVoice(voice.name)
-            narrator = created
-        } else {
-            current.swapEngine(engine, voice.id, targetKey)
-            current.setRate(_narratorRate.value)
+        val created = Narrator(context)
+        if (!created.awaitReady()) {
+            created.release()
+            _narratorError.value = context.getString(R.string.reader_narrator_no_engine)
+            _narrating.value = false
+            return@withLock false
         }
-        _voicePackState.value = VoicePackState.Ready
+        narrator = created
+        loadVoices(created)
+        created.setRate(_narratorRate.value)
         true
     }
 
-    @Suppress("ReturnCount")
-    private suspend fun downloadAndLoadVoice(targetKey: String?): VoiceEngine? {
-        val pack = if (targetKey != null) {
-            VoicePacks.piper[targetKey] ?: return null
-        } else {
-            VoicePacks.kokoroMultiLang
-        }
-        val dir = if (targetKey != null) File(voiceDir, targetKey) else voiceDir
-        val dl = synchronized(downloaders) {
-            downloaders.getOrPut(targetKey ?: KOKORO_KEY) { VoicePackDownloader(pack, dir) }
-        }
-        val forwardJob = viewModelScope.launch {
-            dl.state.collect { state ->
-                if (state != VoicePackState.Idle && state != VoicePackState.Ready) {
-                    _voicePackState.value = state
-                }
-            }
-        }
-        try {
-            dl.ensureDownloaded()
-        } finally {
-            forwardJob.cancel()
-        }
-        if (dl.state.value != VoicePackState.Ready) {
-            _voicePackState.value = dl.state.value
-            if (dl.state.value !is VoicePackState.Failed) {
-                _narratorError.value = context.getString(R.string.reader_narrator_load_failed)
-            }
-            _narrating.value = false
-            return null
-        }
-        _voicePackState.value = VoicePackState.Installing(1f)
-        // Loading the model is slow and native: do it off the main thread, and never crash on it.
-        val engine = withContext(Dispatchers.IO) {
-            runCatching {
-                if (targetKey != null) {
-                    VoiceEngine.loadPiper(dir.absolutePath, pack.modelName)
-                } else {
-                    VoiceEngine.load(dir.absolutePath)
-                }
-            }.getOrNull()
-        }
-        if (engine == null) {
-            _voicePackState.value = VoicePackState.Idle
-            _narratorError.value = context.getString(R.string.reader_narrator_load_failed)
-            _narrating.value = false
-        }
-        return engine
+    /** The engine's voices for the picker, and the saved choice (or the engine's default) put in place. */
+    private suspend fun loadVoices(n: Narrator) {
+        val all = n.voices()
+        val locales = android.os.LocaleList.getDefault().let { list -> (0 until list.size()).map { list[it] } }
+        _narratorVoices.value = NarratorVoices.of(all, locales + java.util.Locale.ENGLISH)
+        val saved = settingsRepository.settings.first().narratorVoice
+        val chosen = saved?.takeIf { name -> all.any { it.name == name } } ?: n.defaultVoice()
+        _narratorVoice.value = chosen
+        n.setVoice(chosen)
     }
+
+    /** Shows sentence [index] of [page] as being read, and within it the word at [start]..[end] when known. */
+    private fun markSpoken(page: Int, index: Int, start: Int = -1, end: Int = -1) {
+        spokenJob?.cancel()
+        spokenJob = viewModelScope.launch(Dispatchers.Default) {
+            val text = pageText(page) ?: return@launch
+            val places = spokenPlaces.getOrPut(page) {
+                SpokenPlaces(text.text, narratorSegments[page].orEmpty().map { it.text })
+            }
+            val sentence = places.sentence(index) ?: return@launch
+            val word = if (start >= 0) places.word(index, start, end) else null
+            val marks = ArrayList<Annotation>(2)
+            val around = rectsOf(text, sentence.first, sentence.last + 1) { word == null || it !in word }
+            marks += spokenAnnotation(SPOKEN_SENTENCE_ID, page, sentence, around, HighlightColor.TEAL)
+            if (word != null) {
+                marks += spokenAnnotation(
+                    SPOKEN_WORD_ID,
+                    page,
+                    word,
+                    rectsOf(text, word.first, word.last + 1),
+                    HighlightColor.ORANGE
+                )
+            }
+            if (_narrating.value) spokenMarks.value = marks
+        }
+    }
+
+    private fun spokenAnnotation(id: Long, page: Int, range: IntRange, rects: List<PageRect>, color: HighlightColor) =
+        Annotation(
+            id = id,
+            bookId = bookId,
+            page = page,
+            label = null,
+            start = range.first,
+            end = range.last + 1,
+            text = "",
+            rects = rects,
+            color = color,
+            note = null,
+            createdAtMillis = 0L,
+            updatedAtMillis = 0L,
+            locator = null
+        )
 
     private fun stopNarration() {
         _narrating.value = false
+        spokenJob?.cancel()
+        spokenMarks.value = emptyList()
         voiceLoadJob?.cancel()
         rateJob?.cancel()
         pageReadJob?.cancel()
@@ -1159,6 +1147,7 @@ class ReaderViewModel @Inject constructor(
             val (stitchedCurrent, stitchedNext) = SpeechText.stitchCrossPage(rawCurrent, rawNext)
             val segments = SpeechText.segments(stitchedCurrent)
             narratorSegments[page] = segments
+            spokenPlaces.remove(page)
             if (segments.isEmpty()) {
                 handleBlankNarratorPage(page)
                 return@launch
@@ -1178,7 +1167,9 @@ class ReaderViewModel @Inject constructor(
                     onSegment = { segPage, index ->
                         currentSegmentPage = segPage
                         currentSegmentIndex = index
+                        markSpoken(segPage, index)
                     },
+                    onWord = { segPage, index, start, end -> markSpoken(segPage, index, start, end) },
                     onPageAdvance = ::onNarratorPageAdvance,
                     done = { finishedPage ->
                         currentSegmentIndex = 0
@@ -1187,6 +1178,8 @@ class ReaderViewModel @Inject constructor(
                 )
                 if (_narratorContinuous.value && nextPage != null && !stitchedNext.isNullOrBlank()) {
                     val nextSegments = prepareStitchedSegments(nextPage, stitchedNext)
+                    narratorSegments[nextPage] = nextSegments
+                    spokenPlaces.remove(nextPage)
                     narrator?.setNextPage(nextPage, nextSegments)
                 }
             }
@@ -1226,6 +1219,7 @@ class ReaderViewModel @Inject constructor(
             }
             val segments = prepareStitchedSegments(nextPage, rawNext)
             narratorSegments[nextPage] = segments
+            spokenPlaces.remove(nextPage)
             if (_narrating.value && _narratorContinuous.value) {
                 narrator?.setNextPage(nextPage, segments)
             }
@@ -1690,7 +1684,6 @@ class ReaderViewModel @Inject constructor(
         /** Covers are decoded at a quarter of their size: only their colours are needed. */
         private const val COVER_SAMPLE = 4
 
-        private const val KOKORO_KEY = "kokoro"
         private const val NARRATOR_RATE_DEBOUNCE_MS = 90L
     }
 }

@@ -41,6 +41,7 @@ interface SettingsRepository {
     suspend fun setStatsBand(band: StatsBand) = Unit
 
     suspend fun setNarratorSkip(skip: NarratorSkip) = Unit
+    suspend fun setNarratorVoice(name: String) = Unit
 
     /** How the Shelves tab orders its shelves (ADR-0052). */
     suspend fun setShelvesOrder(order: ShelvesOrder) = Unit
@@ -150,6 +151,10 @@ class DefaultSettingsRepository @Inject constructor(private val source: Settings
 
     override suspend fun setNarratorSkip(skip: NarratorSkip) {
         source.setNarratorSkip(skip)
+    }
+
+    override suspend fun setNarratorVoice(name: String) {
+        source.setNarratorVoice(name)
     }
 
     override suspend fun setShelvesOrder(order: ShelvesOrder) {

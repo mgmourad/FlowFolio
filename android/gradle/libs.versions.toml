@@ -12,7 +12,7 @@ activityCompose = "1.13.0"
 lifecycle = "2.11.0"
 coreKtx = "1.19.1"
 junit4 = "4.13.2"
-# OCR tests on the JVM (ADR-0054): the runtime line the app gets from sherpa-onnx (1.28.2); no 1.28.2 Java build exists.
+# OCR tests on the JVM (ADR-0054): the same ONNX Runtime the app ships (OnnxRuntimeConventionPlugin, ADR-0059).
 onnxruntime = "1.28.0"
 androidxTestExtJunit = "1.3.0"
 androidxTestRunner = "1.7.0"
@@ -43,8 +43,6 @@ jna = "5.19.1"
 epubcheck = "5.4.0"
 # OCR tests on the desktop JVM (ADR-0054): Tesseract through JNA, :tools:convert tests only, never in the app.
 tess4j = "5.21.0"
-# Voice-pack download (Phase 6 M3): tar.bz2 extraction of the Kokoro model (sherpa-onnx's release format).
-commonsCompress = "1.27.1"
 # Home-screen widgets (TM2, owner-approved 2026-11-12): Jetpack Glance, Apache-2.0, released 2026-08-26.
 glance = "1.2.0"
 
@@ -104,7 +102,6 @@ kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serializa
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 epubcheck = { module = "org.w3c:epubcheck", version.ref = "epubcheck" }
 tess4j = { module = "net.sourceforge.tess4j:tess4j", version.ref = "tess4j" }
-commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "commonsCompress" }
 
 
 # Gradle plugins as libraries, for build-logic convention plugins
@@ -138,7 +135,7 @@ flowfolio-android-compose = { id = "flowfolio.android.compose" }
 flowfolio-android-library = { id = "flowfolio.android.library" }
 flowfolio-jvm-library = { id = "flowfolio.jvm.library" }
 flowfolio-pdfium = { id = "flowfolio.pdfium" }
-flowfolio-sherpa-onnx = { id = "flowfolio.sherpa-onnx" }
+flowfolio-onnxruntime = { id = "flowfolio.onnxruntime" }
 flowfolio-tesseract = { id = "flowfolio.tesseract" }
 flowfolio-hilt = { id = "flowfolio.hilt" }
 flowfolio-quality = { id = "flowfolio.quality" }

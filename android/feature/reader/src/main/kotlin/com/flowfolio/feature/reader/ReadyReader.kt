@@ -321,15 +321,14 @@ internal fun BoxScope.Controls(
             val narratorRate by parts.book.narratorRate.collectAsStateWithLifecycle()
             val narratorContinuous by parts.book.narratorContinuous.collectAsStateWithLifecycle()
             val narratorVoice by parts.book.narratorVoice.collectAsStateWithLifecycle()
-            val voicePackState by parts.book.voicePackState.collectAsStateWithLifecycle()
+            val narratorVoices by parts.book.narratorVoices.collectAsStateWithLifecycle()
             val narratorError by parts.book.narratorError.collectAsStateWithLifecycle()
             val narrator = NarratorUi(
                 narrating = narrating,
                 rate = narratorRate,
                 continuous = narratorContinuous,
-                voices = parts.book.narratorVoices,
+                voices = narratorVoices,
                 voice = narratorVoice,
-                packState = voicePackState,
                 error = narratorError
             )
             val coachTargets = remember { CoachTargets() }
@@ -383,10 +382,11 @@ internal fun BoxScope.Controls(
                 onNarratorToggle = parts.book::toggleNarration,
                 onNarratorRate = parts.book::setNarratorRate,
                 onNarratorContinuous = parts.book::setNarratorContinuous,
-                onNarratorVoice = parts.book::setNarratorVoice
+                onNarratorVoice = parts.book::setNarratorVoice,
+                onSpeechSettings = parts.book::openSpeechSettings,
+                onNarratorShown = parts.book::prepareNarrator
             )
             AtmosphereGlimpse(parts.book)
-            VoiceDownloadOverlay(voicePackState)
             FootnotePopover(overlay.note, parts.book::footnote, onDismiss = { overlay.note = null })
             overlay.figure?.let { FigureZoom(it, parts.book, onDismiss = { overlay.figure = null }) }
             // The coach marks (ADR-0052): once, after the first-book demo, with the chrome held up to point at.

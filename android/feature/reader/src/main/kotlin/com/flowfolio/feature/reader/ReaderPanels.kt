@@ -55,8 +55,6 @@ import com.flowfolio.core.designsystem.dragDownToDismiss
 import com.flowfolio.core.designsystem.glass
 import com.flowfolio.core.designsystem.swipeTabs
 import com.flowfolio.core.model.Bookmark
-import com.flowfolio.core.voice.Voice
-import com.flowfolio.core.voice.VoicePackState
 
 /**
  * Catches taps outside an open panel and closes it (and Back closes it), so a tap meant to dismiss never turns a
@@ -96,7 +94,9 @@ internal fun BoxScope.ReaderPanels(
     onNarratorToggle: () -> Unit = {},
     onNarratorRate: (Float) -> Unit = {},
     onNarratorContinuous: (Boolean) -> Unit = {},
-    onNarratorVoice: (String) -> Unit = {}
+    onNarratorVoice: (String) -> Unit = {},
+    onSpeechSettings: () -> Unit = {},
+    onNarratorShown: () -> Unit = {}
 ) {
     DockPanel(panel == Panel.CONTENTS, inner = LIST_PADDING, onDismiss = onDismiss) {
         ContentsPanel(navigation, s.anchorPage, mark.all, jump) { onPanel(Panel.GO_TO) }
@@ -141,12 +141,13 @@ internal fun BoxScope.ReaderPanels(
             narrator.continuous,
             narrator.voices,
             narrator.voice,
-            narrator.packState,
             narrator.error,
             onNarratorToggle,
             onNarratorRate,
             onNarratorContinuous,
-            onNarratorVoice
+            onNarratorVoice,
+            onSpeechSettings,
+            onNarratorShown
         )
     }
 }
@@ -156,9 +157,8 @@ internal data class NarratorUi(
     val narrating: Boolean = false,
     val rate: Float = 1f,
     val continuous: Boolean = true,
-    val voices: List<Voice> = emptyList(),
+    val voices: List<NarratorVoice> = emptyList(),
     val voice: String? = null,
-    val packState: VoicePackState = VoicePackState.Idle,
     val error: String? = null
 )
 
