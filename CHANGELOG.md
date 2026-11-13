@@ -5,6 +5,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [0.7.0-beta.5] - 2026-11-12
+
+### For readers
+- **Downloads that finish.** Scanned books, Narrator voices and the dictionary now download side by side, and a
+  dropped connection carries on where it stopped instead of failing. All three (177 MB) took 40 seconds in testing.
+- **The voices are ready as soon as they arrive:** no more minutes stuck at 100% while they unpacked.
+- **Two editions.** *Essential* downloads those extras when you ask; *Full* has them inside, ready offline from the
+  first start. Each comes for 64-bit ARM phones (most phones), 32-bit ARM phones, and as a universal file. Either
+  edition updates the other in place, and the app keeps updating to the edition you have.
+- **Folded, the reader's title bar** shows the book's title before the chapter.
+
+### Downloads and editions (ADR-0058)
+- `PackFetch` (`:core:voice`): parallel files, Range resume, 5 attempts, progress once per percent, `FlowFolioFetch`
+  logs. Used by `OcrPack`, `WordNetPack` and Kokoro (mirrored gzipped on `resources-v1`); one lock per voice folder.
+- `ResourceDownloads` runs the packs side by side.
+- `edition` flavour: `essential` and `full` (release-only; `bundled-packs.tsv`, `fetchBundledPacks`, `BundledPacks`).
+- `Updates.pickApk(full)`: `.full.apk` assets; older updaters stay on Essential.
+- `.github/workflows/release.yml` and `tools/release/collect-apks.sh`: both editions, arm64-v8a, armeabi-v7a and
+  universal, signed with the release key from repository secrets.
+- Verified on `fold8_api37`: the three packs downloaded in 40 s; the Full universal APK updated the release app in
+  place and put its packs in place in 8 s; all six APKs signed `59fbae55`. `PickApkTest` covers the editions.
+
 ## [0.7.0-beta.4] - 2026-11-12
 
 ### For readers

@@ -51,12 +51,22 @@ object BundledPacks {
             dir.mkdirs()
             for (f in files) {
                 if (PackFetch.isInPlace(f, dir)) continue
-                val asset = "$ROOT/$group/${f.url.substringAfterLast('/')}"
+                val served = "$ROOT/$group/${f.url.substringAfterLast('/')}"
+                // The Android build unpacks `.gz` assets and drops the `.gz` from their names, so a gzipped file is
+                // usually inside the APK already unpacked; the `.gz` name is the fallback.
+                val unpacked = served.removeSuffix(".gz")
+                val (asset, gunzip) = if (f.gzipped &&
+                    exists(context, unpacked)
+                ) {
+                    unpacked to false
+                } else {
+                    served to f.gzipped
+                }
                 val target = File(dir, f.name)
                 val part = File(dir, f.name + ".part")
                 runCatching {
                     context.assets.open(asset).use { raw ->
-                        val input = if (f.gzipped) GZIPInputStream(raw.buffered(BUFFER), BUFFER) else raw
+                        val input = if (gunzip) GZIPInputStream(raw.buffered(BUFFER), BUFFER) else raw
                         part.outputStream().buffered(BUFFER).use { input.copyTo(it, BUFFER) }
                     }
                     target.delete()
@@ -68,6 +78,9 @@ object BundledPacks {
             }
         }
     }
+
+    private fun exists(context: Context, asset: String): Boolean =
+        context.assets.list(asset.substringBeforeLast('/')).orEmpty().contains(asset.substringAfterLast('/'))
 
     private const val BUFFER = 256 * 1024
 }

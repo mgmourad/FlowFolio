@@ -250,6 +250,12 @@ reading surface and conversion, then TM2, the library, the app's size and widget
   title-bar fix are untested, CI was not waited for, and the unfolded tour pictures were not retaken.
   Release assets are now four APKs (universal under the old name, then `-arm64-v8a`, `-armeabi-v7a`, `-x86_64`),
   each with its `.sha256`.
+- **0.7.0-beta.5 (build 700005), 2026-11-12** (ADR-0058): downloads fixed (`PackFetch`: parallel, resumable,
+  logged; Kokoro mirrored gzipped on `resources-v1`) and **two editions**, Essential and Full (`edition` flavour;
+  Full is release-only and bundles the packs). Releases are built by `.github/workflows/release.yml` on a `v*` tag,
+  for each edition `arm64-v8a`, `armeabi-v7a` and universal; Full files end in `.full.apk`. The debug APK is now
+  `app/build/outputs/apk/essential/debug/app-essential-debug.apk`, and app-module tasks are `essentialDebug`
+  (`:app:testEssentialDebugUnitTest`, `:app:lintEssentialDebug`).
 - **The owner's Arabic book, 2026-11-11** (CHANGELOG, Unreleased, "Arabic books"): typed Arabic pages had their
   words reversed (flat-box spaces cut every line; fixed in `Extraction`); right-to-left pages now read their right
   column first (`ReadingOrder`); and an Arabic scanned book skips OCR once its pages vote it Arabic while no Arabic
@@ -433,7 +439,7 @@ Windows dev machine; PowerShell shown, bash equivalents work in CI.
 uv tool install pre-commit; pre-commit install          # hooks: pre-commit + commit-msg
 
 # Android (from android/)
-.\gradlew.bat assembleDebug                              # debug APK -> app/build/outputs/apk/debug/
+.\gradlew.bat assembleDebug                              # Essential debug APK -> app/build/outputs/apk/essential/debug/
 .\gradlew.bat testDebugUnitTest                          # JVM unit + Robolectric Compose tests
 .\gradlew.bat spotlessCheck detekt lintDebug             # static checks (spotlessApply to fix format)
 .\gradlew.bat connectedDebugAndroidTest                  # instrumented tests; needs emulator/device
