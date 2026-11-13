@@ -5,6 +5,8 @@ package com.flowfolio.core.voice
  * more); Piper is two opt-in per-voice models (Amy, Alan) that share one lexicon.
  */
 object VoicePacks {
+    private const val RESOURCES = "https://github.com/mgmourad/FlowFolio/releases/download/resources-v1/"
+
     /** `kokoro-multi-lang-v1_0` int8, served from sherpa-onnx's public `tts-models` release. */
     val kokoroMultiLang = VoicePack(
         archiveUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/" +
@@ -17,6 +19,45 @@ object VoicePacks {
             "tokens.txt",
             "lexicon-us-en.txt",
             "lexicon-zh.txt"
+        ),
+        // The same five files, unchanged, gzipped one by one on FlowFolio's `resources-v1` (2026-11-12): 117 MB
+        // instead of the 132 MB archive, fetched in parallel, and no bzip2 to unpack on the phone.
+        files = listOf(
+            PackFile(
+                "model.int8.onnx",
+                RESOURCES + "kokoro-model.int8.onnx.gz",
+                "4eb22f73a9e3d06bdfb18dcf90de3474c0985211191d33410053cbdb88f29564",
+                89_200_497,
+                gzipped = true
+            ),
+            PackFile(
+                "voices.bin",
+                RESOURCES + "kokoro-voices.bin.gz",
+                "65ae6355c1027ebc8de667c5f7a450033a3432a4e1366be3afb42e3321219783",
+                25_920_342,
+                gzipped = true
+            ),
+            PackFile(
+                "tokens.txt",
+                RESOURCES + "kokoro-tokens.txt.gz",
+                "ff76c412ffd19a90f5dc5dca46b248a940347cb1a93f1001f9e6204a5f833b7e",
+                487,
+                gzipped = true
+            ),
+            PackFile(
+                "lexicon-us-en.txt",
+                RESOURCES + "kokoro-lexicon-us-en.txt.gz",
+                "515062d0e8daef713935dd725562db122a2127b9bedc1403446b14bd1a2fde71",
+                1_405_568,
+                gzipped = true
+            ),
+            PackFile(
+                "lexicon-zh.txt",
+                RESOURCES + "kokoro-lexicon-zh.txt.gz",
+                "51f3ac93a040eae0594265368eae883a1a23197b2888d6ba2687f8ffb6067f63",
+                615_369,
+                gzipped = true
+            )
         )
     )
 

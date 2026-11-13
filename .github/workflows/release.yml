@@ -1,0 +1,86 @@
+# Release (owner, 2026-11-12): a pushed `v*` tag builds both editions -- Essential (packs downloaded on request) and
+# Full (everything inside) -- for 64-bit ARM, 32-bit ARM and as universal APKs, signs them with the release key and
+# publishes them as a GitHub pre-release (ADR-0042, ADR-0050, ADR-0057).
+#
+# Needs four repository secrets (ADR-0049's second copy of the release key):
+#   FLOWFOLIO_RELEASE_KEYSTORE      the keystore, base64
+#   FLOWFOLIO_RELEASE_STORE_PASSWORD, FLOWFOLIO_RELEASE_KEY_ALIAS, FLOWFOLIO_RELEASE_KEY_PASSWORD
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to (re)build and publish, e.g. v0.7.0-beta.5
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: "21"
+      # Chaquopy builds :core:extract with Python 3.12 (ADR-0047).
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Release key
+        env:
+          KEYSTORE: ${{ secrets.FLOWFOLIO_RELEASE_KEYSTORE }}
+          STORE_PASSWORD: ${{ secrets.FLOWFOLIO_RELEASE_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.FLOWFOLIO_RELEASE_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.FLOWFOLIO_RELEASE_KEY_PASSWORD }}
+        run: |
+          test -n "$KEYSTORE" || { echo "::error::The release key secrets are not set (see the header)"; exit 1; }
+          echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
+          mkdir -p ~/.gradle
+          {
+            echo "flowfolio.releaseSigning.storeFile=$RUNNER_TEMP/release.jks"
+            echo "flowfolio.releaseSigning.storePassword=$STORE_PASSWORD"
+            echo "flowfolio.releaseSigning.keyAlias=$KEY_ALIAS"
+            echo "flowfolio.releaseSigning.keyPassword=$KEY_PASSWORD"
+          } >> ~/.gradle/gradle.properties
+      - name: Build both editions
+        working-directory: android
+        run: ./gradlew :app:assembleEssentialRelease :app:assembleFullRelease
+      - name: Collect, check and hash the APKs
+        run: tools/release/collect-apks.sh "$RUNNER_TEMP/apks"
+      - name: Publish the pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=${TAG#v}
+          code=$(grep '^flowfolio.versionCode=' android/gradle.properties | cut -d= -f2)
+          awk -v v="$version" '$0 ~ "^## \\[" v "\\]" {f=1; next} /^### /&&f&&!/For readers/ {f=0} /^## \[/ {f=0} f' \
+            CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          cat >> "$RUNNER_TEMP/notes.md" <<NOTES
+
+          **Which file?** Two editions, the same app: **Essential** downloads scanned-book reading, Narrator voices
+          and the WordNet dictionary when you ask for them; **Full** has them inside, ready offline. Most phones:
+          \`-arm64-v8a\`. Older 32-bit phones: \`-armeabi-v7a\`. Not sure (or an emulator): the file without a
+          processor name. Full edition files end in \`.full.apk\`. Either edition updates the other in place.
+          NOTES
+          cd "$RUNNER_TEMP/apks"
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --prerelease \
+            --title "FlowFolio $version (build $code)" --notes-file "$RUNNER_TEMP/notes.md" \
+            "flowfolio-$version-$code.apk" "flowfolio-$version-$code.apk.sha256" \
+            flowfolio-*-arm64-v8a.apk* flowfolio-*-armeabi-v7a.apk* \
+            "flowfolio-$version-$code.full.apk" "flowfolio-$version-$code.full.apk.sha256"
+      - name: Forget the key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks"

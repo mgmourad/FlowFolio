@@ -84,6 +84,9 @@ fun ResourcesOfferHost(viewModel: ResourcesOfferViewModel = hiltViewModel()) {
     when {
         seen == null || TOUR_SEEN !in seen || RESOURCES_OFFERED in seen -> Unit
 
+        // The Full edition carries every pack: the offer is made, quietly.
+        viewModel.bundled -> LaunchedEffect(Unit) { viewModel.close() }
+
         // Nothing left to offer (all three already on the phone): the offer is made, quietly.
         states.all { it == ResourceState.Ready } -> LaunchedEffect(Unit) { viewModel.close() }
 
@@ -99,6 +102,8 @@ class ResourcesOfferViewModel @Inject constructor(
 ) : ViewModel() {
     val settings: StateFlow<UserSettings?> =
         repo.settings.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_MS), null)
+
+    val bundled: Boolean get() = downloads.bundled
 
     fun state(resource: Resource): StateFlow<ResourceState> = downloads.state(resource)
 

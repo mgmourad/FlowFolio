@@ -1,0 +1,13 @@
+# The Full edition's packs (2026-11-12): group, URL, SHA-256 of the served file. The same pins as OcrPack.FILES,
+# VoicePacks.kokoroMultiLang.files and WordNetPack; change them together. fetchBundledPacks downloads these into the
+# Full edition's assets (assets/packs/<group>/<file>); nothing here is committed but the list.
+ocr	https://github.com/mgmourad/FlowFolio/releases/download/ocr-models-v1/PP-OCRv6_det_small.onnx	090f04abcd9d9a7498bc4ebf677e4cb9bdce1fe4197ddb7e529f1ef44e1ff94f
+ocr	https://github.com/mgmourad/FlowFolio/releases/download/ocr-models-v1/PP-OCRv6_rec_small.onnx	6f327246b50388f3c176ae304bd95767ea6dc0c9ae92153ef8cbe210b3c14884
+ocr	https://github.com/mgmourad/FlowFolio/releases/download/ocr-models-v1/arabic_PP-OCRv5_rec_mobile.onnx	c1192e632d0baa9146ae5b756a0e635e3dc63c1733737ebfd1629e87144e9295
+ocr	https://github.com/mgmourad/FlowFolio/releases/download/ocr-models-v1/ara.traineddata	ab9d157d8e38ca00e7e39c7d5363a5239e053f5b0dbdb3167dde9d8124335896
+voice	https://github.com/mgmourad/FlowFolio/releases/download/resources-v1/kokoro-model.int8.onnx.gz	4eb22f73a9e3d06bdfb18dcf90de3474c0985211191d33410053cbdb88f29564
+voice	https://github.com/mgmourad/FlowFolio/releases/download/resources-v1/kokoro-voices.bin.gz	65ae6355c1027ebc8de667c5f7a450033a3432a4e1366be3afb42e3321219783
+voice	https://github.com/mgmourad/FlowFolio/releases/download/resources-v1/kokoro-tokens.txt.gz	ff76c412ffd19a90f5dc5dca46b248a940347cb1a93f1001f9e6204a5f833b7e
+voice	https://github.com/mgmourad/FlowFolio/releases/download/resources-v1/kokoro-lexicon-us-en.txt.gz	515062d0e8daef713935dd725562db122a2127b9bedc1403446b14bd1a2fde71
+voice	https://github.com/mgmourad/FlowFolio/releases/download/resources-v1/kokoro-lexicon-zh.txt.gz	51f3ac93a040eae0594265368eae883a1a23197b2888d6ba2687f8ffb6067f63
+dictionary	https://github.com/mgmourad/FlowFolio/releases/download/resources-v1/wordnet.db.gz	1c0c65f35a105c0fdfab4881b632437006191550e4c6ecf0b31f1c6e677e1ee1

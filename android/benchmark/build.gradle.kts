@@ -22,6 +22,9 @@ android {
     }
 
     targetProjectPath = ":app"
+    // The app has two editions (Essential, Full); benchmarks drive the Essential one.
+    flavorDimensions += "edition"
+    productFlavors { create("essential") { dimension = "edition" } }
 }
 
 kotlin {

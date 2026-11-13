@@ -40,6 +40,20 @@ class ResourceDownloads @Inject constructor(
     private val voices = VoicePackDownloader(VoicePacks.kokoroMultiLang, voiceDir)
     private val voicesReady = MutableStateFlow(VoicePacks.kokoroMultiLang.isReady(voiceDir))
 
+    /** The Full edition carries every pack: nothing to offer. */
+    val bundled: Boolean = BundledPacks.present(context)
+
+    /** Puts the Full edition's packs in place (first start; seconds), then reports them ready. */
+    fun installBundled(context: Context) {
+        if (!bundled) return
+        scope.launch {
+            BundledPacks.install(context, voiceDir)
+            ocr.recheck()
+            wordNet.recheck()
+            voicesReady.value = VoicePacks.kokoroMultiLang.isReady(voiceDir)
+        }
+    }
+
     /** Download sizes in bytes. */
     fun sizeOf(resource: Resource): Long = when (resource) {
         Resource.SCANNED_BOOKS -> ocr.sizeBytes
@@ -52,17 +66,21 @@ class ResourceDownloads @Inject constructor(
             it.asResource()
         }.stateIn(scope, SharingStarted.Eagerly, ocr.state.value.asResource())
 
-        Resource.VOICES -> voices.state.map {
-            voiceState(it)
+        // Also follows voicesReady, which the Full edition's first start sets without any download.
+        Resource.VOICES -> kotlinx.coroutines.flow.combine(voices.state, voicesReady) { s, _ ->
+            voiceState(s)
         }.stateIn(scope, SharingStarted.Eagerly, voiceState(voices.state.value))
 
         Resource.DICTIONARY -> wordNet.state
     }
 
-    /** Downloads [chosen] in the background, one after another. */
+    /**
+     * Downloads [chosen] in the background, side by side (2026-11-12): one after another, the 8 MB dictionary waited
+     * behind 180 MB of the rest.
+     */
     fun download(chosen: Set<Resource>) {
-        scope.launch {
-            for (r in Resource.entries.filter { it in chosen }) {
+        for (r in Resource.entries.filter { it in chosen }) {
+            scope.launch {
                 when (r) {
                     Resource.SCANNED_BOOKS -> ocr.download()
 
@@ -93,6 +111,6 @@ class ResourceDownloads @Inject constructor(
 
     private companion object {
         /** Kokoro multi-language int8, as served by sherpa-onnx's `tts-models` release. */
-        const val VOICES_BYTES = 132_353_410L
+        const val VOICES_BYTES = 117_142_263L
     }
 }

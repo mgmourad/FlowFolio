@@ -5,11 +5,10 @@ import com.flowfolio.core.conversion.ocr.OnnxMetadata
 import com.flowfolio.core.conversion.ocr.PaddleOcr
 import com.flowfolio.core.conversion.ocr.ScannedPageReader
 import com.flowfolio.core.ocr.TesseractOcr
+import com.flowfolio.core.voice.PackFetch
+import com.flowfolio.core.voice.PackFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
-import java.security.MessageDigest
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -50,54 +49,23 @@ class OcrPack @Inject constructor(@ApplicationContext private val context: Conte
             _state.value = OcrPackState.Ready
             return@withContext
         }
-        dir.mkdirs()
-        var done = 0L
+        // All four files at once, each resuming where a dropped connection left it (PackFetch, 2026-11-12): one
+        // failed read used to fail the whole pack, and the files came one after another.
         val ok = runCatching {
-            for (f in FILES) {
-                val target = File(dir, f.name)
-                if (!(target.isFile && sha256(target) == f.sha256)) {
-                    fetch(f, target) { n -> _state.value = OcrPackState.Downloading((done + n).toFloat() / sizeBytes) }
-                }
-                done += f.size
-            }
-        }.isSuccess
+            PackFetch.fetchAll(FILES, dir) { _state.value = OcrPackState.Downloading(it) }
+        }.onFailure { android.util.Log.w(PackFetch.TAG, "scanned-books pack failed", it) }.isSuccess
         _state.value = if (ok && readyIn(dir)) OcrPackState.Ready else OcrPackState.Failed
+    }
+
+    /** Reads the pack's state from disk again (the Full edition has just put it in place). */
+    fun recheck() {
+        if (readyIn(dir)) _state.value = OcrPackState.Ready
     }
 
     suspend fun remove() = withContext(Dispatchers.IO) {
         dir.deleteRecursively()
         _state.value = OcrPackState.Missing
     }
-
-    private fun fetch(file: PackFile, target: File, onBytes: (Long) -> Unit) {
-        val part = File(target.path + ".part")
-        val connection = URL(file.url).openConnection() as HttpURLConnection
-        connection.instanceFollowRedirects = true
-        connection.connectTimeout = TIMEOUT_MS
-        connection.readTimeout = TIMEOUT_MS
-        try {
-            connection.inputStream.use { input -> part.outputStream().use { out -> copy(input, out, onBytes) } }
-        } finally {
-            connection.disconnect()
-        }
-        check(sha256(part) == file.sha256) { "${file.name} did not arrive whole" }
-        check(part.renameTo(target))
-    }
-
-    private fun copy(input: java.io.InputStream, out: java.io.OutputStream, onBytes: (Long) -> Unit) {
-        val buffer = ByteArray(BUFFER)
-        var total = 0L
-        var n = input.read(buffer)
-        while (n >= 0) {
-            out.write(buffer, 0, n)
-            total += n
-            onBytes(total)
-            n = input.read(buffer)
-        }
-    }
-
-    /** One file of the pack, pinned by its SHA-256. */
-    class PackFile(val name: String, val url: String, val sha256: String, val size: Long)
 
     companion object {
         private const val BASE = "https://github.com/mgmourad/FlowFolio/releases/download/ocr-models-v1/"
@@ -160,21 +128,5 @@ class OcrPack @Inject constructor(@ApplicationContext private val context: Conte
                 TesseractOcr(dir, "ara")
             )
         }
-
-        private fun sha256(file: File): String {
-            val digest = MessageDigest.getInstance("SHA-256")
-            file.inputStream().use { input ->
-                val buffer = ByteArray(BUFFER)
-                while (true) {
-                    val n = input.read(buffer)
-                    if (n < 0) break
-                    digest.update(buffer, 0, n)
-                }
-            }
-            return digest.digest().joinToString("") { "%02x".format(it) }
-        }
-
-        private const val BUFFER = 64 * 1024
-        private const val TIMEOUT_MS = 30_000
     }
 }

@@ -1,12 +1,9 @@
 package com.flowfolio.core.data
 
 import android.content.Context
+import com.flowfolio.core.voice.PackFetch
+import com.flowfolio.core.voice.PackFile
 import dagger.hilt.android.qualifiers.ApplicationContext
-import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
-import java.security.MessageDigest
-import java.util.zip.GZIPInputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
@@ -42,17 +39,16 @@ class WordNetPack @Inject constructor(@ApplicationContext private val context: C
             _state.value = ResourceState.Ready
             return@withContext
         }
-        target.parentFile?.mkdirs()
-        val gz = File(target.path + ".gz.part")
+        val file = PackFile(target.name, URL_STRING, SHA256, SIZE, gzipped = true)
         val ok = runCatching {
-            fetch(gz)
-            check(sha256(gz) == SHA256) { "wordnet.db.gz did not arrive whole" }
-            val part = File(target.path + ".part")
-            GZIPInputStream(gz.inputStream()).use { input -> part.outputStream().use { input.copyTo(it) } }
-            check(part.renameTo(target))
-        }.isSuccess
-        gz.delete()
+            PackFetch.fetchAll(listOf(file), target.parentFile!!) { _state.value = ResourceState.Downloading(it) }
+        }.onFailure { android.util.Log.w(PackFetch.TAG, "WordNet failed", it) }.isSuccess
         _state.value = if (ok && target.isFile) ResourceState.Ready else ResourceState.Failed
+    }
+
+    /** Reads the state from disk again (the Full edition has just put it in place). */
+    fun recheck() {
+        if (target.isFile) _state.value = ResourceState.Ready
     }
 
     suspend fun remove() = withContext(Dispatchers.IO) {
@@ -60,48 +56,9 @@ class WordNetPack @Inject constructor(@ApplicationContext private val context: C
         _state.value = ResourceState.Missing
     }
 
-    private fun fetch(out: File) {
-        val connection = URL(URL_STRING).openConnection() as HttpURLConnection
-        connection.instanceFollowRedirects = true
-        connection.connectTimeout = TIMEOUT_MS
-        connection.readTimeout = TIMEOUT_MS
-        try {
-            connection.inputStream.use { input -> out.outputStream().use { o -> copy(input, o) } }
-        } finally {
-            connection.disconnect()
-        }
-    }
-
-    private fun copy(input: java.io.InputStream, out: java.io.OutputStream) {
-        val buffer = ByteArray(BUFFER)
-        var total = 0L
-        var n = input.read(buffer)
-        while (n >= 0) {
-            out.write(buffer, 0, n)
-            total += n
-            _state.value = ResourceState.Downloading((total.toFloat() / SIZE).coerceAtMost(1f))
-            n = input.read(buffer)
-        }
-    }
-
-    private fun sha256(file: File): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        file.inputStream().use { input ->
-            val buffer = ByteArray(BUFFER)
-            while (true) {
-                val n = input.read(buffer)
-                if (n < 0) break
-                digest.update(buffer, 0, n)
-            }
-        }
-        return digest.digest().joinToString("") { "%02x".format(it) }
-    }
-
     companion object {
         const val URL_STRING = "https://github.com/mgmourad/FlowFolio/releases/download/resources-v1/wordnet.db.gz"
         const val SHA256 = "1c0c65f35a105c0fdfab4881b632437006191550e4c6ecf0b31f1c6e677e1ee1"
         const val SIZE = 8052396L
-        private const val TIMEOUT_MS = 30_000
-        private const val BUFFER = 64 * 1024
     }
 }

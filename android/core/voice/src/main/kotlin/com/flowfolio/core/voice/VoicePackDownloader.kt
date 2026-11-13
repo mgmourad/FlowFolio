@@ -35,7 +35,8 @@ class VoicePackDownloader(private val pack: VoicePack, private val destDir: File
     private val _state = MutableStateFlow<VoicePackState>(VoicePackState.Idle)
     val state: StateFlow<VoicePackState> = _state.asStateFlow()
 
-    private val mutex = Mutex()
+    /** One lock per folder, shared by every downloader of it (the reader and the downloads offer each make one). */
+    private val mutex: Mutex = locks.getOrPut(destDir.absolutePath) { Mutex() }
 
     suspend fun ensureDownloaded() = mutex.withLock {
         withContext(Dispatchers.IO) {
@@ -65,12 +66,19 @@ class VoicePackDownloader(private val pack: VoicePack, private val destDir: File
             } catch (e: IOException) {
                 part.delete()
                 archive.delete()
+                android.util.Log.w(PackFetch.TAG, "voice pack failed", e)
                 _state.value = VoicePackState.Failed(e.message ?: "Voice pack download failed")
             }
         }
     }
 
     private suspend fun fetchAndExtractArchive(archive: File, part: File) {
+        val files = pack.files
+        if (files != null) {
+            _state.value = VoicePackState.Downloading(0f)
+            PackFetch.fetchAll(files, destDir) { p -> _state.value = VoicePackState.Downloading(p) }
+            return
+        }
         if (!archive.isFile || !pack.hasValidChecksum(archive)) {
             _state.value = VoicePackState.Downloading(0f)
             downloadWithRetry(pack.archiveUrl, archive, part) { p ->
@@ -185,6 +193,7 @@ class VoicePackDownloader(private val pack: VoicePack, private val destDir: File
     }
 
     private companion object {
+        val locks = java.util.concurrent.ConcurrentHashMap<String, Mutex>()
         const val BUFFER_BYTES = 64 * 1024
         const val CONNECT_TIMEOUT_MS = 15_000
         const val READ_TIMEOUT_MS = 60_000

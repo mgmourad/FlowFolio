@@ -219,7 +219,7 @@ class Updates @Inject constructor(
     /** The APK this phone should install from a release, or null when it has none (a notes-only release, say). */
     private fun apkAsset(assets: JSONArray?): JSONObject? = assets?.let { list ->
         val all = (0 until list.length()).mapNotNull { list.optJSONObject(it) }
-        val chosen = pickApk(all.map { it.optString("name") }, Build.SUPPORTED_ABIS.toList())
+        val chosen = pickApk(all.map { it.optString("name") }, Build.SUPPORTED_ABIS.toList(), full)
         all.firstOrNull { it.optString("name") == chosen }
     }
 
@@ -247,6 +247,9 @@ class Updates @Inject constructor(
         }
     }
 
+    /** The Full edition updates to the Full edition, the Essential to the Essential. */
+    private val full: Boolean by lazy { BundledPacks.present(context) }
+
     internal companion object {
         const val RELEASES = "https://api.github.com/repos/mgmourad/FlowFolio/releases?per_page=10"
         const val RELEASES_PAGE = "https://github.com/mgmourad/FlowFolio/releases/latest"
@@ -258,20 +261,26 @@ class Updates @Inject constructor(
         const val TOO_MANY_REQUESTS = 429
 
         /** `flowfolio-<version>-<versionCode>.apk`, or `...-<versionCode>-<abi>.apk` for one processor type (TM2). */
-        val APK_NAME = Regex("""-(\d+)(?:-[a-z0-9_]+(?:-[a-z0-9_]+)?)?\.apk$""")
+        val APK_NAME = Regex("""-(\d+)(?:-[a-z0-9_]+(?:-[a-z0-9_]+)?)?(?:\.full)?\.apk$""")
 
         /**
          * Which APK of a release to install (TM1): the one built for the first processor type in [abis] (the phone's
          * own, most preferred first), else the universal APK, else any APK. Releases from TM2 carry one APK per
          * processor type beside the universal one; older releases only the universal one.
          */
-        fun pickApk(names: List<String>, abis: List<String>): String? {
-            val apks = names.filter { it.endsWith(".apk") }
-            for (abi in abis) apks.firstOrNull { it.endsWith("-$abi.apk") }?.let { return it }
-            return apks.firstOrNull { UNIVERSAL.containsMatchIn(it) } ?: apks.firstOrNull()
+        fun pickApk(names: List<String>, abis: List<String>, full: Boolean = false): String? {
+            // The Full edition's files end in `.full.apk`, which older updaters never match (they look for
+            // `-<abi>.apk` and `-<code>.apk`), so phones on the Essential edition keep getting the Essential one.
+            val ending = if (full) ".full.apk" else ".apk"
+            val apks = names.filter { it.endsWith(ending) && (full || !it.endsWith(".full.apk")) }
+            for (abi in abis) apks.firstOrNull { it.endsWith("-$abi$ending") }?.let { return it }
+            val universal = if (full) UNIVERSAL_FULL else UNIVERSAL
+            return apks.firstOrNull { universal.containsMatchIn(it) } ?: apks.firstOrNull()
+                ?: if (full) pickApk(names, abis, full = false) else null
         }
 
         private val UNIVERSAL = Regex("""-\d+\.apk$""")
+        private val UNIVERSAL_FULL = Regex("""-\d+\.full\.apk$""")
 
         /** What an HTTP status means for a reader waiting on a check. */
         fun failureFor(code: Int): UpdateFailure = when (code) {

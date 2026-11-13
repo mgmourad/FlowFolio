@@ -104,7 +104,8 @@ jobs:
       - name: Lint, test, build
         # testDebugUnitTest also runs the JVM modules' tests, the converter's included (EPUBCheck on the robustness
         # PDFs through the Linux PDFium build).
-        run: ./gradlew spotlessCheck detekt lintDebug testDebugUnitTest assembleDebug --continue
+        # The app has two editions; its debug variant, tests and lint are the Essential edition's (`essentialDebug`).
+        run: ./gradlew spotlessCheck detekt lintDebug :app:lintEssentialDebug testDebugUnitTest :app:testEssentialDebugUnitTest assembleDebug --continue
       - name: Upload debug APK
         # Build output, not a check: a full artifact quota must not fail a build whose checks passed (2026-10-28).
         continue-on-error: true

@@ -1,3 +1,6 @@
+import java.net.URI
+import java.security.MessageDigest
+
 plugins {
     alias(libs.plugins.flowfolio.android.application)
     alias(libs.plugins.flowfolio.android.compose)
@@ -37,6 +40,19 @@ android {
     }
 
     buildFeatures { buildConfig = true }
+
+    // Two editions of one app (owner, 2026-11-12), same package and key, so either updates the other in place:
+    // Essential downloads the optional packs on request; Full carries them (fetchBundledPacks) and never asks.
+    flavorDimensions += "edition"
+    productFlavors {
+        create("essential") {
+            dimension = "edition"
+            isDefault = true
+        }
+        create("full") { dimension = "edition" }
+    }
+    // The bundled models are already compressed or do not compress: stored as they are, read with one copy.
+    androidResources { noCompress += listOf("onnx", "gz", "traineddata") }
 
     // ADR-0036: one fixed key for the dev builds the owner sideloads, so each APK updates the last in place. It lives
     // outside the repo (`flowfolio.devSigning.*` in ~/.gradle/gradle.properties); without it (CI, other machines)
@@ -110,7 +126,56 @@ val checkReleaseSigning = tasks.register("checkReleaseSigning") {
     }
 }
 
-tasks.matching { it.name == "packageRelease" }.configureEach { dependsOn(checkReleaseSigning) }
+tasks.matching {
+    it.name.startsWith("package") && it.name.endsWith("Release") && "Benchmark" !in it.name && "NonMinified" !in it.name
+}.configureEach { dependsOn(checkReleaseSigning) }
+
+/**
+ * Downloads the Full edition's packs (`bundled-packs.tsv`) into its assets, each checked against its pinned SHA-256.
+ * Files already there with the right hash are kept, so this costs nothing after the first build.
+ */
+abstract class FetchBundledPacks : DefaultTask() {
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val manifest: RegularFileProperty
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun fetch() {
+        val root = outputDir.get().asFile.resolve("packs")
+        manifest.get().asFile.readLines().filter { it.isNotBlank() && !it.startsWith("#") }.forEach { line ->
+            val (group, url, sha) = line.split('\t')
+            val target = root.resolve(group).resolve(url.substringAfterLast('/'))
+            if (target.isFile && sha256(target) == sha) return@forEach
+            target.parentFile.mkdirs()
+            val part = File(target.path + ".part")
+            URI(url).toURL().openStream().use { input -> part.outputStream().use { input.copyTo(it) } }
+            check(sha256(part) == sha) { "${target.name} does not match its pinned SHA-256" }
+            target.delete()
+            check(part.renameTo(target))
+        }
+    }
+
+    private fun sha256(file: File): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        file.inputStream().use { input ->
+            val buffer = ByteArray(1 shl 16)
+            while (true) {
+                val n = input.read(buffer)
+                if (n < 0) break
+                digest.update(buffer, 0, n)
+            }
+        }
+        return digest.digest().joinToString("") { "%02x".format(it) }
+    }
+}
+
+val fetchBundledPacks = tasks.register<FetchBundledPacks>("fetchBundledPacks") {
+    manifest.set(layout.projectDirectory.file("bundled-packs.tsv"))
+    outputDir.set(layout.buildDirectory.dir("bundledPacks"))
+}
 
 /**
  * Copies the repository's `CHANGELOG.md` into the APK's assets (ADR-0052), so What's new reads this build's own notes
@@ -138,8 +203,16 @@ val copyChangelog = tasks.register<CopyChangelog>("copyChangelog") {
 
 // The plugin copies `release` into these build types after the DSL runs, so the flag is set per variant instead.
 androidComponents {
+    // The Full edition exists as a release build only: debug builds, tests, lint and benchmarks are the Essential
+    // edition's, so they never download the packs (about 180 MB).
+    beforeVariants { variant ->
+        if (variant.flavorName == "full" && variant.buildType != "release") variant.enable = false
+    }
     onVariants { variant ->
         variant.sources.assets?.addGeneratedSourceDirectory(copyChangelog, CopyChangelog::outputDir)
+        if (variant.flavorName == "full") {
+            variant.sources.assets?.addGeneratedSourceDirectory(fetchBundledPacks, FetchBundledPacks::outputDir)
+        }
         if (variant.buildType in benchmarkBuildTypes) {
             variant.buildConfigFields?.put(
                 "MEASUREMENT_HOOKS",
