@@ -1,7 +1,7 @@
 # Single source of truth for Android dependency versions (ADR-0005).
 # Every entry must also appear in docs/licenses.md.
 [versions]
-agp = "9.4.1"
+agp = "9.5.1"
 chaquopy = "17.2.0"
 ytdlp = "2026.10.26"
 kotlin = "2.4.21"
