@@ -18,7 +18,7 @@ androidxTestExtJunit = "1.3.0"
 androidxTestRunner = "1.7.0"
 espresso = "3.7.0"
 uiautomator = "2.4.0"
-haze = "2.0.1"
+haze = "2.1.0"
 # Google ML Kit on-device translation and language identification (owner-approved 2026-10-18, ADR-0018).
 mlkitTranslate = "17.0.3"
 mlkitLanguageId = "17.0.6"
