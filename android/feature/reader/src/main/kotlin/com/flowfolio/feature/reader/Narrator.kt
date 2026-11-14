@@ -5,6 +5,7 @@ import android.content.Intent
 import android.media.AudioAttributes
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
@@ -28,6 +29,10 @@ internal class Narrator(context: Context) {
     private val tts = TextToSpeech(context.applicationContext, { status ->
         ready.complete(status == TextToSpeech.SUCCESS)
     }, engine)
+
+    /** Each utterance's sample rate and when it started playing, to show its words when they are heard. */
+    private val sampleRates = ConcurrentHashMap<String, Int>()
+    private val startedAt = ConcurrentHashMap<String, Long>()
 
     /** Each page's sentences as queued, for starting again from the sentence under way. */
     private val pages = ConcurrentHashMap<Int, List<SpeechSegment>>()
@@ -113,7 +118,10 @@ internal class Narrator(context: Context) {
         onPageAdvance: (Int) -> Unit,
         done: (Int) -> Unit
     ) {
+        run?.let { main.removeCallbacksAndMessages(it) }
         tts.stop()
+        sampleRates.clear()
+        startedAt.clear()
         pages.clear()
         pages[page] = segments
         playingPage = page
@@ -144,6 +152,7 @@ internal class Narrator(context: Context) {
     fun refreshConfig() = restartHere(keepNext = true)
 
     fun stop() {
+        run?.let { main.removeCallbacksAndMessages(it) }
         run = null
         tts.stop()
     }
@@ -191,6 +200,7 @@ internal class Narrator(context: Context) {
 
     private val listener = object : UtteranceProgressListener() {
         override fun onStart(utteranceId: String?) {
+            if (utteranceId != null) startedAt[utteranceId] = SystemClock.uptimeMillis()
             if (utteranceId?.endsWith(SILENCE) == true) return
             val (r, page, index) = place(utteranceId) ?: return
             val turned = page != playingPage
@@ -203,9 +213,22 @@ internal class Narrator(context: Context) {
             }
         }
 
+        override fun onBeginSynthesis(utteranceId: String?, sampleRateInHz: Int, audioFormat: Int, channelCount: Int) {
+            if (utteranceId != null && sampleRateInHz > 0) sampleRates[utteranceId] = sampleRateInHz
+        }
+
         override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
             val (r, page, index) = place(utteranceId) ?: return
-            main.post { if (run === r) r.onWord(page, index, start, end) }
+            // Online voices report a word when its audio arrives, which can be seconds before it is heard: the word
+            // is shown at its place in the audio (frame / sample rate) after the sentence began to play.
+            val rate = sampleRates[utteranceId]
+            val began = startedAt[utteranceId]
+            val due = if (rate != null && began != null) began + frame * MILLIS / rate else 0L
+            val word = Runnable {
+                // A word whose sentence has already ended is not shown over the next one.
+                if (run === r && playingPage == page && playingIndex == index) r.onWord(page, index, start, end)
+            }
+            main.postAtTime(word, r, maxOf(due, SystemClock.uptimeMillis()))
         }
 
         override fun onDone(utteranceId: String?) {
@@ -258,6 +281,7 @@ internal class Narrator(context: Context) {
         private const val SILENCE = "s"
         private const val PLACE_PARTS = 3
         private const val PREVIEW_ID = "preview"
+        private const val MILLIS = 1000L
         const val GOOGLE_ENGINE = "com.google.android.tts"
         private val main = Handler(Looper.getMainLooper())
 

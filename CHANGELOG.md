@@ -5,6 +5,26 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning: [S
 
 ## [Unreleased]
 
+## [0.7.0-beta.8] - 2026-11-13
+
+### For readers
+- **Slower and finer narrator speeds.** 0.5× and 0.75× join the set speeds, which now take only the room they
+  need. Under them, a slider runs from 0.25× to 2.5× in 0.05× steps, from a turtle to a rabbit, with a mark at every
+  step and a tick you can feel as each is passed. The speed shows above the thumb.
+- **Your own country's voices first.** The voice list opens with your phone's language and country, for example
+  English (United States) on an American phone, and lists the others after it.
+- **The highlighted word keeps time with online voices.** Each word is now marked when its audio plays, not when
+  Google reports it, and a word whose sentence has ended no longer lands on the next one.
+
+### Narrator
+- `NarratorSpeed`: the set speeds (`SPEEDS`, now 0.5×–2×) and `SpeedSlider` (0.25×–2.5×, 46 marks, haptics by
+  `CLOCK_TICK` and `VIRTUAL_KEY` at each quarter). It sits beside the speeds where the panel leaves it a usable length,
+  and under them on a phone's panel.
+- `Narrator` schedules each word at its audio frame over the sample rate after the sentence starts
+  (`onBeginSynthesis`, `onRangeStart`). On the owner's Fold and the emulator, Google's online voices reported their
+  words 60–300 ms after they played; the schedule guards against reports that arrive early.
+- `NarratorVoices` ranks locales: exact phone locale first, then the same language.
+
 ## [0.7.0-beta.7] - 2026-11-13
 
 ### For readers

@@ -21,7 +21,6 @@ import com.flowfolio.core.designsystem.FlowFolio
 import com.flowfolio.core.designsystem.FlowFolioGhostButton
 import com.flowfolio.core.designsystem.FlowFolioMenu
 import com.flowfolio.core.designsystem.FlowFolioPrimaryButton
-import com.flowfolio.core.designsystem.FlowFolioSegmented
 import com.flowfolio.core.designsystem.FlowFolioToggle
 import com.flowfolio.core.designsystem.FlowFolioType
 
@@ -69,14 +68,7 @@ internal fun ReaderNarratorPanel(
             style = FlowFolioType.rowLabel.merge(FlowFolio.item),
             modifier = Modifier.padding(top = 16.dp)
         )
-        // ADR-0052: five set speeds as segments rather than a slider, which landed on rates like 1.07×. A rate saved
-        // from the old slider shows on its nearest segment until another is chosen.
-        FlowFolioSegmented(
-            options = SPEEDS.map { speedLabel(it) },
-            selected = SPEEDS.indices.minBy { kotlin.math.abs(SPEEDS[it] - rate) },
-            onSelect = { onRate(SPEEDS[it]) },
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
-        )
+        NarratorSpeed(rate, onRate, Modifier.padding(top = 8.dp))
         Row(
             Modifier.fillMaxWidth().padding(top = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -151,10 +143,3 @@ private fun VoicePicker(voices: List<NarratorVoice>, current: String?, onVoice: 
         }
     }
 }
-
-/** The narrator's speeds (ADR-0052, the mock's `.mini` row). */
-internal val SPEEDS = listOf(0.8f, 1f, 1.25f, 1.5f, 2f)
-
-/** "0.8×", "1×", "1.25×": no trailing zeros. */
-internal fun speedLabel(rate: Float): String =
-    java.math.BigDecimal(rate.toString()).stripTrailingZeros().toPlainString() + "×"

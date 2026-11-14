@@ -19,17 +19,22 @@ internal data class NarratorVoice(
 
 internal object NarratorVoices {
     /**
-     * The voices worth offering from [all]: those in [languages] (the phone's languages, English first among equals),
+     * The voices worth offering from [all]: those in [languages] (the phone's languages, its own country first),
      * each language's voices numbered by the engine's code for them so a voice keeps its number from one day to the
      * next, and the online and offline forms of one voice side by side.
      */
     fun of(all: List<android.speech.tts.Voice>, languages: List<Locale>): List<NarratorVoice> {
         val wanted = languages.map { it.language }.distinct()
         val kept = all.filter { it.locale.language in wanted }
+
+        // The phone's own language and country first ("English (United States)" for an American phone), then the
+        // same language elsewhere, alphabetically.
+        fun rank(locale: Locale): Int {
+            val exact = languages.indexOfFirst { it.language == locale.language && it.country == locale.country }
+            return if (exact >= 0) exact else languages.size + wanted.indexOf(locale.language)
+        }
         return kept.groupBy { it.locale }
-            .toSortedMap(
-                compareBy<Locale>({ wanted.indexOf(it.language) }, { languageName(it) })
-            )
+            .toSortedMap(compareBy<Locale>({ rank(it) }, { languageName(it) }))
             .flatMap { (locale, voices) ->
                 val codes = voices.map { codeOf(it.name) }.distinct().sorted()
                 voices.sortedWith(compareBy({ codes.indexOf(codeOf(it.name)) }, { it.isNetworkConnectionRequired }))
