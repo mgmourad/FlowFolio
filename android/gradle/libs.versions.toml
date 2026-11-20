@@ -5,7 +5,7 @@ agp = "9.4.1"
 chaquopy = "17.2.0"
 ytdlp = "2026.10.26"
 kotlin = "2.4.21"
-ksp = "2.3.12"
+ksp = "2.3.14"
 hilt = "2.60.1"
 composeBom = "2026.09.00"
 activityCompose = "1.13.0"
@@ -38,7 +38,7 @@ ktlint = "1.8.0"
 detekt = "1.23.8"
 # Phase 3 converter (owner-approved 2026-10-27): JSON for the IR and flowfolio.json; JNA and EPUBCheck for the
 # desktop JVM only (tests and the corpus harness), never in the app.
-serialization = "1.12.0"
+serialization = "1.13.0"
 jna = "5.19.1"
 epubcheck = "5.4.0"
 # OCR tests on the desktop JVM (ADR-0054): Tesseract through JNA, :tools:convert tests only, never in the app.
